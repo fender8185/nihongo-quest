@@ -91,10 +91,10 @@ const YEN = (() => {
       const ls = [['hero', ...FULL[k]]]; if (mu.keeper) ls.push([mu.keeper[0], ...AGAIN]);
       TALK.open(yard, mu.keeper ? mu.keeper[0] : 'hero', ls, null, null, { ev: true }); return false;
     }
-    const p = state.purse, dev = kotoDevice(), first = !p.book[id], td = today();
-    p.spent[dev] = (Number(p.spent[dev]) || 0) + it[3]; if (first) p.book[id] = day();
+    const p = state.purse, first = !p.book[id], td = today();
+    if (first) p.book[id] = day();
     if (LIMIT[k]) p.today = Object.assign({}, td, { [k]: (td[k] || 0) + 1 }, k === 'b' ? { f: 0, d: 0 } : {});   // out of the bath hungry
-    saveState(); kotoButtons(document);
+    yenSpend(it[3]);   // spent, saved with the book and the day's count
     const then = () => {
       have(yard, t, mu);
       if (HAD[k]) setTimeout(() => eat(it, first, m), mu.sit ? 1500 : 1300); else if (first) setTimeout(() => stamp(it), 1000);

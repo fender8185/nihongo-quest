@@ -16,6 +16,9 @@ const ONSEN = (() => {
   const month = () => (typeof sceneDate === 'function' ? sceneDate() : new Date()).getMonth() + 1;
   // the season's trees on the slope: spring's blossom, summer's green, autumn's reds and golds, winter's bare boughs (and snow)
   const leaves = () => seasonLeaves(month());   // the season's trees (71w_ride.js: the diesel's windows have the same)
+  // a leaf's colour dimmed by night as brightness(a + b × day) would dim it, without a filter (2026-11-24, the review: a filtered
+  // circle under the steam repaints with it): by day c × (a + b), by night (hc's --md: a fifth of the day's) c × (a − b / 4)
+  const leafLit = (c, a, b) => hc(mixHex(c, '#000000', 1 - (a + b)), mixHex(c, '#000000', 1 - (a - b / 4)));
   // a ridge through points, smoothed (each corner a curve to the next midpoint), down to y = base
   const ridge = (pts, base) => { let d = `M${pts[0][0]} ${base} L${pts[0][0]} ${pts[0][1]}`; for (let i = 1; i < pts.length - 1; i++) { const [x, y] = pts[i], [nx, ny] = pts[i + 1]; d += ` Q${x} ${y} ${f((x + nx) / 2)} ${f((y + ny) / 2)}`; } const [lx, ly] = pts[pts.length - 1]; return `${d} L${lx} ${ly} L${lx} ${base} Z`; };
   const cedar = (x, y, h, k) => `<path d="M${f(x)} ${f(y - h)} L${f(x + h * 0.2)} ${f(y - h * 0.45)} L${f(x + h * 0.14)} ${f(y - h * 0.45)} L${f(x + h * 0.27)} ${f(y)} L${f(x - h * 0.27)} ${f(y)} L${f(x - h * 0.14)} ${f(y - h * 0.45)} L${f(x - h * 0.2)} ${f(y - h * 0.45)} Z" ${k ? hc('#3f6a4c', '#0e1828') : hc('#4f7a58', '#121e34')}/><path d="M${f(x)} ${f(y - h)} L${f(x + h * 0.27)} ${f(y)} H${f(x)} Z" fill="#000" fill-opacity=".12"/>`;
@@ -44,7 +47,7 @@ const ONSEN = (() => {
       if (x > 556 && x < 668) continue;   // the gorge
       const top = lerpY(NEAR, x), k = Math.floor(x / 16);
       [0, 1, 2, 3].forEach((r) => { const y = top + 18 + r * 24 + ((k * 7 + r * 3) % 9), h = 30 + ((k * 5 + r * 11) % 18); if (y > 160) return;
-        trees += (k + r) % 5 === 2 && r ? `<circle cx="${x + 4}" cy="${y - 10}" r="11" fill="${[c1, c2, c3][(k + r) % 3]}" ${winter ? 'opacity=".7"' : ''} style="filter:brightness(calc(.35 + .65 * var(--day)))"/><circle cx="${x - 3}" cy="${y - 5}" r="7" fill="${[c2, c3, c1][(k + r) % 3]}" style="filter:brightness(calc(.3 + .6 * var(--day)))"/>` : cedar(x + (r % 2) * 8, y, h, (k + r) % 2); });
+        trees += (k + r) % 5 === 2 && r ? `<circle cx="${x + 4}" cy="${y - 10}" r="11" ${leafLit([c1, c2, c3][(k + r) % 3], 0.35, 0.65)} ${winter ? 'opacity=".7"' : ''}/><circle cx="${x - 3}" cy="${y - 5}" r="7" ${leafLit([c2, c3, c1][(k + r) % 3], 0.3, 0.6)}/>` : cedar(x + (r % 2) * 8, y, h, (k + r) % 2); });
     }
     // the gorge: its rock walls and the water falling down it; the bridge — its deck on stone piers at either side, the red truss
     // over it (the far side's behind the train, the near side's before it); the train out of the trees and in again
@@ -310,7 +313,7 @@ const ONSEN = (() => {
   function photo(yard) {
     setTimeout(() => { if (!yard.isConnected || !yh.use) return; SND.play('shutter', { vol: 0.7 }); const fl = document.createElement('i'); fl.className = 'os-flash'; yard.appendChild(fl); setTimeout(() => fl.remove(), 700); }, 1100);
   }
-  return { html, mount, soak, boardSay, window: window_, photo, steam, steamDefs };   // steam, steamDefs: 湯けむり通り's and 湯畑's too
+  return { html, mount, soak, boardSay, window: window_, photo, steam, steamDefs, leafLit };   // steam, steamDefs, leafLit: 湯けむり通り's and 湯畑's too
 })();
 function onsenHtml() { return ONSEN.html(); }
 // the things on 湯の花駅前 to use (spec §3.1): the 改札 (the way home: its ticket machine), the departure board, the bench and the post

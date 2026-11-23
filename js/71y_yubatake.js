@@ -33,7 +33,7 @@ const YUBATAKE = (() => {
     let trees = '';
     for (let x = -10; x < 1215; x += 13) { const k = Math.floor(x / 13);
       [0, 1, 2].forEach((r) => { const y = lerp(NEARH, x) + 14 + r * 22 + ((k * 7 + r * 3) % 9), h = 22 + ((k * 5 + r * 11) % 16); if (y > 120) return;
-        trees += (k + r) % 5 === 2 ? `<circle cx="${x + 2}" cy="${y - 9}" r="7" fill="${[c1, c2, c3][(k + r) % 3]}" style="filter:brightness(calc(.3 + .7 * var(--day)))"/><circle cx="${x - 4}" cy="${y - 5}" r="5" fill="${[c2, c3, c1][(k + r) % 3]}" style="filter:brightness(calc(.28 + .66 * var(--day)))"/>`
+        trees += (k + r) % 5 === 2 ? `<circle cx="${x + 2}" cy="${y - 9}" r="7" ${ONSEN.leafLit([c1, c2, c3][(k + r) % 3], 0.3, 0.7)}/><circle cx="${x - 4}" cy="${y - 5}" r="5" ${ONSEN.leafLit([c2, c3, c1][(k + r) % 3], 0.28, 0.66)}/>`
           : `<path d="M${x} ${f(y - h)} L${f(x + h * 0.28)} ${f(y)} H${f(x - h * 0.28)} Z" ${(k + r) % 2 ? hc('#3f6a4c', '#0e1828') : hc('#4f7a58', '#121e34')}/><path d="M${x} ${f(y - h)} L${f(x + h * 0.28)} ${f(y)} H${x} Z" fill="#0e1a12" style="opacity:calc(.04 + .12 * var(--day))"/>`; }); }
     const hills = `<path d="${ridge(FARR, 160)}" ${hc('#a9b9cb', '#1d2346')}/>${snow}<rect x="-20" y="-90" width="1240" height="70" fill="#fff" style="opacity:calc(.13 * var(--day))"/>
       <path d="${ridge(NEARH, 160)}" ${hc('#6f9478', '#16223c')}/>${trees}<rect x="-20" y="40" width="1240" height="120" fill="#fff" style="opacity:calc(.16 * var(--day))"/>`;
@@ -88,7 +88,7 @@ const YUBATAKE = (() => {
       <g class="yb-fall">${[0, 1, 2, 3, 4, 5].map((k) => `<path d="M${fx + 24 + k * 14} ${F - 44} q2 11 0 22" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="3" stroke-dasharray="6 8" style="animation-delay:-${(k * 0.17).toFixed(2)}s"/>`).join('')}</g>
       <ellipse cx="${fx + 62}" cy="${F - 11}" rx="100" ry="14" ${hc('#a8a296', '#2c2c48')}/><ellipse cx="${fx + 62}" cy="${F - 12}" rx="92" ry="10.4" ${hc('#3fb8a2', '#1a4a5a')}/><ellipse cx="${fx + 62}" cy="${F - 12}" rx="92" ry="10.4" fill="#7fe0cc" style="opacity:calc(.08 + .1 * var(--day))"/><ellipse cx="${fx + 50}" cy="${F - 15}" rx="56" ry="3.6" fill="#fff" style="opacity:calc(.12 + .26 * var(--day))"/>
       ${[0, 1, 2].map((k) => `<ellipse class="fx-ripple" cx="${fx + 34 + k * 30}" cy="${F - 11}" rx="10" ry="2" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="1" style="animation-delay:-${(k * 1.1).toFixed(1)}s"/>`).join('')}`;
-    // the steam: off every row of troughs and thick over the fall and the pool (16 puffs), big slow clouds of it rising over all (6),
+    // the steam: off every row of troughs and thick over the fall and the pool (16 puffs), big slow clouds of it rising over all (8),
     // and the lights over it by night
     const puffs = ybSteam([[x0 + 70, bk + 4, 26, 0], [x0 + 170, bk + 10, 30, 2.4], [x0 + 280, bk + 4, 28, 4.8], [x0 + 390, bk + 12, 32, 7.2],
       [x0 + 110, bk + 34, 32, 1.2], [x0 + 230, bk + 40, 36, 3.6], [x0 + 340, bk + 30, 30, 6.0], [x0 + 440, bk + 44, 34, 8.4],
@@ -154,6 +154,7 @@ const YUBATAKE = (() => {
   }
   // the benches along the railing: [x of the bench, which seat is taken] — visitors in yukata on some (PASSERS' looks)
   const BENCH = { y: F + 46, foot: 64, xs: [380, 600] };
+  const LAMPS = [300, 900], LAMP_FOOT = 370 - (F + 50);   // the stone lamps by the railing's ends (land x), standing on Y 84
   const SITTERS = [[0, 0], [1, 1]];   // [bench, seat]: a seat 30 or 70 in from its end
   function sitters() {
     if (typeof PASSERS !== 'object') return '';
@@ -167,7 +168,7 @@ const YUBATAKE = (() => {
       ${back()}${yubatake()}${railing()}${stage()}${standArt()}${mouth()}${square()}
     </svg>
     ${BENCH.xs.map((x) => benchProps(x, BENCH.y, BENCH.foot)).join('')}
-    ${landProp(40, stoneLamp(300) + stoneLamp(900), null, [280, F, 920, F + 56])}
+    ${LAMPS.map((x) => landProp(LAMP_FOOT, stoneLamp(x), null, [x - 22, F, x + 22, F + 56])).join('')}
     ${sitters()}
     ${yHeroHtml()}
     ${TOWNEV.castHtml('yubatake')}
@@ -179,8 +180,10 @@ const YUBATAKE = (() => {
   // the steaming water, the box; three coins to hand — 50, 100 and 500 円 — and the right one dropped in buys an egg (YEN.pay: 円 spent,
   // a food of the day, its stamp, had by the steam). 50: too little; 500: nobody here to give the change. Not learned たまご yet: the
   // sign can be read all the same, the coins wait ----
-  const COINS = [50, 100, 500];
-  const SAID = { 50: 'たりない…', 500: 'おつりが ない…' };
+  // the coins as they are minted, their faces in kanji (2026-11-24, the review: no digits — the sign's 100円 is to be read as 百円)
+  const COINS = [[50, '五十円'], [100, '百円'], [500, '五百円']];
+  // a wrong coin: what he thinks (Japanese), and a hint under it (Chinese)
+  const SAID = { 50: ['たりない…', '不夠喔，再看一次牌子。'], 500: ['おつりが ない…', '這裡沒有人找零。'] };
   function closeup() {
     const eggs = [[74, 188], [94, 184], [114, 188], [84, 194], [104, 194], [124, 192], [64, 194]];
     return `<svg class="yb-standsvg" viewBox="0 0 360 250" aria-hidden="true"><rect width="360" height="250" fill="#cfe0e8"/><rect width="360" height="250" fill="#1b2050" style="opacity:calc(.85 * (1 - var(--day)))"/>
@@ -199,9 +202,9 @@ const YUBATAKE = (() => {
   function cardHtml(it, lock, note) {
     return `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="yb-closeup">${closeup()}<div class="yb-sign" lang="ja"><b>${ruby('{温泉|おんせん}たまご')}</b><span>${ruby('ひとつ　100{円|えん}。')}</span><span>${ruby('お{金|かね}は　この　{箱|はこ}へ')} <i aria-hidden="true">→</i></span></div></div>
-      <p class="yb-said" lang="ja" aria-live="polite"></p>
+      <p class="yb-said" lang="ja" aria-live="polite"></p><p class="yb-hint" lang="zh-Hant"></p>
       ${lock ? `<p class="yb-lock">學會「${esc(lock)}」這個字，就能買</p>` : ''}
-      <div class="yb-coins">${COINS.map((n) => `<button type="button" class="yb-coin c${n}" data-coin="${n}"${lock || note ? ' disabled' : ''} aria-label="${n} 円"><b>${n}</b><small>円</small></button>`).join('')}</div>
+      <div class="yb-coins">${COINS.map(([n, face]) => `<button type="button" class="yb-coin yb-c${n}" data-coin="${n}" lang="ja"${lock || note ? ' disabled' : ''} aria-label="${face}玉"><b>${face}</b></button>`).join('')}</div>
       ${note ? `<p class="yb-note">${note}</p>` : ''}`;
   }
   function stand(yard, t) {
@@ -211,17 +214,21 @@ const YUBATAKE = (() => {
     let busy = false;
     CLASS.card('yb-stand', '無人販売所', cardHtml(it, lock, note), (e) => {
       const c = e.target.closest('.yb-coin:not(:disabled)'), el = document.querySelector('.yb-stand'); if (!c || !el || busy) return;
-      const n = Number(c.dataset.coin), said = el.querySelector('.yb-said');
-      if (n !== it[3]) { said.innerHTML = ruby(SAID[n] || ''); el.querySelector('.yb-sign').classList.remove('look'); void el.offsetWidth; el.querySelector('.yb-sign').classList.add('look'); return; }   // the wrong coin: back in his hand, the sign read again
+      const n = Number(c.dataset.coin), said = el.querySelector('.yb-said'), hint = el.querySelector('.yb-hint');
+      if (n !== it[3]) { const [ja, zh] = SAID[n] || ['', '']; said.innerHTML = ruby(ja); hint.textContent = zh; el.querySelector('.yb-sign').classList.remove('look'); void el.offsetWidth; el.querySelector('.yb-sign').classList.add('look'); return; }   // the wrong coin: back in his hand, the sign read again
       busy = true; const pay = () => YEN.pay(yard, Object.assign({}, t, { open: null }), 'tamago', it[0]);
       if (YEN.left('f') <= 0 || calm()) { CLASS.close(); pay(); return; }   // full today: he says so, nothing paid
       el.querySelector('.yb-closeup').classList.add('paid');   // the coin into the box (paid as it drops in: YEN's coins), an egg up out of the basket
       setTimeout(() => { if (document.querySelector('.yb-stand') === el) pay(); }, 420); setTimeout(() => { if (document.querySelector('.yb-stand') === el) CLASS.close(); }, 1100);
     });
   }
-  return { F, BED, STAND, BENCH, html, stand, lightDefs, lights, puffDefs, steam: ybSteam };
+  return { F, BED, STAND, BENCH, LAMPS, LAMP_FOOT, html, stand, lightDefs, lights, puffDefs, steam: ybSteam };
 })();
 function yubatakeHtml() { return YUBATAKE.html(); }
+// what stands in the way on the square (2026-11-24, the review): the two benches (as the park's: their foot to a little behind
+// them) and the two stone lamps — walked round; the railing itself is the walk's top (WALK_TOP.yubatake)
+WALK_BLOCK.yubatake = YUBATAKE.BENCH.xs.map((x) => [x - 604, x - 506, YUBATAKE.BENCH.foot - 6, YUBATAKE.BENCH.foot + 12])
+  .concat(YUBATAKE.LAMPS.map((x) => [x - 610, x - 590, YUBATAKE.LAMP_FOOT - 4, YUBATAKE.LAMP_FOOT + 8]));
 
 // ---- what can be tapped on the 湯畑's square: the 無人販売所 (its card), the 湯畑 over its railing, the fall and the pool, the 湯もみ
 // stage, the benches to sit on ----

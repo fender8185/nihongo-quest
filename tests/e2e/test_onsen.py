@@ -303,6 +303,83 @@ def test_shateki_once_a_day(b):
     o = r['odds']
     assert r['prizes'] == ['hazure', 'caramel', 'kokeshi', 'bear'] and o['hazure'] > o['caramel'] > 0 and o['kokeshi'] > o['bear'] > 0 and o['hazure'] > 4000 * 0.45, r
 
+# ---- Task 2, fix round 1 (task-2-review-1.md) ----
+# Important 1: the 湯畑's square is walked in front of its stone railing only (it stands on F = 236: Y 134) — a tap past it stops short
+# of it (WALK_TOP 128), the two benches and the stone lamps are walked round (WALK_BLOCK), a spot kept past the railing comes back in
+# front of it on arrival
+def test_the_yubatake_keeps_him_in_front_of_its_railing(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {};
+      await at('yubatake'); await new Promise((q) => yHeroWalk(yard(), [100, 200], q)); out.tap = Math.round(yh.Y);
+      await new Promise((q) => yHeroWalk(yard(), [-420, 180], q)); out.tap2 = Math.round(yh.Y);
+      const blocks = walkBlocks('yubatake'), clear = (w) => w.every((q, i) => !i || blocks.every((bk) => !yCross(bk, w[i - 1], q)));
+      const w1 = yRoute('yubatake', [-260, 66], [-90, 66]), w2 = yRoute('yubatake', [-60, 66], [130, 66]), w3 = yRoute('yubatake', [-340, 86], [-260, 86]);
+      out.round = [w1.length > 2 && clear(w1), w2.length > 2 && clear(w2), w3.length > 2 && clear(w3)];
+      const onIt = yRoute('yubatake', [-320, 30], [-175, 67]), last = onIt[onIt.length - 1]; out.off = !blocks.some((bk) => yIn(bk, last));
+      localStorage.setItem('nq_hero', JSON.stringify({ yubatake: { X: 120, Y: 200 } })); yPlace = 'yard'; await at('yubatake'); out.kept = [Math.round(yh.X), Math.round(yh.Y)];
+      return JSON.stringify(out); })()"""))
+    assert r['tap'] <= 128 and r['tap2'] <= 128, r   # never past the railing (Y 134)
+    assert r['round'] == [True, True, True] and r['off'], r   # round each bench and the stone lamp, never through
+    assert r['kept'][1] <= 128, r   # a spot kept past the railing: back in front of it
+
+# Minor 8: on 湯けむり通り, ゆのはな堂's steamer table and price board and 花月's 行灯, stone lantern and pine stand out on the pavement,
+# partly inside the street's walkable edge — walked round (WALK_BLOCK.yudori), a walk to one ends beside it
+def test_the_street_keeps_him_off_its_pavement_things(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {};
+      await at('yudori'); const blocks = walkBlocks('yudori'), things = YUDORI.BLOCKS.map((x) => x.id);
+      const has = (id) => (YUDORI.BLOCKS.find((x) => x.id === id) || {}).box, seiro = has('seiro'), andon = has('andon');
+      const mid = (bk) => [(bk[0] + bk[1]) / 2, (bk[2] + bk[3]) / 2], clear = (w) => w.every((q, i) => !i || blocks.every((bk) => !yCross(bk, w[i - 1], q)));
+      const [sx, sy] = mid(seiro), [ax, ay] = mid(andon);
+      const w1 = yRoute('yudori', [sx, sy - 18], [sx, sy + 18]), w2 = yRoute('yudori', [ax, ay - 16], [ax, ay + 16]);
+      await new Promise((q) => yHeroWalk(yard(), [sx, sy], q)); const at1 = [yh.X, yh.Y];
+      await new Promise((q) => yHeroWalk(yard(), [ax, ay], q)); const at2 = [yh.X, yh.Y];
+      out.things = things; out.inside = [YUDORI.half(sy) > Math.abs(seiro[1]) - 1, YUDORI.half(ay) > Math.abs(andon[0]) - 1];
+      out.round = [w1.length > 2 && clear(w1), w2.length > 2 && clear(w2)]; out.off = [at1, at2].map((p) => !blocks.some((bk) => yIn(bk, p)));
+      return JSON.stringify(out); })()"""))
+    assert {'seiro', 'andon'} <= set(r['things']), r
+    assert r['inside'] == [True, True], r   # both reach inside the street's walkable edge (else no block were needed)
+    assert r['round'] == [True, True] and r['off'] == [True, True], r
+
+# Minor 1 / Minor 9: the stand's coins are drawn by their faces (五十円, 百円, 五百円: no digits), so the sign's 100円 has to be read as
+# 百円; a wrong coin gets its Japanese line and a short Chinese hint under it; full today (two foods had), the right coin buys nothing:
+# he says so, nothing is paid, no egg
+def test_the_egg_stand_coins_read_and_a_full_stomach(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {}; const t = todayStr();
+      REG.vocab.filter((v) => jaPlain(v.w) === '卵').forEach((v) => { state.srs[v.key] = { b: 3, due: addDays(t, 9), n: 4, ok: 4, ng: 0, s: 9, d: 5, last: addDays(t, -2), intro: addDays(t, -20), lrn: addDays(t, -2) }; }); saveState();
+      const card = () => document.querySelector('.yb-stand'), open = async () => { click('.yard .use-btn[data-use="tamago"]'); await watch(() => card(), 6000); };
+      await at('yubatake'); await open();
+      out.faces = [...card().querySelectorAll('.yb-coin')].map((c) => [c.dataset.coin, c.textContent.replace(/\\s+/g, ''), [...c.classList].filter((k) => k !== 'yb-coin').join(' '), Math.round(c.getBoundingClientRect().width)]);
+      click('.yb-coin[data-coin="500"]'); await wait(200); out.w500 = [card().querySelector('.yb-said').textContent, (card().querySelector('.yb-hint') || {}).textContent || ''];
+      click('.yb-coin[data-coin="50"]'); await wait(200); out.w50 = [card().querySelector('.yb-said').textContent, (card().querySelector('.yb-hint') || {}).textContent || ''];
+      CLASS.close(); state.purse.today = { day: dateStr(TOWNEV.today()), f: 2, d: 0, b: 0, o: 0 }; saveState(); const bal = yenBalance(), book = Object.keys(state.purse.book).length;
+      await open(); click('.yb-coin[data-coin="100"]'); await watch(() => document.querySelector('.talk-card'), 4000);
+      out.full = [((document.querySelector('.talk-ja') || {}).textContent || '').trim(), yenBalance() - bal, Object.keys(state.purse.book).length - book, state.purse.today.f];
+      await wait(1800); out.eat = Boolean(document.querySelector('.eat-scene')); return JSON.stringify(out); })()"""))
+    faces = {c: (txt, cls, w) for c, txt, cls, w in r['faces']}
+    assert faces['50'][0] == '五十円' and faces['100'][0] == '百円' and faces['500'][0] == '五百円', r   # kanji faces, no digits
+    assert [faces[c][1] for c in ('50', '100', '500')] == ['yb-c50', 'yb-c100', 'yb-c500'] and all(faces[c][2] >= 40 for c in faces), r
+    assert r['w500'][0] == 'おつりが ない…' and '找零' in r['w500'][1], r
+    assert r['w50'][0] == 'たりない…' and '不夠' in r['w50'][1] and '牌子' in r['w50'][1], r
+    assert r['full'] == ['まだ おなかが いっぱいです。', 0, 0, 2] and not r['eat'], r   # a third food: refused, nothing paid, no egg
+
+# Minor 9: a 射的 card shut halfway with motion on (its corks still flying): the result still comes as a toast, the 300 円 spent once
+def test_shateki_shut_halfway_still_tells_and_spends_once(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
+      await at('yudori'); const bal = yenBalance(); YUDORI.shateki(yard()); await watch(() => document.querySelector('.yd-shateki .yd-go'), 3000);
+      click('.yd-shateki .yd-go'); click('.yd-shateki .yd-go'); await wait(500); out.mid = [Boolean(document.querySelector('.yd-shateki')), toasts.filter((m) => /射的/.test(m)).length, bal - yenBalance()];
+      CLASS.close(); await watch(() => toasts.some((m) => /射的/.test(m)), 6000); await wait(400);
+      YUDORI.shateki(yard()); await wait(300); out.after = [toasts.filter((m) => /射的/.test(m)).length, bal - yenBalance(), Boolean(document.querySelector('.yd-shateki .yd-done')), state.oneADay.shateki];
+      return JSON.stringify(out); })()"""))
+    assert r['mid'] == [True, 0, 300], r   # under way: paid once, nothing told yet
+    assert r['after'] == [1, 300, True, '2026-11-10'], r   # shut halfway: told once, still 300 spent once, played today
+
+# Minor 7: 湯けむり通り's visitors come in parties of one to three, but never more than seven walk at once — a party is sent only when
+# all of it fits (here every party a family of three: two fit, a third would make nine)
+def test_street_passers_never_more_than_seven(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ await at('yudori'); const rnd = Math.random; Math.random = () => 0.4;
+      for (let i = 0; i < 10; i++) PASSERS.spawn(); Math.random = rnd; await wait(100);
+      return JSON.stringify({ n: document.querySelectorAll('.yard .passer').length }); })()"""))
+    assert 6 <= r['n'] <= 7, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":

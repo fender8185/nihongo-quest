@@ -1167,6 +1167,12 @@ const yenEarned = () => Object.values((state.cruise && state.cruise.res) || {}).
   + Object.values((state.work && state.work.res) || {}).reduce((a, r) => a + (Number(r && r.yen) || 0), 0);   // 中華街の打工's pay (2026-11-14)
 const yenSpent = () => kotoSum(state.purse && state.purse.spent);   // each device's own sum (sync-core keeps the larger of each)
 const yenBalance = () => Math.min(YEN_CAP, yenEarned() - yenSpent());
+// n 円 spent here (2026-11-24: the one way to spend — a thing bought from its menu or paid into its box (YEN.pay), a train ticket
+// (RIDE), a go at 射的): this device's own sum grows (sync keeps the larger of each), saved, the wallet's button shows what is left
+function yenSpend(n) {
+  const p = state.purse, dev = kotoDevice(); p.spent = p.spent || {}; p.spent[dev] = (Number(p.spent[dev]) || 0) + n;
+  saveState(); if (typeof kotoButtons === 'function') kotoButtons(document);
+}
 const yenStr = (n) => Math.round(n).toLocaleString('en-US');
 // a 100円 coin: silver, its rim milled, a cherry blossom and 100 on it (as kotoIcon: circles and paths, no gradient)
 function yenIcon(cls = '') {

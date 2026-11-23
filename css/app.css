@@ -793,12 +793,15 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
   font-family: 'Hiragino Maru Gothic ProN', 'Zen Maru Gothic', 'Yu Gothic', sans-serif; color: #2b2b33; line-height: 1.5; }
 .yb-sign b { font-size: 16px; letter-spacing: .04em; color: #c8322a; } .yb-sign span { font-size: 13.5px; font-weight: 700; white-space: nowrap; } .yb-sign i { font-style: normal; color: #c8322a; } .yb-sign rt { font-size: 8px; font-weight: 500; }
 .yb-sign.look { animation: ybLook .9s ease-in-out; } @keyframes ybLook { 20%, 60% { transform: rotate(-2.5deg) scale(1.08); box-shadow: 0 0 0 4px #f6e08a, 2px 3px 0 rgba(43, 28, 18, .25); } }
-.yb-said { min-height: 28px; margin: 8px 0 2px; font-size: 18px; font-weight: 700; color: #6e5236; }
+.yb-said { min-height: 28px; margin: 8px 0 0; font-size: 18px; font-weight: 700; color: #6e5236; } .yb-hint { min-height: 18px; margin: 0 0 2px; font-size: 13px; color: #8a7a6e; }
 .yb-lock { margin: 4px 0 8px; font-size: 14px; color: #a8241c; } .yb-note { margin: 6px 0 0; font-size: 13px; color: #8a7a6e; }
 .yb-coins { display: flex; justify-content: center; gap: 18px; margin-top: 6px; }
-.yb-coin { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #9aa0a8; background: radial-gradient(circle at 35% 30%, #fbfcfd, #c9ced6 60%, #a8aeb8); color: #3a3e48; display: grid; place-content: center; line-height: 1; cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .18); }
-.yb-coin b { font-size: 17px; } .yb-coin small { font-size: 10px; } .yb-coin.c500 { border-color: #b8923a; background: radial-gradient(circle at 35% 30%, #fff4c8, #e2c062 60%, #c8a040); color: #5a4214; }
-.yb-coin.c50 { background: radial-gradient(circle, #f4efe4 0 7px, transparent 8px), radial-gradient(circle at 35% 30%, #fbfcfd, #c9ced6 60%, #a8aeb8); } .yb-coin.c50 b { margin-top: -14px; }
+.yb-coin { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #9aa0a8; background: radial-gradient(circle at 35% 30%, #fbfcfd, #c9ced6 60%, #a8aeb8); color: #3a3e48; display: grid; place-content: center; line-height: 1; cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .18);
+  position: relative; padding: 0; font-family: 'Hiragino Mincho ProN', 'Noto Serif JP', serif; }   /* faces in kanji as minted: 五十円, 百円, 五百円 */
+.yb-coin b { font-size: 14px; font-weight: 700; white-space: nowrap; letter-spacing: -.02em; } .yb-coin.yb-c100 b { font-size: 17px; letter-spacing: .04em; }
+.yb-coin.yb-c500 { border-color: #b8923a; background: radial-gradient(circle at 35% 30%, #fff4c8, #e2c062 60%, #c8a040); color: #5a4214; }
+.yb-coin.yb-c50 { background: radial-gradient(circle, #f4efe4 0 6px, #9aa0a8 6.5px, transparent 7.5px), radial-gradient(circle at 35% 30%, #fbfcfd, #c9ced6 60%, #a8aeb8); }   /* the hole in its middle, its name over it */
+.yb-coin.yb-c50 b { position: absolute; left: 0; right: 0; top: 9px; font-size: 12px; text-align: center; }
 .yb-coin:disabled { opacity: .45; cursor: default; } .yb-coin:not(:disabled):active { transform: translateY(2px); box-shadow: none; }
 .yb-standsvg .os-steam { transform-box: fill-box; transform-origin: center; opacity: 0; animation: ydPuff 5.2s ease-out infinite; }   /* the basin's steam, seen close */
 .yb-closeup .yb-drop { opacity: 0; } .yb-closeup.paid .yb-drop { animation: ybDrop .42s ease-in forwards; } @keyframes ybDrop { 0% { opacity: 1; transform: translateY(-20px); } 100% { opacity: 0; transform: translateY(32px) scaleX(.4); } }

@@ -12,7 +12,7 @@
 // it toward the station; their geta heard now and then (SND NOW_AND_THEN). A street seen down its length gives its own way (DOWN)
 const PASSERS = (() => {
   const api = { still: Boolean(window.NQ_E2E) };
-  const MAX = { town: 4, chinatown: 3, chinadori: 4, yudori: 7 };
+  const MAX = { town: 4, chinatown: 3, chinadori: 4, yudori: 7 };   // the most walking at once (湯けむり通り: parties of one to three)
   const rnd = (a, b) => a + Math.random() * (b - a), pick = (a) => a[Math.floor(Math.random() * a.length)];
   const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   let S = null;   // the scene: { yard, place, t: the next one's timer, raf, w: the walkers }
@@ -58,6 +58,7 @@ const PASSERS = (() => {
     const box = S.yard.querySelector('.yworld'); if (!box) return null;
     const path = way(S.place), seg = []; let len = 0; for (let i = 1; i < path.length; i++) { const d = Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]); seg.push([path[i - 1], path[i], len, d]); len += d; }
     const hot = S.place === 'yudori', who = hot ? party() : [{ dx: 0 }], d0 = mid ? rnd(0.2, 0.7) * len : 0, v = rnd(34, 52) * (who.some((m) => m.old) ? 0.7 : 1);
+    if (S.w.length + who.length > (MAX[S.place] || 0)) return null;   // a party only if all of it fits under the place's most (2026-11-24, the review)
     const out = who.map((m) => {
       const { look: lk, wear } = hot ? yukata(m.old) : look(), el = document.createElement('div');
       el.className = 'hero npc passer walk'; el.setAttribute('aria-hidden', 'true'); el.dataset.look = JSON.stringify([lk, wear]);

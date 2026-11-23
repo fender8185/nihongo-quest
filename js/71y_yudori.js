@@ -28,6 +28,13 @@ const YUDORI = (() => {
   const shop = (id) => SHOPS.find((s) => s.id === id);
   const pAt = (s, t) => 1 / (1 / (H - s.y0) + t * (1 / (H - s.y1) - 1 / (H - s.y0)));
   const door = (id) => { const s = shop(id), Y = H - pAt(s, 0.5); return [s.side * (half(Y) - 8), Y]; };
+  // what stands out on the pavement, reaching in past the street's walkable edge (L 110): walked round, never through (2026-11-24,
+  // the review; WALK_BLOCK.yudori) — [id, the shop it stands before, t along it, from L0 to L1 out from the middle, how deep (Y)], as
+  // FORE draws them: ゆのはな堂's steamers and price board; 花月's 行灯, stone lantern and pine; 甘味処's bench under its parasol
+  const PAVE = [['seiro', 'yunohanado', 0.32, 84, 128, 6], ['board', 'yunohanado', 0.16, 100, 124, 4], ['andon', 'kagetsu', 0.28, 97, 119, 5],
+    ['ishidoro', 'kagetsu', 0.18, 102, 122, 5], ['matsu', 'kagetsu', 0.88, 105, 127, 4], ['kanmi', 'kanmi', 0.3, 92, 136, 4]];
+  const BLOCKS = PAVE.map(([id, s, t, l0, l1, dy]) => { const S = shop(s), p = pAt(S, t), k = p / K, a = S.side * l0 * k, b = S.side * l1 * k;
+    return { id, box: [Math.min(a, b), Math.max(a, b), H - p - dy, H - p + dy] }; });
   // the passers (PASSERS): up the street into the 湯畑's steam, or out of it toward the station; lost in the steam at the far end
   const passWay = (rnd) => { const x = rnd(-36, 36), up = [[x, -40], [rnd(-22, 22), FAR + 30]]; return Math.random() < 0.55 ? up : up.reverse(); };
   const passFade = (X, Y) => Math.max(0, Math.min(1, (FAR + 30 - Y) / 26));
@@ -271,7 +278,7 @@ const YUDORI = (() => {
     let trees = '';
     for (let x = -10; x < 1215; x += 12) { const k = Math.floor(x / 12);
       [0, 1].forEach((r) => { const y = lerp(x) + 10 + r * 16 + ((k * 7 + r * 3) % 7), h = 18 + ((k * 5 + r * 11) % 14);
-        trees += (k + r) % 6 === 3 ? `<circle cx="${x + 2}" cy="${y - 7}" r="5.6" fill="${[c1, c2, c3][(k + r) % 3]}" style="filter:brightness(calc(.3 + .7 * var(--day)))"/><circle cx="${x - 3}" cy="${y - 4}" r="4.2" fill="${[c2, c3, c1][(k + r) % 3]}" style="filter:brightness(calc(.28 + .66 * var(--day)))"/>`
+        trees += (k + r) % 6 === 3 ? `<circle cx="${x + 2}" cy="${y - 7}" r="5.6" ${ONSEN.leafLit([c1, c2, c3][(k + r) % 3], 0.3, 0.7)}/><circle cx="${x - 3}" cy="${y - 4}" r="4.2" ${ONSEN.leafLit([c2, c3, c1][(k + r) % 3], 0.28, 0.66)}/>`
           : `<path d="M${x} ${f(y - h)} L${f(x + h * 0.28)} ${f(y)} H${f(x - h * 0.28)} Z" ${(k + r) % 2 ? hc('#3f6a4c', '#0e1828') : hc('#4f7a58', '#121e34')}/><path d="M${x} ${f(y - h)} L${f(x + h * 0.28)} ${f(y)} H${x} Z" fill="#0e1a12" style="opacity:calc(.04 + .12 * var(--day))"/>`; }); }
     return `<path d="${ridge(RANGE, 150)}" ${hc('#a9b9cb', '#1d2346')}/>${snow}<rect x="-20" y="-60" width="1240" height="50" fill="#fff" style="opacity:calc(.14 * var(--day))"/>
       <path d="${ridge(HILL, 150)}" ${hc('#6f9478', '#16223c')}/>${trees}<rect x="-20" y="-14" width="1240" height="164" fill="#fff" style="opacity:calc(.14 * var(--day))"/>`;
@@ -401,8 +408,7 @@ const YUDORI = (() => {
   // a go: paid (this device's 円 spent, the day kept), three corks — the prize's at the last if one is won — and what came of it
   function go(yard) {
     const c = document.querySelector('.yd-shateki'); if (!c || played() || yenEarned() <= 0 || yenBalance() < PRICE) return;
-    const p = state.purse, dev = kotoDevice(); p.spent[dev] = (Number(p.spent[dev]) || 0) + PRICE;
-    state.oneADay = Object.assign({}, state.oneADay, { shateki: day() }); saveState(); kotoButtons(document); SND.play('coins');
+    state.oneADay = Object.assign({}, state.oneADay, { shateki: day() }); yenSpend(PRICE); SND.play('coins');   // the day kept, saved with the 円 spent
     const won = prize(), [, , ja, zh] = PRIZES.find((x) => x[0] === won), me = ++shooting, foot = c.querySelector('.yd-foot'); foot.innerHTML = '';
     const target = { caramel: [0, 3, 7, 10], kokeshi: [2, 5, 6, 9], bear: [11] }[won], aims = [1, 4, 8];
     if (target) aims[2] = target[Math.floor(Math.random() * target.length)];
@@ -422,9 +428,10 @@ const YUDORI = (() => {
     setTimeout(() => knock(c, i, hit), 340);
   }
   function knock(c, i, hit) { const g = c.querySelector(`.yd-prize[data-i="${i}"]`); if (!g) return; g.classList.remove('wob', 'down'); void g.getBoundingClientRect(); g.classList.add(hit ? 'down' : 'wob'); }
-  return { H, Y0, FAR, HALF0, K, END, scale, half, top, clamp, SHOPS, shop, pAt, door, passWay, passFade, open, shutSay, sig, html, shateki, prize, PRIZES, PRICE, played };
+  return { H, Y0, FAR, HALF0, K, END, scale, half, top, clamp, SHOPS, shop, pAt, door, BLOCKS, passWay, passFade, open, shutSay, sig, html, shateki, prize, PRIZES, PRICE, played };
 })();
 DOWN.yudori = YUDORI;   // seen down its length (71a_yard.js)
+WALK_BLOCK.yudori = YUDORI.BLOCKS.map((x) => x.box);   // the pavement's things reaching into the street (YUDORI.BLOCKS)
 function yudoriHtml() { return YUDORI.html(); }
 
 // ---- what can be tapped along the street: each shop (its sign and front), ゆのはな堂's steamers (its menu, or when it opens), the

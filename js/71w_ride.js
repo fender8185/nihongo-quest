@@ -24,7 +24,7 @@ const RIDE = (() => {
   const ms = (s) => (s * 1000) / api.speed;
   const ticket = () => { try { return JSON.parse(localStorage.getItem(TK) || 'null'); } catch (e) { return null; } };
   const keep = (t) => { try { if (t) localStorage.setItem(TK, JSON.stringify(t)); else localStorage.removeItem(TK); } catch (e) { /* none kept */ } };
-  const spend = (n) => { const p = state.purse, dev = kotoDevice(); p.spent = p.spent || {}; p.spent[dev] = (Number(p.spent[dev]) || 0) + n; saveState(); if (typeof kotoButtons === 'function') kotoButtons(document); };
+  const spend = (n) => yenSpend(n);   // a ticket, the rest paid off the train (40_core.js)
   const st = (id) => ([...TOWN.EKI.LINE, ...((TOWN.EKI.YAMA || {}).LINE || [])].find((x) => x[0] === id) || [, id])[1];
   const fill = (l, o) => [l[0].replace(/\{S\}/g, o.S || '').replace('{P}', o.P || '').replace('{L}', o.L || ''), l[1].replace(/\{s\}/g, o.s || '').replace('{p}', o.p || '').replace('{l}', o.l || '')];
   const lineName = (ln) => L().lines[ln] || ['', ''];
