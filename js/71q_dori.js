@@ -31,8 +31,13 @@ const DORI = (() => {
   const pAt = (s, t) => 1 / (1 / (H - s.y0) + t * (1 / (H - s.y1) - 1 / (H - s.y0)));
   // where the hero stands to deal with a shop: halfway along it, at the street's edge
   const door = (id) => { const s = shop(id), Y = H - pAt(s, 0.5); return [s.side * (half(Y) - 8), Y]; };
-  return { H, Y0, FAR, HALF0, K, END, scale, half, top, clamp, SHOPS, shop, pAt, door };
+  // the passers' way (PASSERS): up 大通り to the corner and off to the right down the side street, or the other way; out of sight
+  // round the corner, behind the last shop on the right
+  const passWay = (rnd) => { const x = rnd(-50, 50), up = [[x, -40], [rnd(-20, 20), FAR + 6], [half(FAR) + 60, FAR + 6]]; return Math.random() < 0.6 ? up : up.reverse(); };
+  const passFade = (X, Y) => Math.max(0, Math.min(1, 1 - (X - half(Y) - 6) / 30));
+  return { H, Y0, FAR, HALF0, K, END, scale, half, top, clamp, SHOPS, shop, pAt, door, passWay, passFade };
 })();
+DOWN.chinadori = DORI;   // seen down its length (71a_yard.js)
 
 // ---- the street, drawn: a point of it is P(side, p, L, V) — p how far from the horizon (H − Y), L how far out from the middle
 // and V how high, both as they measure at the front (Y0), so everything shrinks toward the vanishing point (land x 600, y −60).

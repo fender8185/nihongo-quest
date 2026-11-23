@@ -7,11 +7,11 @@
 const TOWN = {
   // the places index.html draws people in (a new one goes here when it is drawn: street, station, sento, shrine, castle; 奥社 —
   // drawn since 2026-11-14 — with t5's stops there, 2026-11-23)
-  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi', 'oku', 'onsen'],
+  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi', 'oku', 'onsen', 'yudori', 'yubatake'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源', '湯の花', '森下'],
+  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源', '湯の花', '森下', '花月', 'ゆのはな堂', '湯けむり通り', '湯畑'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
-  HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21], dori: [10, 19], rairai: [10, 20] },
+  HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21], dori: [10, 19], rairai: [10, 20], yunohanado: [9, 21] },   // ゆのはな堂 (湯けむり通り, 2026-11-23): 竹内's hours too (Task 3: CAST.makoto)
   // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
   WAKE: [8, 12, 17, 20],
   // where people stand, by place: X along the land (0 the middle), Y up from the front. roam: how far they stroll about it either
@@ -39,6 +39,7 @@ const TOWN = {
     platform: { stand: { X: -376, Y: 128, roam: [4, 2] } },   // みなと駅のホーム (2026-11-20): ハル behind her bento stall
     sushi: { counter: { u: 10.6, v: 1.75 } },   // みなと寿司 (2026-11-23): 源さん behind the counter, his hands at work over it (SUSHI)
     onsen: { window: { X: 158, Y: 136, roam: 0 } },   // 湯の花駅前 (2026-11-23): あかり behind the 観光案内所's counter window (ONSEN), her face between its mullions
+    yudori: { yunohanado: { X: -66, Y: 126, roam: [8, 3] } },   // 湯けむり通り (2026-11-23): before ゆのはな堂 by its steamers (竹内, 9–21: TOWN.HOURS.yunohanado; YUDORI)
     kyoshitsu: { teach: { u: 4.6, v: 3.6 }, desk1: { u: 5.6, v: 5.85, sit: 1, pose: 'turn flip' }, desk2: { u: 13, v: 5.85, sit: 1, pose: 'turn flip' }, desk3: { u: 16.6, v: 5.85, sit: 1, pose: 'turn flip' }, tatami: { u: 19.4, v: 12.4, h: 0.5, kneel: 1, pose: 'turn flip' } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
@@ -3738,7 +3739,26 @@ const TOWN = {
           ['ホタテが かいがらから はみだしそうです。', '扇貝大到快從殼裡滿出來了。']],
         say: [['あつっ！ でも、ぷりっぷりです！', '好燙！可是好Q彈！'], ['かむと、うみの {味|あじ|味道}が じゅわっと でて きます。', '一咬，大海的味道就滲出來。'], ['バターじょうゆが ホタテに よく あいます。', '奶油醬油和扇貝超搭。'],
           ['かいがらの スープも のみたいです…', '貝殼裡的湯汁也好想喝……'], ['ひもも こりこりして おいしい！', '裙邊也脆脆的好好吃！'], ['うみを {見|み}ながら {食|た}べると、さいこうです！', '一邊看海一邊吃，最棒了！']] }]],
-      have: 'いい におい！' }
+      have: 'いい におい！' },
+    // 湯の花温泉 (2026-11-23, spec §6): ゆのはな堂's 温泉まんじゅう out of the steamers before its door on 湯けむり通り, by its hours (9–21:
+    // HOURS yunohanado) — no word to learn first, nobody to sell it till 竹内 stands there (Task 3 gives the menu his keeper and hello);
+    // had there, bitten
+    yunohanado: { title: '{ゆのはな堂|ゆのはなどう}', shop: '{湯けむり通り|ゆけむりどおり}の {ゆのはな堂|ゆのはなどう}',
+      items: [['onsenmanju', '{温泉|おんせん}まんじゅう', '溫泉饅頭', 120, { k: 'f', pic: '温泉まんじゅう',
+        look: [['せいろの ふたが あくと、ゆげが ふわっと {上|あ}がりました！', '蒸籠的蓋子一打開，蒸氣就輕飄飄地冒上來！'], ['ちゃいろい かわが、つやつや ひかって います。', '咖啡色的外皮亮晶晶的。'],
+          ['うえに「{湯|ゆ|熱水}」の じが やいて あります。', '上面烙著一個「湯」字。'], ['{手|て}に もつと、まだ ほかほかです。', '拿在手上，還熱呼呼的。']],
+        say: [['あつっ！ でも、ほかほかで おいしい！', '好燙！可是熱呼呼的好好吃！'], ['かわが もちっと して、しっとり して います。', '外皮Q彈，又濕潤。'], ['なかの こしあんが なめらかで、あまさも ちょうど いいです。', '裡面的豆沙很細滑，甜度也剛剛好。'],
+          ['くろざとうの こうばしい かおりが します。', '有黑糖的香氣。'], ['ふたくちで ぺろりと {食|た}べて しまいました。', '兩口就一下子吃光了。'], ['おみやげに {買|か}って かえりたいです！', '好想買回去當伴手禮！']] }]],
+      have: 'ほかほか！' },
+    // the 湯畑's 無人販売所 (2026-11-23, spec §3.3, §6): eggs in a basket in the hot water, nobody keeping it — its sign read and 100 円 put in
+    // its box (YUBATAKE's card, not a menu: YEN.pay); opened by たまご; had there by the steam, the egg broken into a cup, by spoon
+    tamago: { title: '{無人販売所|むじんはんばいじょ|無人販賣處}', shop: '{湯畑|ゆばたけ}の {無人販売所|むじんはんばいじょ|無人販賣處}',
+      items: [['onsentamago', '{温泉|おんせん}たまご', '溫泉蛋', 100, { k: 'f', w: '卵', pic: '温泉たまご',
+        look: [['からを わると、たまごが つるんと カップに おちました。', '把殼一敲開，蛋就滑溜溜地掉進杯子裡。'], ['しろみは ぷるぷる、きみは まんまるです。', '蛋白軟嫩嫩的，蛋黃圓滾滾的。'],
+          ['だしじょうゆを かけると、いい においが します。', '淋上醬油高湯，好香。'], ['{温泉|おんせん}の おゆで、ゆっくり ゆでた たまごです。', '是用溫泉的熱水慢慢煮出來的蛋。']],
+        say: [['きみが とろっと して、こくが あります。', '蛋黃滑順濃郁。'], ['しろみは つるんと して、やわらかいです。', '蛋白滑溜溜的，好軟。'], ['だしの あじが しみて、やさしい あじです。', '高湯的味道滲進去，味道很溫和。'],
+          ['スプーンで すくうと、ぷるんと ゆれます。', '用湯匙一舀，就軟嫩嫩地晃動。'], ['あたたかくて、おなかが ぽかぽか して きました。', '暖暖的，肚子都暖呼呼起來了。'], ['ゆげを {見|み}ながら {食|た}べると、もっと おいしいです。', '一邊看著蒸氣一邊吃，更好吃了。']] }]],
+      have: 'いただきます！' }
   },
   // もらいもの (2026-11-22, the user: a food or two not bought — given after a word, or for a job done well): who gives it and where;
   // ask: the hero's reply in their talk that brings it (once a day), or job and grade: the shift it comes after (its results put away);

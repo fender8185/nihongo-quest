@@ -214,6 +214,95 @@ def test_no_ticket_is_sold_that_cannot_be_ridden(b):
     assert r['sold'] == [30, 260] and r['refused'] == [True, True, True, 1, None], r   # みなと線 wants 50 more: refused in the card; やまなみ線 still to hand
     assert r['minato'] == [10, 140], r   # みなと's: 2番線 to みなと港 takes any ticket
 
+# ---- Task 2: 湯けむり通り, 湯畑, the food and 射的 (spec §3.2, §3.3, §6) ----
+# motion reduced (a walk out is there at once, a meal straight to its end) and nobody about the street
+CALM = """const mm = window.matchMedia; window.matchMedia = (q) => (/reduced-motion/.test(q) ? { matches: true } : mm.call(window, q));
+  const eat = async () => { await watch(() => document.querySelector('.eat-scene'), 6000); const es = document.querySelector('.eat-scene'); if (!es) return null;
+    const o = { bg: es.querySelector('.es-face').dataset.bg, name: es.querySelector('.es-name').textContent, look: 0, say: 0 };
+    while (es.querySelector('.es-face').dataset.mood === 'drool') { o.look += 1; es.querySelector('.es-ok').click(); await wait(60); }
+    while (document.querySelector('.eat-scene')) { o.say += 1; document.querySelector('.es-ok').click(); await wait(60); } return o; };"""
+
+# the onsen's own ring grows (ruling 1): 湯の花駅前 ↔ 湯けむり通り ↔ 湯畑, joined both ways and walked both ways by their way buttons; still a
+# ring of its own — none of the harbour town's places is reached from it on foot, nor it from them (the train only)
+def test_the_town_walks_station_street_yubatake(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {};
+      out.ways = [['onsen', 'yudori'], ['yudori', 'yubatake']].filter(([a, c]) => !(WAYS[a + '>' + c] && WAYS[c + '>' + a]));
+      out.routes = ['yudori', 'yubatake'].map((p) => PLACE_ROUTE[p]); out.names = ['yudori', 'yubatake'].map((p) => TOWNEV.PLACE_NAME[p]);
+      out.hops = [TOWNEV.hop('onsen', 'yubatake'), TOWNEV.hop('yubatake', 'onsen'), TOWNEV.hop('onsen', 'town'), TOWNEV.hop('town', 'yubatake'), TOWNEV.hop('yudori', 'harbor'), TOWNEV.hop('harbor', 'beach')];
+      const ways = () => [...yard().querySelectorAll('.way-btn')].map((w) => w.dataset.to).sort();
+      const walk = async (to, hash) => { click(`.yard .way-btn[data-to="${to}"]`); await watch(() => location.hash === hash, 8000); await wait(500); return location.hash; };
+      await at('onsen'); out.station = ways(); out.walked = [await walk('yudori', '#/yudori')]; out.street = ways(); out.cam = Math.round(ycam.x);
+      out.walked.push(await walk('yubatake', '#/yubatake')); out.square = ways();
+      out.walked.push(await walk('yudori', '#/yudori'), await walk('onsen', '#/onsen'));
+      return JSON.stringify(out); })()"""))
+    assert r['ways'] == [] and r['routes'] == ['#/yudori', '#/yubatake'] and r['names'] == ['湯けむり通り', '湯畑'], r
+    assert r['hops'] == ['yudori', 'yudori', None, None, None, 'beach'], r   # its own ring; the harbour town's as it was
+    assert r['station'] == ['yudori'] and r['street'] == ['onsen', 'yubatake'] and r['square'] == ['yudori'], r
+    assert r['walked'] == ['#/yudori', '#/yubatake', '#/yudori', '#/onsen'] and r['cam'] == 0, r   # down the street: one screen, seen down its length
+
+# ゆのはな堂 (ruling 2) keeps 竹内's hours, 9–21 (TOWN.HOURS.yunohanado): outside them its front is shut — a tap says when it opens, never
+# an empty menu — and in them its 温泉まんじゅう is sold, nobody standing there yet (竹内 comes in Task 3: SPOTS.yudori.yunohanado)
+def test_the_manju_shop_keeps_its_hours(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
+      const look = async (h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; await at('yudori'); const o = [Boolean(yard().querySelector('.use-btn[data-use="yunohanado"]')), Boolean(yard().querySelector('.use-btn[data-use="junbi"]'))];
+        click(`.yard .use-btn[data-use="${o[0] ? 'yunohanado' : 'junbi'}"]`); await wait(1200); o.push(Boolean(document.querySelector('.mc-item')), toasts.splice(0).join('|')); closeModal(); return o; };
+      out.early = await look(8); out.open = await look(10); out.late = await look(21.5);
+      out.hours = TOWN.HOURS.yunohanado; out.spot = TOWN.SPOTS.yudori && TOWN.SPOTS.yudori.yunohanado; return JSON.stringify(out); })()"""))
+    assert r['early'][:3] == [False, True, False] and '9:00' in r['early'][3], r   # shut: the tap says it opens at 9
+    assert r['open'][:3] == [True, False, True], r   # open: its menu
+    assert r['late'][:3] == [False, True, False] and '明天' in r['late'][3] and '9:00' in r['late'][3], r
+    assert r['hours'] == [9, 21] and r['spot'] and r['spot']['X'] < 0, r   # the hours kept once, the spot before the shop on the left
+
+# ゆのはな堂's 温泉まんじゅう (120 円): no course word to learn first (spec §6); the 湯畑's 無人販売所's 温泉たまご (100 円): locked till たまご is
+# learned, then paid for by reading its hand-written sign (ひとつ 100円。お金は この 箱へ) — the 100 円 coin into the box (50 is too little,
+# 500 wants change nobody is there to give), one egg taken; each had on a screen of its own where it is had, three looks and five
+# words at least; the two foods of the day
+def test_manju_and_eggs_are_bought_and_eaten(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {}; state.srs = {}; saveState();
+      await at('yudori'); click('.yard .use-btn[data-use="yunohanado"]'); await wait(200);
+      out.menu = [...document.querySelectorAll('.mc-item')].map((x) => [x.dataset.item || 'locked', x.disabled]);
+      click('.mc-item[data-item="onsenmanju"]'); out.manju = await eat(); out.bal1 = yenBalance();
+      await at('yubatake'); click('.yard .use-btn[data-use="tamago"]'); await watch(() => document.querySelector('.yb-stand'), 6000);
+      const card = () => document.querySelector('.yb-stand'), coins = () => [...card().querySelectorAll('.yb-coin')].map((c) => [c.dataset.coin, c.disabled]);
+      out.sign = card().querySelector('.yb-sign').textContent.replace(/\\s+/g, ''); out.locked = [Boolean(card().querySelector('.yb-lock')), coins()]; CLASS.close();
+      const t = todayStr(); REG.vocab.filter((v) => jaPlain(v.w) === '卵').forEach((v) => { state.srs[v.key] = { b: 3, due: addDays(t, 9), n: 4, ok: 4, ng: 0, s: 9, d: 5, last: addDays(t, -2), intro: addDays(t, -20), lrn: addDays(t, -2) }; }); saveState();
+      click('.yard .use-btn[data-use="tamago"]'); await watch(() => document.querySelector('.yb-stand'), 6000); out.open = [Boolean(card().querySelector('.yb-lock')), coins()];
+      click('.yb-coin[data-coin="500"]'); await wait(300); out.change = [yenBalance(), Boolean(card())];
+      click('.yb-coin[data-coin="50"]'); await wait(300); out.short = [yenBalance(), Boolean(card())];
+      click('.yb-coin[data-coin="100"]'); out.egg = await eat(); out.bal2 = yenBalance(); out.today = state.purse.today; out.book = Object.keys(state.purse.book).sort();
+      out.dish = [EATSCENE.way(TOWN.MENU.yunohanado.items[0]), EATSCENE.way(TOWN.MENU.tamago.items[0])]; out.pics = ['温泉まんじゅう', '温泉たまご'].map((k) => Boolean(PICS_TOWN[k]));
+      return JSON.stringify(out); })()"""))
+    assert r['menu'] == [['onsenmanju', False]], r   # no word to learn first
+    m, e = r['manju'], r['egg']
+    assert m and m['bg'] == 'yudori' and m['look'] >= 3 and m['say'] >= 5 and 'まんじゅう' in m['name'] and r['bal1'] == 880, r
+    assert 'ひとつ' in r['sign'] and '100円' in r['sign'] and '箱' in r['sign'], r   # the sign as written, to be read
+    assert r['locked'] == [True, [['50', True], ['100', True], ['500', True]]], r   # たまご not learned: the sign to read, nothing to pay with
+    assert r['open'] == [False, [['50', False], ['100', False], ['500', False]]] and r['change'] == [880, True] and r['short'] == [880, True], r
+    assert e and e['bg'] == 'yubatake' and e['look'] >= 3 and e['say'] >= 5 and 'たまご' in e['name'] and r['bal2'] == 780, r
+    assert r['today']['f'] == 2 and r['book'] == ['onsenmanju', 'onsentamago'] and r['dish'] == ['bite', 'spoon'] and r['pics'] == [True, True], r
+
+# 射的 (spec §3.2): 300 円 a go, once a day — a cork gun's ポン, a prize at random (mostly はずれ; キャラメル or 小こけし; now and then
+# 大当たり, the big bear), nothing kept; a second go the same day refused with nothing taken, the next day again. The day is kept in
+# state.oneADay.shateki: normalizeState keeps it, mergeStates keeps the later day (tests/sync-core.test.js)
+def test_shateki_once_a_day(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
+      const go = async () => { click('.yard .use-btn[data-use="shateki"]'); await watch(() => document.querySelector('.yd-shateki'), 6000); const c = document.querySelector('.yd-shateki');
+        const o = { card: Boolean(c), btn: Boolean(c && c.querySelector('.yd-go:not(:disabled)')), done: Boolean(c && c.querySelector('.yd-done')) };
+        if (o.btn) { c.querySelector('.yd-go').click(); await watch(() => toasts.some((m) => /射的/.test(m)), 6000); }
+        o.toast = toasts.splice(0).join('|'); o.bal = yenBalance(); CLASS.close(); return o; };
+      await at('yudori'); out.first = await go(); out.day = state.oneADay && state.oneADay.shateki; out.again = await go();
+      out.kept = normalizeState(JSON.parse(JSON.stringify(state))).oneADay;
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 11) }; await at('yudori'); out.next = await go();
+      const n = {}; for (let i = 0; i < 4000; i++) { const p = YUDORI.prize(); n[p] = (n[p] || 0) + 1; } out.odds = n; out.prizes = YUDORI.PRIZES.map((p) => p[0]);
+      return JSON.stringify(out); })()"""))
+    f, a, n = r['first'], r['again'], r['next']
+    assert f['card'] and f['btn'] and f['bal'] == 700 and '射的' in f['toast'] and r['day'] == '2026-11-10', r   # 300 円, and what came of it
+    assert a['card'] and not a['btn'] and a['done'] and a['bal'] == 700 and '射的' not in a['toast'], r   # the same day: refused, nothing taken
+    assert r['kept'] == {'shateki': '2026-11-10'}, r   # kept through a load
+    assert n['btn'] and n['bal'] == 400, r   # the next day again
+    o = r['odds']
+    assert r['prizes'] == ['hazure', 'caramel', 'kokeshi', 'bear'] and o['hazure'] > o['caramel'] > 0 and o['kokeshi'] > o['bear'] > 0 and o['hazure'] > 4000 * 0.45, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":

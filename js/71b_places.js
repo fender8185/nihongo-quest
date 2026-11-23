@@ -54,7 +54,7 @@ INDOOR.forEach((pl) => Object.values(TOWN.SPOTS[pl] || {}).forEach((sp) => { if 
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
 const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128, rairai: 128, platform: 128, sushi: 128, onsen: 128 };
-const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : place === 'chinadori' ? (X === undefined ? DORI.FAR : DORI.top(X)) : WALK_TOP[place] || 214);   // 中華街大通り: its trapezoid (DORI)   // the yard: a hilltop, lower towards its sides — not out over the edge
+const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : DOWN[place] ? (X === undefined ? DOWN[place].FAR : DOWN[place].top(X)) : WALK_TOP[place] || 214);   // a street seen down its length: its trapezoid (DOWN)   // the yard: a hilltop, lower towards its sides — not out over the edge
 // what stands in the way in each place (2026-11-10, the user: he walked about as if every place were flat ground): the ground the
 // things there stand on, [X0, X1, Y0, Y1] in his units — benches, crates, tables and stools, the sandbox, the beach's grassy bank
 // either side of the boardwalk — and in the yard its wares and the mailbox. He goes round them (yRoute); a tap on one sends him to
@@ -202,7 +202,8 @@ function yRoute(place, p0, goal0, free) {
 // to it (back: it stands behind him), a pose for a moment, words popping up over it (say, then), its part (fx) doing fxc for ms,
 // a fortune, a toast (or what it says now), a burst of petals or leaves; out: he goes in and comes back ms later (then: words as he
 // does); when: there only then (an open shop, the festival); go may follow the tap ((tap) => [X, Y]: the words over him); mirror:
-// then into the look in front of a mirror (DRESS, as the full-length mirror)
+// then into the look in front of a mirror (DRESS, as the full-length mirror); over: its button over those round it (湯けむり通り's cat on
+// ゆかた屋's step, 2026-11-23)
 const KUJI = [['大吉', '一切都會很順利！'], ['中吉', '努力會有好結果。'], ['小吉', '小小的好事在等你。'], ['吉', '平平穩穩就是福。'], ['末吉', '慢慢來，會越來越好。']];
 // the 緣日's stalls along the shrine's approach (2026-11-13, the user: seven or eight, more to eat): [id, x of its left edge on the
 // land, awning, sign, name, who keeps it (TOWN.YATAI; a menu's keeper says its prices)] — drawn 72 wide (shrineHtml), four before
@@ -374,7 +375,7 @@ const USED = (() => {
     mark(place, id) { const s = all(), k = `${place}.${id}`; if (s[k]) return; s[k] = 1; try { localStorage.setItem('nq_used', JSON.stringify(s)); } catch (e) { /* no storage: this visit only */ } }
   };
 })();
-const useBtnsHtml = (place, only) => (PLACE_USE[place] || []).filter((t) => (!only || only(t)) && (!t.when || t.when())).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn${t.sign ? ' thing signed' : ''}${USED.has(place, t.id) ? ' tried' : ''}" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${INDOOR.includes(place) ? 1 : Math.round(150 - (370 - y1) / 4)}${t.signAt ? `;--tx:${t.signAt[0]}%;--ty:${t.signAt[1]}%` : ''}">${t.sign ? `<span class="tag">${ySign(t.sign, t.name)}</span>` : ''}</button>`; }).join('');   // only: those of them (the 朝市's stalls put up in place: ICHIBA.sync)
+const useBtnsHtml = (place, only) => (PLACE_USE[place] || []).filter((t) => (!only || only(t)) && (!t.when || t.when())).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn${t.sign ? ' thing signed' : ''}${USED.has(place, t.id) ? ' tried' : ''}" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${INDOOR.includes(place) ? 1 : Math.round(150 - (370 - y1) / 4) + (t.over ? 60 : 0)}${t.signAt ? `;--tx:${t.signAt[0]}%;--ty:${t.signAt[1]}%` : ''}">${t.sign ? `<span class="tag">${ySign(t.sign, t.name)}</span>` : ''}</button>`; }).join('');   // only: those of them (the 朝市's stalls put up in place: ICHIBA.sync)
 // words popping up over a thing (x, y in the land's units), a burst of petals or leaves off a tree
 function yPop(yard, x, y, text) {
   const w = yard && yard.querySelector('.yworld'); if (!w) return;
@@ -512,11 +513,11 @@ function yHeroWalk(yard, to, done, free) {   // free: on the way out of the plac
   const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
   yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) { el.classList.remove('climb'); yClimbLook(el, 0); }   // off the hill path, if he was on it
   HERO.still(el); if (el) el.classList.remove('bench');   // up off the bus stop's bench
-  const from = [yh.X, yh.Y], aim = INDOOR.includes(yPlace) ? (free ? to : isoClamp(to)) : yPlace === 'chinadori' && !free ? DORI.clamp(to) : [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(free ? 222 : walkTop(yPlace, Math.max(-lim, Math.min(lim, to[0]))), to[1]))];
+  const from = [yh.X, yh.Y], aim = INDOOR.includes(yPlace) ? (free ? to : isoClamp(to)) : DOWN[yPlace] && !free ? DOWN[yPlace].clamp(to) : [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(free ? 222 : walkTop(yPlace, Math.max(-lim, Math.min(lim, to[0]))), to[1]))];
   const pts = yRoute(yPlace, from, aim, free), goal = pts[pts.length - 1], seg = []; let len = 0;   // round what stands in the way
   for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (d) { seg.push([pts[i - 1], pts[i], len, d]); len += d; } }
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
-  const v = Math.max(170, len / 1.1) * (yPlace === 'chinadori' ? Math.max(0.4, DORI.scale((from[1] + goal[1]) / 2) / 0.5) : 1); yh.v = v;   // px a second: a long way hurries, about a second at most; down 中華街大通り's length, slower the further in (a step there is short)
+  const v = Math.max(170, len / 1.1) * (DOWN[yPlace] ? Math.max(0.4, DOWN[yPlace].scale((from[1] + goal[1]) / 2) / 0.5) : 1); yh.v = v;   // px a second: a long way hurries, about a second at most; down a street's length (DOWN), slower the further in (a step there is short)
   const face = ([a, b]) => { const dx = b[0] - a[0], dy = b[1] - a[1]; yh.back = dy > 0; if (Math.abs(dx) > 1) yh.flip = dx < 0; yh.turn = Math.abs(dx) > 0.5 * Math.abs(dy); };   // across the lawn: a little turned
   let on = seg[0]; face(on);
   el.classList.remove('out'); el.classList.toggle('run', v > 260); el.classList.toggle('walk', v <= 260);

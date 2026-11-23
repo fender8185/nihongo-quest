@@ -77,13 +77,19 @@ const YEN = (() => {
   function toggleZh() { if (!at) return; zh = !zh; show(); }
 
   // ---- bought: paid, ordered, had ----
+  const can = (m, id) => { const it = item(m, id); return Boolean(it) && known(it) && yenEarned() > 0 && yenBalance() >= it[3]; };
   function buy(id) {
     if (!at) return;
-    const { yard, t, m } = at, mu = M()[m], it = item(m, id), k = opt(it || []).k; if (!it || !known(it) || yenEarned() <= 0 || yenBalance() < it[3]) return;
-    closeModal(); at = null;
+    const { yard, t, m } = at; if (!can(m, id)) return;
+    closeModal(); at = null; pay(yard, t, m, id);
+  }
+  // paid for and had (from its menu, or paid into a box nobody keeps: the 湯畑's 無人販売所, 2026-11-23 — its sign read, the coin in):
+  // false when it is not to be had — not to be bought, or had enough today (he says so; nothing paid)
+  function pay(yard, t, m, id) {
+    const mu = M()[m], it = item(m, id), k = opt(it || []).k; if (!mu || !can(m, id)) return false;
     if (left(k) <= 0) {   // had enough today: he says so, the keeper says come again tomorrow
       const ls = [['hero', ...FULL[k]]]; if (mu.keeper) ls.push([mu.keeper[0], ...AGAIN]);
-      TALK.open(yard, mu.keeper ? mu.keeper[0] : 'hero', ls, null, null, { ev: true }); return;
+      TALK.open(yard, mu.keeper ? mu.keeper[0] : 'hero', ls, null, null, { ev: true }); return false;
     }
     const p = state.purse, dev = kotoDevice(), first = !p.book[id], td = today();
     p.spent[dev] = (Number(p.spent[dev]) || 0) + it[3]; if (first) p.book[id] = day();
@@ -94,9 +100,10 @@ const YEN = (() => {
       if (HAD[k]) setTimeout(() => eat(it, first, m), mu.sit ? 1500 : 1300); else if (first) setTimeout(() => stamp(it), 1000);
       if (k === 'b') setTimeout(() => { if (!yard.isConnected) return; yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), 'おなか すいた〜！'); toast('泡完澡，肚子又餓了。', 2600); }, (t.out || 0) + 1800);
     };
-    if (!mu.keeper) { SND.play('coins'); then(); return; }   // a machine, the おみくじ box
+    if (!mu.keeper) { SND.play('coins'); then(); return true; }   // a machine, the おみくじ box, a box nobody keeps
     const [o, oz] = order(mu, it), [pr, pz] = price(mu, it);
     TALK.open(yard, mu.keeper[0], [['hero', o, oz], [mu.keeper[0], pr, pz, { snd: 'coins' }]], then, null, { ev: true });
+    return true;
   }
   // had where it is had: the thing's own doing (a can down the chute, the bath, a fortune) with what is said as it is had after;
   // else what is said as it is had; the 食堂 and the 居酒屋: sat down to it at a table or the counter, and 「ごちそうさまでした」 a while on
@@ -116,7 +123,8 @@ const YEN = (() => {
   // looks, a line a tap), いただきます and it is had, then he goes on about it (its say, a line a tap, read out, the Chinese on a
   // tap) and 「ごちそうさまでした！」; the first time, its stamp ----
   // where it is had, for the scene's backdrop (EATSCENE BG): the menu's own place; a machine in the street or the station; the stalls
-  const WHERE = { shokudo: 'shokudo', izakaya: 'izakaya', cafe: 'cafe', milk: 'sento', vend: 'street', bakery: 'bakery', chaya: 'chaya', butaman: 'chinatown', ryuho: 'chinatown', ekiben: 'platform', evend: 'platform', sushi: 'sushi', ichiba: 'ichiba' };   // みなと寿司's counter, the 朝市 by the sea (2026-11-23)
+  const WHERE = { shokudo: 'shokudo', izakaya: 'izakaya', cafe: 'cafe', milk: 'sento', vend: 'street', bakery: 'bakery', chaya: 'chaya', butaman: 'chinatown', ryuho: 'chinatown', ekiben: 'platform', evend: 'platform', sushi: 'sushi', ichiba: 'ichiba',   // みなと寿司's counter, the 朝市 by the sea (2026-11-23)
+    yunohanado: 'yudori', tamago: 'yubatake' };   // 湯の花温泉 (2026-11-23): before ゆのはな堂 on 湯けむり通り, by the 湯畑's steam
   const where = (m) => WHERE[m] || (typeof SHRINE_STALLS !== 'undefined' && SHRINE_STALLS.some(([id]) => id === m) ? 'fair' : 'shokudo');
   function eat(it, first, m) {
     const o = opt(it), drink = o.k === 'd', el = document.createElement('div');
@@ -211,5 +219,5 @@ const YEN = (() => {
     given()[g] = day(); if (first) p.book[it[0]] = day(); saveState();
     setTimeout(() => eat(it, first, x.bg), 300);
   }
-  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic, where, treat, gifts: G, giftAsk, giftFor, gift };
+  return { open, buy, pay, can, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic, where, treat, gifts: G, giftAsk, giftFor, gift };
 })();

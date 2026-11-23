@@ -432,6 +432,9 @@ function normalizeState(s) {
   if (pu.today && typeof pu.today.day === 'string') out.purse.today = { day: pu.today.day, f: num(pu.today.f), d: num(pu.today.d), b: num(pu.today.b), o: num(pu.today.o) };   // b, o: the bath, おみくじ (once a day)
   if (num(pu.gift)) out.purse.gift = num(pu.gift);
   const gifts = Object.fromEntries(Object.entries(obj(pu.gifts)).filter(([, v]) => typeof v === 'string')); if (Object.keys(gifts).length) out.purse.gifts = gifts;   // a gift had (2026-11-22): the day, once a day each
+  // things had once a day (2026-11-23: 湯けむり通り's 射的, oneADay.shateki): the day each was last had. Out of the town and the purse,
+  // which 1.21.0 rebuilds key by key: a copy that has been through a device on 1.21.0 still has it
+  const once = Object.fromEntries(Object.entries(obj(out.oneADay)).filter(([, v]) => typeof v === 'string' && /^\d{4}-\d\d-\d\d$/.test(v))); if (Object.keys(once).length) out.oneADay = once; else delete out.oneADay;
   const wk = obj(out.work);   // 中華街の打工 (2026-11-14): a record a day, as WORK keeps it
   out.work = { res: Object.fromEntries(Object.entries(obj(wk.res)).filter(([d, r]) => /^\d{4}-\d\d-\d\d(#\d+)?$/.test(d) && r && typeof r === 'object' && typeof r.place === 'string').map(([d, r]) => [d, Object.assign({ place: r.place, done: num(r.done), score: Object.fromEntries(Object.entries(obj(r.score)).map(([k, v]) => [k, num(v)])) },
     r.yen !== undefined && r.yen !== null ? { yen: num(r.yen), grade: typeof r.grade === 'string' ? r.grade : 'E', tip: num(r.tip) } : r.keep && typeof r.keep === 'object' ? { keep: r.keep } : {})])) };   // keep: what a runner needs back after a break (the taxi's おつり, 外場's stars), till paid

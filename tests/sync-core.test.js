@@ -318,3 +318,12 @@ test('mergeStates: the bun steps answered right are kept, the more of each (2026
   const b = { v: 3, updatedAt: '2026-11-14T02:00:00.000Z', work: { res: {}, seenSteps: { kone: 2, musu: 4 } } };
   assert.deepEqual(C.mergeStates(a, b).work.seenSteps, { kone: 3, marume: 1, musu: 4 });
 });
+
+test('mergeStates: a thing once a day (射的: oneADay.shateki) keeps the later day of either copy, whichever was saved later (2026-11-23)', () => {
+  const at = (h, oneADay) => Object.assign({ v: 3, updatedAt: `2026-11-23T0${h}:00:00.000Z` }, oneADay ? { oneADay } : {});
+  assert.deepEqual(C.mergeStates(at(1, { shateki: '2026-11-23' }), at(2, { shateki: '2026-11-22' })).oneADay, { shateki: '2026-11-23' });   // the newer copy holds the older day
+  assert.deepEqual(C.mergeStates(at(2, { shateki: '2026-11-22' }), at(1, { shateki: '2026-11-23' })).oneADay, { shateki: '2026-11-23' });
+  assert.deepEqual(C.mergeStates(at(1, { shateki: '2026-11-23' }), at(2)).oneADay, { shateki: '2026-11-23' });   // a copy without it (1.21.0's): kept
+  assert.deepEqual(C.mergeStates(at(2, { manju: '2026-11-21' }), at(1, { shateki: '2026-11-20' })).oneADay, { manju: '2026-11-21', shateki: '2026-11-20' });   // each thing its own
+  assert.equal(C.mergeStates(at(1), at(2)).oneADay, undefined);   // nothing invented
+});

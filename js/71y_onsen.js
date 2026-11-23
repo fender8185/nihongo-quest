@@ -27,7 +27,7 @@ const ONSEN = (() => {
   // nothing, no filter — rising and swelling by transform only (.os-steam), cheap on a phone. steamDefs(): the gradient, once in a
   // land's <svg> (its colour --os-puff: white by day, a dim lilac by night); steam(puffs): [x, y, r, delay s] each ----
   const steamDefs = () => `<defs><radialGradient id="osPuff"><stop offset="0" style="stop-color:var(--os-puff)" stop-opacity=".95"/><stop offset=".5" style="stop-color:var(--os-puff)" stop-opacity=".5"/><stop offset="1" style="stop-color:var(--os-puff)" stop-opacity="0"/></radialGradient></defs>`;
-  const steam = (puffs) => puffs.map(([x, y, r, d]) => `<circle class="os-steam" cx="${x}" cy="${y}" r="${r}" fill="url(#osPuff)" style="animation-delay:-${d}s"/>`).join('');
+  const steam = (puffs, cls = '') => puffs.map(([x, y, r, d]) => `<circle class="os-steam${cls ? ' ' + cls : ''}" cx="${x}" cy="${y}" r="${r}" fill="url(#osPuff)" style="animation-delay:-${d}s"/>`).join('');   // cls: yd-small, a short rise (a steamer's, a gutter's: 湯けむり通り)
   const lerpY = (P, x) => { const i = Math.max(0, P.findIndex((p) => p[0] > x) - 1), [x0, y0] = P[i], [x1, y1] = P[i + 1] || P[i]; return y0 + (y1 - y0) * ((x - x0) / ((x1 - x0) || 1)); };
   const FAR = [[-20, -40], [80, -96], [170, -70], [260, -128], [360, -84], [450, -110], [540, -150], [640, -104], [730, -138], [820, -92], [920, -120], [1020, -80], [1110, -112], [1220, -70]];
   const MID = [[-20, 30], [100, -20], [200, 10], [300, -40], [420, 0], [520, -30], [600, -56], [690, -20], [780, -44], [880, -4], [980, -30], [1080, 6], [1220, -16]];
@@ -214,7 +214,7 @@ const ONSEN = (() => {
       <path d="M${x + w / 2} ${y - 6} v6" ${hs('#3b3b44', '#1c1d3c')} stroke-width="1.4"/><path d="M${x + w / 2 - 7} ${y} h14 l-3 4 h-8 Z" ${hc('#3b3b44', '#1c1d3c')}/><path class="glow" d="M${x + w / 2 - 4} ${y + 4} L${x - 4} ${y + h + 4} H${x + w + 4} L${x + w / 2 + 4} ${y + 4} Z" fill="url(#glw)" style="opacity:calc((1 - var(--day)) * .6)"/></g>`;
   }
   // ---- the mouth of 湯けむり通り on the right: the corner of a two-storey wooden house (latticed windows, a noren, a lantern), the
-  // signpost with the street's name, a string of lanterns across, warm light by night ----
+  // signpost with the street's name, a string of lanterns across, warm light by night; its way in (WAYS onsen>yudori, 2026-11-23) ----
   function street() {
     const lan = (x, y, k) => `<g class="fx-sway" style="animation-delay:-${(k * 0.7).toFixed(1)}s;animation-duration:${(3.2 + k * 0.3).toFixed(1)}s"><path d="M${x} ${y - 5} v5" stroke="#3b2a1c" stroke-width=".8"/><ellipse cx="${x}" cy="${y + 7}" rx="5.4" ry="7" ${hc('#d0302a', '#ff8a5a')}/><path d="M${x - 5} ${y + 5} q5 1.4 10 0 M${x - 5} ${y + 9} q5 1.4 10 0" fill="none" stroke="#8a1a1a" stroke-opacity=".45" stroke-width=".6"/><circle class="glow" cx="${x}" cy="${y + 7}" r="18" fill="url(#glw)"/></g>`;
     return `<path d="M1124 236 V118 L1160 98 L1226 98 V236 Z" ${hc('#8a6a48', '#2a2238')}/><path d="M1118 120 L1160 94 L1230 94" fill="none" ${hs('#4a5262', '#14152c')} stroke-width="7"/>
@@ -263,6 +263,7 @@ const ONSEN = (() => {
     ${landProp(74, rickBack(), null, [RICK.x - 70, RICK.g - 104, RICK.x + 140, RICK.g + 8])}${landProp(60, rickFront(), null, [RICK.x - 40, RICK.g - 66, RICK.x + 140, RICK.g + 6])}
     ${yHeroHtml()}
     ${TOWNEV.castHtml('onsen')}
+    <button type="button" class="thing way-btn way-edge" data-act="go-place" data-to="yudori" aria-label="往湯けむり通り" style="margin-left:${560 - 32}px;bottom:150px"><span class="tag">${ySign('shop', '湯けむり通り')}</span></button>
     <div class="ysel"></div>`;
   }
   // ---- the 足湯 sat on (ySit → its sat; up again → its up): the hero's legs down in the water, his shoes left on the rim beside

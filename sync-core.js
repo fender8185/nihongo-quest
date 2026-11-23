@@ -53,6 +53,7 @@
   //   言靈          (koto): each count by day and device the larger, bonus days a union; owned (things bought): a union by id
   //   town          (the town's events): done, seen, stops, arrived each a union by id; talks (chats with each person) the larger count
   //   cruise        (the cruise ship's trips): done a union; the one under way: the later trip, further on, unless done on either
+  //   oneADay       (things had once a day: 射的): the later day of each
   //   everything else (settings, currentUnit, today, placed, wear, …): from the copy saved later
   function stampOf(s) { return (s && typeof s.updatedAt === 'string') ? s.updatedAt : ''; }
   function pickRec(x, y) {
@@ -209,6 +210,10 @@
       out.town = Object.assign({}, o, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops), talks });   // a key either copy has (a later build's): kept, the later copy's where both do (2026-11-23)
       if (o.traps || n.traps) out.town.traps = Object.assign({}, o.traps, n.traps);   // 中華街's 漢字陷阱 seen through (2026-11-14): once on either device, for good
       if (o.arrived || n.arrived) out.town.arrived = Object.assign({}, o.arrived, n.arrived);   // a place first come to (湯の花's ようこそ, 2026-11-23): once on either device, for good
+    }
+    if (older.oneADay || newer.oneADay) {   // a thing had once a day (2026-11-23, 射的): the later day of each — the copy saved later may hold the earlier
+      const once = Object.assign({}, older.oneADay); Object.entries(newer.oneADay || {}).forEach(([k, v]) => { if (!once[k] || v > once[k]) once[k] = v; });
+      out.oneADay = once;
     }
     if (older.cruise || newer.cruise) out.cruise = mergeCruise(older.cruise, newer.cruise);
     if (older.work || newer.work) out.work = mergeWork(older.work, newer.work);

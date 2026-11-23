@@ -189,6 +189,18 @@ const EATSCENE = (() => {
     DISH.hotate = { way: 'chop', steam: [[176, 290], [206, 284], [232, 292]], carry: ['hotate', 'hotate', 'roe'], dips: [[214, 310], [178, 312], [138, 314]],
       table: (k) => `${SHADOW(196, 356, 110, 9)}<path d="M76 330 L300 316 L316 346 L92 362 Z" fill="#f4ead2"/><path d="M76 330 L92 362 L92 366 L76 334 Z" fill="#dccfb0"/>${SHELL}${BUBBLES}${k < 3 ? at(136, 314, 2.1, PIECE.roe) : ''}${k < 2 ? at(178, 310, 2.6, PIECE.hotate) : ''}${k < 1 ? at(214, 308, 2.6, PIECE.hotate) : ''}<path d="M220 300 l12 -2 l2 6 l-12 2 Z" fill="#fff1a8" opacity="${k < 1 ? 1 : 0.4}"/>` };
   })();
+  // 温泉たまご (湯畑, 2026-11-23): broken into a little white cup — the white set soft, the yolk whole — in its dashi with a few rings of
+  // green onion; three spoonfuls (the white, the yolk, the rest with the dashi), the dashi left at the bottom
+  (() => {
+    const HOLES = [[170, 300, 22, 11], [200, 292, 20, 12], [190, 300, 46, 20]];
+    const egg = '<path d="M150 300 C150 286 168 278 188 278 C212 278 230 288 230 300 C228 310 210 315 190 315 C168 315 152 310 150 300 Z" fill="#fbf6ea"/>'
+      + '<path d="M158 304 C170 312 214 312 224 302" fill="none" stroke="#e8dcc4" stroke-width="2"/><ellipse cx="198" cy="292" rx="15" ry="10.5" fill="#f0a02a"/><ellipse cx="198" cy="293" rx="15" ry="10.5" fill="none" stroke="#d8861a" stroke-width="1.4"/><ellipse cx="193" cy="288" rx="5" ry="2.6" fill="#fff" opacity=".6"/>';
+    const onion = '<circle cx="168" cy="292" r="3" fill="none" stroke="#6fae4a" stroke-width="1.6"/><circle cx="220" cy="304" r="2.6" fill="none" stroke="#6fae4a" stroke-width="1.6"/><circle cx="178" cy="310" r="2.4" fill="none" stroke="#8ac85a" stroke-width="1.4"/>';
+    DISH.onsentamago = { way: 'spoon', steam: [[178, 276], [206, 270]], load: mound('#fbf6ea', '#f0a02a'), dips: HOLES.map(([x, y]) => [x, y]),
+      table: (k, ms, uid) => `${SHADOW(198, 348, 80, 9)}<path d="M120 298 A70 22 0 0 0 260 298 L250 328 C238 346 216 352 190 352 C164 352 142 346 130 328 Z" fill="#f6f4ee"/><path d="M132 330 C150 344 230 344 248 330" fill="none" stroke="#dcd6ca" stroke-width="3"/>
+        <ellipse cx="190" cy="298" rx="70" ry="22" fill="#e8e4da"/><ellipse cx="190" cy="300" rx="61" ry="17" fill="#9a5a26"/><ellipse cx="184" cy="296" rx="40" ry="6" fill="#c98a4a" opacity=".55"/>${k < N ? masked(uid, HOLES.slice(0, k), egg + onion) : ''}
+        <path d="M120 298 A70 22 0 0 0 260 298" fill="none" stroke="#3f6aa8" stroke-width="2.4"/><path d="M126 305 C140 318 160 324 176 326" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>` };
+  })();
   // ---- フォーク・つまようじ ----
   DISH.cake = { way: 'fork', carry: ['cake', 'cake', 'berry'], dips: [[159, 288], [185, 288], [198, 262]],
     table: (k) => { const L = [150, 176, 202][k], RX = 226;
@@ -398,7 +410,27 @@ const EATSCENE = (() => {
       <path d="M40 176 q14 -10 28 0 M110 192 q10 -7 20 0" stroke="#fff" stroke-opacity=".6" stroke-width="2" fill="none"/><path d="M70 60 q8 -9 16 0 q8 -9 16 0 M160 40 q6 -7 12 0 q6 -7 12 0" stroke="#f6f6f2" stroke-width="2.6" fill="none" stroke-linecap="round"/>
       <rect y="228" width="360" height="40" ${dn('#cfcac0', '#262848')}/><path d="M-10 0 H370 V30 H-10 Z" fill="#d0453c"/>${Array.from({ length: 13 }, (_, i) => `<path d="M${i * 30 - 10} 30 q15 14 30 0 Z" fill="#d0453c"/>`).join('')}<path d="M-10 4 H370" stroke="#fff" stroke-opacity=".35" stroke-width="3"/>`,
     front: slats('#c9a06a', '#ddb87e', '#a8804e', [306, 350, 394]) };
-  const OUTDOOR = ['street', 'bakery', 'platform'];   // had out of a paper, not off a plate (the platform's bench: 2026-11-22)
+  // 湯けむり通り (2026-11-23): before ゆのはな堂 — the wooden fronts either side, their lattices and red lanterns, its indigo noren and the
+  // steamers on their table steaming behind, the sky over the eaves (stars by night); had over its wooden counter
+  BG.yudori = { back: () => `<rect width="360" height="268" ${dn('#bfe0f4', '#1b2050')}/>${stars}
+      <path d="M-10 70 L40 40 H320 L370 70 Z" ${dn('#4f5868', '#1c1e38')}/>${Array.from({ length: 24 }, (_, i) => `<path d="M${-6 + i * 16} 69 l6 -26" stroke="#000" stroke-opacity=".18" stroke-width="1.2"/>`).join('')}<path d="M-10 70 H370" stroke="#2e3444" stroke-width="5"/>
+      ${[[0, 96], [264, 96]].map(([x, w]) => `<rect x="${x}" y="74" width="${w}" height="194" ${dn('#6e5236', '#2a2234')}/><rect x="${x + 10}" y="86" width="${w - 20}" height="58" ${dn('#ead9b8', '#ffd98a')}/>${Array.from({ length: 9 }, (_, i) => `<path d="M${x + 16 + i * 8} 86 v58" stroke="#5a3e2a" stroke-width="2"/>`).join('')}<rect x="${x}" y="152" width="${w}" height="16" ${dn('#4f5868', '#1c1e38')}/><path d="M${x} 168 H${x + w}" stroke="#2e3444" stroke-width="3"/>
+        <rect x="${x + 8}" y="176" width="${w - 16}" height="92" ${dn('#d8c8a6', '#2a2440')}/>${Array.from({ length: 10 }, (_, i) => `<path d="M${x + 12 + i * 8} 176 v92" stroke="#5a3e2a" stroke-width="2.4"/>`).join('')}`).join('')}
+      <rect x="96" y="74" width="168" height="194" ${dn('#3e2c22', '#14142a')}/><rect x="96" y="74" width="168" height="194" fill="#ffb060" opacity=".12"/>${[0, 1, 2, 3].map((i) => `<rect x="${100 + i * 41}" y="74" width="38" height="70" ${dn('#26407a', '#1c2a5a')}/>`).join('')}
+      <circle cx="180" cy="108" r="12" fill="none" stroke="#f4efe4" stroke-width="3"/>${lantern(86, 186, 15, '#d8303a')}${lantern(274, 186, 15, '#d8303a')}
+      <rect x="290" y="226" width="64" height="8" fill="#8a6a48"/>${[0, 1, 2].map((i) => `<rect x="298" y="${196 - i * 15}" width="48" height="15" fill="${i % 2 ? '#d9b98a' : '#cfae7c'}"/><path d="M298 ${203 - i * 15} h48" stroke="#a8804e" stroke-width="1"/>`).join('')}<path d="M294 166 Q322 152 350 166 Z" fill="#c9a06a"/>
+      <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".6"><path d="M310 150 q-8 -14 0 -26 q8 -12 0 -24"/><path d="M330 146 q-8 -14 0 -26 q8 -12 0 -24"/></g>`,
+    front: slats('#c9a06a', '#ddb87e', '#a8804e', [306, 350, 394]) };
+  // the 湯畑 (2026-11-23): the hills over the inns' roofs, the wooden troughs crusted yellow-white, the steam off them — lit in violet
+  // and blue by night — and the stone railing; had on the railing's stone
+  BG.yubatake = { back: (uid) => `<defs><radialGradient id="ebp${uid}"><stop offset="0" stop-color="#fff" stop-opacity=".92"/><stop offset=".55" stop-color="#f2f6f8" stop-opacity=".5"/><stop offset="1" stop-color="#e8eef2" stop-opacity="0"/></radialGradient></defs><rect width="360" height="268" ${dn('#bfe0f4', '#1b2050')}/>${stars}<path d="M0 96 Q60 64 130 80 Q200 56 270 76 Q320 62 360 72 V140 H0 Z" ${dn('#6f9478', '#16223c')}/>
+      ${[[0, 120, 54], [130, 110, 40], [250, 110, 50]].map(([x, w, h]) => `<rect x="${x}" y="${140 - h}" width="${w}" height="${h}" ${dn('#e9dfc8', '#262848')}/><rect x="${x + 6}" y="${146 - h}" width="${w - 12}" height="${h * 0.4}" ${dn('#cfd8d4', '#ffd98a')}/><path d="M${x - 6} ${142 - h} L${x + w / 2} ${128 - h} L${x + w + 6} ${142 - h} Z" ${dn('#4f5868', '#1c1e38')}/>`).join('')}
+      <rect y="140" width="360" height="100" ${dn('#7a7468', '#24243e')}/>${[0, 1, 2, 3, 4].map((i) => { const y = 150 + i * 17; return `<rect x="-10" y="${y}" width="380" height="${7 + i}" ${dn('#8a6844', '#2a2238')}/><rect x="-10" y="${y - 3}" width="380" height="4" ${dn('#9ae4d8', '#3a6a8a')}/><path d="M-10 ${y + 7 + i} ${Array.from({ length: 12 }, (_, k) => `h24 q3 ${4 + (k + i) % 3 * 2} 6 0`).join(' ')}" ${dn('#efe4a6', '#6a6a52')}/>`; }).join('')}
+      ${[[40, 150, 46], [130, 140, 54], [220, 150, 48], [320, 142, 50], [90, 112, 40], [270, 110, 44], [180, 96, 38]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#ebp${uid})"/>`).join('')}
+      <g ${NIGHT}><ellipse cx="110" cy="140" rx="120" ry="70" fill="#a07ae8" opacity=".32"/><ellipse cx="260" cy="130" rx="120" ry="70" fill="#4ac8f0" opacity=".28"/></g>
+      <rect y="236" width="360" height="32" ${dn('#b4aea2', '#30304c')}/>${[20, 90, 160, 230, 300].map((x) => `<rect x="${x}" y="226" width="14" height="42" ${dn('#a8a296', '#2c2c48')}/>`).join('')}`,
+    front: '<path d="M0 268 H360 V420 H0 Z" fill="#b9b3a6"/><path d="M0 268 H360" stroke="#d4cec2" stroke-width="4"/><path d="M0 310 H360 M120 268 V310 M260 268 V310 M60 310 V360 M190 310 V360 M320 310 V360 M0 360 H360" stroke="#9a9488" stroke-width="2" opacity=".7"/>' };
+  const OUTDOOR = ['street', 'bakery', 'platform', 'yudori', 'yubatake'];   // had out of a paper, not off a plate (the platform's bench: 2026-11-22; 湯の花温泉's street and 湯畑, 2026-11-23)
   let uidN = 0;
   function mount(svg, it, picSvg, still, where) {   // still: motion reduced — drawn once, then once more at the end; where: a BG key
     const uid = `e${++uidN}`, bust = heroArt(state.look), pic = (/<svg[^>]*>(?:<circle class="pd"[^>]*\/>)?([\s\S]*)<\/svg>$/.exec(picSvg || '') || [])[1] || '';

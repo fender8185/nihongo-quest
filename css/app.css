@@ -759,6 +759,51 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .yard .hero.bench.os-soak .legs { transform: scaleY(.92); }
 .os-flash { position: absolute; inset: 0; z-index: 50; background: #fff; pointer-events: none; animation: osFlash .6s ease-out forwards; } @keyframes osFlash { from { opacity: .85; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .sky .land :is(.os-steam, .os-far-train > g) { animation: none; } .os-flash { display: none; } }
+/* ---- 湯けむり通り (2026-11-23, yd-): the street's steam — a steamer's, the gutter's: a short rise — the gutter's water and its flow, the
+   射的's ポン seen from the street, the cat on its step; the 射的's card: the stall seen close, a go, three corks ---- */
+.sky .land .os-steam.yd-small { animation-name: ydPuff; animation-duration: 5.2s; } @keyframes ydPuff { 0% { transform: translate(0, 6px) scale(.5); opacity: 0; } 25% { opacity: .9; } 100% { transform: translate(5px, -34px) scale(1.8); opacity: 0; } }
+.sky .land .yd-flow { animation: ydFlow 1.6s linear infinite; } @keyframes ydFlow { to { stroke-dashoffset: -40; } }
+.sky .land .yd-pon { opacity: 0; } .sky .land [data-fx="shateki"].pon .yd-pon { animation: ydPonStreet 1.3s ease-out; } @keyframes ydPonStreet { 0% { opacity: 0; } 15%, 70% { opacity: 1; } 100% { opacity: 0; } }
+.sky .land [data-fx="neko"] :is(.yd-tail, .yd-ear) { transform-box: fill-box; transform-origin: 0% 100%; } .sky .land [data-fx="neko"].stir .yd-tail { animation: ydTail .7s ease-in-out 3 alternate; } .sky .land [data-fx="neko"].stir .yd-ear { animation: ydEar .3s ease-in-out 4 alternate; }
+@keyframes ydTail { to { transform: rotate(-28deg); } } @keyframes ydEar { to { transform: rotate(-12deg); } }
+.yd-shateki .cls-card { width: min(400px, 100%); background: #f6ecd8; color: #2b2b33; border-top: 8px solid #c8322a; text-align: center; padding: 14px 12px 12px; }
+.yd-board { margin: 0 36px 8px; font-size: 16px; font-weight: 800; letter-spacing: .04em; } .yd-board rt { font-size: 9px; font-weight: 600; }
+.yd-closeup { border-radius: 12px; overflow: hidden; background: #3a2418; } .yd-closeup svg { display: block; width: 100%; height: auto; }
+.yd-said { min-height: 30px; margin: 8px 0 4px; font-size: 22px; font-weight: 800; color: #c8322a; } .yd-said rt { font-size: 10px; }
+.yd-foot { display: grid; justify-items: center; gap: 6px; min-height: 52px; }
+.yd-go, .yd-ok { min-height: 48px; min-width: 180px; font-size: 18px; display: grid; justify-items: center; line-height: 1.15; } .yd-go small { font-size: 11px; font-weight: 600; opacity: .85; } .yd-go rt, .yd-ok rt { font-size: 9px; }
+.yd-done { margin: 4px 0 0; font-size: 17px; font-weight: 700; } .yd-done rt { font-size: 9px; } .yd-note { margin: 0; font-size: 13px; color: #8a7a6e; }
+.yd-stall .yd-cork { opacity: 0; } .yd-stall .yd-cork.fly { animation: ydCork .34s ease-in forwards; } @keyframes ydCork { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(.55); } }
+.yd-stall .yd-ponw { opacity: 0; } .yd-stall.fire .yd-ponw { animation: ydPon .7s ease-out; } @keyframes ydPon { 0% { opacity: 0; transform: translate(0, 6px) scale(.6); } 20% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translate(4px, -8px); } }
+.yd-stall .yd-gun { transform-box: fill-box; transform-origin: 30% 100%; } .yd-stall.fire .yd-gun { animation: ydKick .3s ease-out; } @keyframes ydKick { 30% { transform: rotate(-5deg) translate(-2px, 3px); } }
+.yd-prize .yd-wob { transform-box: fill-box; transform-origin: 50% 100%; } .yd-prize.wob .yd-wob { animation: ydWob .6s ease-in-out; } @keyframes ydWob { 25% { transform: rotate(-9deg); } 60% { transform: rotate(7deg); } }
+.yd-prize.down .yd-wob { animation: ydDown .7s ease-in forwards; } @keyframes ydDown { 30% { transform: rotate(-12deg); } 100% { transform: rotate(84deg) translate(0, 10px); opacity: .9; } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.os-steam.yd-small, .yd-flow), .yd-stall :is(.yd-cork, .yd-ponw, .yd-gun), .yd-prize .yd-wob { animation: none !important; } .yd-prize.down .yd-wob { transform: rotate(84deg) translate(0, 10px); } }
+/* ---- 湯畑 (2026-11-23, yb-): its water running in the troughs and over the fall, the 湯もみ tub stirred, the light-up by night (three
+   lights brightening and fading in turn over the steam: opacity only); the 無人販売所's card — its sign to read, the coins, the box ---- */
+.sky .land { --yb-edge: color-mix(in srgb, #b8c8d4 calc(var(--day, 1) * 100%), #6a6090); }   /* the 湯畑's steam's edge (YUBATAKE puffDefs) */
+.sky .land .os-steam.yb-cloud { animation-name: ybCloud; animation-duration: 14s; } @keyframes ybCloud { 0% { transform: translate(0, 16px) scale(.7); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(16px, -96px) scale(1.9); opacity: 0; } }
+.sky .land .yb-flow { stroke-dasharray: 10 14; animation: ybFlow 1.4s linear infinite; } @keyframes ybFlow { to { stroke-dashoffset: -48; } }
+.sky .land .yb-fall path { animation: ybFall .5s linear infinite; } @keyframes ybFall { to { stroke-dashoffset: -28; } }
+.sky .land [data-fx="yumomi"] ellipse { transform-box: fill-box; transform-origin: center; } .sky .land [data-fx="yumomi"].stir > ellipse { animation: ybStir .5s ease-in-out 4 alternate; } @keyframes ybStir { to { transform: scale(1.06, .8); } }
+.sky .land .yb-light { opacity: calc((1 - var(--day)) * .9); pointer-events: none; } .sky .land .yb-hue { opacity: 0; animation: ybHue 21s ease-in-out infinite; } @keyframes ybHue { 0%, 100% { opacity: 0; } 30% { opacity: 1; } 60% { opacity: 0; } }
+.yb-stand .cls-card { width: min(400px, 100%); background: #f4ecdc; color: #2b2b33; border-top: 8px solid #6e5236; text-align: center; padding: 14px 12px 12px; }
+.yb-closeup { position: relative; margin-top: 30px; border-radius: 12px; overflow: hidden; } .yb-closeup svg { display: block; width: 100%; height: auto; }
+.yb-sign { position: absolute; left: 13%; top: 14%; width: 56%; padding: 6px 6px 8px; display: grid; gap: 1px; background: #e8d2a8; border: 1px solid #b89868; box-shadow: 2px 3px 0 rgba(43, 28, 18, .25); transform: rotate(-2.5deg);
+  font-family: 'Hiragino Maru Gothic ProN', 'Zen Maru Gothic', 'Yu Gothic', sans-serif; color: #2b2b33; line-height: 1.5; }
+.yb-sign b { font-size: 16px; letter-spacing: .04em; color: #c8322a; } .yb-sign span { font-size: 13.5px; font-weight: 700; white-space: nowrap; } .yb-sign i { font-style: normal; color: #c8322a; } .yb-sign rt { font-size: 8px; font-weight: 500; }
+.yb-sign.look { animation: ybLook .9s ease-in-out; } @keyframes ybLook { 20%, 60% { transform: rotate(-2.5deg) scale(1.08); box-shadow: 0 0 0 4px #f6e08a, 2px 3px 0 rgba(43, 28, 18, .25); } }
+.yb-said { min-height: 28px; margin: 8px 0 2px; font-size: 18px; font-weight: 700; color: #6e5236; }
+.yb-lock { margin: 4px 0 8px; font-size: 14px; color: #a8241c; } .yb-note { margin: 6px 0 0; font-size: 13px; color: #8a7a6e; }
+.yb-coins { display: flex; justify-content: center; gap: 18px; margin-top: 6px; }
+.yb-coin { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #9aa0a8; background: radial-gradient(circle at 35% 30%, #fbfcfd, #c9ced6 60%, #a8aeb8); color: #3a3e48; display: grid; place-content: center; line-height: 1; cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .18); }
+.yb-coin b { font-size: 17px; } .yb-coin small { font-size: 10px; } .yb-coin.c500 { border-color: #b8923a; background: radial-gradient(circle at 35% 30%, #fff4c8, #e2c062 60%, #c8a040); color: #5a4214; }
+.yb-coin.c50 { background: radial-gradient(circle, #f4efe4 0 7px, transparent 8px), radial-gradient(circle at 35% 30%, #fbfcfd, #c9ced6 60%, #a8aeb8); } .yb-coin.c50 b { margin-top: -14px; }
+.yb-coin:disabled { opacity: .45; cursor: default; } .yb-coin:not(:disabled):active { transform: translateY(2px); box-shadow: none; }
+.yb-standsvg .os-steam { transform-box: fill-box; transform-origin: center; opacity: 0; animation: ydPuff 5.2s ease-out infinite; }   /* the basin's steam, seen close */
+.yb-closeup .yb-drop { opacity: 0; } .yb-closeup.paid .yb-drop { animation: ybDrop .42s ease-in forwards; } @keyframes ybDrop { 0% { opacity: 1; transform: translateY(-20px); } 100% { opacity: 0; transform: translateY(32px) scaleX(.4); } }
+.yb-closeup .yb-take { transform-box: fill-box; transform-origin: center; } .yb-closeup.paid .yb-take { animation: ybTake .7s ease-out .4s forwards; } @keyframes ybTake { to { transform: translate(0, -36px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.yb-flow, .yb-fall path, .yb-hue, .os-steam.yb-cloud), .yb-sign.look, .yb-closeup :is(.yb-drop, .yb-take), .yb-standsvg .os-steam { animation: none !important; } .sky .land .yb-hue { opacity: .34; } .yb-standsvg .os-steam { opacity: .6; } }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */
 :is(.wk-bento, .wk-window, .wk-lost, .wk-taxi) .wk-ear { min-height: 40px; min-width: 44px; }
 .wk-lock { margin: 10px 0 4px; padding: 8px 10px; border-radius: 10px; background: #fde4cf; color: #8a3a1a; font-size: 14px; line-height: 1.5; }
