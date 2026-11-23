@@ -53,6 +53,22 @@ MEAL = """[stop('hi', 'harbor', [180, 56], [40, 40]), stop('ok', 'oku', [330, 80
   stop('nx', 'oku', [-100, 80], [-230, 90], { ask: 1 }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })]"""
 BUS = """[stop('hi', 'harbor', [180, 56], [40, 40]), stop('sh', 'shrine', [300, 62], [180, 54], { go: 'bus' }), stop('cs', 'castle', [90, 60], [230, 54], { go: 'bus' }),
   stop('sh2', 'shrine', [300, 62], [180, 54], { go: 'bus' }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })]"""
+# a whole trip through, every reply right at once (the one its stop's data marks right, wherever the card shows it): the places in
+# the order they come, the most sat down at each, the town's people seen at each (there or brought out), the stops on along the bar
+RIGHT = """const right = (card) => { const t = CRUISE.current(), s = t && t.stops.find((x) => x.id === state.cruise.on.stop), ask = (card.querySelector('.talk-name span') || {}).textContent;
+    const L = s && s.lines.find((l) => !Array.isArray(l) && l.ask === ask), k = L ? L.opts.findIndex((o) => o[1]) : -1; return card.querySelector(`.talk-opt[data-pick="${k}"] .talk-pick`); };
+  const tour = async (done, ms = 240000) => { const seen = [], order = [], sat = {}, folk = {}, t0 = Date.now();
+    while (!done() && Date.now() - t0 < ms) {
+      const p = y() && y().dataset.place;
+      if (p) { if (order[order.length - 1] !== p) order.push(p); sat[p] = Math.max(sat[p] || 0, document.querySelectorAll('#view .tourist.bench, #view .tourist.kneel').length);
+        folk[p] = [...new Set((folk[p] || []).concat([...document.querySelectorAll('#view [data-npc], #view .cr-extra')].map((e) => e.dataset.npc || (/npc-(\\w+)/.exec(e.className) || [])[1])))]; }
+      const card = document.querySelector('.talk-card');
+      if (card) { if (card.classList.contains('asking')) { const o = right(card); if (!o) return { stuck: (card.querySelector('.talk-name span') || {}).textContent, seen, order }; o.click(); } else document.querySelector('.talk').click(); await wait(15); continue; }
+      const b = document.querySelector('#view .cr-takahashi .ev-mark'); if (b) { seen.push(document.querySelector('.cruise-bar .cb-t').textContent); b.closest('.tourist').click(); await wait(40); continue; }
+      await wait(60); }
+    return { seen, order, sat, folk }; };
+  const trip = (id) => TOWN.CRUISE.TRIPS.find((t) => t.id === id);
+  const asks = (t) => t.stops.flatMap((s) => s.lines).filter((l) => !Array.isArray(l));"""
 
 def titles(b, k):
     return [s['title'] for s in json.loads(ev(b, f"JSON.stringify(TOWN.CRUISE.TRIPS[{k}].stops)"))]
@@ -361,7 +377,80 @@ def test_the_old_members_have_something_new_to_say_each_unit(b):
     assert sorted(r['old']) == sorted(['umeko', 'kaneda', 'yuta', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama', 'mike']), r
     assert r['missing'] == [], r
 
-TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
+def test_trip_three_rides_the_train_back_and_eats_bento_on_the_platform(b):
+    # 2026-11-23 (spec §2): t3「電車に 乗って」— ひかる comes down last; by bus to 駅前 (its stop opened by the tour), up through the
+    # gate to the platform, where ハル sells the group her 駅弁 and they eat them there out of doors (eat), then home by train to the
+    # harbour; every reply right at once: grade S. His photos go off with a shutter's カシャ (a sound there is)
+    r = json.loads(ev(b, "(async () => { " + FRESH + RIGHT + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
+      CRUISE.skipTo('t3'); await call(); const party = people(), t = trip('t3');
+      const d = await tour(() => !!state.cruise.done.t3);
+      const photos = t.stops.flatMap((s) => s.lines).filter((l) => Array.isArray(l) && l[0] === 'hikaru' && l[3] && l[3].snd === 'shutter').length;
+      return JSON.stringify(Object.assign(d, { party: party.length, last: CRUISE.party(t).slice(-1)[0], errs, res: state.cruise.res.t3, asks: asks(t).length, pts: asks(t).map((a) => a.pt),
+        eats: t.stops.filter((s) => s.eat).map((s) => [s.at, Object.keys(s.cast || {})]), photos, shutter: typeof SND.SYNTH.shutter, stops: state.town.stops })); })()"""))
+    assert r.get('stuck') is None and r['errs'] == [], r
+    assert r['party'] == 11 and r['last'] == 'hikaru', r   # the eight, マイク, ひかる (down last), 高橋
+    assert r['seen'] == titles(b, 2)[1:] and r['order'] == ['harbor', 'station', 'platform', 'harbor'], r   # by bus, up the stairs, home by train
+    assert r['eats'] == [['platform', ['haru']]] and 'haru' in r['folk']['platform'] and r['sat']['platform'] >= 4, r   # ハル's 駅弁 on the platform's benches
+    assert r['asks'] >= 20 and r['pts'].count('m3') > len(r['pts']) / 2, r
+    assert r['res']['asks'] == r['asks'] and r['res']['first'] == r['asks'] and r['res']['grade'] == 5, r   # S
+    assert r['photos'] >= 2 and r['shutter'] == 'function' and r['stops'].get('station') == 1, r
+
+def test_trip_four_bathes_by_the_rules_and_lunches_at_rairai(b):
+    # 2026-11-23 (spec §3): t4「月の湯と 中華街」— 水野 comes down last; by bus to 月の湯 (松's rules; its stop opened by the tour),
+    # by bus to 中華街 (王 making 豚まん), through the 牌樓 into 大通り and in to らいらいけん, sat down at its tables (黄), home by bus
+    r = json.loads(ev(b, "(async () => { " + FRESH + RIGHT + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
+      CRUISE.skipTo('t4'); await call(); const party = people(), t = trip('t4');
+      const d = await tour(() => !!state.cruise.done.t4);
+      return JSON.stringify(Object.assign(d, { party: party.length, last: CRUISE.party(t).slice(-1)[0], errs, res: state.cruise.res.t4, asks: asks(t).length, pts: asks(t).map((a) => a.pt),
+        seat: t.stops.filter((s) => s.seat).map((s) => s.at), stops: state.town.stops })); })()"""))
+    assert r.get('stuck') is None and r['errs'] == [], r
+    assert r['party'] == 12 and r['last'] == 'mizuno', r   # ひかる and 水野 aboard now
+    assert r['seen'] == titles(b, 3)[1:] and r['order'] == ['harbor', 'sento', 'chinatown', 'chinadori', 'rairai', 'harbor'], r
+    assert r['seat'] == ['rairai'] and r['sat']['rairai'] >= 9, r   # all らいらいけん's stools taken (nine), the rest standing by
+    assert all(w in r['folk'][p] for p, w in [('sento', 'matsu'), ('chinatown', 'wang'), ('chinadori', 'zhou'), ('rairai', 'huang')]), r
+    assert r['asks'] >= 20 and r['pts'].count('m4') > len(r['pts']) / 2, r
+    assert r['res']['asks'] == r['asks'] and r['res']['first'] == r['asks'] and r['res']['grade'] == 5 and r['stops'].get('sento') == 1, r
+
+def test_a_meal_has_words_for_what_is_eaten_there_only(b):
+    # 2026-11-23 (the ruling): a word at a meal about a dish (t2's やきとり and からあげ at the 居酒屋, 梅子's cold tea …) carries where
+    # it is eaten (EAT's at) and is said there only — never at らいらいけん's tables, where the others' are; at the 居酒屋 it still is
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ T1.u = 'm4';   // t1's eight, their words up to m4
+      const tagged = Object.entries(TOWN.CRUISE.EAT).flatMap(([id, ls]) => ls.filter((l) => l[3]).map((l) => [id, l[1], [].concat(l[3].at)]));
+      const heard = async (place, mid) => { T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40]), mid, stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })];
+        at(mid.id, place); await go(place); await drive(() => state.cruise.on.stop === 'bye', 30000); await wait(100);
+        const realS = speakAs, out = [], sat = document.querySelectorAll('#view .tourist.bench').length; speakAs = (w, l) => { out.push([w, l]); return Promise.resolve(); };
+        for (let n = 0; n < 24; n++) for (const id of ['rina', 'yoshimoto', 'umeko']) { const e = document.querySelector(`#view .cr-${id}`); if (e) { e.click(); await wait(5); } }
+        speakAs = realS; return { out, sat }; };
+      const rl = await heard('rairai', stop('rl', 'rairai', [11.6, 9.6], [12.4, 10.8], { room: true, seat: true }));
+      const iz = await heard('izakaya', stop('iz', 'izakaya', [7, 8.6], [12, 9], { room: true, seat: true }));
+      const eat = (w) => (TOWN.CRUISE.EAT[w] || []).map((l) => l[1]), isTagged = (w, l) => tagged.some((x) => x[0] === w && x[1] === l);
+      return JSON.stringify({ tagged, rl: { sat: rl.sat, n: rl.out.length, notEat: rl.out.filter(([w, l]) => !eat(w).includes(l)), tagged: rl.out.filter(([w, l]) => isTagged(w, l)) },
+        iz: { n: iz.out.length, tagged: [...new Set(iz.out.filter(([w, l]) => isTagged(w, l)).map(([w, l]) => l))] } }); })()"""))
+    t = r['tagged']
+    assert any('やきとり' in l and at == ['izakaya'] for _, l, at in t) and any('からあげ' in l for _, l, at in t) and any('ラーメン' in l for _, l, at in t), t   # the dishes named
+    assert all(at and all(isinstance(p, str) for p in at) for _, _, at in t), t
+    assert r['rl']['sat'] == 8 and r['rl']['n'] == 72 and r['rl']['notEat'] == [] and r['rl']['tagged'] == [], r['rl']   # sat at らいらいけん: words for a meal, none about another's dish
+    assert r['iz']['n'] == 72 and len(r['iz']['tagged']) >= 2, r['iz']   # at the 居酒屋 its own come up
+
+def test_every_train_the_tour_takes_comes_in_by_its_station(b):
+    # 2026-11-23 (the review of the train): a stop gone to by train (go: 'train') arrives by that place's station (WAYS' train>place:
+    # where one steps in off a train) — check-events cannot see WAYS
+    r = json.loads(ev(b, """(() => JSON.stringify(TOWN.CRUISE.TRIPS.flatMap((t) => t.stops.filter((s) => s.go === 'train').map((s) => [t.id, s.id, s.at, Boolean(WAYS['train>' + s.at])]))))()"""))
+    assert r and all(w for _, _, _, w in r), r
+
+def test_after_hours_the_tour_still_goes_in_to_lunch(b):
+    # 2026-11-23: らいらいけん's door shut after 20:00 (PLACE_SHUT) opens for the tour on its way in (CRUISE.opens), as the town's shops
+    # do for it — the group would else stand in 大通り for ever; on one's own at that hour it stays shut
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40]), stop('dr', 'chinadori', [40, 60], [-40, 50]),
+        stop('rl', 'rairai', [11.6, 9.6], [12.4, 10.8], { room: true, seat: true }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })];
+      at('dr', 'chinadori'); await go('chinadori'); TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) };
+      const before = PLACE_SHUT.rairai(), d = await drive(() => state.cruise.on.stop === 'bye', 30000);
+      const alone = (() => { const on = state.cruise.on; state.cruise.on = null; const s = PLACE_SHUT.rairai(); state.cruise.on = on; return s; })();
+      return JSON.stringify({ before, places: d.places, stop: state.cruise.on.stop, alone }); })()"""))
+    assert r['before'] and r['alone'], r   # shut at 21:00, to anyone on their own
+    assert 'rairai' in r['places'] and r['stop'] == 'bye', r   # in to lunch with the tour all the same
+
+TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

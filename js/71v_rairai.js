@@ -87,5 +87,9 @@ PLACE_USE.rairai = (() => {
     { id: 'menu', name: '菜單', box: isoBBox(11.3, 17.4, 0, 0.1, 3.4, 6.3), kind: 'do', go: isoXY(14.2, 2.4), face: 'back turn', pose: 'look', pick: () => ['ぎょうざ、ラーメン…', '牆上的菜單：ぎょうざ（煎餃）、ラーメン（拉麵）、チャーハン（炒飯）、しゅうまい（燒賣）、はるまき（春捲）、マーボーどうふ（麻婆豆腐）。'] },
     { id: 'poster', name: 'にんき', box: isoBBox(0, 0.1, 3.6, 6.4, 2.8, 6.2), kind: 'do', go: isoXY(2.4, 5.0), face: 'back turn flip', pose: 'look', pick: () => ['マーボーどうふ！', '「にんき」是人氣：店裡最受歡迎的麻婆豆腐。'] },
     { id: 'toilet', name: 'おてあらい', box: isoBBox(19.3, 20.9, 0, 0.2, 0, 4.8), kind: 'do', go: isoXY(20.1, 2.0), face: 'back turn', pose: 'look', pick: () => ['おてあらい…', '「おてあらい」是洗手間。'] },
-    { id: 'tank', name: '魚缸', box: isoBBox(k0, k1, m0, m1, 0, 2.5), kind: 'do', go: isoXY(12.4, 2.6), face: 'back turn', pose: 'look', say: 'きんぎょ！', fx: 'fish', fxc: 'flutter' }];
+    { id: 'tank', name: '魚缸', box: isoBBox(k0, k1, m0, m1, 0, 2.5), kind: 'do', go: isoXY(12.4, 2.6), face: 'back turn', pose: 'look', say: 'きんぎょ！', fx: 'fish', fxc: 'flutter' },
+    // each table's three stools (RAIRAI.STOOLS: behind it facing us, at its −u side facing right, at its −v side facing left): sat on
+    // at the tour's lunch (CRUISE: seat; 2026-11-23, spec §3) — not the hero's to tap (the tables are the 外場's): never a button
+    ...RAIRAI.TABLES.map(([u, v], i) => ({ id: 'stools' + i, name: '圓凳', box: isoBBox(u - 2.2, u + 0.8, v - 2.2, v + 0.8, 0, 1.1), kind: 'seat', when: () => false,
+      seats: RAIRAI.STOOLS.slice(i * 3, i * 3 + 3).map(([a, b], k) => [a, b, 0, ['bench', 'bench turn', 'bench turn flip'][k]]) }))];
 })();

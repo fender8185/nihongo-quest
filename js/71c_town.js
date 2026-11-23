@@ -1567,8 +1567,9 @@ const WAYS = {
 };
 const HARBOR_PATH = -380, PARK_PATH = 360;
 const YARD_GATE = { beach: [-470, 204], town: [480, 214] };   // the yard's edge towards the beach and the town seen far below (X, Y): their signs stand there
-// a door shut at this hour (2026-11-14): 公民館 opens 9–22, らいらいけん 10–20 (TOWN.HOURS) — what the hero says and the note
-const PLACE_SHUT = { kyoshitsu: () => !TOWNEV.isOpen('kominkan', TOWNEV.now()), rairai: () => !TOWNEV.isOpen('rairai', TOWNEV.now()) };
+// a door shut at this hour (2026-11-14): 公民館 opens 9–22, らいらいけん 10–20 (TOWN.HOURS) — what the hero says and the note;
+// らいらいけん open all the same to the cruise's group on its way in for lunch (CRUISE.opens, as the town's shops; 2026-11-23, t4)
+const PLACE_SHUT = { kyoshitsu: () => !TOWNEV.isOpen('kominkan', TOWNEV.now()), rairai: () => !TOWNEV.isOpen('rairai', TOWNEV.now()) && !CRUISE.opens('rairai') };
 const PLACE_SHUT_SAY = { kyoshitsu: ['へいかん…', '公民館已經關門了（9:00〜22:00 開）。'], rairai: ['しまってる…', 'らいらいけん 10:00〜20:00 營業。'] };
 function yGo(el, to) {
   yNamed(el);

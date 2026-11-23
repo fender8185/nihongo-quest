@@ -15,11 +15,11 @@ const MARK = /\{([^|}]+)\|([^|}]+)(?:\|([^}]+))?\}/g;
 
 function loadTown(file = FILE) { return new Function(fs.readFileSync(file, 'utf8') + '\n;return TOWN;')(); }
 
-// what a cruise line may sound with (snd: SND's — made in js/82_sound.js or a file in sounds/) or say instead of being read out
-// (cry: VOICE_FX in js/80_tts.js)
+// what a cruise line may sound with (snd: SND's — made in js/82_sound.js, its name quoted when it has a dash: 'door-chime', or a
+// file in sounds/) or say instead of being read out (cry: VOICE_FX in js/80_tts.js)
 const ROOT = path.join(__dirname, '..');
 const SOUNDS = new Set([...fs.readdirSync(path.join(ROOT, 'sounds')).map((f) => (/^(.+)-\d+\.m4a$/.exec(f) || [])[1]).filter(Boolean),
-  ...[...fs.readFileSync(path.join(ROOT, 'js', '82_sound.js'), 'utf8').matchAll(/^ {4}(\w+): \(c, to, v\)/gm)].map((m) => m[1])]);
+  ...[...fs.readFileSync(path.join(ROOT, 'js', '82_sound.js'), 'utf8').matchAll(/^ {4}'?([\w-]+)'?: \(c, to, v\)/gm)].map((m) => m[1])]);
 const CRIES = new Set([...((/const VOICE_FX = \{([^}]*)\}/.exec(fs.readFileSync(path.join(ROOT, 'js', '80_tts.js'), 'utf8')) || ['', ''])[1]).matchAll(/(\w+):/g)].map((m) => m[1]));
 
 // what the hero can wear (古道具屋's wear and clothes): a chat line may be about one (when.look)
@@ -146,7 +146,11 @@ function check(T, D, opts = {}) {
       if (t && !ls.some((l) => unitIdx(l[0]) <= unitIdx(t.u))) bad('cruise', `cruise off ${id}`, 'nothing to say coming off on their first trip');
     });
     Object.entries(cr.SAY || {}).forEach(([id, ls]) => { if (id !== 'takahashi' && !people[id]) bad('ref', `cruise say ${id}`, 'not a passenger'); said('say', id, ls); });
-    Object.entries(cr.EAT || {}).forEach(([id, ls]) => { if (!people[id]) bad('ref', `cruise eat ${id}`, 'not a passenger'); said('eat', id, ls); });   // tapped at the table
+    Object.entries(cr.EAT || {}).forEach(([id, ls]) => {   // tapped at the table; one about a dish: where it is eaten ({ at: a place or places })
+      if (!people[id]) bad('ref', `cruise eat ${id}`, 'not a passenger'); said('eat', id, ls);
+      (ls || []).forEach((l, i) => { const w = l[3]; if (w === undefined) return; const at = w && typeof w === 'object' && !Array.isArray(w) ? [].concat(w.at) : [];
+        if (Object.keys(w || {}).some((k) => k !== 'at') || !at.length || !at.every((p) => places.includes(p))) bad('cruise', `cruise eat ${id}#${i}`, 'an EAT line\'s fourth is { at: the place or places it is eaten at }'); });
+    });
     let lastU = -1; const tids = new Set();
     trips.forEach((t, k) => {
       const where = `cruise ${t.id}`, u = t.u;

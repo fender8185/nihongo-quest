@@ -50,7 +50,8 @@ const CRUISE = (() => {
   const fits = (t) => (l) => unitI(l[0]) <= unitI(t.u);   // said by the trip's unit
   const offLine = (t, id) => (C().OFF[id] || []).filter(fits(t)).pop();
   const sayLines = (t, id) => (C().SAY[id] || []).filter(fits(t));
-  const eatLines = (t, id) => ((C().EAT || {})[id] || []).filter(fits(t));   // tapped at the table
+  // tapped at a meal: one about a dish (its fourth: { at }, 2026-11-23 — t2's やきとり, a 駅弁's lid) only where it is eaten
+  const eatLines = (t, id, place) => ((C().EAT || {})[id] || []).filter(fits(t)).filter((l) => !l[3] || [].concat(l[3].at).includes(place));
   const person = (id) => (id === 'takahashi' ? TOWN.CAST.takahashi : (C() && people()[id]) || null);
   const needOk = (s) => !s.need || TOWNEV.seen(s.need);   // ムギ: once he has come by
   function nextStop(t, from) { const ss = t.stops; for (let i = Math.max(0, from); i < ss.length; i++) if (needOk(ss[i])) return i; return ss.length - 1; }
@@ -666,7 +667,7 @@ const CRUISE = (() => {
     const id = b.dataset.who, p = alive() && S.ppl.get(id), t = current(); if (!p || !t) return;
     if (id === 'takahashi' && !S.busy && !TALK.on() && cs().on.place === S.place) { next(); return; }
     HERO.react(b);
-    const ls = (p.seat || S.eat) && eatLines(t, id).length ? eatLines(t, id) : sayLines(t, id); if (!ls.length) return;   // at a meal (out of doors standing round too): a word for it
+    const eat = p.seat || S.eat ? eatLines(t, id, S.place) : [], ls = eat.length ? eat : sayLines(t, id); if (!ls.length) return;   // at a meal (out of doors standing round too): a word for it
     const l = pick(ls); say(id, l[1], 2600); if (!TALK.on()) speakAs(id, l[1]);
   }
   // the talk card's face for one of them, or the passengers together ('all': three of them)

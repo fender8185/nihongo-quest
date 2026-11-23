@@ -149,6 +149,22 @@ test('a passenger may join on a trip still to be written (after the last, t and 
   assert.deepEqual(cr({ b: { from: 't1x', name: 'B' } }), ['cruise']);
   assert.deepEqual(cr({ b: { from: 't2', name: 'B' } }, [['b', 'はい。', '是。']]), ['cruise']);   // on t1 before joining
 });
+test('a cruise line sounds with a sound there is: a file, or one made in 82_sound.js — its name quoted when it has a dash', () => {
+  const said = (snd) => kinds(check(town([ev()], { PLACES: ['town', 'beach', 'harbor'], CRUISE: { PEOPLE: {}, OFF: {}, SAY: {}, TRIPS: [{ id: 't1', u: 'm1', title: 't',
+    stops: [{ id: 's0', at: 'harbor', title: 't', hero: [0, 50], crowd: [40, 40], lines: [['hero', 'はい。', '是。', { snd }]], bye: true }] }] } }), DATA).filter((p) => !/reply choices/.test(p)));
+  assert.deepEqual(said('shutter'), []);   // made: shutter: (c, to, v)
+  assert.deepEqual(said('door-chime'), []);   // made: 'door-chime': (c, to, v)
+  assert.deepEqual(said('bus'), []);   // a file: sounds/bus-1.m4a
+  assert.deepEqual(said('door-bell'), ['ref']);
+});
+test('a word at a meal about what is eaten there is said there only: an EAT line\'s fourth is { at: a place or places }', () => {
+  const cr = (eat) => kinds(check(town([ev()], { PLACES: ['town', 'beach', 'harbor', 'izakaya'], CRUISE: { PEOPLE: { a: { from: 't1', name: 'A' } }, SAY: {}, OFF: { a: [['m1', 'はい。', '是。']] }, EAT: { a: eat },
+    TRIPS: [{ id: 't1', u: 'm1', title: 't', stops: [{ id: 's0', at: 'harbor', title: 't', hero: [0, 50], crowd: [40, 40], lines: [], bye: true }] }] } }), DATA).filter((p) => !/reply choices/.test(p)));
+  assert.deepEqual(cr([['m1', 'おいしい！', '好吃！'], ['m1', 'やきとり！', '烤雞肉串！', { at: 'izakaya' }], ['m1', 'ねえ。', '欸。', { at: ['izakaya', 'beach'] }]]), []);
+  assert.deepEqual(cr([['m1', 'やきとり！', '烤雞肉串！', { at: 'moon' }]]), ['cruise']);   // no such place
+  assert.deepEqual(cr([['m1', 'やきとり！', '烤雞肉串！', 'izakaya']]), ['cruise']);   // not { at }
+  assert.deepEqual(cr([['m1', 'やきとり！', '烤雞肉串！', { at: 'izakaya', h: 'am' }]]), ['cruise']);   // nothing but where
+});
 test('away after an event that exists; helps at a shop someone keeps', () => {
   const cast = (o) => ({ CAST: { miku: Object.assign({ name: '美玖', hours: [[7, 20, 'town', 'bakeryIn']] }, o), kenta: { name: '健太', shop: 'bakery', hours: [[5, 21, 'town', 'bakery']] } } });
   assert.deepEqual(check(town([ev()], cast({ away: 'e1', helps: 'bakery' })), DATA), []);
