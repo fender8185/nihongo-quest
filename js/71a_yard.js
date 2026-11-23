@@ -160,9 +160,15 @@ function yardLayout(yard) {   // the world as wide as it should be on this scree
   ycam.W = sw / ycam.z; ycam.YW = Math.max(2 * YARD_HALF, ycam.W);
   w.style.width = `${ycam.YW}px`; w.style.marginLeft = `${-ycam.YW / 2}px`;
   const k = ycam.YW / 1200, sb = yard.querySelector('.shop-btn');   // the hill scales up on a very wide screen
-  w.querySelectorAll('.land.prop[data-box]').forEach((q) => { const [x0, b0, pw, ph] = q.dataset.box.split(' ').map(Number); Object.assign(q.style, { left: `${x0 * k}px`, bottom: `${b0 * k}px`, width: `${pw * k}px`, height: `${ph * k}px` }); });   // the things' own layers, as the land
+  yFitProps(w);
   if (sb) { sb.style.left = `calc(50% - ${Math.round(118 * k)}px)`; sb.style.bottom = `${Math.round(346 * k - 6)}px`; }
   yCamTo(yard, ycam.x);
+}
+// the things' own layers (landProp: data-box, in the land's units) placed and sized as the land on a world ycam.YW wide — the whole
+// world's (yardLayout), or those just put up in it (the 朝市: ICHIBA.sync)
+function yFitProps(root) {
+  const k = ycam.YW / 1200;
+  root.querySelectorAll('.land.prop[data-box]').forEach((q) => { const [x0, b0, pw, ph] = q.dataset.box.split(' ').map(Number); Object.assign(q.style, { left: `${x0 * k}px`, bottom: `${b0 * k}px`, width: `${pw * k}px`, height: `${ph * k}px` }); });
 }
 // a place's sight seen whole (2026-11-14, the user: 白鷺城 could not be seen whole on a phone): the camera drawn back till the
 // frame [x0, x1, top] (in the land's own units: 0–1200 across, its ground's foot at 370) fits the screen, held ms, then back to

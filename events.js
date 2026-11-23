@@ -28,7 +28,7 @@ const TOWN = {
     castle: { gate: { X: -340, Y: 110 }, info: { X: -110, Y: 112, roam: [30, 8] }, plaza: { X: 60, Y: 78 }, keep: { X: 250, Y: 120 } },
     shrine: { haiden: { X: 300, Y: 118, roam: [60, 10] }, torii: { X: -420, Y: 96 }, ennichi: { X: -60, Y: 86, roam: [30, 6] }, ennichi2: { X: 80, Y: 92 }, stall: { X: -150, Y: 112, roam: [30, 6] } },
     sento: { door: { X: -40, Y: 124, roam: [20, 4] }, bench: { X: -322, Y: 71, sit: 1 }, milk: { X: -360, Y: 112 } },
-    harbor: { pier: { X: 120, Y: 96 }, hut: { X: 370, Y: 112 } },
+    harbor: { net: { X: -255, Y: 100, roam: [15, 10] }, hut: { X: 370, Y: 112 } },   // 健二 by his net (2026-11-23: moved with it, off みなと寿司's door; clear of the bollard to sit on)
     park: { slide: { X: -220, Y: 92, roam: [90, 22], run: 1 }, bench: { X: 405, Y: 57, sit: 1 } },
     station: { taxi: { X: -430, Y: 96, roam: [45, 10] }, gate: { X: -60, Y: 120, roam: [30, 8] }, koban: { X: 330, Y: 112, roam: [30, 8] }, plaza: { X: -355, Y: 74, sit: 1 }, stop: { X: 470, Y: 80, roam: [40, 10] } },
     // 日本語教室 (2026-11-14), at 45° as the 食堂: the teacher by the blackboard, the chairs behind the two tables (facing us), the tatami
@@ -99,7 +99,7 @@ const TOWN = {
       hours: [[7, 9, 'station', 'plaza'], [19, 24, 'izakaya', 'seat2']] },
     kenji: { name: '林 健二', kana: 'はやし けんじ', role: '漁師', look: { face: 'pointed', skin: '#a9714d', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'sharp', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'stubble', topStyle: 'tee', top: '#4f6f9e', bottomStyle: 'wide', bottom: '#6b7a45', shoeStyle: 'boots', shoe: '#2b2b33' }, wear: { head: 'nejiri', body: 'apron', apron: '#4f7a4a' },
       bio: ['林美玲的先生，46 歲，漁夫。話很少，一開口就是常體短句。', '以前跟鉄平一起出海。天還沒亮就在海邊整理漁網。'],
-      hours: [[5, 10, 'beach', 'shore'], [10, 14, 'harbor', 'pier'], [19, 23, 'izakaya', 'seat1']] },
+      hours: [[5, 10, 'beach', 'shore'], [10, 14, 'harbor', 'net'], [19, 23, 'izakaya', 'seat1']] },
     suzuki: { name: '鈴木 茂', kana: 'すずき しげる', role: 'タクシー運転手', look: { face: 'chubby', skin: '#e8bd98', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'mustache', topStyle: 'shirt', top: '#ecebe6', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'cap', cap: '#2b2b33', neck: 'necktie', tie: '#3f4660' },
       bio: ['計程車司機，56 歲。這一帶每條路都熟，最愛教人怎麼走。', '每天中午在まんぷく食堂吃同一份炸雞定食。說話是大叔常體。'],
       hours: [[8, 12, 'station', 'taxi'], [12, 15, 'shokudo', 'table2'], [15, 19, 'station', 'taxi']] },
@@ -192,7 +192,7 @@ const TOWN = {
       ['m0', 'きょうの アジは いい。', '今天的竹筴魚不錯。'],
       ['m0', 'しょうゆは、ちょっとで いい。', '醬油沾一點點就好。'],
       ['m0', 'にぎったら、すぐ たべて くれ。', '捏好了就馬上吃。'],
-      ['m0', 'てが はやい？ ほめても、なにも でないよ。', '手很快？誇我也不會多送什麼喔。'],
+      ['m0', 'はやいだろう？ ほめても、なにも でないよ。', '很快吧？誇我也不會多送什麼喔。'],
       ['m0', '…まいど。', '……謝謝光臨。', { h: 'night' }],
       ['m1', '{毎朝|まいあさ}、{市場|いちば}で さかなを えらぶ。', '每天早上在市場挑魚。'],
       ['m1', 'しゃべるのは にがてだ。にぎるのは とくいだ。', '講話我不在行。捏壽司我拿手。'],

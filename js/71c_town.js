@@ -1681,6 +1681,14 @@ function senbonArt(F) {
   }
   return s + [[520, 108, 30], [552, 116, 24], [494, 100, 20], [472, 128, 15]].map(([x, y, r]) => `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 0.62}" ${hc('#5a7a58', '#10182c')}/><ellipse cx="${x - r * 0.2}" cy="${y - r * 0.24}" rx="${r * 0.6}" ry="${r * 0.3}" ${hc('#7a9a74', '#18223a')}/>`).join('');
 }
+// a stall's keeper (TOWN.YATAI) behind its counter, head and shoulders over the things laid out (feet: where the figure's feet
+// would be, under the counter), lit as the stall is: the 緣日's (shrineHtml) and the 朝市's (ICHIBA)
+function stallKeeper(id, cx, feet, k) {
+  const v = (TOWN.YATAI || {})[id], z = 0.3; if (!v) return '';
+  const lit = (h) => `style="fill:color-mix(in srgb, ${h} calc(70% + 30% * var(--day, 1)), #3a2c40)"`;
+  return `<g class="stall-keeper" data-keeper="${id}" style="--k:${k}">${HERO.svg({ look: v.look, wear: TOWNEV.wearOf(v.wear), front: true, box: '-60 -205 120 180', L: lit })
+    .replace('<svg ', `<svg x="${(cx - 60 * z).toFixed(1)}" y="${(feet - 205 * z).toFixed(1)}" width="${(120 * z).toFixed(1)}" height="${(180 * z).toFixed(1)}" `)}</g>`;
+}
 // 稲荷神社 (test, 2026-11-09), up the bus line on the hill: a red torii, a stone path with lanterns, two stone foxes, the hall
 // with its rope and bell, the ema board and the omikuji box. From 18 to 22 its 緣日: a row of stalls under paper lanterns — 金魚すくい,
 // やきそば, わたあめ — and the people in yukata (TOWNEV.look)
@@ -1743,12 +1751,8 @@ function shrineHtml() {
   // tree, two before the hall's left wing, one before its right (the bell between kept clear); a long name in smaller letters
   // Later the same day (the user: someone at every stall): its keeper (TOWN.YATAI) behind the counter, head and shoulders over
   // the things laid out, under the awning — the sign moved up onto the awning to make room, lit as the stall is
-  const keeper = (id, cx, k) => { const v = (TOWN.YATAI || {})[id], z = 0.3, feet = F - 21; if (!v) return '';
-    const lit = (h) => `style="fill:color-mix(in srgb, ${h} calc(70% + 30% * var(--day, 1)), #3a2c40)"`;
-    return `<g class="stall-keeper" data-keeper="${id}" style="--k:${k}">${HERO.svg({ look: v.look, wear: TOWNEV.wearOf(v.wear), front: true, box: '-60 -205 120 180', L: lit })
-      .replace('<svg ', `<svg x="${(cx - 60 * z).toFixed(1)}" y="${(feet - 205 * z).toFixed(1)}" width="${(120 * z).toFixed(1)}" height="${(180 * z).toFixed(1)}" `)}</g>`; };
   const stall = (x, w, aw, sign, goods, who, k) => `<g><rect x="${x}" y="${F - 70}" width="${w}" height="70" ${hc('#c58a54', '#3a2c40')}/><path d="M${x} ${F - 70} h${w} v6 h${-w} Z" fill="#2b1c12" fill-opacity=".16"/>
-    ${keeper(who, x + w / 2, k)}<path d="M${x + 1} ${F - 70} h4 v70 h-4 Z M${x + w - 5} ${F - 70} h4 v70 h-4 Z" ${hc('#8a5a30', '#2a2440')}/><path d="M${x - 6} ${F - 70} h${w + 12} l-8 -22 h${-w + 4} Z" ${hc(aw, '#5a2030')}/>
+    ${stallKeeper(who, x + w / 2, F - 21, k)}<path d="M${x + 1} ${F - 70} h4 v70 h-4 Z M${x + w - 5} ${F - 70} h4 v70 h-4 Z" ${hc('#8a5a30', '#2a2440')}/><path d="M${x - 6} ${F - 70} h${w + 12} l-8 -22 h${-w + 4} Z" ${hc(aw, '#5a2030')}/>
     <path d="${Array.from({ length: Math.ceil(w / 24) }, (_, k) => { const a = k / (w / 12) * 2, b = Math.min(1, a + 12 / w); return `M${(x + 2 + (w - 4) * a).toFixed(1)} ${F - 92} H${(x + 2 + (w - 4) * b).toFixed(1)} L${(x - 6 + (w + 12) * b).toFixed(1)} ${F - 70} H${(x - 6 + (w + 12) * a).toFixed(1)} Z`; }).join(' ')}" fill="#fff" fill-opacity=".3" style="opacity:calc(.45 + .55 * var(--day))"/>
     ${Array.from({ length: Math.floor(w / 18) }, (_, k) => `<path d="M${x - 4 + k * 18} ${F - 70} q9 8 18 0" ${hc(aw, '#5a2030')}/>`).join('')}<path d="M${x - 6} ${F - 70.6} h${w + 12}" stroke="#2b1c12" stroke-opacity=".18" stroke-width="1.2"/><rect x="${x + 6}" y="${F - 89}" width="${w - 12}" height="15" rx="2" ${hc('#fbf7ec', '#e8dcb4')}/>
     <text x="${x + w / 2}" y="${F - 77.6}" text-anchor="middle" font-size="${Math.min(11, (w - 16) / [...sign].length).toFixed(1)}" font-weight="700" ${hc('#8a2f2a', '#8a2f2a')} font-family="system-ui, sans-serif">${sign}</text>${goods}<rect x="${x + 4}" y="${F - 28.5}" width="${w - 8}" height="3" rx="1" ${hc('#a8743f', '#4a3a40')}/><rect x="${x + 6}" y="${F - 26}" width="${w - 12}" height="10" ${hc('#efe6d6', '#ffe2a0')}/>

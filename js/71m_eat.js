@@ -82,6 +82,7 @@ const EATSCENE = (() => {
     maguro: NIGIRI('#d23e36', '<path d="M-6 -5.4 l3 3.6 M-1 -6.2 l3 3.6 M4 -5.8 l3 3.4" stroke="#e8776a" stroke-width="1.2" stroke-linecap="round"/>'),
     salmon: NIGIRI('#f08a5a', '<path d="M-7 -4.6 l3 4 M-2.4 -6 l3 4 M2.2 -6.2 l3 4 M6.6 -5 l2.6 3.4" stroke="#fde2cf" stroke-width="1.5" stroke-linecap="round"/>'),
     ebi: NIGIRI('#f26a4e', '<path d="M-7 -3 q3.4 -2.4 6.8 0 M-1 -4.6 q3.4 -2 6.8 .4" stroke="#fbf3ea" stroke-width="1.7" fill="none" stroke-linecap="round"/><path d="M11.6 -1.6 l5 -4.4 l1 6 Z" fill="#e0533e"/>'),
+    ika: NIGIRI('#f1f1ea', '<path d="M-11.4 1 C-10.6 -4.4 -4.4 -6.6 1.4 -6.6 C7.6 -6.6 12 -4.6 11.8 -.4" fill="none" stroke="#c9d0cc" stroke-width=".9"/><path d="M-7.4 -3.6 l2.4 2.8 M-3.4 -5.2 l2.4 2.8 M.8 -5.6 l2.4 2.8 M5 -5.2 l2.4 2.8 M-5.6 -.8 l2.6 -3 M-1.4 -2.6 l2.6 -3 M2.8 -2.8 l2.6 -3 M7 -2.2 l2.2 -2.6" stroke="#d3d9d5" stroke-width=".8" stroke-linecap="round"/><path d="M-6 -3.4 C-3 -5 1 -5.4 4 -5" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="1.1" stroke-linecap="round"/>'),
     tamagoN: NIGIRI('#f4cd4e', '<path d="M-8 -3.6 C-3 -6 3 -6 9 -3.6" fill="none" stroke="#e5ad26" stroke-width="1"/>', '<path d="M-1.6 -7 h4 l.4 15 h-4.6 Z" fill="#1f2d27"/>'),
     tekka: '<path d="M-9 -4 V5 A9 4.4 0 0 0 9 5 V-4 Z" fill="#22382c"/><path d="M3 -.6 V8.6 A9 4.4 0 0 0 9 5 V-4 Z" fill="#162820"/><ellipse cx="0" cy="-4" rx="9" ry="4.4" fill="#1f3328"/><ellipse cx="0" cy="-4" rx="7.6" ry="3.6" fill="#fbf7ef"/><ellipse cx=".2" cy="-4" rx="3.6" ry="1.9" fill="#d23e36"/>',
     hotate: '<path d="M-9 2 C-10 -4 -5 -7 0 -7 C5 -7 10 -4 9 2 C6 6 -6 6 -9 2 Z" fill="#f6dcaa"/><path d="M-8 -2 C-4 -6 4 -6 8 -2 C4 -3.6 -4 -3.6 -8 -2 Z" fill="#e8b46a"/><path d="M-4 -1 l3 -2 M1 1 l4 -2" stroke="#d99a52" stroke-width="1.1" stroke-linecap="round"/>',
@@ -164,15 +165,15 @@ const EATSCENE = (() => {
     DISH.kitsune = { way: 'chop', steam: STEAM_BOWL, carry: ['noodles', 'age', 'noodles'], noodle: ['#f8f3e3', 4], dips: [[176, 300], [206, 292], [180, 298]],
       table: (k) => `${kb.back}${strands(k < 1 ? 6 : k < 3 ? 3 : 0, '#f8f3e3', 4.4, 140, 302)}${k < 2 ? '<path d="M178 296 L224 282 L236 300 L190 308 Z" fill="#d9a14a"/><path d="M178 296 L224 282 L225 285 L180 299 Z" fill="#e8b860"/><path d="M196 296 h.1 M210 292 h.1 M216 300 h.1" stroke="#b07a2a" stroke-width="2" stroke-linecap="round"/>' : ''}${[[150, 290], [244, 296], [160, 304], [236, 306]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.4" fill="#7fbf5a"/>`).join('')}${kb.front}` };
   })();
-  // みなと寿司 (2026-11-23): 並にぎり on a geta — the two richest first, the ebi and the squid, the tamago last — てっかまき six on a
-  // blue-rimmed plate, two at a mouthful; たまご two, then its ginger; and at the 朝市 焼きホタテ, the scallop cut in two on its half
-  // shell in its juice, then its roe
+  // みなと寿司 (2026-11-23): 並にぎり on a geta, eaten from the right two a mouthful — the maguro and the salmon first, the ebi and
+  // the squid, the tamago last — てっかまき six on a blue-rimmed plate, two at a mouthful; たまご two, then its ginger; and at the 朝市
+  // 焼きホタテ, the scallop cut in two on its half shell in its juice, then its roe
   (() => {
     const GETA = `${SHADOW(196, 340, 110, 9)}<path d="M86 294 H294 L302 312 H78 Z" fill="#d8b47a"/><path d="M78 312 H302 V325 H78 Z" fill="#a6763f"/><path d="M104 325 h24 v13 h-24 Z M252 325 h24 v13 h-24 Z" fill="#6e4a33"/><path d="M92 298 H288" stroke="#ecd3a2" stroke-width="2" stroke-linecap="round"/>`;
     const at = (x, y, k, inner) => `<g transform="translate(${x} ${y}) scale(${k})">${inner}</g>`;
-    const SET = [[112, 298, 'tamagoN'], [146, 302, 'ebi'], [180, 298, 'maguro'], [214, 302, 'salmon'], [248, 298, 'maguro']];   // left to right; lifted from the right, two a mouthful
+    const SET = [[112, 298, 'tamagoN'], [146, 302, 'ebi'], [180, 298, 'ika'], [214, 302, 'salmon'], [248, 298, 'maguro']];   // left to right; lifted from the right, two a mouthful
     const GARI = at(282, 304, 1.5, PIECE.gari);
-    DISH.nigiri = { way: 'chop', carry: ['maguro', 'ebi', 'tamagoN'], dips: [[248, 294], [146, 298], [112, 294]],
+    DISH.nigiri = { way: 'chop', carry: ['maguro', 'ika', 'tamagoN'], dips: [[248, 294], [180, 294], [112, 294]],
       table: (k) => `${GETA}${SET.slice(0, [5, 3, 1, 0][k]).map(([x, y, p]) => at(x, y, 1.75, PIECE[p])).join('')}${GARI}` };
     const ROLL = (x, y) => `<g transform="translate(${x} ${y})"><path d="M-15 -6 V8 A15 7 0 0 0 15 8 V-6 Z" fill="#22382c"/><path d="M5 -.6 V14.4 A15 7 0 0 0 15 8 V-6 Z" fill="#162820"/><ellipse cx="0" cy="-6" rx="15" ry="7" fill="#1f3328"/><ellipse cx="0" cy="-6" rx="13" ry="5.8" fill="#fbf7ef"/><ellipse cx=".4" cy="-6" rx="6" ry="3" fill="#d23e36"/><path d="M-9 -7 h.1 M8 -4.4 h.1 M-3 -2.6 h.1" stroke="#e6dcc8" stroke-width="1.6" stroke-linecap="round"/></g>`;
     const ROLLS = [[156, 300], [194, 296], [232, 300], [146, 322], [186, 324], [226, 322]];
@@ -392,7 +393,7 @@ const EATSCENE = (() => {
     front: '<path d="M0 268 H360 V420 H0 Z" fill="#f2e2bf"/><path d="M0 268 H360" stroke="#fff6dc" stroke-width="4"/><path d="M0 282 H360" stroke="#e2c99a" stroke-width="2"/><path d="M0 318 C90 312 270 324 360 316 M0 372 C120 378 240 366 360 374" stroke="#e8d2a6" stroke-width="1.6" fill="none" opacity=".8"/>' };
   // the 朝市 (2026-11-23): the sea and the lighthouse beyond the quay, gulls, the grill stall's red skirt overhead; had on a crate's
   // boards by the sea
-  BG.ichiba = { back: () => `<rect width="360" height="268" ${dn('#bfe0f4', '#1b2050')}/>${stars}<rect y="150" width="360" height="78" ${dn('#5fa6d0', '#12173e')}/><path d="M0 150 H360" ${dn('#9acbe3', '#1a2050').replace('style="fill:', 'style="stroke:')} stroke-width="3"/>
+  BG.ichiba = { back: () => `<rect width="360" height="268" ${dn('#bfe0f4', '#1b2050')}/>${stars}<rect y="150" width="360" height="78" ${dn('#5fa6d0', '#12173e')}/><path d="M0 150 H360" style="stroke:color-mix(in srgb,#9acbe3 calc(var(--day)*100%),#1a2050)" stroke-width="3"/>
       <path d="M262 150 L266 82 H282 L286 150 Z" ${dn('#f4f1ea', '#4a4c72')}/><path d="M264 104 H284 V112 H264 Z M265 126 H285 V134 H265 Z" fill="#d0453c"/><rect x="262" y="74" width="24" height="9" rx="2" ${dn('#3a4254', '#1c2240')}/><path d="M262 74 Q274 62 286 74 Z" fill="#d0453c"/>
       <path d="M40 176 q14 -10 28 0 M110 192 q10 -7 20 0" stroke="#fff" stroke-opacity=".6" stroke-width="2" fill="none"/><path d="M70 60 q8 -9 16 0 q8 -9 16 0 M160 40 q6 -7 12 0 q6 -7 12 0" stroke="#f6f6f2" stroke-width="2.6" fill="none" stroke-linecap="round"/>
       <rect y="228" width="360" height="40" ${dn('#cfcac0', '#262848')}/><path d="M-10 0 H370 V30 H-10 Z" fill="#d0453c"/>${Array.from({ length: 13 }, (_, i) => `<path d="M${i * 30 - 10} 30 q15 14 30 0 Z" fill="#d0453c"/>`).join('')}<path d="M-10 4 H370" stroke="#fff" stroke-opacity=".35" stroke-width="3"/>`,

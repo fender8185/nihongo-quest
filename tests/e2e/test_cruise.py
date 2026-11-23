@@ -472,7 +472,7 @@ def test_the_morning_market_stands_six_to_ten(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """
       const look = async (h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; location.hash = '#/harbor'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
         return { stalls: [...y().querySelectorAll('.ic-stall')].map((g) => g.dataset.stall), btns: ['sakana', 'himono', 'yaki'].filter((id) => y().querySelector(`.use-btn[data-use="${id}"]`)),
-          keepers: [...y().querySelectorAll('.ic-keeper')].map((g) => g.dataset.keeper), shoppers: y().querySelectorAll('.ic-shopper').length, gulls: y().querySelectorAll('.ic-gull').length }; };
+          keepers: [...y().querySelectorAll('.ic-market .stall-keeper')].map((g) => g.dataset.keeper), shoppers: y().querySelectorAll('.ic-shopper').length, gulls: y().querySelectorAll('.ic-gull').length }; };
       const hours = {}; for (const h of [5 + 59 / 60, 6, 9 + 59 / 60, 10, 15]) hours[h.toFixed(2)] = await look(h);
       const fn = [5 + 59 / 60, 6, 9 + 59 / 60, 10, 15].map((h) => ICHIBA.open(h, false)).concat([ICHIBA.open(15, true), ICHIBA.open(3, true)]);
       // a trip under way, at a stop of the harbour flagged market: at 15:00 the stalls stand; the same trip unflagged: none
@@ -497,6 +497,21 @@ def test_the_morning_market_stands_six_to_ten(b):
     assert r['tour']['stalls'] == ['sakana', 'himono', 'yaki'] and r['plain']['stalls'] == [], r   # a t6 market stop at 15:00: standing
     assert r['clear'] == {'ramp': True, 'door': True, 'ground': True}, r['clear']
     assert r['before'] == 0 and r['arrived'] == {'same': True, 'stalls': 3, 'btns': 1, 'sig': True}, r
+
+def test_a_save_as_the_market_packs_up_leaves_who_comes_at_ten_to_the_minute(b):
+    # 2026-11-23 (review): at 10:00 the 朝市 packs up, みなと寿司's noren goes out and 健二 comes to the harbour; a save before the
+    # minute's tick puts the market away and the noren out in place (ICHIBA.sync) but leaves who stands where to that tick — the
+    # harbour then drawn anew, 健二 in it
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ state.town.seen.kenji = 1; saveState();
+      TOWNEV.clock = { h: 9 + 59 / 60, day: new Date(2026, 10, 10) }; location.hash = '#/harbor'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+      const yd = y(), before = { stalls: yd.querySelectorAll('.ic-stall').length, kenji: !!yd.querySelector('.npc-kenji') };
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; saveState();
+      const saved = { same: y() === yd, stalls: yd.querySelectorAll('.ic-stall').length, noren: !!yd.querySelector('.su-front .su-noren'), behind: yd.dataset.sig !== TOWNEV.sig('harbor') };
+      sceneMinute(); await until(() => y() && y() !== yd, 6000); await wait(300);
+      return JSON.stringify({ before, saved, after: { kenji: !!y().querySelector('.npc-kenji'), sig: y().dataset.sig === TOWNEV.sig('harbor') } }); })()"""))
+    assert r['before'] == {'stalls': 3, 'kenji': False}, r
+    assert r['saved'] == {'same': True, 'stalls': 0, 'noren': True, 'behind': True}, r   # put away in place, the noren out; who stands where left to the tick
+    assert r['after'] == {'kenji': True, 'sig': True}, r   # the minute's tick: drawn anew, 健二 at the harbour
 
 def test_minato_sushi_opens_off_the_harbour(b):
     # 2026-11-23 (spec §1.5): みなと寿司 beside the 漁協, in by its door on the harbour; 源さん behind the counter 10–14 and 17–21, his
@@ -524,12 +539,12 @@ def test_minato_sushi_opens_off_the_harbour(b):
     assert r['open12'] == {'noren': True, 'shut': False} and r['shut15'] == {'noren': False, 'shut': True}, r   # its noren out while open; 準備中 in the break
     assert r['inside'] == {'place': 'sushi', 'hash': '#/sushi', 'gen': True, 'hands': True, 'menu': True, 'fuda': False}, r['inside']   # in off the harbour; 源さん at work
     assert '源' in r['hello']['who'] and r['hello']['picks'] == ['order', 'chat'], r['hello']   # tapped: 點餐 or 閒聊, as the town's keepers
-    assert r['door15']['place'] == 'harbor' and any('17:00' in t for t in r['door15']['toast']), r['door15']   # the break: shut, and when it opens
-    for k, when in (('in15', '17:00'), ('in22', '10:00'), ('in8', '10:00')):
+    hours = '（營業時間 10:00–14:00、17:00–21:00）。'
+    assert r['door15']['place'] == 'harbor' and 'みなと寿司 準備中，17:00 開店' + hours in r['door15']['toast'], r['door15']   # the break: shut, and when it opens
+    for k, want in (('in15', 'みなと寿司 準備中，17:00 開店'), ('in22', 'みなと寿司 今天的營業結束了，明天 10:00 開店'), ('in8', 'みなと寿司 準備中，10:00 開店')):
         x = r[k]
         assert not x['gen'] and not x['hands'] and not x['menu'] and x['fuda'], (k, x)   # 源さん away, the menu's tags shut
-        assert not x['menu'] and not x['talk'] and any(when in t for t in x['toast']), (k, x)   # no empty card: a toast with when it opens
-    assert any('明天' in t for t in r['in22']['toast']), r['in22']
+        assert not x['menu'] and not x['talk'] and want + hours in x['toast'], (k, x)   # no empty card: a toast with when it opens next (8:00: today, not tomorrow)
     assert r['seats'] >= 13 and r['near'] >= 30 and r['gen'] >= 30, r   # room for the thirteen of t6; the 30 px a seat; not where 源さん stands
 
 def test_thirteen_sit_down_to_lunch_at_minato_sushi(b):

@@ -81,7 +81,7 @@ const SUSHI = (() => {
     const clock = (() => { const [x, y] = isoPt(0.06, 10.8, 6.1); return `<g transform="translate(${r1(x)} ${r1(y)}) matrix(1 -.5 0 1 0 0)"><circle r="11" fill="#4a3424"/><circle r="9" fill="#fbf8f0"/><path d="M0 0 V-5.4" stroke="#2b2b33" stroke-width="1.6" stroke-linecap="round" style="transform-box:fill-box;transform-origin:50% 100%;transform:rotate(var(--hh, 0deg))"/><path d="M0 0 V-7.4" stroke="#2b2b33" stroke-width="1" stroke-linecap="round" style="transform-box:fill-box;transform-origin:50% 100%;transform:rotate(var(--mm, 0deg))"/><circle r="1.2" fill="#2b2b33"/></g>`; })();
     const door = iOnL('<rect x="-14.8" y="-4.62" width="2.8" height="4.62" fill="#2a2a3a"/><rect x="-14.66" y="-4.5" width="1.28" height="4.38" fill="#cfdce0" opacity=".8"/><rect x="-13.3" y="-4.5" width="1.28" height="4.38" fill="#cfdce0" opacity=".8"/><path d="M-14.66 -2.3 h2.64 M-14.02 -4.5 v4.38 M-12.66 -4.5 v4.38" stroke="#4a3424" stroke-width=".06"/>', 0.03) + frameL(12, 14.8, 4.62, '#4a3424')
       + iOnL([0, 1].map((k) => `<g class="fx-sway" style="animation-duration:3.4s;animation-delay:-${k * 0.8}s"><path d="M${f(-14.72 + k * 1.36)} -4.5 h1.3 v1.5 h-1.3 Z" fill="#26407a"/></g>`).join(''), 0.36);
-    const land = `<svg class="land indoor-land iso su-land" viewBox="0 -530 1200 900" preserveAspectRatio="xMidYMax slice" style="height:900px">${GLOW_DEFS}${ISO_DEFS}
+    const land = `<svg class="land indoor-land iso" viewBox="0 -530 1200 900" preserveAspectRatio="xMidYMax slice" style="height:900px">${GLOW_DEFS}${ISO_DEFS}
       ${isoShell({ floor: '#9c968b', seam: '#857f74', wallL: '#efe7d4', wallR: '#f4ecda', wainL: '#7a5a3c', wainR: '#836244', batten: '#5e4430', trim: '#4a3424', edgeU: '#6e665a', edgeV: '#7a7266', capU: '#e6dcc6', capV: '#ece2cc', top: '#ddd2bc' })}
       ${iOnF(0, `<rect x="${BACK[0]}" y="0" width="${f(ISO.RW - BACK[0])}" height="${LONG[3]}" fill="#7a6a58"/><path d="${Array.from({ length: Math.floor((ISO.RW - BACK[0]) / 0.5) }, (_, i) => `M${f(BACK[0] + 0.25 + i * 0.5)} 0 V${LONG[3]}`).join(' ')}" stroke="#5e5042" stroke-width=".06"/>`)}
       ${kitchen}${tags}${gyotaku}${win}${clock}${door}${[6.4, 11.6, 16.8].map((u) => lamp(u, 3.4)).join('')}
@@ -148,7 +148,7 @@ const SUSHI = (() => {
       <path d="M${X0 - 12} ${T + 2} L${X0 + 4} ${T - 26} H${X1 + 4} L${X1 + 18} ${T - 5} L${X1 + 14} ${T + 2} Z" ${hc('#4a5468', '#181a36')}/><path d="${tiles}" ${hs('#3a4254', '#101128')} stroke-width="1"/><path d="M${X1 + 4} ${T - 26} L${X1 + 18} ${T - 5}" ${hs('#5e6a80', '#1e2244')} stroke-width="1.6"/>
       <rect x="${X0 + 2}" y="${T - 30}" width="${X1 - X0 + 4}" height="5" rx="2" ${hc('#3a4254', '#141530')}/><circle cx="${X0 + 3}" cy="${T - 28}" r="3.6" ${hc('#3a4254', '#141530')}/><circle cx="${X1 + 5}" cy="${T - 28}" r="3.6" ${hc('#3a4254', '#141530')}/>
       <path d="M${X0 - 12} ${T + 2} H${X1 + 14}" ${hs('#2e3444', '#101128')} stroke-width="3.6"/>${Array.from({ length: 21 }, (_, i) => `<circle cx="${X0 - 9 + i * 7.1}" cy="${T + 3}" r="1.6" ${hc('#3a4254', '#141530')}/>`).join('')}
-      ${sign}${win}<g class="su-door">${door}${step}<g class="su-sign">${noren}</g></g>${lantern}${pine}
+      ${sign}${win}<g class="su-door">${door}${step}${noren}</g>${lantern}${pine}
       ${on ? `${lightPool(dm, F + 12, 64)}${lightPool(X0 + 34, F + 8, 40)}` : ''}</g>`;
   }
   return { BACK, LONG, SHORT, TOP, STOOLS, TABLES, CASES, FRIDGE, TAGS, X0, X1, DOOR, genHere, open, shutSay, spot, html: sushiHtml, front };
@@ -157,7 +157,6 @@ const sushiHtml = () => SUSHI.html();
 
 // ---- the 朝市 ----
 const ICHIBA = (() => {
-  const r1 = (n) => n.toFixed(1);
   // [id: its thing in the harbour (PLACE_USE), x of its left edge, its sign, its canopy's colour, who keeps it (TOWN.YATAI)]; 80 wide
   const STALLS = [['sakana', 364, 'さかな', '#3f7ac8', 'sakanaya'], ['himono', 452, 'ひもの', '#c98a2e', 'himonoya'], ['yaki', 540, 'はま焼き', '#d0453c', 'hamayaki']], W = 80;
   // open: 6:00 to 10:00 (10:00 sharp: packed away), or a trip's group here at the harbour on one of its market stops (t6)
@@ -165,11 +164,6 @@ const ICHIBA = (() => {
   const here = () => { const t = CRUISE.current(), on = state.cruise && state.cruise.on; return Boolean(t && on && on.place === 'harbor' && t.stops.some((s) => s.at === 'harbor' && s.market)); };
   const now = () => open(TOWNEV.now(), here());
   const sig = () => `${now() ? 'm' : ''}${SUSHI.open() ? 's' : ''}`;   // TOWNEV.sig: what the harbour shows of them
-  // a keeper behind a stall's table: head and shoulders, as the 緣日's
-  const keeper = (id, cx, F, k) => { const v = (TOWN.YATAI || {})[id], z = 0.3, feet = F - 14; if (!v) return '';
-    const lit = (c) => `style="fill:color-mix(in srgb, ${c} calc(70% + 30% * var(--day, 1)), #3a2c40)"`;
-    return `<g class="stall-keeper ic-keeper" data-keeper="${id}" style="--k:${k}">${HERO.svg({ look: v.look, wear: TOWNEV.wearOf(v.wear), front: true, box: '-60 -205 120 180', L: lit })
-      .replace('<svg ', `<svg x="${r1(cx - 60 * z)}" y="${r1(feet - 205 * z)}" width="${r1(120 * z)}" height="${r1(180 * z)}" `)}</g>`; };
   // what each sells, on its table (its top at y): fish on ice in polystyrene boxes, prices on sticks; dried fish laid in rows and a
   // net hung with more; the grill's coals and scallops bubbling on their shells, smoke off them
   const fishy = (x, y, c, k) => `<path d="M${x} ${y} q5 -3.4 10 0 q-5 3.4 -10 0 Z M${x + 10} ${y} l3 -2 v4 Z" ${hc(c, '#4a4c72')} transform="rotate(${k} ${x + 5} ${y})"/><circle cx="${x + 2.2}" cy="${y - 0.4}" r=".7" fill="#2b2b33"/>`;
@@ -193,7 +187,7 @@ const ICHIBA = (() => {
     const scallops = Array.from({ length: 8 }, (_, i) => `M${x - 4 + i * 11} ${val + 12} q5.5 5 11 0`).join(' ');
     return `<g class="ic-stall" data-stall="${id}"><ellipse cx="${x + W / 2}" cy="${F + 7}" rx="${W / 2 + 6}" ry="4" fill="#2b1c12" fill-opacity=".14"/>
       <path d="M${x + 4} ${val} V${F - 2} M${x + W - 4} ${val} V${F - 2}" ${hs('#9aa0a8', '#2a2c50')} stroke-width="2"/>
-      ${keeper(who, x + W / 2, F, k)}
+      ${stallKeeper(who, x + W / 2, F - 14, k)}
       <path d="M${x - 4} ${val} L${x + 8} ${top} H${x + W - 8} L${x + W + 4} ${val} Z" ${hc(c, '#3a2c48')}/><path d="M${x + 8} ${top} H${x + W - 8} L${x + W - 4} ${top + 4} H${x + 4} Z" fill="#fff" fill-opacity=".22"/><path d="M${x - 4} ${val} L${x + 8} ${top}" stroke="#2b1c12" stroke-opacity=".15" stroke-width="1"/>
       <rect x="${x - 4}" y="${val}" width="${W + 8}" height="12" ${hc(c, '#3a2c48')}/><path d="${scallops}" ${hc(c, '#3a2c48')}/><rect x="${x - 4}" y="${val}" width="${W + 8}" height="2" fill="#fff" fill-opacity=".35"/><rect x="${x + 10}" y="${val + 2}" width="${W - 20}" height="9" rx="1.4" ${hc('#fbf7ec', '#d8ccb0')}/>
       <text x="${x + W / 2}" y="${val + 9}" text-anchor="middle" font-size="${[...sign].length > 3 ? 6.6 : 7.4}" font-weight="800" fill="#2b2b33" font-family="'Hiragino Maru Gothic ProN', 'Zen Maru Gothic', sans-serif">${sign}</text>
@@ -216,25 +210,27 @@ const ICHIBA = (() => {
   // it is not standing (sync puts it up or away in place)
   function layer(F) {
     return STALLS.map((s, k) => landProp(126, stall(s, k, F), null, [s[1] - 10, F - 110, s[1] + W + 10, F + 12])).join('')
-      + landProp(40, [[410, F - 128, 0], [520, F - 150, 1], [600, F - 120, 2], [470, F - 176, 3]].map(([x, y, k]) => gull(x, y, k)).join('') + perched(STALLS[0][1] + 22, F - 103) + perched(STALLS[2][1] + 58, F - 103), null, [380, F - 200, 680, F - 90]).replace('<svg class="land prop"', '<svg class="land prop ic-sky"')
+      + landProp(40, [[410, F - 128, 0], [520, F - 150, 1], [600, F - 120, 2], [470, F - 176, 3]].map(([x, y, k]) => gull(x, y, k)).join('') + perched(STALLS[0][1] + 22, F - 103) + perched(STALLS[2][1] + 58, F - 103), null, [380, F - 200, 680, F - 90])
       + shoppers();
   }
-  const html = (F) => `<div class="ic-market" data-on="${now() ? 1 : ''}">${now() ? layer(F) : ''}</div>`;
+  let quay;   // the quay's edge the harbour was drawn on (harborHtml's F, given to html): sync draws on it again
+  const html = (F) => { quay = F; return `<div class="ic-market" data-on="${now() ? 1 : ''}">${now() ? layer(F) : ''}</div>`; };
   // put up or taken away in place (on any save: the ship called in for t6, a stop done): the stalls and their things to tap, the shop's
-  // noren with them — the harbour not drawn anew under the cruise's arrival; its sig kept in step
+  // noren with them — the harbour not drawn anew under the cruise's arrival; the market's part of its sig kept in step, who stands
+  // where left to the minute's tick (sceneMinute: at 10:00 健二 comes as the market packs up)
   function sync() {
     const y = document.querySelector('#view .yard[data-place="harbor"]'); if (!y) return;
     const m = y.querySelector('.ic-market'), fr = y.querySelector('.su-front'), on = now(), so = SUSHI.open(); if (!m) return;
     let changed = false;
     if ((m.dataset.on === '1') !== on) {
-      m.dataset.on = on ? '1' : ''; m.innerHTML = on ? layer(236) : '';
+      m.dataset.on = on ? '1' : ''; m.innerHTML = on ? layer(quay) : '';
       y.querySelectorAll(STALLS.map(([id]) => `.use-btn[data-use="${id}"]`).join(',')).forEach((b) => b.remove());
       if (on) y.querySelector('.yworld').insertAdjacentHTML('beforeend', useBtnsHtml('harbor', (t) => STALLS.some(([id]) => id === t.id)));
-      const k = ycam.YW / 1200; m.querySelectorAll('.land.prop[data-box]').forEach((q) => { const [x0, b0, pw, ph] = q.dataset.box.split(' ').map(Number); Object.assign(q.style, { left: `${x0 * k}px`, bottom: `${b0 * k}px`, width: `${pw * k}px`, height: `${ph * k}px` }); });
+      yFitProps(m);
       changed = true;
     }
-    if (fr && (fr.dataset.open === '1') !== so) { const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.innerHTML = SUSHI.front(236); fr.replaceWith(g.firstElementChild); changed = true; }
-    if (changed) y.dataset.sig = TOWNEV.sig('harbor');
+    if (fr && (fr.dataset.open === '1') !== so) { const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.innerHTML = SUSHI.front(quay); fr.replaceWith(g.firstElementChild); changed = true; }
+    if (changed) y.dataset.sig = y.dataset.sig.replace(/^[^|]*/, sig());
   }
   saveHooks.push(() => sync());
   return { STALLS, W, open, here, now, sig, html, sync, SHOPPERS };
@@ -252,8 +248,10 @@ PLACE_USE.sushi = (() => {
     ...SUSHI.TABLES.map(([u0, u1, v0, v1], i) => ({ id: 'table' + i, name: '小桌', box: isoBBox(u0, u1, v0, v1, 1.3, 1.5), kind: 'seat', say: 'いただきます！', seats: [[u0 + 0.5, v0 - 0.75, 0, 'bench turn flip'], [u1 - 0.5, v0 - 0.75, 0, 'bench turn flip']] })),
     { id: 'menu', name: '木牌菜單', box: isoBBox(2.2, 15.4, 0, 0.1, 3.9, 6.7), kind: 'do', go: isoXY(7.6, 5.7), face: 'back turn', pose: 'look', buy: 'sushi', when: () => !shut() },
     { id: 'fuda', name: '木牌菜單', box: isoBBox(2.2, 15.4, 0, 0.1, 3.9, 6.7), kind: 'do', go: isoXY(7.6, 5.7), face: 'back turn', pose: 'look', when: shut, pick: () => ['じゅんびちゅう…', SUSHI.shutSay()] },
-    { id: 'case', name: '冷藏櫃', box: isoBBox(SUSHI.CASES[1][0], SUSHI.CASES[1][1], 2.95, 3.45, 1.95, 2.6), kind: 'do', go: isoXY(14.8, 5.7), face: 'back turn', pose: 'look',
-      pick: () => ['ぴかぴか！', 'ネタケース（冷藏玻璃櫃）：今天早上的まぐろ（鮪魚）、サーモン（鮭魚）、えび（蝦）、いか（花枝）、いくら（鮭魚卵）。'] },
+    // the glass cases, each its own: the one by 源さん's hands (its tap stopping short of him: he is tapped, not the case), the far one
+    ...SUSHI.CASES.map(([u0, u1], i) => ({ id: 'case' + i, name: '冷藏櫃', box: isoBBox(u0, i ? u1 : u1 - 1.2, 2.95, 3.45, 1.95, 2.6), kind: 'do', go: isoXY([6.8, 14.8][i], 5.7), face: 'back turn', pose: 'look',
+      pick: () => [['つやつや…！', 'ネタケース（冷藏玻璃櫃）：源先生手邊這一櫃，是他正在捏的料：まぐろ（鮪魚）、サーモン（鮭魚）、えび（蝦）、いか（花枝）。'],
+        ['ぴかぴか！', 'ネタケース（冷藏玻璃櫃）：今天早上的まぐろ（鮪魚）、サーモン（鮭魚）、えび（蝦）、いか（花枝）、いくら（鮭魚卵）。']][i] })),
     { id: 'gyotaku', name: '魚拓', box: isoBBox(0, 0.1, 1.6, 5.4, 3.5, 6.3), kind: 'do', go: isoXY(1.0, 4.4), face: 'back turn flip', pose: 'look', pick: () => ['おおきい タイ…！', '魚拓：用墨把真的魚拓印在紙上。這條鯛魚是源先生年輕時釣到的。'] }];
 })();
 PLACE_USE.harbor.push(
