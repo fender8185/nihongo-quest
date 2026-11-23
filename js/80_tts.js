@@ -136,6 +136,11 @@ const CAST_VOICE = {
   wang: ['Algenib', 1.06, 0, 1], ryuho: ['Schedar', 0.98],   // 中華街 (2026-11-14)
   zhou: ['Pulcherrima', 0.9], zhang: ['Achird', 0.96], huang: ['Puck', 1.14],   // 中華街大通り's keepers (2026-11-14)
   haru: ['Gacrux', 1.06],   // みなと駅のホーム's bento seller (2026-11-20): an old woman, quick
+  // みなと寿司's 源さん and the 朝市's three keepers (2026-11-23): no Chirp 3 HD voice is left unused, so each shares one with someone
+  // never where they are (not at the harbour nor in the shop: no passenger, not 高橋, not 健二), said its own way — 源さん older and
+  // gruffer than 鈴木 (Rasalgethi: slower, a semitone down), the fish man brisker than 剛 (Alnilam), the dried-fish grandmother lower
+  // than トメ and 周 (Pulcherrima), the grill's young woman brighter than ソフィア (Zephyr)
+  gen: ['Rasalgethi', 0.9, 0, -1], sakanaya: ['Alnilam', 1.08], himonoya: ['Pulcherrima', 0.96, 0, -1], hamayaki: ['Zephyr', 1.08],
   ann: ['Kore', 0.96]   // みなと線's announcements in the car (2026-11-20)
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a

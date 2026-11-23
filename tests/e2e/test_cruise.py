@@ -464,6 +464,92 @@ def test_after_hours_the_tour_still_goes_in_to_lunch(b):
     assert r['before'] and r['alone'], r   # shut at 21:00, to anyone on their own
     assert 'rairai' in r['places'] and r['stop'] == 'bye', r   # in to lunch with the tour all the same
 
+def test_the_morning_market_stands_six_to_ten(b):
+    # 2026-11-23 (spec §1.6): みなと漁港's 朝市 every morning 6:00–10:00 — three stalls (fish, dried fish, the grill), their keepers
+    # behind them, a few shoppers, more gulls; none at 5:59 nor at 10:00 sharp; a trip under way with its stop at the harbour flagged
+    # market (t6) has them whatever the hour — standing as the ship comes in. Never over the gangway, the shop's door nor the ground
+    # walked on
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """
+      const look = async (h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; location.hash = '#/harbor'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+        return { stalls: [...y().querySelectorAll('.ic-stall')].map((g) => g.dataset.stall), btns: ['sakana', 'himono', 'yaki'].filter((id) => y().querySelector(`.use-btn[data-use="${id}"]`)),
+          keepers: [...y().querySelectorAll('.ic-keeper')].map((g) => g.dataset.keeper), shoppers: y().querySelectorAll('.ic-shopper').length, gulls: y().querySelectorAll('.ic-gull').length }; };
+      const hours = {}; for (const h of [5 + 59 / 60, 6, 9 + 59 / 60, 10, 15]) hours[h.toFixed(2)] = await look(h);
+      const fn = [5 + 59 / 60, 6, 9 + 59 / 60, 10, 15].map((h) => ICHIBA.open(h, false)).concat([ICHIBA.open(15, true), ICHIBA.open(3, true)]);
+      // a trip under way, at a stop of the harbour flagged market: at 15:00 the stalls stand; the same trip unflagged: none
+      T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40], { market: true }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })];
+      at('hi', 'harbor'); const tour = await look(15);
+      const box = (e) => { const q = e.getBBox(); return [q.x, q.y, q.x + q.width, q.y + q.height]; }, cross = (a, c) => a[0] < c[2] && c[0] < a[2] && a[1] < c[3] && c[1] < a[3];
+      const stalls = [...y().querySelectorAll('.ic-stall')].map(box), ramp = box(y().querySelector('.cruise-ramp')), door = box(y().querySelector('.su-door'));
+      const clear = { ramp: stalls.every((s) => !cross(s, ramp)), door: stalls.every((s) => !cross(s, door)), ground: stalls.every((s) => s[3] <= 370 - walkTop('harbor') + 1) };   // behind the ground walked on
+      T1.stops[0].market = undefined; const plain = await look(15);
+      // the ship called in at 15:00 for a trip whose first stop is the market's: they stand as it comes in, the harbour not drawn anew
+      state.cruise.on = null; T1.stops[0].market = true; saveState(); await look(15); const yd = y(), before = yd.querySelectorAll('.ic-stall').length;
+      document.querySelector('.cruise-call').click(); await wait(100); document.querySelector('[data-act=cruise-start]').click(); await wait(300);
+      const arrived = { same: y() === yd, stalls: yd.querySelectorAll('.ic-stall').length, btns: yd.querySelectorAll('.use-btn[data-use="yaki"]').length, sig: yd.dataset.sig === TOWNEV.sig('harbor') };
+      return JSON.stringify({ hours, fn, tour, plain, clear, before, arrived }); })()"""))
+    h = r['hours']
+    assert h['5.98']['stalls'] == [] and h['10.00']['stalls'] == [] and h['15.00']['stalls'] == [] and h['5.98']['btns'] == [] and h['10.00']['btns'] == [], h   # 5:59, 10:00 sharp, the afternoon: none
+    for k in ('6.00', '9.98'):
+        m = h[k]
+        assert m['stalls'] == ['sakana', 'himono', 'yaki'] and m['btns'] == ['sakana', 'himono', 'yaki'], (k, m)   # three, each a thing to tap
+        assert m['keepers'] == ['sakanaya', 'himonoya', 'hamayaki'] and m['shoppers'] >= 2 and m['gulls'] >= 3, (k, m)   # someone behind each; shoppers; more gulls
+    assert r['fn'] == [False, True, True, False, False, True, True], r['fn']
+    assert r['tour']['stalls'] == ['sakana', 'himono', 'yaki'] and r['plain']['stalls'] == [], r   # a t6 market stop at 15:00: standing
+    assert r['clear'] == {'ramp': True, 'door': True, 'ground': True}, r['clear']
+    assert r['before'] == 0 and r['arrived'] == {'same': True, 'stalls': 3, 'btns': 1, 'sig': True}, r
+
+def test_minato_sushi_opens_off_the_harbour(b):
+    # 2026-11-23 (spec §1.5): みなと寿司 beside the 漁協, in by its door on the harbour; 源さん behind the counter 10–14 and 17–21, his
+    # hands at work; in the break or by night its door says when it opens, and in the shop then 源さん is away and its menu shut,
+    # saying when it opens — never an empty card. Its seats: enough for the tour, none on top of another, none where he stands
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ const toasts = [], realT = toast; toast = (m, ms) => { toasts.push(m); return realT(m, ms); };
+      const at = async (place, h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; location.hash = '#/' + place; document.getElementById('view').innerHTML = ''; route(); await wait(300); };
+      const cards = () => ({ menu: !!document.querySelector('.menu-card'), talk: !!document.querySelector('.talk-card') });
+      await at('harbor', 12); const open12 = { noren: !!y().querySelector('.su-front .su-noren'), shut: !!y().querySelector('.su-front .su-junbi') };
+      y().querySelector('.use-btn[data-use="sushi"]').click(); await until(() => y() && y().dataset.place === 'sushi', 8000); await wait(300);
+      const inside = { place: y().dataset.place, hash: location.hash, gen: !!y().querySelector('.npc-gen'), hands: !!y().querySelector('.su-hands'), menu: !!y().querySelector('.use-btn[data-use="menu"]'), fuda: !!y().querySelector('.use-btn[data-use="fuda"]') };
+      y().querySelector('.npc-gen').click(); await until(() => document.querySelector('.talk-card'), 5000);
+      const hello = { who: (document.querySelector('.talk-name') || {}).textContent || '', picks: [...document.querySelectorAll('.talk-card [data-choose]')].map((x) => x.dataset.go) }; TALK.close();
+      toasts.length = 0; await at('harbor', 15); const shut15 = { noren: !!y().querySelector('.su-front .su-noren'), shut: !!y().querySelector('.su-front .su-junbi') };
+      y().querySelector('.use-btn[data-use="sushi"]').click(); await wait(1500); const door15 = { place: y().dataset.place, toast: toasts.slice() };
+      const away = async (h) => { toasts.length = 0; await at('sushi', h); const o = { gen: !!y().querySelector('.npc-gen'), hands: !!y().querySelector('.su-hands'), menu: !!y().querySelector('.use-btn[data-use="menu"]') };
+        const f = y().querySelector('.use-btn[data-use="fuda"]'); o.fuda = !!f; if (f) { f.click(); await wait(1600); } return Object.assign(o, cards(), { toast: toasts.slice() }); };
+      const in15 = await away(15), in22 = await away(22), in8 = await away(8);
+      toast = realT;
+      const u = TOWN.SPOTS.sushi.counter, me = isoXY(u.u, u.v), seats = []; PLACE_USE.sushi.filter((t) => t.kind === 'seat').forEach((t) => t.seats.forEach((q) => { const p = isoXY(q[0], q[1], q[2]); if (!seats.some((s) => Math.hypot(s[0] - p[0], s[1] - p[1]) < 1)) seats.push(p); }));
+      let near = Infinity; seats.forEach((p, i) => seats.forEach((q, j) => { if (i < j) near = Math.min(near, Math.hypot(p[0] - q[0], p[1] - q[1])); }));
+      return JSON.stringify({ open12, inside, hello, shut15, door15, in15, in22, in8, seats: seats.length, near: Math.round(near), gen: Math.round(Math.min(...seats.map((p) => Math.hypot(p[0] - me[0], p[1] - me[1])))),
+        hours: TOWN.CAST.gen.hours.map((x) => x.slice(0, 3)) }); })()"""))
+    assert r['hours'] == [[10, 14, 'sushi'], [17, 21, 'sushi']], r['hours']
+    assert r['open12'] == {'noren': True, 'shut': False} and r['shut15'] == {'noren': False, 'shut': True}, r   # its noren out while open; 準備中 in the break
+    assert r['inside'] == {'place': 'sushi', 'hash': '#/sushi', 'gen': True, 'hands': True, 'menu': True, 'fuda': False}, r['inside']   # in off the harbour; 源さん at work
+    assert '源' in r['hello']['who'] and r['hello']['picks'] == ['order', 'chat'], r['hello']   # tapped: 點餐 or 閒聊, as the town's keepers
+    assert r['door15']['place'] == 'harbor' and any('17:00' in t for t in r['door15']['toast']), r['door15']   # the break: shut, and when it opens
+    for k, when in (('in15', '17:00'), ('in22', '10:00'), ('in8', '10:00')):
+        x = r[k]
+        assert not x['gen'] and not x['hands'] and not x['menu'] and x['fuda'], (k, x)   # 源さん away, the menu's tags shut
+        assert not x['menu'] and not x['talk'] and any(when in t for t in x['toast']), (k, x)   # no empty card: a toast with when it opens
+    assert any('明天' in t for t in r['in22']['toast']), r['in22']
+    assert r['seats'] >= 13 and r['near'] >= 30 and r['gen'] >= 30, r   # room for the thirteen of t6; the 30 px a seat; not where 源さん stands
+
+def test_thirteen_sit_down_to_lunch_at_minato_sushi(b):
+    # 2026-11-23 (spec §5, for t6): by t6 the group is thirteen (the eight, マイク, ひかる, 水野, ミヨコ, 味村); a lunch stop at みなと寿司
+    # (seat) sits all thirteen at its counter and tables, none closer than 30 px to another — a trip of the test's own after t5 and t6
+    # (stand-ins for them till they are written: whoever joins on them is aboard)
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ const C = TOWN.CRUISE;
+      ['t5', 't6'].forEach((id, k) => { if (!C.TRIPS.some((t) => t.id === id)) C.TRIPS.push({ id, u: ['m5', 'm6'][k], title: id, stops: [] }); });
+      C.TRIPS.push({ id: 'tz', u: 'm6', title: '昼', stops: [stop('hi', 'harbor', [180, 56], [40, 40]), stop('su', 'sushi', [6.4, 9.4], [8.4, 9.6], { room: true, seat: true }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })] });
+      state.currentUnit = 'm6'; state.cruise.on = { trip: 'tz', step: 1, stop: 'su', place: 'harbor', score: {} }; saveState();
+      TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; location.hash = '#/harbor'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+      const d = await drive(() => state.cruise.on.stop === 'bye' && y().dataset.place === 'sushi' && !document.querySelector('.talk-card'), 60000); await wait(300);
+      const sat = [...document.querySelectorAll('#view .tourist.bench, #view .tourist.kneel')], xy = sat.map(XY); let near = Infinity;
+      xy.forEach((p, i) => xy.forEach((q, j) => { if (i < j) near = Math.min(near, Math.hypot(p[0] - q[0], p[1] - q[1])); }));
+      return JSON.stringify({ party: CRUISE.party(C.TRIPS.find((t) => t.id === 'tz')).length, place: y().dataset.place, sat: sat.length, near: Math.round(near), aji: !!document.querySelector('#view .cr-ajimura.bench'),
+        standing: tourists().filter((e) => !e.matches('.bench, .kneel')).map((e) => e.dataset.who), gen: !!document.querySelector('#view .npc-gen') }); })()"""))
+    assert r['party'] == 13 and r['place'] == 'sushi', r
+    assert r['sat'] == 13 and r['aji'] and r['standing'] == ['takahashi'], r   # every one of them sat down (味村 too); 高橋 standing by
+    assert r['near'] >= 30 and r['gen'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":

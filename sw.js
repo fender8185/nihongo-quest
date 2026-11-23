@@ -52,6 +52,7 @@ const PRECACHE = [
   './js/71w_lost.js',
   './js/71w_taxi.js',
   './js/71w_ride.js',
+  './js/71x_sushi.js',
   './js/72_course.js',
   './js/73_vocab.js',
   './js/74_mistakes.js',
@@ -74,7 +75,7 @@ const PRECACHE = [
   './data.js?v=30',
   './data-n3.js?v=4',
   './events.js?v=98',
-  './pics.js?v=14',
+  './pics.js?v=15',
   './kana-strokes.js?v=1'
 ];
 // Versioned, immutable files: when the previous cache already holds the same URL, copy it instead of downloading

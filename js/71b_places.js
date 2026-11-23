@@ -5,7 +5,7 @@
 // unit), the walls RH high, the back corner at (ox, oy) in the land's 1200 × 900 frame. The hero and the people stand in it at X,
 // Y like everywhere out (from the world's middle, up from the bottom), all one size (k) anywhere in it; they walk the floor round
 // the furniture (WALK_BLOCK in floor units), and who is drawn over whom goes by the furniture they stand before or behind (isoZ)
-const INDOOR = ['shokudo', 'izakaya', 'kyoshitsu', 'rairai'];   // 日本語教室 (2026-11-14) and らいらいけん (2026-11-15) too
+const INDOOR = ['shokudo', 'izakaya', 'kyoshitsu', 'rairai', 'sushi'];   // 日本語教室 (2026-11-14), らいらいけん (2026-11-15) and みなと寿司 (2026-11-23) too
 const ISO = { U: 31, RW: 22, RD: 16, RH: 8, ox: 507, oy: -259, k: 0.64, door: [0.25, 13.4], in: [2.6, 13] };
 const isoPt = (u, v, h = 0) => [ISO.ox + (u - v) * ISO.U, ISO.oy + (u + v) * ISO.U / 2 - h * ISO.U];   // in the land's svg
 const isoXY = (u, v, h = 0) => { const [x, y] = isoPt(u, v, h); return [x - 600, 370 - y]; };   // in the hero's units
@@ -53,7 +53,7 @@ function isoZ(u, v, on = 0) {
 INDOOR.forEach((pl) => Object.values(TOWN.SPOTS[pl] || {}).forEach((sp) => { if (sp.u !== undefined) { [sp.X, sp.Y] = isoXY(sp.u, sp.v, sp.h || 0); sp.foot = isoXY(sp.u, sp.v); } }));
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
-const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128, rairai: 128, platform: 128 };
+const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128, rairai: 128, platform: 128, sushi: 128 };
 const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : place === 'chinadori' ? (X === undefined ? DORI.FAR : DORI.top(X)) : WALK_TOP[place] || 214);   // 中華街大通り: its trapezoid (DORI)   // the yard: a hilltop, lower towards its sides — not out over the edge
 // what stands in the way in each place (2026-11-10, the user: he walked about as if every place were flat ground): the ground the
 // things there stand on, [X0, X1, Y0, Y1] in his units — benches, crates, tables and stools, the sandbox, the beach's grassy bank
@@ -373,7 +373,7 @@ const USED = (() => {
     mark(place, id) { const s = all(), k = `${place}.${id}`; if (s[k]) return; s[k] = 1; try { localStorage.setItem('nq_used', JSON.stringify(s)); } catch (e) { /* no storage: this visit only */ } }
   };
 })();
-const useBtnsHtml = (place) => (PLACE_USE[place] || []).filter((t) => !t.when || t.when()).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn${t.sign ? ' thing signed' : ''}${USED.has(place, t.id) ? ' tried' : ''}" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${INDOOR.includes(place) ? 1 : Math.round(150 - (370 - y1) / 4)}${t.signAt ? `;--tx:${t.signAt[0]}%;--ty:${t.signAt[1]}%` : ''}">${t.sign ? `<span class="tag">${ySign(t.sign, t.name)}</span>` : ''}</button>`; }).join('');
+const useBtnsHtml = (place, only) => (PLACE_USE[place] || []).filter((t) => (!only || only(t)) && (!t.when || t.when())).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn${t.sign ? ' thing signed' : ''}${USED.has(place, t.id) ? ' tried' : ''}" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${INDOOR.includes(place) ? 1 : Math.round(150 - (370 - y1) / 4)}${t.signAt ? `;--tx:${t.signAt[0]}%;--ty:${t.signAt[1]}%` : ''}">${t.sign ? `<span class="tag">${ySign(t.sign, t.name)}</span>` : ''}</button>`; }).join('');   // only: those of them (the 朝市's stalls put up in place: ICHIBA.sync)
 // words popping up over a thing (x, y in the land's units), a burst of petals or leaves off a tree
 function yPop(yard, x, y, text) {
   const w = yard && yard.querySelector('.yworld'); if (!w) return;
@@ -493,7 +493,7 @@ function yDo(yard, t) {
   if (t.pick) { const [a, b] = t.pick(); say = a; if (b) toast(b, 3600); }   // the thing's say and what it means, drawn each time (おもかる石)
   if (say) yPop(yard, cx, y0 - 4, say);
   if (t.then) setTimeout(() => yPop(yard, cx, y0 - 4, t.then), 1200);
-  if (t.keeper) setTimeout(() => { const v = (TOWN.YATAI || {})[t.keeper]; if (!yard.isConnected || !v || !v.scoop) return; yBubble(yard, cx, y0 - 2, esc(v.scoop[0]), 2600); speakAs(t.keeper, v.scoop[0]); }, 1300);   // the one who keeps it says a word
+  if (t.keeper) setTimeout(() => { const v = (TOWN.YATAI || {})[t.keeper], w = v && (v.call ? v.call[Math.floor(Math.random() * v.call.length)] : v.scoop); if (!yard.isConnected || !w) return; yBubble(yard, cx, y0 - 2, esc(w[0]).replace(/\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, '<ruby>$1<rt>$2</rt></ruby>'), 2600); speakAs(t.keeper, w[0]); }, 1300);   // the one who keeps it says a word (the goldfish's old man: scoop; the 朝市's: one of their calls)
   if (t.toast) toast(typeof t.toast === 'function' ? t.toast() : t.toast, 4600);
   if (t.mirror) setTimeout(() => { if (yard.isConnected && !yard.classList.contains('dressing')) DRESS.open(yard, 'mirror', t.name); }, 1300);
   if (t.burst) yBurst(yard, t.box, t.burst);

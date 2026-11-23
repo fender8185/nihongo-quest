@@ -189,7 +189,7 @@ const TOWNEV = (() => {
   const linesOf = (e) => (e.met && state.town.done[e.met.if] ? e.met.head.concat(e.lines.slice(e.met.from)) : e.lines);
   // the people at a place now: those met, where their hours put them, and whoever an event there waits on (marked ！); in the
   // 日本語教室 and 中華街 everyone there, met or not (a class one walks into, a street of stalls)
-  const SEEN_UNMET = ['kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform'];
+  const SEEN_UNMET = ['kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi'];
   function here(place) {
     const out = [];
     Object.keys(T().CAST).forEach((id) => {
@@ -200,7 +200,7 @@ const TOWNEV = (() => {
     return out;
   }
   // what a place shows of the town now (its shops' doors, who stands where, the mark): drawn anew when it changes
-  const sig = (place) => (place === 'town' ? TOWN_SHOPS.map((x) => shopState(x[6])).join() : place === 'shrine' ? String(isOpen('ennichi', now())) : place === 'chinadori' ? String(isOpen('dori', now())) : '') + '|' + here(place).map((p) => p.id + (p.host ? '!' : '')).join();
+  const sig = (place) => (place === 'town' ? TOWN_SHOPS.map((x) => shopState(x[6])).join() : place === 'shrine' ? String(isOpen('ennichi', now())) : place === 'chinadori' ? String(isOpen('dori', now())) : place === 'harbor' ? ICHIBA.sig() : '') + '|' + here(place).map((p) => p.id + (p.host ? '!' : '')).join();   // the harbour: its 朝市 standing, みなと寿司's noren out
   const festival = () => isOpen('ennichi', now());
   function castHtml(place) {
     return here(place).map(({ id, spot, host }) => { const size = T().CAST[id].size || 1, k = yScale(spot.Y) * size;
@@ -216,8 +216,9 @@ const TOWNEV = (() => {
   ADJ.shrine.push('oku'); ADJ.oku = ['shrine'];   // up the 千本鳥居 on foot (2026-11-14)
   ADJ.kominkan.push('kyoshitsu'); ADJ.kyoshitsu = ['kominkan'];   // 公民館's door to its 日本語教室 (2026-11-14)
   ADJ.chinatown.push('chinadori'); ADJ.chinadori = ['chinatown', 'rairai']; ADJ.rairai = ['chinadori'];
+  ADJ.harbor.push('sushi'); ADJ.sushi = ['harbor'];   // みなと寿司's door on the harbour (2026-11-23)
   ADJ.station.push('platform'); ADJ.platform = ['station'];   // up through 駅前's 改札 to みなと駅's platform (2026-11-20)   // through 中華街's 牌樓 into 大通り (2026-11-14), and into らいらいけん (2026-11-15)
-  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城', oku: '稲荷山・奥社', kominkan: '公民館', kyoshitsu: '日本語教室', chinatown: '中華街', chinadori: '中華街大通り', rairai: 'らいらいけん', platform: 'みなと駅ホーム' };
+  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城', oku: '稲荷山・奥社', kominkan: '公民館', kyoshitsu: '日本語教室', chinatown: '中華街', chinadori: '中華街大通り', rairai: 'らいらいけん', platform: 'みなと駅ホーム', sushi: 'みなと寿司' };
   function hop(from, to) {
     if (from === to || !ADJ[from]) return null;
     const first = { [from]: null }, q = [from];   // breadth first: the first step of the way each place was reached by
@@ -576,7 +577,7 @@ function talkLines() {
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
   DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
   add('hero', TOWNEV.DROP_BY[0]); CRUISE.lines(add); YEN.lines(add); CLASS.lines(add); CHINA.lines(add); WORK.lines(add); RIDE.lines(add);   // the cruise's, buying with 円, 日本語教室's かるた and singing
-  Object.keys(TOWN.YATAI || {}).forEach((id) => { if (TOWN.YATAI[id].scoop) add(id, TOWN.YATAI[id].scoop[0]); });   // the goldfish's old man
+  Object.keys(TOWN.YATAI || {}).forEach((id) => { const v = TOWN.YATAI[id]; if (v.scoop) add(id, v.scoop[0]); (v.call || []).forEach((l) => add(id, l[0])); });   // the goldfish's old man; the 朝市's keepers calling out
   return out;
 }
 // the beach (test, 2026-11-09), along the yard to the left: the sea to the horizon, an island, glints, waves washing in on wet
@@ -869,7 +870,8 @@ function townHtml() {
 }
 // みなと漁港 (test, 2026-11-10; the map joined up): below the beach, along the street's left — the harbour's quay, boats bobbing at
 // their moorings, a breakwater out to a red lighthouse (its light swinging round by night), the fishermen's hut, crates, floats
-// and a net drying, gulls; a sandy path comes down from the beach at the back on the left
+// and a net drying, gulls; a sandy path comes down from the beach at the back on the left. 2026-11-23: みなと寿司 beside the 漁協
+// (SUSHI.front, its door: PLACE_USE), the net moved down by the path to make room; the 朝市 along the quay's back 6–10 (ICHIBA)
 // 古道具屋 before it opens (2026-11-11, the user): a thick fog lies over the top of the hill and hides it, and nothing there can be
 // tapped; at 20 言靈 福爺's letter comes and the fog lifts, slowly, the first time the yard is seen after (nq_fog_lifted)
 function shopFog() {
@@ -958,8 +960,9 @@ function harborHtml() {
       <g ${hcx('fx-flag', '#f6f3ec', '#4a4c72', 'filter:brightness(calc(.5 + .5 * var(--day)))')}><path d="M1075 ${F - 184} h62 v40 h-62 Z"/><path d="M1075 ${F - 184} h62 v10 h-62 Z" fill="#d0453c"/><path d="M1075 ${F - 154} h62 v10 h-62 Z" fill="#3f7ac8"/>
         <path d="${Array.from({ length: 8 }, (_, i) => { const a = i * Math.PI / 4; return `M${rd1(1092 + 8.4 * Math.cos(a))} ${rd1(F - 164 + 8.4 * Math.sin(a))} L${rd1(1092 + 10.4 * Math.cos(a))} ${rd1(F - 164 + 10.4 * Math.sin(a))}`; }).join(' ')}" stroke="#e6c23a" stroke-width="1.6" stroke-linecap="round"/><circle cx="1092" cy="${F - 164}" r="7" fill="#e6c23a"/><circle cx="1092" cy="${F - 164}" r="4.4" fill="none" stroke="#d0453c" stroke-width="1.2"/>
         <path d="M1076 ${F - 151} ${Array.from({ length: 10 }, () => 'q3 -2.6 6 0').join(' ')}" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="1.1"/><text x="1120" y="${F - 159}" text-anchor="middle" font-size="12" font-weight="800" fill="#d0453c" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">大漁</text><path d="M1097 ${F - 184} h5 v40 h-5 Z M1122 ${F - 184} h5 v40 h-5 Z" fill="#2b1c12" fill-opacity=".07"/></g>
-      <path d="M640 ${F} V${F - 70} M760 ${F} V${F - 70}" ${hs('#6e4f3a', '#2c2440')} stroke-width="4"/><path d="M641 ${F - 66} V${F - 4} M761 ${F - 66} V${F - 4}" stroke="#fff" stroke-opacity=".2" stroke-width="1"/><rect x="637" y="${F - 73}" width="6" height="3.4" rx="1" ${hc('#4a3a2c', '#1c1830')}/><rect x="757" y="${F - 73}" width="6" height="3.4" rx="1" ${hc('#4a3a2c', '#1c1830')}/>
-      <g class="fx-netwave">${netMesh}<path d="M640 ${F - 20} Q700 ${F - 2} 760 ${F - 20}" fill="none" ${hs('#4f6f6a', '#2a3a4a')} stroke-width="1.4"/></g><path d="M640 ${F - 66} Q700 ${F - 40} 760 ${F - 66}" fill="none" ${hs('#c9b48a', '#4a4466')} stroke-width="1.6"/>${[0.2, 0.4, 0.6, 0.8].map((t) => `<ellipse cx="${rd1(640 + 120 * t)}" cy="${rd1(F - 66 + 52 * t * (1 - t))}" rx="2.6" ry="1.7" ${hc('#f0a050', '#5a3a2a')}/>`).join('')}
+      <g transform="matrix(.78 0 0 1 -233.2 0)"><path d="M640 ${F} V${F - 70} M760 ${F} V${F - 70}" ${hs('#6e4f3a', '#2c2440')} stroke-width="4"/><path d="M641 ${F - 66} V${F - 4} M761 ${F - 66} V${F - 4}" stroke="#fff" stroke-opacity=".2" stroke-width="1"/><rect x="637" y="${F - 73}" width="6" height="3.4" rx="1" ${hc('#4a3a2c', '#1c1830')}/><rect x="757" y="${F - 73}" width="6" height="3.4" rx="1" ${hc('#4a3a2c', '#1c1830')}/>
+        <g class="fx-netwave">${netMesh}<path d="M640 ${F - 20} Q700 ${F - 2} 760 ${F - 20}" fill="none" ${hs('#4f6f6a', '#2a3a4a')} stroke-width="1.4"/></g><path d="M640 ${F - 66} Q700 ${F - 40} 760 ${F - 66}" fill="none" ${hs('#c9b48a', '#4a4466')} stroke-width="1.6"/>${[0.2, 0.4, 0.6, 0.8].map((t) => `<ellipse cx="${rd1(640 + 120 * t)}" cy="${rd1(F - 66 + 52 * t * (1 - t))}" rx="2.6" ry="1.7" ${hc('#f0a050', '#5a3a2a')}/>`).join('')}</g>
+      ${SUSHI.front(F)}
       ${[380, 520, 700, 860, 1040].map((x, k) => `<g transform="translate(${x} ${F - 3})"><path d="M-12 0 q6 -5 12 0 q6 -5 12 0" fill="none" ${hsx('fx-ripple', '#ffffff', '#5a6aa0', `animation-delay:-${k * 0.8}s`)} stroke-width="1.6"/></g>`).join('')}
       <rect class="pave" x="-20" y="${F}" width="1240" height="134" style="fill:color-mix(in srgb, #cfcac0 calc(var(--day) * 100%), #262848)"/><path d="M-20 ${F + 2} H1220" ${hs('#9a958a', '#1c1d3e')} stroke-width="4"/>
       ${[300, 560, 820].map((x) => `<rect x="${x - 9}" y="${F + 11}" width="18" height="3" rx="1" ${hc('#3a3a44', '#16172e')}/><path d="M${x - 6} ${F + 11.4} Q${x - 4.6} ${F + 7} ${x - 5.6} ${F + 3.4} H${x + 5.6} Q${x + 4.6} ${F + 7} ${x + 6} ${F + 11.4} Z" ${hc('#4a4a55', '#1c1d3c')}/><path d="M${x - 8.6} ${F + 4} Q${x - 8.6} ${F - 0.2} ${x} ${F - 0.2} Q${x + 8.6} ${F - 0.2} ${x + 8.6} ${F + 4} Z" ${hc('#4a4a55', '#1c1d3c')}/><path d="M${x - 8.4} ${F + 4} H${x + 8.4}" stroke="#000" stroke-opacity=".25" stroke-width="1"/><path d="M${x - 3.4} ${F + 10.4} Q${x - 2.8} ${F + 7.4} ${x - 3.6} ${F + 5} M${x - 5.6} ${F + 2} q2.6 -1.4 5.2 -1.4" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1.1" stroke-linecap="round"/>`).join('')}
@@ -974,6 +977,7 @@ function harborHtml() {
     ${landProp(82, crate(400, F + 10, '#3f7ac8') + '<g data-fx="fish">' + [404, 414, 426].map((fx, k) => `<g class="hfish" style="animation-delay:-${k * 0.09}s"><path d="M${fx + 11.4} ${F + 9} l4.6 -3.4 l-1 3.4 l1 3.4 Z" ${hc('#8a9cae', '#3a3c62')}/><path d="M${fx} ${F + 9.4} Q${fx + 5} ${F + 4.2} ${fx + 12} ${F + 9} Q${fx + 5} ${F + 13.2} ${fx} ${F + 9.4} Z" ${hc(['#b9c8d4', '#a8b8c8', '#c8d4dc'][k], '#4a4c72')}/><path d="M${fx + 1.4} ${F + 8.2} Q${fx + 5.4} ${F + 5.2} ${fx + 11.4} ${F + 8.6} Q${fx + 5.4} ${F + 7.2} ${fx + 1.4} ${F + 8.2} Z" ${hc('#6a7e92', '#3a3c62')}/><path d="M${fx + 2.6} ${F + 10.8} q4 1.4 8 -.6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".8"/><path d="M${fx + 4.2} ${F + 7.2} q1 1.8 0 3.6" fill="none" stroke="#4a5a6a" stroke-opacity=".5" stroke-width=".6"/><circle cx="${fx + 2.4}" cy="${F + 8.8}" r="1" ${hc('#ffffff', '#8a8eb8')}/><circle cx="${fx + 2.3}" cy="${F + 8.8}" r=".5" fill="#2b2b33"/></g>`).join('') + '</g>' + crate(380, F + 30, '#3f7ac8') + crate(424, F + 30, '#d0574b')
       + `<g data-fx="hcat"><g transform="translate(476 ${F + 52})">${harborCat}</g></g>`, null, [372, F + 2, 500, F + 58])}${landProp(78, crate(1090, F + 34, '#e6a23c'), null, [1086, F + 30, 1134, F + 60])}
     ${landProp(76, `<path d="M790 ${F + 50} q10 6 22 2.6 q12 -3.6 26 3.4 q6 2.6 12 0" fill="none" ${hs('#c9b48a', '#4a4466')} stroke-width="1.4"/>` + [[800, F + 40], [822, F + 48], [842, F + 38]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" ${hc('#f08a3a', '#5a3a2a')}/><path d="${crescentD(x, y, 9, -20, 160)}" fill="#2b1c12" fill-opacity=".14"/><path d="M${x - 9} ${y + 0.6} Q${x} ${y + 3.6} ${x + 9} ${y + 0.6}" fill="none" ${hs('#c86a24', '#3a2a20')} stroke-width="1.4"/><ellipse cx="${x - 3.4}" cy="${y - 4}" rx="2.8" ry="1.7" transform="rotate(-30 ${x - 3.4} ${y - 4})" fill="#fff" fill-opacity=".5"/><circle cx="${x}" cy="${y - 10}" r="1.6" fill="none" ${hs('#8a6a4a', '#3a2c40')} stroke-width="1"/>`).join(''), null, [788, F + 26, 854, F + 60])}
+    ${ICHIBA.html(F)}
     ${yHeroHtml()}
     ${TOWNEV.castHtml('harbor')}${CRUISE.callHtml()}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="往海邊" style="margin-left:${HARBOR_PATH - 32}px;bottom:186px"><span class="tag">${ySign('wave', '往海邊')}</span></button>
@@ -1518,7 +1522,7 @@ function streetHtml() {
 // between the places out of doors (test, 2026-11-09): the yard's path down to the main road, the yard's left edge along to the
 // beach. The hero walks to the way out (out), fades, and the other place opens with him coming in (in: where he appears, where
 // he walks to; yh.arrive)
-const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle', oku: '#/oku', kominkan: '#/kominkan', kyoshitsu: '#/kyoshitsu', chinatown: '#/chinatown', chinadori: '#/chinadori', rairai: '#/rairai', platform: '#/platform' };
+const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle', oku: '#/oku', kominkan: '#/kominkan', kyoshitsu: '#/kyoshitsu', chinatown: '#/chinatown', chinadori: '#/chinadori', rairai: '#/rairai', platform: '#/platform', sushi: '#/sushi' };
 // where a place's sight stands, for the camera to look at on the way in (2026-11-10: 白鷺城 was off the screen of a phone)
 const PLACE_LOOK = { castle: 280, shokudo: 130 };
 // a sight too big for a phone's screen, seen whole (yWide): [x0, x1, top] in the land's units — 白鷺城's keeps, their walls to the
@@ -1557,6 +1561,9 @@ const WAYS = {
   'chinadori>chinatown': { out: () => [0, 12], in: () => [[-360, 150], [-350, 106]] },
   'chinadori>rairai': { out: () => DORI.door('rairai'), in: () => [isoXY(...ISO.door), isoXY(...ISO.in)] },   // らいらいけん's door on 大通り, in by the room's (2026-11-15)
   'rairai>chinadori': { out: () => isoXY(...ISO.door), in: () => { const d = DORI.door('rairai'); return [d, [d[0] - 40, d[1]]]; } },
+  // みなと寿司's door on the harbour, in by the room's (2026-11-23)
+  'harbor>sushi': { out: () => [(SUSHI.DOOR[0] + SUSHI.DOOR[1]) / 2 - 600, 128], in: () => [isoXY(...ISO.door), isoXY(...ISO.in)] },
+  'sushi>harbor': { out: () => isoXY(...ISO.door), in: () => { const x = (SUSHI.DOOR[0] + SUSHI.DOOR[1]) / 2 - 600; return [[x, 128], [x, 98]]; } },
   // 駅前's 改札 ↔ the platform (2026-11-20): through the gate and up; down the stairs at the platform's right end
   'station>platform': { out: () => [-20, 126], in: () => [[493, 120], [430, 96]] },
   'platform>station': { out: () => [493, 122], in: () => [[-20, 126], [-20, 92]] },
@@ -1569,11 +1576,11 @@ const HARBOR_PATH = -380, PARK_PATH = 360;
 const YARD_GATE = { beach: [-470, 204], town: [480, 214] };   // the yard's edge towards the beach and the town seen far below (X, Y): their signs stand there
 // a door shut at this hour (2026-11-14): 公民館 opens 9–22, らいらいけん 10–20 (TOWN.HOURS) — what the hero says and the note;
 // らいらいけん open all the same to the cruise's group on its way in for lunch (CRUISE.opens, as the town's shops; 2026-11-23, t4)
-const PLACE_SHUT = { kyoshitsu: () => !TOWNEV.isOpen('kominkan', TOWNEV.now()), rairai: () => !TOWNEV.isOpen('rairai', TOWNEV.now()) && !CRUISE.opens('rairai') };
-const PLACE_SHUT_SAY = { kyoshitsu: ['へいかん…', '公民館已經關門了（9:00〜22:00 開）。'], rairai: ['しまってる…', 'らいらいけん 10:00〜20:00 營業。'] };
+const PLACE_SHUT = { kyoshitsu: () => !TOWNEV.isOpen('kominkan', TOWNEV.now()), rairai: () => !TOWNEV.isOpen('rairai', TOWNEV.now()) && !CRUISE.opens('rairai'), sushi: () => !SUSHI.open() };
+const PLACE_SHUT_SAY = { kyoshitsu: ['へいかん…', '公民館已經關門了（9:00〜22:00 開）。'], rairai: ['しまってる…', 'らいらいけん 10:00〜20:00 營業。'], sushi: () => ['じゅんびちゅう…', SUSHI.shutSay()] };   // みなと寿司 (2026-11-23): when it opens next, from 源さん's hours
 function yGo(el, to) {
   yNamed(el);
-  if (PLACE_SHUT[to] && PLACE_SHUT[to]()) { const [a, b] = PLACE_SHUT_SAY[to], y = el.closest('.yard'); if (y) yPop(y, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), a); toast(b, 3200); return; }
+  if (PLACE_SHUT[to] && PLACE_SHUT[to]()) { const said = PLACE_SHUT_SAY[to], [a, b] = typeof said === 'function' ? said() : said, y = el.closest('.yard'); if (y) yPop(y, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), a); toast(b, 3200); return; }
   const yard = el.closest('.yard'), h = yard && yard.querySelector('.yhero'), way = WAYS[`${yPlace}>${to}`]; if (!way) return;
   const leave = () => { yh.arrive = { from: yPlace, to }; go(PLACE_ROUTE[to]); };
   if (!h || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { leave(); return; }
@@ -2480,7 +2487,7 @@ function yardHtml(pct, place = 'yard') {
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
       <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
-      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : place === 'oku' ? okuHtml() : place === 'kominkan' ? kominkanHtml() : place === 'kyoshitsu' ? kyoshitsuHtml() : place === 'chinatown' ? chinatownHtml() : place === 'chinadori' ? chinadoriHtml() : place === 'rairai' ? rairaiHtml() : place === 'platform' ? platformHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
+      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : place === 'oku' ? okuHtml() : place === 'kominkan' ? kominkanHtml() : place === 'kyoshitsu' ? kyoshitsuHtml() : place === 'chinatown' ? chinatownHtml() : place === 'chinadori' ? chinadoriHtml() : place === 'rairai' ? rairaiHtml() : place === 'platform' ? platformHtml() : place === 'sushi' ? sushiHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
         <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
         <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>

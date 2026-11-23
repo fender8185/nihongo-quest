@@ -105,7 +105,7 @@ const SND = (() => {
   const GROUND = {
     yard: { way: 'gravel', off: 'grass' }, park: { way: 'concrete', off: 'gravel' }, beach: { way: 'wood', off: 'sand' }, harbor: { way: 'sand', off: 'concrete' },
     street: { off: 'concrete' }, town: { off: 'concrete' }, station: { off: 'concrete' }, sento: { off: 'concrete' },
-    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }, kominkan: { off: 'concrete' }, kyoshitsu: { off: 'wood' }, rairai: { off: 'concrete' }, chinatown: { off: 'concrete' }, platform: { off: 'concrete' }, chinadori: { off: 'concrete' }
+    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }, kominkan: { off: 'concrete' }, kyoshitsu: { off: 'wood' }, rairai: { off: 'concrete' }, sushi: { off: 'concrete' }, chinatown: { off: 'concrete' }, platform: { off: 'concrete' }, chinadori: { off: 'concrete' }
   };
   const groundOf = (place, kind) => { const g = GROUND[place]; return g ? g[kind] || g.off : ''; };
   // ---- each place's background: [layer, how loud by day, by night] (sounds/amb-<layer>-1.m4a, looping); room: through the window,
@@ -130,6 +130,7 @@ const SND = (() => {
     chinatown: [['town', 0.6, 0.35], ['restaurant', 0.25, 0.25]],   // 中華街: a busy street, kitchens open onto it
     chinadori: [['town', 0.5, 0.3], ['restaurant', 0.3, 0.25]],   // 大通り (2026-11-14): its shops and kitchens either side
     rairai: [['restaurant', 0.55, 0.45]],   // らいらいけん (2026-11-15): its kitchen and its tables
+    sushi: [['restaurant', 0.35, 0.3], ['harbor', 0.14, 0.12]],   // みなと寿司 (2026-11-23): a quiet counter, the harbour outside its door
     izakaya: [['izakaya', 0.6, 0.6]],
     shop: [['clock', 0.5, 0.5]],
     room: [['birds', 0.18, 0], ['insects', 0, 0.07]]
@@ -140,6 +141,10 @@ const SND = (() => {
     beach: [['gull', 35, 80, 0.25, 'day']], harbor: [['gull', 30, 70, 0.25, 'day']],
     town: [['bike', 40, 90, 0.5, 'day']], street: [['piyo', 50, 110, 0.6, '']], station: [['chime', 70, 140, 0.5, '']]
   };
+  // more while something stands there (2026-11-23): the 朝市 at the harbour — people about it, gulls after the fish (ICHIBA)
+  const MARKET = () => typeof ICHIBA === 'object' && ICHIBA.now();
+  const AMB_MORE = { harbor: () => (MARKET() ? [['town', 0.4, 0.3], ['gulls', 0.35, 0.15]] : []) };
+  const NOW_MORE = { harbor: () => (MARKET() ? [['gull', 10, 26, 0.3, '']] : []) };
   const live = {};   // a layer playing → { g, s }
   let scene = '', tick = 0, nextAt = {};
   function sceneNow() {
@@ -174,7 +179,7 @@ const SND = (() => {
     const c = ctx(), sc = c ? sceneNow() : '';
     if (c) out(c);
     const day = daylight(), want = {};
-    (AMB[sc] || []).forEach(([n, d, nt]) => { const v = d * day + nt * (1 - day); if (v > 0.02) want[n] = v; });
+    (AMB[sc] || []).concat(AMB_MORE[sc] ? AMB_MORE[sc]() : []).forEach(([n, d, nt]) => { const v = Math.min(1, (want[n] || 0) + d * day + nt * (1 - day)); if (v > 0.02) want[n] = v; });
     Object.keys(live).forEach((n) => { if (!(n in want)) layerOff(n); });
     Object.keys(want).forEach((n) => layerOn(c, n, want[n]));
     if (sc !== scene) { scene = sc; nextAt = {}; if (sc) prime(sc); }
@@ -185,7 +190,7 @@ const SND = (() => {
     const c = ctx(); if (!c || !scene) return;
     const now = Date.now(), day = daylight();
     if (now - tuned > 60000) { tuned = now; tune(); return; }
-    (NOW_AND_THEN[scene] || []).forEach(([name, lo, hi, v, when], k) => {
+    (NOW_AND_THEN[scene] || []).concat(NOW_MORE[scene] ? NOW_MORE[scene]() : []).forEach(([name, lo, hi, v, when], k) => {
       if ((when === 'day' && day < 0.5) || (when === 'night' && day >= 0.5)) return;
       const key = scene + k;
       if (!nextAt[key]) { nextAt[key] = now + (lo + Math.random() * (hi - lo)) * 500; return; }   // the first one sooner
@@ -235,6 +240,8 @@ const USE_SND = {
   'station.vend': 'can-drop', 'station.jobs': 'paper', 'platform.vend': 'can-drop', 'platform.bins': 'drawer', 'platform.wait': 'slide-door', 'platform.stall': 'paper', 'station.pigeons': 'wings', 'station.taxi': 'horn', 'station.gate': 'ic',
   'sento.milk': 'bottle', 'sento.cat': 'purr', 'sento.bath': 'bath', 'sento.laundry': 'washer',
   'chinatown.post': 'paper', 'chinatown.notice': 'paper', 'chinatown.shirt': 'cloth', 'chinatown.seiro': 'pour', 'chinatown.panda': 'cushion', 'chinatown.rmenu': 'paper', 'chinatown.yuka': 'place', 'chinatown.shishi': 'clap', 'chinatown.uranai': 'sparkle',
+  'harbor.sushi': 'slide-door', 'harbor.sakana': 'flop', 'harbor.himono': 'rustle', 'harbor.yaki': 'sizzle',
+  'sushi.stool': 'sit', 'sushi.table': 'dishes', 'sushi.menu': 'paper', 'sushi.fuda': 'paper', 'sushi.case': 'sparkle', 'sushi.gyotaku': 'paper',
   'rairai.pass': 'sizzle', 'rairai.register': 'suzu', 'rairai.table': 'dishes', 'rairai.menu': 'paper', 'rairai.poster': 'paper', 'rairai.tank': 'splash', 'rairai.toilet': 'door-close',
   'chinadori.ranran': 'suzu', 'chinadori.fuku': 'rustle', 'chinadori.toka': 'pour', 'chinadori.rairai': 'dishes', 'chinadori.kuriya': 'sizzle', 'chinadori.kohaku': 'furin', 'chinadori.board': 'paper',
   'kominkan.keiji': 'paper', 'kominkan.neko': 'meow', 'kominkan.hana': 'rustle', 'kominkan.nobori': 'cloth', 'kominkan.tokei': 'tick', 'kominkan.jitensha': 'bike',

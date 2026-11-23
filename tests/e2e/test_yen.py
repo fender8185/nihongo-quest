@@ -73,16 +73,18 @@ def test_every_food_and_drink_is_had_its_own_way_through_a_whole_meal(b):
       }
       host.remove(); const where = Object.fromEntries(Object.keys(TOWN.MENU).map((m) => [m, YEN.where(m)]));
       return JSON.stringify({ n: items.length, bad, ways, where, bgs: EATSCENE.BG }); })()"""))
-    assert r['n'] == 56 and not r['bad'], r   # 41, 稲荷山の茶屋's three, 中華街's seven (2026-11-14: 福明's four, 龍鳳飯店's three), the station's five (2026-11-22)
+    assert r['n'] == 61 and not r['bad'], r   # 41, 稲荷山の茶屋's three, 中華街's seven (2026-11-14: 福明's four, 龍鳳飯店's three), the station's five (2026-11-22), みなと寿司's four and the 朝市's 焼きホタテ (2026-11-23)
     wh = r['where']   # each where it is had: its own backdrop (2026-11-14, the user)
     assert (wh['shokudo'], wh['izakaya'], wh['cafe'], wh['milk'], wh['vend'], wh['bakery']) == ('shokudo', 'izakaya', 'cafe', 'sento', 'street', 'bakery'), wh
     assert all(wh[m] == 'fair' for m in ('yakisoba', 'takoyaki', 'wataame', 'ringoame', 'chocobanana')) and wh['chaya'] == 'chaya' and set(wh.values()) <= set(r['bgs']), wh
+    assert wh['sushi'] == 'sushi' and wh['ichiba'] == 'ichiba', wh   # at みなと寿司's counter; at the 朝市, the harbour behind (2026-11-23)
     w = r['ways']
     assert set(w) == {'spoon', 'chop', 'fork', 'pick', 'kushi', 'bite', 'straw', 'tip', 'cup'}, w
     assert {'curry', 'kakigori', 'jagabata'} <= set(w['spoon']) and {'ramen', 'udon', 'gyudon', 'sakana', 'yakisoba', 'inari', 'kitsune'} <= set(w['chop']), w
     assert w['fork'] == ['cake'] and w['pick'] == ['takoyaki'] and set(w['straw']) == {'soda', 'juice', 'tapioca'}, w   # 中華街 (2026-11-14): 珍珠奶茶 through its straw
-    assert {'cola', 'coffee', 'water', 'ramune', 'milk', 'oolong'} <= set(w['tip']) and set(w['cup']) == {'kohi', 'ocha', 'miso', 'amazake', 'jasmine'}, w
+    assert {'cola', 'coffee', 'water', 'ramune', 'milk', 'oolong'} <= set(w['tip']) and set(w['cup']) == {'kohi', 'ocha', 'miso', 'amazake', 'jasmine', 'agari'}, w
     assert {'gyoza', 'shoronpo', 'chukasoba'} <= set(w['chop']) and {'butaman', 'gomadango'} <= set(w['bite']) and wh['butaman'] == wh['ryuho'] == 'chinatown', w
+    assert {'nigiri', 'tekka', 'tamagozushi', 'hotate'} <= set(w['chop']), w   # みなと寿司 by chopsticks, the scallop off its shell (2026-11-23)
     assert set(w['kushi']) == {'yakitori', 'gyukushi', 'ichigoame', 'budouame'} and {'melonpan', 'onigiri', 'ringoame', 'suika', 'wataame'} <= set(w['bite']), w
 
 def test_the_tea_house_at_the_oku_sells_inari_kitsune_udon_and_amazake_by_day(b):
@@ -243,6 +245,36 @@ def test_a_stall_sells_more_each_thing_opened_by_its_word(b):
       return JSON.stringify({ open, locked, added }); })()"""))
     assert r['open'] == ['ringoame', 'ichigoame'] and r['locked'] == ['學會「ぶどう」這個字，就能點'], r
     assert r['added'] == [['gyukushi', '牛肉', True], ['jagabata', 'じゃがいも', True], ['ichigoame', 'いちご', True], ['budouame', 'ぶどう', True], ['lemonkori', 'レモン', True], ['suika', 'すいか', True]], r
+
+def test_sushi_and_scallops_are_bought_and_eaten(b):
+    # 2026-11-23 (spec §1.5, §1.6): みなと寿司's menu from 源さん — にぎり（並）, てっかまき, たまご, あがり, each opened by its word (すし,
+    # たまご, おちゃ) — and the 朝市's grill's 焼きホタテ (300 円); bought with 円, each had on a screen of its own where it is had, its own
+    # way (chopsticks, the scallop off its shell, a teacup), three looks and five words at least
+    r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ await go('sushi'); use('menu'); await wait(100);
+      const first = { items: [...document.querySelectorAll('.mc-item')].map((x) => x.dataset.item || 'locked'), lock: [...document.querySelectorAll('.mc-item.locked .mc-lock')].map((x) => x.textContent) };
+      closeModal(); learn('寿司', '卵'); use('menu'); await wait(100); const open = menu();
+      const eat = async () => { const es = document.querySelector('.eat-scene'); if (!es) return null; const o = { bg: es.querySelector('.es-face').dataset.bg, look: 0, say: 0 };
+        while (es.querySelector('.es-face').dataset.mood === 'drool') { o.look += 1; es.querySelector('.es-ok').click(); await wait(60); }
+        while (document.querySelector('.eat-scene')) { o.say += 1; document.querySelector('.es-ok').click(); await wait(60); } return o; };
+      document.querySelector('.mc-item[data-item="nigiri"]').click(); await wait(100); const said = await talk(); await wait(1700); const nig = await eat(), bal1 = yenBalance();
+      TOWNEV.clock = { h: 7, day: new Date(2026, 10, 10) }; location.hash = '#/harbor'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+      use('yaki'); await wait(100); const stall = menu(); document.querySelector('.mc-item[data-item="hotate"]').click(); await wait(100);
+      const who = [], said2 = []; while (document.querySelector('.talk-card')) { who.push(document.querySelector('.talk-name').firstChild.textContent); said2.push(document.querySelector('.talk-ja').textContent.trim()); document.querySelector('.talk').click(); await wait(40); }
+      await wait(1700); const hot = await eat();
+      const items = TOWN.MENU.sushi.items.concat(TOWN.MENU.ichiba.items).map((it) => [it[0], it[3], EATSCENE.way(it), (it[4].look || []).length, (it[4].say || []).length, Boolean(YEN.pic(it)), it[4].w || '']);
+      return JSON.stringify({ first, open, said, nig, bal1, stall, who, said2, hot, bal: yenBalance(), items, keepers: [TOWN.MENU.sushi.keeper[0], TOWN.MENU.ichiba.keeper[0]] }); })()"""))
+    assert r['first']['items'] == ['locked', 'locked', 'locked', 'agari'], r['first']   # おちゃ learned already; すし, たまご not yet
+    assert r['first']['lock'] == ['學會「すし」這個字，就能點', '學會「すし」這個字，就能點', '學會「たまご」這個字，就能點'], r['first']
+    assert r['open'] == [['nigiri', False], ['tekka', False], ['tamagozushi', False], ['agari', False]], r['open']   # learned: all four
+    assert r['said'][0].startswith('並') and r['said'][0].endswith('にぎりを ください。') and '1,200円' in r['said'][1] and r['bal1'] == 3800, r   # ordered in Japanese, 源さん says the price
+    assert r['nig']['bg'] == 'sushi' and r['nig']['look'] >= 3 and r['nig']['say'] >= 5, r['nig']   # at his counter
+    assert r['stall'] == [['hotate', False]] and r['who'] == ['我', '浜焼きのお姉さん'] and r['said2'][0].startswith('焼') and '300円' in r['said2'][1], r
+    assert r['hot']['bg'] == 'ichiba' and r['hot']['look'] >= 3 and r['hot']['say'] >= 5 and r['bal'] == 3500, r
+    assert r['keepers'] == ['gen', 'hamayaki'], r
+    ways = {i[0]: i[2] for i in r['items']}
+    assert ways == {'nigiri': 'chop', 'tekka': 'chop', 'tamagozushi': 'chop', 'agari': 'cup', 'hotate': 'chop'}, ways   # chopsticks; the scallop off its shell; a teacup
+    assert all(150 <= i[1] <= 1500 and i[3] >= 3 and i[4] >= 5 and i[5] for i in r['items']) and {i[0]: i[1] for i in r['items']}['hotate'] == 300, r['items']
+    assert {i[0]: i[6] for i in r['items']} == {'nigiri': '寿司', 'tekka': '寿司', 'tamagozushi': '卵', 'agari': 'お茶', 'hotate': ''}, r['items']
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

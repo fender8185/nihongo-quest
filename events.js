@@ -6,9 +6,9 @@
    docs/superpowers/specs/2026-11-09-town-events-design.md. */
 const TOWN = {
   // the places index.html draws people in (a new one goes here when it is drawn: street, station, sento, shrine, castle)
-  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform'],
+  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街'],
+  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
   HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21], dori: [10, 19], rairai: [10, 20] },
   // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
@@ -36,6 +36,7 @@ const TOWN = {
     chinadori: { ranran: { X: -66, Y: 132, roam: [8, 4] }, fuku: { X: -44, Y: 222, roam: [6, 3] }, rairai: { X: 66, Y: 132, roam: [8, 4] } },   // 大通り (2026-11-14): its keepers at their shops (WORK)
     rairai: { pass: { u: 6.9, v: 0.85 } },   // らいらいけん (2026-11-15): 黄 behind the pass
     platform: { stand: { X: -376, Y: 128, roam: [4, 2] } },   // みなと駅のホーム (2026-11-20): ハル behind her bento stall
+    sushi: { counter: { u: 10.6, v: 1.75 } },   // みなと寿司 (2026-11-23): 源さん behind the counter, his hands at work over it (SUSHI)
     kyoshitsu: { teach: { u: 4.6, v: 3.6 }, desk1: { u: 5.6, v: 5.85, sit: 1, pose: 'turn flip' }, desk2: { u: 13, v: 5.85, sit: 1, pose: 'turn flip' }, desk3: { u: 16.6, v: 5.85, sit: 1, pose: 'turn flip' }, tatami: { u: 19.4, v: 12.4, h: 0.5, kneel: 1, pose: 'turn flip' } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
@@ -155,6 +156,11 @@ const TOWN = {
     haru: { name: '浜田 ハル', kana: 'はまだ はる', role: '駅弁屋「みなと弁当」', look: { face: 'round', skin: '#f0cdb0', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#3a2a20', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#2f5a8a', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'hachimaki' },
       bio: ['みなと駅月台上便當攤「みなと弁当」的老闆娘，74 歲。在這個月台賣了五十年便當，嗓門大、手腳快、很疼人。', '口頭禪是「でんしゃは まって くれないよ！」。說話是老奶奶的常體。'],
       hours: [[7, 19, 'platform', 'stand']] },
+    // みなと寿司 (2026-11-23, docs/superpowers/specs/2026-11-23-cruise-t3-t6-design.md §1.5): the 大将 on the harbour beside the 漁協 —
+    // few words, quick hands, now and then a dry joke; in his shop for lunch and for supper, a break between (SUSHI)
+    gen: { name: '源さん', kana: 'げんさん', role: 'すし屋「みなと寿司」の大将', look: { face: 'pointed', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'sharp', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'stubble', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'nejiri' },
+      bio: ['漁港「みなと寿司」的大將，65 歲。頭綁布巾、穿白色板前服，話很少、手很快，偶爾冷冷地冒出一句好笑的。', '每天天還沒亮就去漁港挑魚；健二捕的魚他最信得過。中午和晚上開店，中間休息。'],
+      hours: [[10, 14, 'sushi', 'counter'], [17, 21, 'sushi', 'counter']] },
     granny: { name: 'おばあちゃん', kana: 'おばあちゃん', role: '外婆（信）', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#b8a27a', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
       bio: ['你的外婆。在海邊的小屋住了一輩子，鎮上每個人都記得她。', '她留給渚一封信，要等你會說日文才交給你。'],
       hours: [] }
@@ -179,6 +185,23 @@ const TOWN = {
       ['m4', '{中村|なかむら}さんは いつも おにぎり {二|ふた}つと お{茶|ちゃ}。「いつもの」で わかるよ。', '中村先生總是兩個飯糰加茶。說「老樣子」我就懂了。', { about: 'nakamura' }],
       ['m5', '{昔|むかし|以前}は {電車|でんしゃ}の {窓|まど}から お{弁当|べんとう}を {売|う}ったんだよ。いまも {売|う}って いるけどね！', '以前是從電車的窗戶賣便當的喔。現在也還在賣啦！'],
       ['m6', '{雨|あめ}の {日|ひ}は お{客|きゃく}さんが {少|すく}ないから、{歌|うた}を {歌|うた}って {待|ま}つんだよ。', '下雨天客人少，所以我就唱著歌等。']
+    ],
+    // みなと寿司 (2026-11-23): 源さん — few words, quick hands, a dry joke now and then
+    gen: [
+      ['m0', 'らっしゃい。なに にぎる？', '歡迎。要捏什麼？'],
+      ['m0', 'きょうの アジは いい。', '今天的竹筴魚不錯。'],
+      ['m0', 'しょうゆは、ちょっとで いい。', '醬油沾一點點就好。'],
+      ['m0', 'にぎったら、すぐ たべて くれ。', '捏好了就馬上吃。'],
+      ['m0', 'てが はやい？ ほめても、なにも でないよ。', '手很快？誇我也不會多送什麼喔。'],
+      ['m0', '…まいど。', '……謝謝光臨。', { h: 'night' }],
+      ['m1', '{毎朝|まいあさ}、{市場|いちば}で さかなを えらぶ。', '每天早上在市場挑魚。'],
+      ['m1', 'しゃべるのは にがてだ。にぎるのは とくいだ。', '講話我不在行。捏壽司我拿手。'],
+      ['m2', '{昼|ひる}は いそがしい。{夜|よる}は しずかで いい。', '中午很忙。晚上很安靜，挺好。'],
+      ['m2', '{健二|けんじ}の とった さかなは、まちがいない。', '健二捕的魚，絕對沒問題。', { about: 'kenji' }],
+      ['m3', 'すしを にぎって {四十年|よんじゅうねん|四十年}。…まだ しゅぎょうちゅうだ。', '捏壽司四十年了。……還在修行中。'],
+      ['m4', 'うちの すしは しゃべらない。だから、うまい。', '我家的壽司不說話。所以好吃。'],
+      ['m5', 'わさびは なみだが でる くらいが いい。…なかないで くれよ。', '芥末要放到會流眼淚才好。……可別哭啊。'],
+      ['m6', 'ひまな ときは、{包丁|ほうちょう|菜刀}を とぐ。ひまじゃ ない ときも とぐ。', '有空的時候磨刀。沒空的時候也磨。']
     ],
     // 中華街大通り (2026-11-14): 周 — slow, kind, and never loses a haggle; 張 — few words, everything in its place; 黄 — in a hurry
     zhou: [
@@ -3140,7 +3163,14 @@ const TOWN = {
     oniisan: { name: 'かき氷屋のお兄さん', kana: 'かきごおりやのおにいさん', role: '剉冰、冰西瓜、彈珠汽水', look: { face: 'oval', skin: '#e8bd98', cheeks: 'none', fringe: 'spiky', sides: 'short', hairBack: 'short', hairTop: 'none', hairColor: '#c9a25a', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#3f9a8c', bottomStyle: 'shorts', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'nejiri' } },
     oneesan: { name: 'チョコバナナ屋のお姉さん', kana: 'チョコバナナやのおねえさん', role: '巧克力香蕉', look: { face: 'mochi', skin: '#f8dcc8', cheeks: 'blush', fringe: 'round', sides: 'chin', hairBack: 'short', hairTop: 'ponytail', hairColor: '#8a4a2e', eyes: 'kira', eyeColor: '#5a3a28', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#5a68d8', bottomStyle: 'shorts', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: {} },
     ojiisan: { name: '金魚すくいのおじいさん', kana: 'きんぎょすくいのおじいさん', role: '金魚撈', look: { face: 'oval', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'short', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'smile', beard: 'mustache', topStyle: 'jinbei', top: '#4f6f9e', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'geta', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
-      scoop: ['おっ、じょうずだね！', '喔，撈得真好！'] }
+      scoop: ['おっ、じょうずだね！', '喔，撈得真好！'] },
+    // みなと漁港の朝市 (2026-11-23, spec §1.6): behind its three stalls 6:00–10:00 (ICHIBA) — the fish, the dried fish, the grill (its
+    // 焼きホタテ: MENU ichiba); call: what they call out to one at their stall (one of them, a tap)
+    sakanaya: { name: '魚屋のおじさん', kana: 'さかなやの おじさん', role: '朝市的魚攤', look: { face: 'round', skin: '#d39f78', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'tee', top: '#4f6f9e', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'rainboots', shoe: '#2b2b33' }, wear: { head: 'nejiri', body: 'apron', apron: '#3f4660' },
+      call: [['らっしゃい！ {今朝|けさ} あがった アジだよ！', '歡迎！今天早上剛上岸的竹筴魚喔！'], ['この タイ、{見|み}て ごらん。ぴかぴかだろう？', '你看這條鯛魚，亮晶晶的吧？'], ['さしみでも、{焼|や|烤}いても うまいよ！', '做生魚片也好、拿去烤也好，都好吃喔！']] },
+    himonoya: { name: '干物屋のおばあさん', kana: 'ひものやの おばあさん', role: '朝市的魚乾攤', look: { face: 'round', skin: '#e8bd98', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#d9a43a', bottomStyle: 'wide', bottom: '#4a4a55', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'sankakukin', body: 'apron', apron: '#6e4f3a' },
+      call: [['アジの ひもの、{焼|や|烤}くと おいしいよ。', '竹筴魚乾，烤了很好吃喔。'], ['お{日|ひ}さまで ほした ひものだよ。', '用太陽曬的魚乾喔。'], ['{寒|さむ}い {日|ひ}は、ひものと ごはんが いちばん。', '冷天就是要魚乾配白飯。']] },
+    hamayaki: { name: '浜焼きのお姉さん', kana: 'はまやきの おねえさん', role: '朝市的燒烤攤：烤扇貝', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'blush', fringe: 'swept', sides: 'tucked', hairBack: 'short', hairTop: 'ponytail', hairColor: '#6b4a32', eyes: 'big', eyeColor: '#5a3a28', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#d0574b', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'nejiri' } }
   },
   // what the wallet's 円 buys (2026-11-13, the second round of the guide's pay): a menu a place's thing has (PLACE_USE buy) —
   // items [id, name as said, Chinese, price 円, { k: a food (f) or a drink (d) — two foods and a drink a day; w: the course's
@@ -3400,7 +3430,35 @@ const TOWN = {
         say: [['あまい！ あずきの あじが こいです。', '好甜！紅豆味好濃。'], ['なかに ちいさい おもちが はいって いました！', '裡面有小小的麻糬！'], ['おもちが やわらかくて、あずきと よく あいます。', '麻糬軟軟的，跟紅豆很搭。'],
           ['のむ おやつ みたいです。', '像是用喝的點心。'], ['おなかの なかが ぽかぽか します。', '肚子裡暖呼呼的。'], ['ちいさい かんで、ちょうど いい りょうです。', '小小一罐，份量剛剛好。'],
           ['あまくて… ちょっと のどが かわきました。', '好甜……有點口渴了。']] }]],
-      have: 'あたたかい…' }
+      have: 'あたたかい…' },
+    // みなと寿司 (2026-11-23, spec §1.5): 源さん's counter — its wooden tags on the wall; had at the counter (sit)
+    sushi: { title: 'みなと{寿司|すし}', keeper: ['gen', 'へい。{P}。', '好。{Z}。'], hello: ['…らっしゃい。まあ、すわんな。', '……歡迎。先坐吧。'], sit: true,
+      items: [['nigiri', '{並|なみ|一般}にぎり', '握壽司（一般）', 1200, { k: 'f', w: '寿司', pic: 'にぎり', dish: true,
+        look: [['げたの {上|うえ}に、すしが ずらり！', '木板上排滿了壽司！'], ['まぐろ、サーモン、えび、いか… いろが きれい！', '鮪魚、鮭魚、蝦、花枝……顏色好漂亮！'], ['ネタが つやつや ひかって います。', '魚料亮晶晶地發著光。'],
+          ['{源|げん}さんの {手|て}、はやかった…！', '源先生的手好快……！']],
+        say: [['まぐろが とろっと とけます…！', '鮪魚入口即化……！'], ['しゃりが くちの なかで ふわっと ほどけます。', '醋飯在嘴裡輕輕地散開。'], ['わさびが ツーンと きました！', '芥末衝上鼻子了！'],
+          ['えびが ぷりぷりで、あまい！', '蝦子Q彈又鮮甜！'], ['いかは ねっとり。しょうがで くちが さっぱり。', '花枝黏稠綿密。吃片薑，嘴裡就清爽了。'], ['みなとの さかなは、やっぱり ちがいます！', '港口的魚果然不一樣！']] }],
+        ['tekka', 'てっかまき', '鐵火卷（鮪魚細卷）', 600, { k: 'f', w: '寿司', pic: 'てっかまき', dish: true,
+        look: [['まるい てっかまきが {六|むっ}つ！', '圓圓的鐵火卷有六個！'], ['まんなかの まぐろが まっかです。', '中間的鮪魚紅通通的。'], ['のりの いい においが します。', '有海苔的香味。']],
+        say: [['のりが パリッ！ まぐろが しっとり！', '海苔脆脆的！鮪魚濕潤潤的！'], ['ひとくちで ちょうど いい おおきさです。', '一口剛剛好的大小。'], ['わさびが ピリッと して、おいしい！', '芥末辣辣的，好好吃！'],
+          ['しょうゆは ちょっとだけ つけます。', '醬油只沾一點點。'], ['{手|て}が とまりません… {六|むっ}つ ぜんぶ {食|た}べました！', '停不下來……六個全吃完了！']] }],
+        ['tamagozushi', 'たまご', '玉子燒握壽司', 200, { k: 'f', w: '卵', pic: 'たまご寿司', dish: true,
+        look: [['きいろい たまごが ふっくら！', '黃色的玉子燒蓬鬆鬆的！'], ['のりの おびが まいて あります。', '捲著一條海苔帶。'], ['あまい においが します…', '有甜甜的香味……']],
+        say: [['あまくて、ふわふわ！ おかしみたい！', '甜甜的、軟綿綿的！像點心一樣！'], ['だしの {味|あじ|味道}が じゅわっと します。', '高湯的味道一下子滲出來。'], ['しゃりと いっしょに {食|た}べると、もっと おいしい。', '和醋飯一起吃更好吃。'],
+          ['すしやの たまごは、とくべつです。', '壽司店的玉子燒很特別。'], ['さいごは たまごで しめる… {大人|おとな}の {食|た}べかたです。', '最後用玉子燒收尾……這是大人的吃法。']] }],
+        ['agari', 'あがり', '熱茶（壽司店的茶）', 150, { k: 'd', w: 'お茶', pic: 'あがり',
+        look: [['おおきい ゆのみ！ さかなへんの {漢字|かんじ}が いっぱい！', '好大的茶杯！上面寫滿了魚字旁的漢字！'], ['あつい おちゃの ゆげが たって います。', '熱茶冒著熱氣。'], ['すしやでは、おちゃを「あがり」と いいます。', '在壽司店，茶叫做「あがり」。']],
+        say: [['ずずっ… あつい！ でも、ほっと します。', '嘶……好燙！可是好放鬆。'], ['すこし にがくて、くちが さっぱり しました。', '有點苦，嘴巴變清爽了。'], ['こい おちゃです。すしに ぴったり！', '很濃的茶。跟壽司超搭！'],
+          ['ゆのみが あったかくて、{手|て}も ぽかぽか。', '茶杯暖暖的，手也暖呼呼。'], ['すしの あとの あがりは、さいこうです！', '吃完壽司後的這杯茶，最棒了！']] }]],
+      have: 'いただきます！', done: 'ごちそうさまでした！' },
+    // みなと漁港の朝市 (2026-11-23, spec §1.6): the grill's 焼きホタテ on its shell, had there by the sea (6:00–10:00, ICHIBA)
+    ichiba: { title: '{浜焼|はまや|海鮮燒烤}き', shop: 'みなとの {朝市|あさいち|早市}', keeper: ['hamayaki', 'はい、{P}です！ あついから、きを つけてね！', '好的，{Z}！很燙，小心喔！'],
+      items: [['hotate', '{焼|や|烤}きホタテ', '烤扇貝（帶殼）', 300, { k: 'f', pic: '焼きホタテ', dish: true,
+        look: [['おおきい かいがらの {上|うえ}で、ホタテが ぐつぐつ！', '大大的貝殼上，扇貝咕嘟咕嘟地冒泡！'], ['バターと しょうゆの におい… たまりません！', '奶油和醬油的香味……受不了了！'], ['けむりが もくもく あがって います。', '煙一直冒上來。'],
+          ['ホタテが かいがらから はみだしそうです。', '扇貝大到快從殼裡滿出來了。']],
+        say: [['あつっ！ でも、ぷりっぷりです！', '好燙！可是好Q彈！'], ['かむと、うみの {味|あじ|味道}が じゅわっと でて きます。', '一咬，大海的味道就滲出來。'], ['バターじょうゆが ホタテに よく あいます。', '奶油醬油和扇貝超搭。'],
+          ['かいがらの スープも のみたいです…', '貝殼裡的湯汁也好想喝……'], ['ひもも こりこりして おいしい！', '裙邊也脆脆的好好吃！'], ['うみを {見|み}ながら {食|た}べると、さいこうです！', '一邊看海一邊吃，最棒了！']] }]],
+      have: 'いい におい！' }
   },
   // もらいもの (2026-11-22, the user: a food or two not bought — given after a word, or for a job done well): who gives it and where;
   // ask: the hero's reply in their talk that brings it (once a day), or job and grade: the shift it comes after (its results put away);
