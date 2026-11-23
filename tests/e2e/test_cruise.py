@@ -57,9 +57,9 @@ BUS = """[stop('hi', 'harbor', [180, 56], [40, 40]), stop('sh', 'shrine', [300, 
 # the order they come, the most sat down at each, the town's people seen at each (there or brought out), the stops on along the bar
 RIGHT = """const right = (card) => { const t = CRUISE.current(), s = t && t.stops.find((x) => x.id === state.cruise.on.stop), ask = (card.querySelector('.talk-name span') || {}).textContent;
     const L = s && s.lines.find((l) => !Array.isArray(l) && l.ask === ask), k = L ? L.opts.findIndex((o) => o[1]) : -1; return card.querySelector(`.talk-opt[data-pick="${k}"] .talk-pick`); };
-  const tour = async (done, ms = 240000) => { const seen = [], order = [], sat = {}, folk = {}, t0 = Date.now();
+  const tour = async (done, look, ms = 240000) => { const seen = [], order = [], sat = {}, folk = {}, t0 = Date.now();   // look(place): a peek each step
     while (!done() && Date.now() - t0 < ms) {
-      const p = y() && y().dataset.place;
+      const p = y() && y().dataset.place; if (p && look) await look(p);
       if (p) { if (order[order.length - 1] !== p) order.push(p); sat[p] = Math.max(sat[p] || 0, document.querySelectorAll('#view .tourist.bench, #view .tourist.kneel').length);
         folk[p] = [...new Set((folk[p] || []).concat([...document.querySelectorAll('#view [data-npc], #view .cr-extra')].map((e) => e.dataset.npc || (/npc-(\\w+)/.exec(e.className) || [])[1])))]; }
       const card = document.querySelector('.talk-card');
@@ -383,14 +383,22 @@ def test_trip_three_rides_the_train_back_and_eats_bento_on_the_platform(b):
     # harbour; every reply right at once: grade S. His photos go off with a shutter's カシャ (a sound there is)
     r = json.loads(ev(b, "(async () => { " + FRESH + RIGHT + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
       CRUISE.skipTo('t3'); await call(); const party = people(), t = trip('t3');
-      const d = await tour(() => !!state.cruise.done.t3);
+      // after the 駅弁's talk: ひかる, new today, sat down to his dream 駅弁; after the 電車 stop's: their train in at 二番線, doors open,
+      // the other track empty, the timetable held, no 搭車 button for the hero (2026-11-23, the review)
+      let meal = null, board = null; const quiet = () => !document.querySelector('.talk-card'), on = () => state.cruise.on || {};
+      const look = async (p) => { if (p !== 'platform' || !quiet()) return; const g = (k) => y().querySelector(`.pf-train[data-track="${k}"]`);
+        if (!meal && on().stop === 'densha') meal = { hikaru: !!document.querySelector('#view .cr-hikaru.bench') };
+        if (!board && on().stop === 'bye') board = { now: PLATFORM.now(), open: g(2).classList.contains('open'), two: g(2).style.transform, one: g(1).style.transform, btn: !!y().querySelector('.pf-board') }; };
+      const d = await tour(() => !!state.cruise.done.t3, look);
       const photos = t.stops.flatMap((s) => s.lines).filter((l) => Array.isArray(l) && l[0] === 'hikaru' && l[3] && l[3].snd === 'shutter').length;
       return JSON.stringify(Object.assign(d, { party: party.length, last: CRUISE.party(t).slice(-1)[0], errs, res: state.cruise.res.t3, asks: asks(t).length, pts: asks(t).map((a) => a.pt),
-        eats: t.stops.filter((s) => s.eat).map((s) => [s.at, Object.keys(s.cast || {})]), photos, shutter: typeof SND.SYNTH.shutter, stops: state.town.stops })); })()"""))
+        eats: t.stops.filter((s) => s.eat).map((s) => [s.at, Object.keys(s.cast || {})]), photos, shutter: typeof SND.SYNTH.shutter, stops: state.town.stops, meal, board })); })()"""))
     assert r.get('stuck') is None and r['errs'] == [], r
     assert r['party'] == 11 and r['last'] == 'hikaru', r   # the eight, マイク, ひかる (down last), 高橋
     assert r['seen'] == titles(b, 2)[1:] and r['order'] == ['harbor', 'station', 'platform', 'harbor'], r   # by bus, up the stairs, home by train
-    assert r['eats'] == [['platform', ['haru']]] and 'haru' in r['folk']['platform'] and r['sat']['platform'] >= 4, r   # ハル's 駅弁 on the platform's benches
+    assert r['eats'] == [['platform', ['haru']]] and 'haru' in r['folk']['platform'] and r['sat']['platform'] >= 4 and r['meal'] == {'hikaru': True}, r   # ハル's 駅弁 on the benches, ひかる among those sat
+    bd = r['board']   # the みなと港 train standing at 二番線 with its doors open while they board; 1番線 empty
+    assert bd['now'] == {'track': 2, 'to': 'minatoko', 'kind': bd['now']['kind'], 'phase': 'stop'} and bd['open'] and bd['two'] == 'translateX(0px)' and '1400px' in bd['one'] and not bd['btn'], bd
     assert r['asks'] >= 20 and r['pts'].count('m3') > len(r['pts']) / 2, r
     assert r['res']['asks'] == r['asks'] and r['res']['first'] == r['asks'] and r['res']['grade'] == 5, r   # S
     assert r['photos'] >= 2 and r['shutter'] == 'function' and r['stops'].get('station') == 1, r
@@ -400,13 +408,19 @@ def test_trip_four_bathes_by_the_rules_and_lunches_at_rairai(b):
     # by bus to 中華街 (王 making 豚まん), through the 牌樓 into 大通り and in to らいらいけん, sat down at its tables (黄), home by bus
     r = json.loads(ev(b, "(async () => { " + FRESH + RIGHT + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
       CRUISE.skipTo('t4'); await call(); const party = people(), t = trip('t4');
-      const d = await tour(() => !!state.cruise.done.t4);
+      // at らいらいけん after its talk: 水野, new today (his appetite the joke), sat at a table — tapped, a word for the meal (EAT), not chatter
+      let mz = null; const look = async (p) => { if (mz || p !== 'rairai' || document.querySelector('.talk-card') || (state.cruise.on || {}).stop !== 'bye') return;
+        const e = document.querySelector('#view .cr-mizuno'), realS = speakAs, heard = []; if (!e) return; speakAs = (w, l) => { heard.push(l); return Promise.resolve(); };
+        e.click(); await wait(30); speakAs = realS; mz = { sat: e.matches('.bench'), heard }; };
+      const d = await tour(() => !!state.cruise.done.t4, look), of = (k) => (TOWN.CRUISE[k].mizuno || []).map((l) => l[1]);
       return JSON.stringify(Object.assign(d, { party: party.length, last: CRUISE.party(t).slice(-1)[0], errs, res: state.cruise.res.t4, asks: asks(t).length, pts: asks(t).map((a) => a.pt),
-        seat: t.stops.filter((s) => s.seat).map((s) => s.at), stops: state.town.stops })); })()"""))
+        seat: t.stops.filter((s) => s.seat).map((s) => s.at), stops: state.town.stops, mz, eat: of('EAT'), say: of('SAY') })); })()"""))
     assert r.get('stuck') is None and r['errs'] == [], r
     assert r['party'] == 12 and r['last'] == 'mizuno', r   # ひかる and 水野 aboard now
     assert r['seen'] == titles(b, 3)[1:] and r['order'] == ['harbor', 'sento', 'chinatown', 'chinadori', 'rairai', 'harbor'], r
     assert r['seat'] == ['rairai'] and r['sat']['rairai'] >= 9, r   # all らいらいけん's stools taken (nine), the rest standing by
+    mz = r['mz']   # 水野 among them, the newcomer seated first
+    assert mz and mz['sat'] and len(mz['heard']) == 1 and mz['heard'][0] in r['eat'] and mz['heard'][0] not in r['say'], mz
     assert all(w in r['folk'][p] for p, w in [('sento', 'matsu'), ('chinatown', 'wang'), ('chinadori', 'zhou'), ('rairai', 'huang')]), r
     assert r['asks'] >= 20 and r['pts'].count('m4') > len(r['pts']) / 2, r
     assert r['res']['asks'] == r['asks'] and r['res']['first'] == r['asks'] and r['res']['grade'] == 5 and r['stops'].get('sento') == 1, r

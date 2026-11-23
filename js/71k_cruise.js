@@ -314,11 +314,16 @@ const CRUISE = (() => {
   }
   const meal = (s) => (s.seat ? S.indoor : Boolean(s.eat) && !S.indoor);   // they sit down to eat: a room's seats, or out of doors (eat) the place's
   // where each goes at a stop: their place in the crowd round its spot (slots) — at a meal a seat each in turn while there are any
-  // (not the one lost elsewhere, nor one sat down already), out of doors the rest round in a ring (ring: its middle; S.eat)
+  // (not the one lost elsewhere, nor one sat down already), out of doors the rest round in a ring (ring: its middle; S.eat). The trip's
+  // newcomer sits first, on the seat nearest the crowd's spot (2026-11-23, the review: 水野 stood at his own lunch, the newest last of
+  // all) — in the middle of the meal, where the camera looks
+  const seatAt = (q) => (Array.isArray(q) ? isoXY(q[0], q[1]) : [q.X, q.t.dep]);
   function spots(s, i, ids) {
     const m = meal(s), free = !m ? [] : S.indoor ? seats() : benches(), seat = {}, at = slots(s, i, ids);
     const sat = (id) => Boolean((S.ppl.get(id) || {}).seat), lost = (id) => Boolean(s.lost) && s.lost[0] === id, out = m && !S.indoor;
-    if (m) ids.forEach((id) => { if (!sat(id) && !lost(id) && free.length) seat[id] = free.shift(); });
+    const j = (current() || {}).join, [cx, cy] = crowdAt(s), far = (q) => { const [X, Y] = seatAt(q); return Math.hypot(X - cx, Y - cy); };
+    if (m && ids.includes(j) && !sat(j) && !lost(j) && free.length) seat[j] = free.splice(free.reduce((b, q, k) => (far(q) < far(free[b]) ? k : b), 0), 1)[0];
+    if (m) ids.forEach((id) => { if (!seat[id] && !sat(id) && !lost(id) && free.length) seat[id] = free.shift(); });
     if (out) Object.assign(at, ring(s, i, ids.filter((id) => !seat[id] && !sat(id) && !lost(id))));
     return { meal: m, seat, at, ring: out ? crowdAt(s) : null };
   }
@@ -375,6 +380,7 @@ const CRUISE = (() => {
     if (!alive() || S.busy) return;
     const t = current(), s = t.stops[i], ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi'), sc = S;
     S.busy = true; bar(); bringOut(s); busIn(s); S.home = S.indoor ? null : crowdAt(s);
+    const board = S.place === 'platform' && ride(t, i + 1); if (board) PLATFORM.berth(S.yard, board);   // the stop before a ride on: its train in, doors open
     let left = 1, fin = false;
     const there = () => { if (--left > 0 || fin) return; fin = true; setTimeout(begin, 250); };
     const begin = () => {
@@ -397,6 +403,12 @@ const CRUISE = (() => {
     const late = (n) => { if (fin || S !== sc) return; if (n < 12 && [...sc.ppl.values()].some((p) => p.walk && !p.away)) { sc.t.push(setTimeout(() => late(n + 1), 400)); return; } left = 1; there(); };
     S.t.push(setTimeout(() => late(0), 5200));   // a walk cut short (the hero sent elsewhere): on after 5 s all the same — those still on their way (a long way over) waited for a few seconds more
   }
+  // a ride on by train from みなと駅's platform next (t3's 電車 stop, 2026-11-23, the review: the words said the みなと港 train was in
+  // at 二番線, the picture had the timetable's 白鷺 train): its train stands in at its track, doors open, from the stop before the ride
+  // till they have gone (PLATFORM.berth); boarding(): which line's, while they wait on the platform to board (the page drawn anew)
+  const LINE_END = { harbor: 'minatoko', castle: 'shirasagi' };   // the station a ride from the platform ends at, by the place it is in
+  const ride = (t, k) => { const nx = t.stops[nextStop(t, k)]; return (nx && nx.go === 'train' && LINE_END[nx.at]) || ''; };
+  const boarding = () => { const t = current(); return t && alive() && S.place === 'platform' && cs().on.place === 'platform' ? ride(t, stepOf(t, cs().on)) : ''; };
   // a stop's bus (bus: the X it stops at): in along the road as the stop begins, away as it ends — someone behind it is aboard
   function busIn(s) {
     if (s.bus === undefined || S.yard.querySelector('.bus')) return;
@@ -708,5 +720,5 @@ const CRUISE = (() => {
   function force() { const t = trips().find((x) => !cs().done[x.id]); if (!t) return null; cs().on = null; saveState(); setLocal(FORCE, t.id); setLocal(TOLD, ''); return t; }
   function reset() { state.cruise = { done: {}, on: null, res: {} }; saveState(); setLocal(FORCE, ''); setLocal(TOLD, ''); }
   function skipTo(id) { const k = tripIdx(id); if (k < 0) return; state.cruise = { done: Object.fromEntries(trips().slice(0, k).map((t) => [t.id, '2000-01-01'])), on: null, res: {} }; saveState(); setLocal(FORCE, id); setLocal(TOLD, ''); }
-  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, chorus, tune, result, rankOf, card, guided, preview, force, reset, skipTo, person, party, trips: () => trips() };
+  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, chorus, tune, result, rankOf, card, guided, preview, force, reset, skipTo, person, party, boarding, trips: () => trips() };
 })();

@@ -159,8 +159,8 @@ function pfBoardRows() {
 // ---- the trains: now and then one in on 1番線 (to 白鷺, from the right), then one on 2番線 (to みなと港, from the left); each slows to
 // its stop, opens its doors (ピンポン), waits, plays its bell, shuts and goes. PLATFORM.speed: the tests run it fast ----
 const PLATFORM = (() => {
-  let run = 0, cur = null;   // cur: the train in now { track, to, kind, phase }
-  const api = { speed: 1, now: () => cur, mount };
+  let run = 0, cur = null, held = '';   // cur: the train in now { track, to, kind, phase }; held: where the one the cruise's group boards goes (berth)
+  const api = { speed: 1, now: () => cur, mount, berth };
   // ---- the people on it (not under e2e; still for one who'd rather): a few waiting at 1番線's boarding marks, their backs to us;
   // in when the doors open — and one or two off it, away down the stairs; new ones up the stairs to wait while it is gone ----
   const MARKS = [0.5, 0.83, 1.17, 1.5, 1.83].map((t) => Math.round(PF_NEAR.at + PF_NEAR.len * t + (t > 1 ? 6 : 0) - 600));   // the doors' X (the stall stands at the first)
@@ -215,7 +215,7 @@ const PLATFORM = (() => {
   }
   // one train's call: in (slowing), stopped with its doors open, its bell, doors shut, away
   async function call(y, mine, track, x) {
-    const g = y.querySelector(`.pf-train[data-track="${track}"]`), alive = () => run === mine && y.isConnected; if (!g || !alive()) return;
+    const g = y.querySelector(`.pf-train[data-track="${track}"]`), alive = () => run === mine && y.isConnected && !held; if (!g || !alive()) return;
     const from = track === 1 ? 1400 : -1400, wait = (s) => new Promise((ok) => setTimeout(ok, ms(s)));
     const svg = g.querySelector('g'); if (svg) svg.innerHTML = pfTrain(PF_NEAR.len, PF_NEAR.h, x, track === 2);   // its LED says where to
     cur = { track, to: x.to, kind: x.kind, phase: 'in' };
@@ -231,15 +231,40 @@ const PLATFORM = (() => {
     await wait(1.4); if (!alive()) return;
     cur.phase = 'out'; g.style.transition = still() ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.6, 0, .9, .6)`; g.style.transform = `translateX(${-from}px)`;
     play('train-out', { vol: track === 1 ? 1 : 0.5 });
-    await wait(6.2); cur = null;
+    await wait(6.2); if (alive()) cur = null;   // (held meanwhile: cur is the boarded train's now)
+  }
+  // the cruise's group about to board (2026-11-23, t3's 電車 stop: 「みなと港行きの 電車が 来ます。二番線です！」 — the review: the
+  // picture had the timetable's 白鷺 train in): their train in at its track (to: where it goes), standing with its doors open till the
+  // platform is left (now: there already, the page drawn anew with them waiting); the timetable waits meanwhile (held), one at the other
+  // track drawn on out. No 搭車 button: the group gets on by 高橋's 「！」
+  async function berth(y, to, now = false) {
+    if (home !== y || !y.isConnected || held === to) return;
+    held = to; const mine = run, track = TOWN.EKI.TRACK[to] || 2, from = track === 1 ? 1400 : -1400, quick = now || still();
+    const here = () => run === mine && held === to && y.isConnected, wait = (s) => new Promise((ok) => setTimeout(ok, ms(s)));
+    [1, 2].forEach((k) => boardBtn(y, k, false));
+    const o = y.querySelector(`.pf-train[data-track="${3 - track}"]`);   // the other track's goes out its way (the side this one comes in from)
+    if (o && !/1400px/.test(o.style.transform)) { o.classList.remove('open'); o.style.transition = quick ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.6, 0, .9, .6)`; o.style.transform = `translateX(${from}px)`; if (!quick) play('train-out', { vol: 0.5 }); }
+    const g = y.querySelector(`.pf-train[data-track="${track}"]`); if (!g) return;
+    const h = sceneHour(), x = EKI.next(Math.floor(h), Math.floor((h % 1) * 60), 8).find((n) => n.to === to) || { kind: '普通', to };   // the next one there by the timetable
+    const svg = g.querySelector('g'); if (svg) svg.innerHTML = pfTrain(PF_NEAR.len, PF_NEAR.h, x, track === 2);
+    const coming = cur && cur.track === track && cur.phase === 'in';
+    cur = { track, to, kind: x.kind, phase: 'in' };
+    if (g.style.transform !== 'translateX(0px)') {
+      g.classList.remove('open'); g.style.transition = 'none'; g.style.transform = `translateX(${from}px)`; void g.getBoundingClientRect();
+      g.style.transition = quick ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.12, .62, .3, 1)`; g.style.transform = 'translateX(0px)';
+      if (!quick) { play('train-in', { vol: track === 1 ? 1 : 0.5 }); await wait(6.2); }
+    } else if (coming && !quick) await wait(3);   // the timetable's own was on its way in: let it stop
+    if (!here()) return;
+    cur.phase = 'stop'; if (!g.classList.contains('open')) { g.classList.add('open'); if (!now) play('door-chime', { vol: track === 1 ? 1 : 0.5 }); }
   }
   // the departure board again each minute
   function boardRows(y) { const b = y.querySelector('.pf-dep'); if (b) b.innerHTML = pfBoardRows(); }
   async function mount(y, place) {
-    const mine = ++run; cur = null; clear(); home = place === 'platform' ? y : null; if (place !== 'platform') return;
-    const wait = (s) => new Promise((ok) => setTimeout(ok, ms(s))), alive = () => run === mine && y.isConnected;
-    const tick = setInterval(() => { if (!alive()) { clearInterval(tick); return; } boardRows(y); }, 30000);
+    const mine = ++run; cur = null; held = ''; clear(); home = place === 'platform' ? y : null; if (place !== 'platform') return;
+    const wait = (s) => new Promise((ok) => setTimeout(ok, ms(s))), alive = () => run === mine && y.isConnected && !held;
+    const tick = setInterval(() => { if (run !== mine || !y.isConnected) { clearInterval(tick); return; } boardRows(y); }, 30000);   // on while a train is held too
     if (!quiet()) { for (let i = 0; i < 2; i++) { const m = free()[i * 2], p = person(y, [m, WAIT_Y]); if (p) { p.mark = m; p.el.classList.add('back'); } } const more = setInterval(() => { if (!alive()) { clearInterval(more); return; } if (!cur || cur.phase !== 'stop') comeToWait(y); }, 9000); }
+    const to = typeof CRUISE === 'object' ? CRUISE.boarding() : ''; if (to) { berth(y, to, true); return; }   // the cruise's group waiting here to board: theirs is in
     await wait(2);
     for (let k = 0; alive(); k++) {
       const now = sceneHour(), next = EKI.next(Math.floor(now), Math.floor((now % 1) * 60), 8), track = k % 2 ? 2 : 1;
