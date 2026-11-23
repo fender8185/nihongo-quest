@@ -611,6 +611,14 @@ def test_week0_completes_itself_when_its_last_item_is_answered(b):
     r = json.loads(ev(b, js))
     assert r == {'before': False, 'done': True, 'units': ['基本句型']}, r
 
+
+# ---- 2026-11-10: a 入門 word's question says 入門 above it, not the level's code ----
+def test_a_pre_n5_word_question_is_labelled_nyumon(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.lv === 'PRE_N5'); state.srs[v.key] = { b: 2, due: todayStr(), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {} };
+      const labels = ['v-meaning', 'v-recall'].map(f => (makeVocabQuestion(v, { forceFmt: f }) || {}).label); delete state.srs[v.key]; return JSON.stringify(labels); })()"""
+    r = json.loads(ev(b, js))
+    assert all(l and l.startswith('單字 · 入門 · ') for l in r), r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -633,10 +641,3 @@ if __name__ == "__main__":
         srv.terminate()
     print("ALL PASS" if not failed else f"{failed} FAILED")
     sys.exit(1 if failed else 0)
-
-# ---- 2026-11-10: a 入門 word's question says 入門 above it, not the level's code ----
-def test_a_pre_n5_word_question_is_labelled_nyumon(b):
-    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.lv === 'PRE_N5'); state.srs[v.key] = { b: 2, due: todayStr(), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {} };
-      const labels = ['v-meaning', 'v-recall'].map(f => (makeVocabQuestion(v, { forceFmt: f }) || {}).label); delete state.srs[v.key]; return JSON.stringify(labels); })()"""
-    r = json.loads(ev(b, js))
-    assert all(l and l.startswith('單字 · 入門 · ') for l in r), r
