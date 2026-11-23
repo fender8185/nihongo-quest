@@ -522,6 +522,46 @@ def test_review_state_kept_and_meter_voiced(b):
       return JSON.stringify({ gifts: n.purse.gifts, keep: n.work.res['2026-11-22'].keep, paid: 'keep' in n.work.res['2026-11-21'], meter: ls.includes('hero ' + TOWN.WORK.say.taxi.pay[0].replace('{P}', YEN.priceMark(2900))) }); })()"""))
     assert r == {'gifts': {'tamago': '2026-11-22'}, 'keep': {'tip': 20}, 'paid': False, 'meter': True}, r
 
+
+# 2026-11-22, the user: the station sells what nowhere else does — ハル's 駅弁 at her stall (while she is there; ordered from her
+# too), the platform's machine of hot cans; each drawn, had its own way (chopsticks from the box, a can tipped), on the platform,
+# with more to say than the town's (four looks, seven words after); 美食手帳 has their pages
+def test_station_food_sold_on_the_platform(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ s(); location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      const thing = (id) => PLACE_USE.platform.find((t) => t.id === id), M = TOWN.MENU, items = (m) => M[m].items.map((it) => [it[0], it[3]]);
+      const out = { here: [thing('ekiben').when(), thing('stall').when()], sells: Boolean(YEN.sells(yard(), 'haru')), vend: thing('vend').buy, ekiben: items('ekiben'), evend: items('evend'),
+        pics: M.ekiben.items.concat(M.evend.items).every((it) => YEN.pic(it).includes('<path')), ways: ['sakanaben', 'makunouchi', 'reitomikan', 'cornsoup', 'oshiruko'].map((id) => EATSCENE.way(M.ekiben.items.concat(M.evend.items).find((it) => it[0] === id))),
+        where: [YEN.where('ekiben'), YEN.where('evend')], bg: EATSCENE.BG.includes('platform'),
+        lines: M.ekiben.items.concat(M.evend.items).map((it) => [it[4].look.length, it[4].say.length]),
+        pages: (() => { const d = document.createElement('div'); d.innerHTML = YEN.book(); d.querySelectorAll('rt').forEach((x) => x.remove()); return [...d.querySelectorAll('.fb-menu h4')].map((h) => h.textContent); })() };   // each page's name as read, its furigana off
+      TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; out.late = [thing('ekiben').when(), thing('stall').when()];
+      return JSON.stringify(out); })()"""))
+    assert r['here'] == [True, False] and r['sells'] and r['late'] == [False, True], r   # ハル 7–19 at her stall
+    assert r['vend'] == 'evend' and r['ekiben'] == [['sakanaben', 800], ['makunouchi', 800], ['reitomikan', 300]] and r['evend'] == [['cornsoup', 130], ['oshiruko', 130]], r
+    assert r['pics'] and r['ways'] == ['chop', 'chop', 'bite', 'tip', 'tip'] and r['where'] == ['platform', 'platform'] and r['bg'], r
+    assert all(lk >= 4 and sy >= 7 for lk, sy in r['lines']), r['lines']
+    assert '駅の みなと弁当' in r['pages'] and '駅の 自動販売機' in r['pages'], r['pages']   # their own pages (the town's machine is the page named 自動販売機)
+
+# 2026-11-22, the user: a food or two not bought but given — ハル's 玉子焼き for 「おなかが すきました…」 picked in her talk (once a
+# day), 原田's 白鷺まんじゅう once a shift at the window is graded S (its results put away); each had at once, stamped into 美食手帳
+# (もらったもの, its hint before it is had). The window opens at unit m2: left at m1, WORK.start only toasts why not and the stubbed
+# runner never runs (__ctx undefined)
+def test_gifts_for_a_word_and_for_an_s(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ s(); reg(); window.speakAs = () => Promise.resolve(); location.hash = '#/platform'; route(); await wait(400); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; route(); await wait(400);
+      const out = { before: YEN.book().includes('？？？') };
+      const talkTo = async (id) => { document.querySelector(`.npc[data-npc="${id}"]`).click(); for (let i = 0; i < 60 && !document.querySelector('.talk'); i++) await wait(100); await wait(300); };
+      const through = async () => { for (let i = 0; i < 40 && !document.querySelector('.eat-scene'); i++) { const t = document.querySelector('.talk'); if (t) t.click(); await wait(150); } return Boolean(document.querySelector('.eat-scene')); };
+      await talkTo('haru'); const p = document.querySelector('.talk [data-go="gift"]'); out.pick = p ? p.textContent.trim() : null; if (p) p.click(); await wait(200);
+      out.ate = await through(); out.what = (document.querySelector('.eat-scene .es-name') || {}).textContent; document.querySelectorAll('.eat-scene').forEach((x) => x.remove());
+      out.book = Boolean(state.purse.book.tamagoyaki); TALK.close(); document.querySelectorAll('.talk').forEach((x) => x.remove()); await talkTo('haru'); out.again = Boolean(document.querySelector('.talk [data-go="gift"]')); TALK.close(); document.querySelectorAll('.talk').forEach((x) => x.remove());
+      location.hash = '#/station'; route(); await wait(400); state.currentUnit = 'm2'; stub('window');
+      WORK.start(yard(), 'window'); await wait(300); for (let k = 0; k < 10; k++) __ctx.right(k, 0); __ctx.finish(); await wait(300);
+      document.querySelector('.wk-result .crr-ok').click(); await wait(300); out.harada = Boolean(document.querySelector('.talk')); out.ate2 = await through();
+      out.what2 = (document.querySelector('.eat-scene .es-name') || {}).textContent; document.querySelectorAll('.eat-scene').forEach((x) => x.remove()); out.book2 = Boolean(state.purse.book.shirasagimanju);
+      out.page = YEN.book(); return JSON.stringify(out); })()"""))
+    assert r['before'] and r['pick'] == 'おなかが すきました…' and r['ate'] and 'たまごやき' in r['what'] and r['book'] and not r['again'], r
+    assert r['harada'] and r['ate2'] and 'まんじゅう' in r['what2'] and r['book2'] and 'もらったもの' in r['page'] and '非賣品' in r['page'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -544,40 +584,3 @@ if __name__ == "__main__":
         srv.terminate()
     print("ALL PASS" if not failed else f"{failed} FAILED")
     sys.exit(1 if failed else 0)
-
-# 2026-11-22, the user: the station sells what nowhere else does — ハル's 駅弁 at her stall (while she is there; ordered from her
-# too), the platform's machine of hot cans; each drawn, had its own way (chopsticks from the box, a can tipped), on the platform,
-# with more to say than the town's (four looks, seven words after); 美食手帳 has their pages
-def test_station_food_sold_on_the_platform(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ s(); location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
-      const thing = (id) => PLACE_USE.platform.find((t) => t.id === id), M = TOWN.MENU, items = (m) => M[m].items.map((it) => [it[0], it[3]]);
-      const out = { here: [thing('ekiben').when(), thing('stall').when()], sells: Boolean(YEN.sells(yard(), 'haru')), vend: thing('vend').buy, ekiben: items('ekiben'), evend: items('evend'),
-        pics: M.ekiben.items.concat(M.evend.items).every((it) => YEN.pic(it).includes('<path')), ways: ['sakanaben', 'makunouchi', 'reitomikan', 'cornsoup', 'oshiruko'].map((id) => EATSCENE.way(M.ekiben.items.concat(M.evend.items).find((it) => it[0] === id))),
-        where: [YEN.where('ekiben'), YEN.where('evend')], bg: EATSCENE.BG.includes('platform'),
-        lines: M.ekiben.items.concat(M.evend.items).map((it) => [it[4].look.length, it[4].say.length]), book: YEN.book() };
-      TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; out.late = [thing('ekiben').when(), thing('stall').when()];
-      return JSON.stringify(out); })()"""))
-    assert r['here'] == [True, False] and r['sells'] and r['late'] == [False, True], r   # ハル 7–19 at her stall
-    assert r['vend'] == 'evend' and r['ekiben'] == [['sakanaben', 800], ['makunouchi', 800], ['reitomikan', 300]] and r['evend'] == [['cornsoup', 130], ['oshiruko', 130]], r
-    assert r['pics'] and r['ways'] == ['chop', 'chop', 'bite', 'tip', 'tip'] and r['where'] == ['platform', 'platform'] and r['bg'], r
-    assert all(lk >= 4 and sy >= 7 for lk, sy in r['lines']), r['lines']
-    assert 'みなと弁当' in r['book'] and '自動販売機' in r['book'], r['book'][:300]
-
-# 2026-11-22, the user: a food or two not bought but given — ハル's 玉子焼き for 「おなかが すきました…」 picked in her talk (once a
-# day), 原田's 白鷺まんじゅう once a shift at the window is graded S (its results put away); each had at once, stamped into 美食手帳
-# (もらったもの, its hint before it is had)
-def test_gifts_for_a_word_and_for_an_s(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ s(); reg(); window.speakAs = () => Promise.resolve(); location.hash = '#/platform'; route(); await wait(400); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; route(); await wait(400);
-      const out = { before: YEN.book().includes('？？？') };
-      const talkTo = async (id) => { document.querySelector(`.npc[data-npc="${id}"]`).click(); for (let i = 0; i < 60 && !document.querySelector('.talk'); i++) await wait(100); await wait(300); };
-      const through = async () => { for (let i = 0; i < 40 && !document.querySelector('.eat-scene'); i++) { const t = document.querySelector('.talk'); if (t) t.click(); await wait(150); } return Boolean(document.querySelector('.eat-scene')); };
-      await talkTo('haru'); const p = document.querySelector('.talk [data-go="gift"]'); out.pick = p ? p.textContent.trim() : null; if (p) p.click(); await wait(200);
-      out.ate = await through(); out.what = (document.querySelector('.eat-scene .es-name') || {}).textContent; document.querySelectorAll('.eat-scene').forEach((x) => x.remove());
-      out.book = Boolean(state.purse.book.tamagoyaki); TALK.close(); document.querySelectorAll('.talk').forEach((x) => x.remove()); await talkTo('haru'); out.again = Boolean(document.querySelector('.talk [data-go="gift"]')); TALK.close(); document.querySelectorAll('.talk').forEach((x) => x.remove());
-      location.hash = '#/station'; route(); await wait(400); stub('window');
-      WORK.start(yard(), 'window'); await wait(300); for (let k = 0; k < 10; k++) __ctx.right(k, 0); __ctx.finish(); await wait(300);
-      document.querySelector('.wk-result .crr-ok').click(); await wait(300); out.harada = Boolean(document.querySelector('.talk')); out.ate2 = await through();
-      out.what2 = (document.querySelector('.eat-scene .es-name') || {}).textContent; document.querySelectorAll('.eat-scene').forEach((x) => x.remove()); out.book2 = Boolean(state.purse.book.shirasagimanju);
-      out.page = YEN.book(); return JSON.stringify(out); })()"""))
-    assert r['before'] and r['pick'] == 'おなかが すきました…' and r['ate'] and 'たまごやき' in r['what'] and r['book'] and not r['again'], r
-    assert r['harada'] and r['ate2'] and 'まんじゅう' in r['what2'] and r['book2'] and 'もらったもの' in r['page'] and '非賣品' in r['page'], r
