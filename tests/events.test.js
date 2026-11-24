@@ -271,10 +271,11 @@ test('フロント\'s lines (TOWN.ONSEN.front) are checked at m15: a bare kanji,
   const RIGHT = [L('はい、ございます。'), [['はい、いらっしゃいます。', '浴衣是東西。', 'thing'], ['はい、おります。', '浴衣是東西。', 'thing']]];
   const LOOK = { face: 'mochi', skin: '#e8bd98' };
   const fr = (o = {}, top = {}) => Object.assign({ ONSEN: { front: Object.assign({ named: { miku: P }, like: { miku: [['美玖', 'みく']] }, memo: { ebi: L('えびが だめ') },
-    rooms: [['sakura', '花', 'はな', '花']], room: L('{R}です。'), times: [[18, 'ろくじ', '六點']],
+    rooms: [['sakura', '花', 'はな', '花', '{花|はな}の へや']], room: L('{P}、{R}です。'), times: [[18, 'ろくじ', '六點']],
     ask: { a: { who: 'kenta', kind: 'request', line: L('{花|はな}は ありますか。'), reply: 'r' } }, reply: { r: RIGHT },
     fun: { s: { who: 'rikishi', kind: 'request', line: L('すみません。'), reply: RIGHT, after: L('ごっつぁんです！') } },
-    bday: L('おめでとう ございます。'), tip: 50, say: { who: 'kenta', start: L('はい。'), ok: [L('けっこう。')] }, hi: { in: L('いらっしゃいませ。') }, ok: L('かしこまりました。'), thanks: L('どうも。') }, o) },
+    bday: L('おめでとう ございます。'), tip: 50, tipName: '心付け', keyWhy: '看台帳。', hi: { in: L('いらっしゃいませ。') }, ok: L('かしこまりました。'), thanks: L('どうも。'),
+    say: Object.assign({ who: 'kenta', ok: [L('けっこう。')] }, ...['start', 'self', 'guest', 'thing', 'fact', 'key', 'lost', 'end', 'all'].map((k) => ({ [k]: L('はい。') }))) }, o) },
     GUESTS: { rikishi: { name: 'おすもうさん', look: LOOK } } }, top);
   assert.deepEqual(check(town([ev()], fr()), D15), []);
   assert.deepEqual(kinds(check(town([ev()], fr({ ask: { a: { who: 'kenta', kind: 'request', line: L('花は ありますか。'), reply: 'r' } } })), D15)), ['bare-kanji']);
@@ -290,4 +291,25 @@ test('フロント\'s lines (TOWN.ONSEN.front) are checked at m15: a bare kanji,
   assert.deepEqual(kinds(check(town([ev()], fr({}, { GUESTS: { rikishi: { name: 'おすもうさん' } } })), D15)), ['onsen']);   // a guest with no look
   assert.deepEqual(kinds(check(town([ev()], fr({}, { GUESTS: { rikishi: { name: 'おすもうさん', look: LOOK }, miku: { name: '美玖', look: LOOK } } })), D15)), ['ref']);   // someone of the town's
   assert.deepEqual(kinds(check(town([ev()], fr({ fun: { s: { who: 'sumo', kind: 'request', line: L('はい。'), reply: RIGHT, after: L('はい。') } } }, { GUESTS: { sumo: { name: 'おすもうさん', look: LOOK } } })), D15)), ['onsen']);   // no voice
+});
+test('フロント (fix round 1, M-5): 佐藤 has a word for each way a reply is wrong (self, guest, thing, fact) and for a wrong key, 道山, the start, ok, the end and all; a near name has its reading and is like a named guest; a named guest has a reading; the key\'s why and the tip\'s name are there', () => {
+  const D15 = Object.assign({}, DATA, { UNITS: DATA.UNITS.concat([{ id: 'm15', lv: 'N4' }, { id: 'm16', lv: 'N4' }]) });
+  const L = (ja) => [ja, '中文'], SAY = Object.assign({ who: 'kenta', ok: [L('けっこう。')] }, ...['start', 'self', 'guest', 'thing', 'fact', 'key', 'lost', 'end', 'all'].map((k) => ({ [k]: L('はい。') })));
+  const P = { name: ['美玖', 'みく'], in: L('{美玖|みく}です。'), ebi: L('えびは？'), when: L('なんじ？'), late: L('まだ。'), dinner: [18, L('はい。')], bday: L('わあ！') };
+  const RIGHT = [L('はい、ございます。'), [['はい、いらっしゃいます。', '浴衣是東西。', 'thing'], ['はい、おります。', '浴衣是東西。', 'thing']]];
+  const fr = (o = {}) => ({ ONSEN: { front: Object.assign({ named: { miku: P }, like: { miku: [['美玖', 'みく']] }, memo: { ebi: L('えびが だめ') }, rooms: [['sakura', '花', 'はな', '花', '{花|はな}の へや']],
+    room: L('{P}、{R}です。'), times: [[18, 'ろくじ', '六點']], ask: { a: { who: 'kenta', kind: 'request', line: L('{花|はな}は ありますか。'), reply: 'r' } }, reply: { r: RIGHT }, fun: {},
+    bday: L('おめでとう ございます。'), tip: 50, tipName: '心付け', keyWhy: '看台帳。', say: SAY, hi: { in: L('いらっしゃいませ。') }, ok: L('かしこまりました。'), thanks: L('どうも。') }, o) } });
+  const town2 = (o) => town([ev()], fr(o));
+  assert.deepEqual(check(town2({}), D15), []);
+  for (const k of ['self', 'guest', 'thing', 'fact', 'key', 'lost', 'start', 'end', 'all']) {
+    const say = Object.assign({}, SAY); delete say[k]; assert.deepEqual(kinds(check(town2({ say }), D15)), ['onsen'], `no ${k}`);
+  }
+  assert.deepEqual(kinds(check(town2({ say: Object.assign({}, SAY, { ok: [] }) }), D15)), ['onsen'], 'no ok');
+  assert.deepEqual(kinds(check(town2({ like: { miku: [['美玖']] } }), D15)), ['onsen']);   // a near name with no reading
+  assert.deepEqual(kinds(check(town2({ like: { nobody: [['美玖', 'みく']] } }), D15)), ['ref']);   // like no named guest
+  assert.deepEqual(kinds(check(town2({ named: { miku: Object.assign({}, P, { name: ['美玖'] }) } }), D15)), ['onsen']);   // a named guest with no reading
+  assert.deepEqual(kinds(check(town2({ keyWhy: '' }), D15)), ['onsen']);
+  assert.deepEqual(kinds(check(town2({ tipName: undefined }), D15)), ['onsen']);
+  assert.deepEqual(kinds(check(town2({ rooms: [['sakura', '花', 'はな', '花', '花の間']] }), D15)), ['bare-kanji']);   // a room as said, its kanji marked
 });

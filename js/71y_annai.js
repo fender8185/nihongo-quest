@@ -146,7 +146,7 @@ const ANNAI_RUN = (() => {
   const N = 10, SECS = 25, MISS = 0.15;   // a tourist's patience: 25 s from the end of their asking (the board takes reading), a miss costs some
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>');
   const S = () => TOWN.ONSEN.annai;
-  let D = null, runs = 0;   // the desk under way (JOBS.desk): its now() the tourist at the window (the tests: { k, task, phase, seed })
+  let cur = null, runs = 0;   // the latest run's desk (JOBS.desk): its now() the tourist at the window, for the tests ({ k, task, phase, seed }); each run reads its own
   // the board's pictures (28 × 28) and its rules' marks
   const ICON = {
     ashiyu: '<rect x="2" y="15" width="24" height="10" rx="2.5" fill="#a8a296"/><rect x="4" y="17" width="20" height="5" rx="1.2" fill="#7cc4c0"/><path d="M9.6 18 v-5.6 q0 -1.6 1.6 -1.6 h.4 q1.2 0 1.2 1.2 V18 M15.2 18 v-5.6 q0 -1.6 1.6 -1.6 h.4 q1.2 0 1.2 1.2 V18" fill="#f3d1b5" stroke="#c98d64" stroke-width=".8"/><path d="M6 8 q-1.6 -2 0 -4 M14 7 q-1.6 -2 0 -4 M22 8 q-1.6 -2 0 -4" fill="none" stroke="#8fa8b2" stroke-width="1.6" stroke-linecap="round"/>',
@@ -179,19 +179,13 @@ const ANNAI_RUN = (() => {
     const mine = ++runs, s = S(), A = s.say, seed = Number(ctx.kept && ctx.kept.seed) || 1 + Math.floor(Math.random() * 2147483646);
     if (!(ctx.kept && ctx.kept.seed)) ctx.keep({ seed });   // the board kept with the day's record: the same after a break
     const shift = ANNAI.make(TOWNEV.reachedIdx(), seed), first = !Object.values(state.work.res).some((r) => r.place === 'annai' && r.yen !== undefined);
-    // this run's own card (box, once drawn): a shift's goodbye still being said when the next one's card opens never touches that one
-    let box = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), live = () => mine === runs && Boolean(el('.an-glass')) && ctx.on();
-    // a short phone (2026-11-24, fix round 1): the card holds the board, the glass, the replies and the talk line; when a line lands below
-    // its fold the card scrolls itself just far enough to show it, and is back at its top for each tourist (the board and the glass first)
-    const card = () => (box && box.isConnected ? box.querySelector('.cls-card') : null);
-    const glide = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
-    const seeTalk = () => requestAnimationFrame(() => { const c = card(), t = el('.an-talk'); if (!c || !t) return;
-      const d = t.getBoundingClientRect().bottom - (c.getBoundingClientRect().top + c.clientTop + c.clientHeight) + 6; if (d > 0) c.scrollBy({ top: d, behavior: glide() }); });
-    // あかり and the hero share the line under the replies (whoever spoke last), as at 原田's window
-    const talk = (who) => { const t = el('.an-talk'); if (t) t.dataset.who = who; seeTalk(); };
-    const word = ([ja, zh], cls = '') => { talk('drv'); const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(A.who, ja); };
-    const me = ([ja, zh]) => { talk('me'); const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
-    const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
+    // this run's own card (box, once drawn): a shift's goodbye still being said when the next one's card opens never touches that one; its
+    // own desk (D: never another run's)
+    let box = null, D = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), live = () => mine === runs && Boolean(el('.an-glass')) && ctx.on();
+    // あかり and the hero share the line under the replies (whoever spoke last), as at 原田's window; a short phone (2026-11-24, fix round
+    // 1): the card holds the board, the glass, the replies and the talk line — when a line lands below its fold the card scrolls itself just
+    // far enough to show it, and is back at its top for each tourist (the board and the glass first): JOBS.talkLine (Task 7's fix round, M-10)
+    const TL = JOBS.talkLine({ box: () => box, sel: '.an-talk', who: A.who, first }), { word, me, said, seeTalk } = TL;
     function bub(open, line) {
       const R = D.now(), b = el('.wk-cust .wk-bub'); if (!b || !R) return; const [ja, zh] = line || R.task.q;
       b.innerHTML = `<button type="button" class="wk-ear an-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="bt-dots">……</b>'}`;
@@ -206,10 +200,10 @@ const ANNAI_RUN = (() => {
     // tourist their own word, in the bubble), now and then あかり's word; a wrong one: あかり says what kind of miss it is (the board misread,
     // or a form that answers nothing) with why under it, and it cannot be picked again; the question shown, the tourist still there to
     // read it, till they go
-    D = JOBS.desk({ job: 'annai', ctx, N, box: () => box, alive: '.an-glass', mine: () => mine === runs, tasks: shift.tasks,
+    D = cur = JOBS.desk({ job: 'annai', ctx, N, box: () => box, alive: '.an-glass', mine: () => mine === runs, tasks: shift.tasks,
       isRight: (t, i) => Boolean(t.opts[i] && t.opts[i][2]), secs: () => SECS, cost: MISS, hi: () => s.hi, fresh: () => ({ seed }),
       me, word, bub, opts, optSel: '.an-opt', earSel: '.an-ear', rightCls: 'an-right', once: true,
-      draw: (t) => { const cc = card(); if (cc) cc.scrollTop = 0; el('.wk-cust').dataset.fun = t.fun || ''; },   // the card from its top: the board and the glass first
+      draw: (t) => { TL.toTop(); el('.wk-cust').dataset.fun = t.fun || ''; },   // the card from its top: the board and the glass first
       miss: (t, i) => { const o = t.opts[i]; return [(o[3] === 'form' ? A.form : A.fact)[0], o[1]]; },
       served: async (t, R, lv) => {
         const after = t.after || s.thanks; if (t.after) bub(true, after); await said(speakAs(t.who, after[0]), 600); if (!lv()) return;
@@ -236,6 +230,6 @@ const ANNAI_RUN = (() => {
     say('hero', s.hi[0]); ANNAI.rights().forEach((l) => say('hero', l));
     [A.start, A.dogs, A.fact, A.form, A.end, A.all, ...A.ok].forEach((l) => say(A.who, l[0]));
   }
-  return { run, lines, now: () => (D ? D.now() : null), N, SECS };
+  return { run, lines, now: () => (cur ? cur.now() : null), N, SECS };
 })();
 WORK.register('annai', { run: ANNAI_RUN.run, lines: ANNAI_RUN.lines });

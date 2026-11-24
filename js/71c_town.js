@@ -184,7 +184,10 @@ const TOWNEV = (() => {
   // Christmas (2026-11-14, the user: the people of the shops in Santa hats): a Santa hat over whatever is on their head while it is on
   const wearOf = (w) => (festOn('christmas') && !HERO.whole(w && w.head) ? Object.assign({}, w, { head: 'santahat' }) : w || {});
   const art = (id, place) => { const c = T().CAST[id]; return c.art === 'npc' ? NPC.art(id) : HERO.svg({ look: look(id, place), wear: wearOf(c.wear) }); };
-  const face = (id) => { if (id === 'hero') return HERO.head(state.look, 'bust'); const c = T().CAST[id], v = (T().YATAI || {})[id] || (T().GUESTS || {})[id]; if (v) return HERO.head(v.look, 'bust'); if (!c) return CRUISE.face(id); return c.art === 'npc' ? NPC.face(id) : HERO.head(c.look, 'bust'); };   // not of the town: a stall keeper (YATAI), a job's guest (GUESTS: the フロント's sumo wrestler), the cruise's
+  // not of the town: a stall keeper (YATAI), a job's guest (GUESTS: the フロント's sumo wrestler — the band round his 丸子 in his own tie colour,
+  // a 元結's white, never the hero's red ribbon: 2026-11-25, fix round 1, M-4), the cruise's
+  const tied = (svg, tie) => (tie ? svg.split(`stroke="${HERO.TIE}" stroke-width="2.6"`).join(`stroke="${tie}" stroke-width="2.6"`) : svg);
+  const face = (id) => { if (id === 'hero') return HERO.head(state.look, 'bust'); const c = T().CAST[id], g = (T().GUESTS || {})[id], v = (T().YATAI || {})[id] || g; if (v) return tied(HERO.head(v.look, 'bust'), g && g.tie); if (!c) return CRUISE.face(id); return c.art === 'npc' ? NPC.face(id) : HERO.head(c.look, 'bust'); };
   // an event's lines as said to this learner: met — { if: an event, head: lines, from: k } — the opening for one who has done that
   // event already, said in place of the first k lines (2026-11-13: m1-7 meets 高橋 for those who came to know him in m10-2 first)
   const linesOf = (e) => (e.met && state.town.done[e.met.if] ? e.met.head.concat(e.lines.slice(e.met.from)) : e.lines);

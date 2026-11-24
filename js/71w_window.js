@@ -60,7 +60,7 @@ const MADO = (() => {
 
 const MADO_RUN = (() => {
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>');
-  let D = null, runs = 0;   // the desk under way (JOBS.desk): its now() the one at the window (the tests: { k, task, phase, printed })
+  let cur = null, runs = 0;   // the latest run's desk (JOBS.desk): its now() the one at the window, for the tests ({ k, task, phase, printed }); each run reads its own
   // a price, a time, a track as said, in kana alone (2026-11-21, the review: shown as 170円 they were matched to the board's digits, never read)
   const NUMERIC = new Set(['fare', 'next', 'track', 'buy']), kanaOf = (s) => s.replace(MARK, '$2');
   const S = () => TOWN.WORK.say.window;
@@ -77,12 +77,12 @@ const MADO_RUN = (() => {
   function run(ctx) {
     const mine = ++runs, s = S(), now = TOWNEV.now(), tasks = MADO.make(Math.floor(now), Math.floor((now % 1) * 60)), first = !Object.values(state.work.res).some((r) => r.place === 'window' && r.yen !== undefined);
     // this run's own card (box, once drawn; 2026-11-24, ruling 22): an ended shift's goodbye still being said never touches the next card
-    let box = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null);
+    let box = null, D = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null);   // its own desk (D: never another run's)
     // 原田 and the hero share the line under the answers (whoever spoke last), the card one screen on a phone (2026-11-22, the user)
     const talk = (who) => { const t = el('.md-talk'); if (t) t.dataset.who = who; };
     const word = ([ja, zh], cls = '') => { talk('drv'); const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(s.who, ja); };
     const me = ([ja, zh]) => { talk('me'); const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
-    const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
+    const said = JOBS.whole;   // each line to its end within the lane's cap (Task 7's fix round, I-1)
     function bub(open) {
       const R = D.now(), b = el('.wk-bub'); if (!b || !R) return; const t = R.task;
       b.innerHTML = `<button type="button" class="wk-ear md-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(t.q[0])}</b><span>${esc(t.q[1])}</span>` : '<b class="bt-dots">……</b>'}`;
@@ -103,7 +103,7 @@ const MADO_RUN = (() => {
     // the desk's flow (ruling 28: JOBS.desk, as the 案内所's and the フロント's): the question heard first, three replies off the wall —
     // the right one said, their thanks, now and then 原田's word; a wrong one (or the wrong station): his word, its cost after it; two and
     // the question shown, the right reply lit (and, before the tickets print, the station); the customer dimmed once served
-    D = JOBS.desk({ job: 'window', ctx, N: MADO.N, box: () => box, alive: '.md-glass', mine: () => mine === runs, tasks,
+    D = cur = JOBS.desk({ job: 'window', ctx, N: MADO.N, box: () => box, alive: '.md-glass', mine: () => mine === runs, tasks,
       isRight: (t, i) => i === t.right, secs: () => MADO.SECS, cost: MADO.MISS, hi: () => s.me.hi, fresh: (t) => ({ printed: t.kind !== 'buy' }),
       me, word, bub, opts, optSel: '.md-opt', earSel: '.md-ear', rightCls: 'md-right', dim: true,
       draw: (t) => { el('.md-wall').innerHTML = `${chart(t, t.kind === 'buy', first)}<div class="md-row">${board(t)}</div>`; el('.md-ticket').innerHTML = ''; },
@@ -131,6 +131,6 @@ const MADO_RUN = (() => {
     const X = TOWN.WORK.say.waiter.cust; MADO.CUST.concat(['kenta', 'maria']).forEach((id) => [s.cust.thanks, X.again, X.hey, X.out, X.out0].forEach((l) => add(id, l[0])));   // their thanks; kept waiting (JOBS.patience)
     add('hero', s.me.hi[0]); [s.miss, s.end, s.all, ...s.ok].forEach((l) => add(s.who, l[0]));
   }
-  return { run, lines, now: () => (D ? D.now() : null) };
+  return { run, lines, now: () => (cur ? cur.now() : null) };
 })();
 WORK.register('window', { run: MADO_RUN.run, lines: MADO_RUN.lines });

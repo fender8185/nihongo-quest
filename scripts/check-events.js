@@ -365,11 +365,13 @@ function check(T, D, opts = {}) {
         ['in', 'ebi', 'when', 'late', 'bday'].forEach((k) => pair(p[k], U15, `${at} ${k}`)); later(p.in && p.in[2], `${at} in`);
         if (!Array.isArray(p.dinner) || !hours.includes(p.dinner[0])) bad('onsen', at, `the time they want is one the book shows: ${p.dinner && p.dinner[0]}`); else pair(p.dinner[1], U15, `${at} dinner`);
       });
-      Object.entries(FR.like || {}).forEach(([who, ns]) => { if (!(FR.named || {})[who]) bad('ref', `front like ${who}`, `no named guest ${who}`); (ns || []).forEach(([n, r], i) => text(`{${n}|${r}}`, U15, `front like ${who}#${i}`)); });
+      Object.entries(FR.like || {}).forEach(([who, ns]) => { if (!(FR.named || {})[who]) bad('ref', `front like ${who}`, `no named guest ${who}`);
+        (ns || []).forEach(([n, r], i) => { if (!n || !r) bad('onsen', `front like ${who}#${i}`, 'a near name is [kanji, reading]'); else text(`{${n}|${r}}`, U15, `front like ${who}#${i}`); }); });
       Object.entries(FR.memo || {}).forEach(([k, l]) => pair(l, U15, `front memo ${k}`));
-      (FR.rooms || []).forEach(([id, k, r, zh], i) => { if (!id || !k || !r || !zh) bad('onsen', `front room ${i}`, 'a room is [id, name, reading, 中文]'); });
+      (FR.rooms || []).forEach(([id, k, r, zh, as], i) => { if (!id || !k || !r || !zh || !as) bad('onsen', `front room ${i}`, 'a room is [id, name, reading, 中文, the room as said]'); else text(as, U15, `front room ${id}`); });
       ['room', 'bday', 'ok', 'thanks'].forEach((k) => { if (FR[k]) pair(FR[k], U15, `front ${k}`); });
       if (FR.tip !== undefined && !(Number.isInteger(FR.tip) && FR.tip > 0)) bad('onsen', 'front tip', `a tip is a number of 円: ${FR.tip}`);
+      ['keyWhy', 'tipName'].forEach((k) => { if (typeof FR[k] !== 'string' || !FR[k]) bad('onsen', `front ${k}`, `no ${k} (the 中文 under a wrong key; the tip's name on the results)`); });   // fix round 1, M-5
       const replies = (set, at) => { if (!Array.isArray(set) || !Array.isArray(set[1]) || !set[1].length) { bad('onsen', at, 'replies are [right, [wrong …]]'); return; } pair(set[0], U15, at);
         set[1].forEach(([ja, why, how], i) => { text(String(ja || ''), U15, `${at} wrong${i}`); if (!why || !HOWS.includes(how)) bad('onsen', `${at} wrong${i}`, 'a wrong reply is [Japanese, why, self | guest | thing | fact]'); }); };
       Object.entries(sets).forEach(([k, set]) => replies(set, `front reply ${k}`));
@@ -379,6 +381,9 @@ function check(T, D, opts = {}) {
       });
       Object.entries(FR.fun || {}).forEach(([id, f]) => { const at = `front fun ${id}`; person(f.who, at); voiced(f.who, at); if (!['where', 'request'].includes(f.kind)) bad('onsen', at, `no kind ${f.kind}`); pair(f.line, U15, at); pair(f.after, U15, `${at} after`); replies(f.reply, at); });
       const fs = FR.say || {}; person(fs.who, 'front say'); voiced(fs.who, 'front say');
+      // 佐藤 has a word for each way a reply can be wrong (the runner says say[how]), a wrong key, 道山, the start, ok, the end and all (M-5)
+      HOWS.concat(['key', 'lost', 'start', 'end', 'all']).forEach((k) => { if (!fs[k]) bad('onsen', 'front say', `佐藤 has no word for ${k}`); });
+      if (!Array.isArray(fs.ok) || !fs.ok.length || !fs.ok.every((l) => Array.isArray(l))) bad('onsen', 'front say', '佐藤 has no ok words ([[Japanese, 中文] …])');
       Object.entries(fs).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U15, `front say ${k}#${i}`)));
       Object.entries(FR.hi || {}).forEach(([k, l]) => pair(l, U15, `front hi ${k}`));
     }

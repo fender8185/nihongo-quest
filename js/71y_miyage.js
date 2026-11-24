@@ -115,15 +115,11 @@ const MIYAGE_RUN = (() => {
     let box = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), all = (q) => (box && box.isConnected ? [...box.querySelectorAll(q)] : []);
     const live = () => mine === runs && Boolean(el('.om-shop')) && ctx.on(), mineNow = (me0) => live() && R === me0;
     let k = ctx.done, P = null, rep = 0, missed = 0, lost = 0, bits = BITS;
-    const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
     // a short phone (360×640): the card holds the shelves, the shop's front and the talk row; with the replies too it cannot, so when a
     // line lands below its fold the card scrolls itself just far enough to show it — never past the shop's front (the customer and
-    // their words stay in sight) — and is back at its top for each customer (the shelves first), as the 案内所's (Task 4)
-    const card = () => (box && box.isConnected ? box.querySelector('.cls-card') : null);
-    const glide = () => (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
-    const seeTalk = () => requestAnimationFrame(() => { const c = card(), t = el('.om-talk'), f = el('.om-front'); if (!c || !t || !f) return;
-      const top = c.getBoundingClientRect().top + c.clientTop, d = t.getBoundingClientRect().bottom - (top + c.clientHeight) + 6, room = f.getBoundingClientRect().top - top - 2;
-      if (d > 0 && room > 0) c.scrollBy({ top: Math.min(d, room), behavior: glide() }); });
+    // their words stay in sight) — and is back at its top for each customer (the shelves first), as the 案内所's: JOBS.talkLine's (Task 7's
+    // fix round, M-10; its talk row stays its own, below); each line awaited to its end within the lane's cap (said: I-1)
+    const TL = JOBS.talkLine({ box: () => box, sel: '.om-talk', keep: () => el('.om-front') }), { said, seeTalk } = TL;
     // the talk row under the replies: whoever spoke last — 竹内's word (its 中文, or a miss's reason), a customer's to a tray that is not
     // it (with the reason), the hero's (its 中文 on the job's first shift only, ruling 23: under the reply once said, never under the buttons)
     function talk(id, html, cls = '') {
@@ -161,7 +157,7 @@ const MIYAGE_RUN = (() => {
     }
     function plate() { const p = el('.om-plate'); if (p) p.innerHTML = plateSvg(bits); }
     function show() {
-      const c = tasks[k]; R = { k, c, step: 0, phase: 'hi', tray: [], seed, miss: 0, miss2: 0, busy: false, line: c.line }; rep = 0; const cc = card(); if (cc) cc.scrollTop = 0;   // the card from its top: the shelves first
+      const c = tasks[k]; R = { k, c, step: 0, phase: 'hi', tray: [], seed, miss: 0, miss2: 0, busy: false, line: c.line }; rep = 0; TL.toTop();   // the card from its top: the shelves first
       el('.wk-n').textContent = `${k + 1}／${N}`;
       const cu = el('.wk-cust'); cu.className = 'wk-cust'; cu.removeAttribute('data-mood'); cu.dataset.kind = c.kind; cu.innerHTML = JOBS.custHtml(c.who) + hold(c);
       unhint(); shelves(); tray(); opts(false); bub(false);

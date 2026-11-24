@@ -19,12 +19,36 @@ const FRONT = (() => {
   const said = (line, lat, u) => (lat && u >= TOWNEV.unitIdx(lat[0]) ? [lat[1], lat[2]] : [line[0], line[1]]);
   // a set of replies as options: [Japanese, 中文 or why, right, how ('' right; self, guest, thing, fact wrong; bday the wish)]
   const optsOf = (set) => [[set[0][0], set[0][1], true, '']].concat(set[1].map(([ja, why, how]) => [ja, why, false, how]));
-  const roomLine = (id) => { const [, k, r, z] = T().rooms.find((x) => x[0] === id), [ja, zh] = T().room; return [ja.replace('{R}', `{${k}の間|${r}のま}`), zh.replace('{r}', z)]; };
+  // the hero handing over a key: the guest's name at last (it is kept out of the greeting: heard, then found in the book — fix round 1, M-7)
+  // and their room as said (桜 read over 桜, の, 間 over 間)
+  const roomLine = (who, id) => { const [, , , z, mark] = T().rooms.find((x) => x[0] === id), [n, r] = T().named[who].name, [ja, zh] = T().room;
+    return [ja.replace('{P}', `{${n}|${r}}`).replace('{R}', mark), zh.replace('{p}', n).replace('{r}', z)]; };
   // dinner's time asked of the book: the time on their row; the wrong one another row's (the book always has four times: one a row)
   function whenOpts(p, book, R) {
     const set = T().reply.when, [, mark, zh] = timeOf(p.dinner), others = [...new Set(book.filter((q) => q !== p && q.dinner !== null && q.dinner !== p.dinner).map((q) => q.dinner))];
     const fill = (s, m, z = '') => s.replace('{T}', m).replace('{t}', z), wm = timeOf(pickR(others, R))[1];
     return [[fill(set[0][0], mark), fill(set[0][1], mark, zh), true, ''], [fill(set[1][0][0], wm), set[1][0][1], false, set[1][0][2]], [fill(set[1][1][0], mark), set[1][1][1], false, set[1][1][2]]];
+  }
+  // a party's question of the book (theirs: their name, their row — tonight's shrimp by its note, dinner's time by its time); a guest with
+  // no name and their want, their where, their luggage, their leaving
+  const memoTask = (book, i, ask, R) => { const p = book[i], F = T();
+    return { id: 'memo:' + ask, kind: 'memo', ask, who: p.who, q: F.named[p.who][ask].slice(0, 2), party: i, opts: shuffleR(ask === 'ebi' ? optsOf(p.memo === 'ebi' ? F.reply.ebiNo : F.reply.ebiYes) : whenOpts(p, book, R), R) }; };
+  const plainTask = (id, u, R) => { const a = T().ask[id]; return { id, kind: a.kind, who: a.who, q: said(a.line, a.later, u), opts: shuffleR(optsOf(T().reply[a.reply]), R) }; };
+  // who comes at task k in place of a guest who left in a huff at their check-in (sc: the day's scores; 3 at it) — they do not come back
+  // (fix round 1, M-12): their book question goes to another named party in by then (checked in before k and not left, or staying on;
+  // never the one with dinner's time to tell), else — as their dinner time always — a want or a where not yet in the shift, its speaker not
+  // the guest before or after; none (never so far): they come back after all. Seeded by the shift and k: the same on a resume
+  function instead(sh, k, sc, u) {
+    const t = sh.tasks[k], R = rng((sh.seed ^ Math.imul(k + 1, 0x85ebca6b)) >>> 0), near = [sh.tasks[k - 1], sh.tasks[k + 1]].filter(Boolean).map((x) => x.who), free = (who) => !near.includes(who);
+    if (t.kind === 'memo') {
+      const dinW = (sh.tasks.find((x) => x.kind === 'dinner') || {}).who;
+      const ok = sh.book.map((p, i) => [p, i]).filter(([p]) => p.who && p.who !== t.who && p.who !== dinW && p.dinner !== null && free(p.who)
+        && (p.in || sh.tasks.some((x, j) => j < k && x.kind === 'checkin' && x.who === p.who && !(sc[j] >= 3))));
+      if (ok.length) return memoTask(sh.book, pickR(ok, R)[1], t.ask, R);
+    }
+    const used = new Set(sh.tasks.map((x) => x.id)), A = T().ask;
+    const ids = Object.keys(A).filter((id) => ['request', 'where'].includes(A[id].kind) && !used.has(id) && free(A[id].who) && (!A[id].at || A[id].at === (sh.morning ? 'am' : 'pm')));
+    return ids.length ? plainTask(pickR(ids, R), u, R) : t;
   }
   // a shift: { seed, morning, book: [{ who (a guest's id; null: arriving later), name, kana, n, room, dinner (hour; null: not told), memo
   // ('', bday, kids, ebi), in (staying on: their key out) }], tasks: [{ id, kind, who, q: [ja, 中文], opts, steps?, party? (their row),
@@ -53,11 +77,10 @@ const FRONT = (() => {
     const tasks = [];
     ins.forEach((w) => { const i = at(w), p = book[i], opts = optsOf(F.reply.in); if (p.memo === 'bday') opts.push([F.bday[0], F.bday[1], true, 'bday']);
       tasks.push({ id: 'in:' + w, kind: 'checkin', who: w, q: said(F.named[w].in, F.named[w].in[2], u), opts: shuffleR(opts, R), steps: ['say', 'key'], party: i, room: p.room, bday: p.memo === 'bday' }); });
-    { const i = at(memoW), p = book[i]; tasks.push({ id: 'memo:' + ask, kind: 'memo', ask, who: memoW, q: F.named[memoW][ask].slice(0, 2), party: i,
-      opts: shuffleR(ask === 'ebi' ? optsOf(p.memo === 'ebi' ? F.reply.ebiNo : F.reply.ebiYes) : whenOpts(p, book, R), R) }); }
+    { const i = at(memoW); tasks.push(memoTask(book, i, ask, R)); }
     { const N0 = F.named[dinW]; tasks.push({ id: 'dinner', kind: 'dinner', who: dinW, q: N0.late.slice(0, 2), opts: shuffleR(optsOf(F.reply.dinner), R), party: at(dinW), time: N0.dinner[0], answer: N0.dinner[1] }); }
     const A = F.ask, of = (kind) => Object.keys(A).filter((id) => A[id].kind === kind && (!A[id].at || A[id].at === (morning ? 'am' : 'pm')));
-    const plain = (id) => { const a = A[id]; return { id, kind: a.kind, who: a.who, q: said(a.line, a.later, u), opts: shuffleR(optsOf(F.reply[a.reply]), R) }; };
+    const plain = (id) => plainTask(id, u, R);
     if (morning) of('checkout').forEach((id) => tasks.push(plain(id)));
     of('luggage').forEach((id) => tasks.push(plain(id)));
     const rest = 10 - tasks.length, [nReq, nWhere] = rest >= 4 ? [2, rest - 2] : R() < 0.5 ? [2, rest - 2] : [1, rest - 1];
@@ -85,26 +108,26 @@ const FRONT = (() => {
     return [...out];
   }
   const guests = () => [...new Set(Object.keys(T().named).concat(Object.values(T().ask).map((a) => a.who), Object.values(T().fun).map((f) => f.who)))];
-  return { make, rights, guests, roomLine, timeOf, get ROOMS() { return T().rooms; } };
+  return { make, instead, rights, guests, roomLine, timeOf, get ROOMS() { return T().rooms; } };
 })();
 
 const FRONT_RUN = (() => {
   const N = 10, SECS = { say: 25, key: 25 }, MISS = 0.15;   // a guest's patience: 25 s from the end of their words (the book takes reading), and again for their key; a miss costs some
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>');
   const S = () => TOWN.ONSEN.front;
-  let D = null, runs = 0;   // the desk under way (JOBS.desk): its now() the guest at the desk (the tests: { k, task, phase, step, miss, seed, morning })
+  let cur = null, runs = 0;   // the latest run's desk (JOBS.desk): its now() the guest at the desk, for the tests ({ k, task, phase, step, miss, seed, morning }); each run reads its own
   const hm = (h) => `${Math.floor(h)}:${h % 1 ? '30' : '00'}`;
   // the call bell on the counter (rung as a guest comes up), a guest's luggage in hand
   const BELL = '<svg viewBox="0 0 44 34" aria-hidden="true"><ellipse cx="22" cy="29" rx="17" ry="4.4" fill="#2b2b33"/><rect x="6" y="25" width="32" height="4" rx="2" fill="#3a3a44"/><g class="fr-cap"><path d="M8.6 25 Q8.6 9.4 22 9.4 Q35.4 9.4 35.4 25 Z" fill="#c9ccd2"/><path d="M12.6 20 q1.6 -6.6 7.2 -8.2" stroke="#fff" stroke-opacity=".85" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="20.4" y="4.4" width="3.2" height="5.4" fill="#8a8e96"/><ellipse cx="22" cy="4.4" rx="4" ry="1.7" fill="#b8bcc2"/></g></svg>';
   const BAGS = '<svg viewBox="0 0 34 26" aria-hidden="true"><path d="M4 9 h13 l1.4 16 h-15.8 Z" fill="#e6c48a"/><path d="M7 9 q0 -6 3.5 -6 q3.5 0 3.5 6" fill="none" stroke="#8a5a34" stroke-width="1.4"/><path d="M15 11 h14 l1.6 14.6 h-17 Z" fill="#5a78c8"/><path d="M18.4 11 q0 -6 3.6 -6 q3.6 0 3.6 6" fill="none" stroke="#3f4660" stroke-width="1.4"/><path d="M17 14 h11" stroke="#fff" stroke-opacity=".55" stroke-width="1.2"/></svg>';
-  // the open 予約台帳: its title and the day; a row a party — the name (its reading over it) 様, how many, the room, dinner (― not told),
-  // the note under it; a party in (checked in, or staying on) marked so
+  // the open 予約台帳: its title and the day (月 and 日 read: furi's counters), a row a party — the name (its reading over it) 様, how many
+  // (名 read), the room, dinner (― not told), the note under it; a party in (checked in, or staying on) marked so
   function bookHtml(book) {
     const F = S(), d = TOWNEV.today(), room = (id) => F.rooms.find((x) => x[0] === id);
     const rows = book.map((p) => { const [, k, r] = room(p.room);
-      return `<div class="fr-row${p.in ? ' fr-in' : ''}" data-room="${p.room}"><b class="fr-nm"><ruby>${esc(p.name)}<rt>${esc(p.kana)}</rt></ruby><small><ruby>様<rt>さま</rt></ruby></small></b><span class="fr-n">${p.n}名</span>
+      return `<div class="fr-row${p.in ? ' fr-in' : ''}" data-room="${p.room}"><b class="fr-nm"><ruby>${esc(p.name)}<rt>${esc(p.kana)}</rt></ruby><small><ruby>様<rt>さま</rt></ruby></small></b><span class="fr-n">${p.n}<ruby>名<rt>めい</rt></ruby></span>
         <span class="fr-rm"><ruby>${k}<rt>${r}</rt></ruby></span><span class="fr-dn">${p.dinner === null ? '―' : hm(p.dinner)}</span>${p.memo ? `<span class="fr-memo">${ruby(F.memo[p.memo][0])}</span>` : ''}</div>`; }).join('');
-    return `<p class="fr-btitle"><b><ruby>予約<rt>よやく</rt></ruby><ruby>台帳<rt>だいちょう</rt></ruby></b><small>${d.getMonth() + 1}月${d.getDate()}日</small></p>
+    return `<p class="fr-btitle"><b><ruby>予約<rt>よやく</rt></ruby><ruby>台帳<rt>だいちょう</rt></ruby></b><small>${furi(`${d.getMonth() + 1}月${d.getDate()}日`)}</small></p>
       <div class="fr-hd"><span>お<ruby>名前<rt>なまえ</rt></ruby></span><span><ruby>人数<rt>にんずう</rt></ruby></span><span><ruby>部屋<rt>へや</rt></ruby></span><span><ruby>夕食<rt>ゆうしょく</rt></ruby></span></div>${rows}`;
   }
   // the key board behind the desk: a wooden tag on its hook for each room (a room taken: its hook bare); the bell beside it
@@ -112,29 +135,31 @@ const FRONT_RUN = (() => {
     return `<button type="button" class="fr-key${out ? ' fr-out' : ''}" data-room="${id}" aria-label="${k}の間の鍵"${out ? ' disabled' : ''}><i class="fr-hook" aria-hidden="true"></i><b><ruby>${k}<rt>${r}</rt></ruby></b></button>`; }).join('') + `<i class="fr-bell">${BELL}</i>`;
   function run(ctx) {
     const mine = ++runs, F = S(), A = F.say, kept = ctx.kept || {}, seed = Number(kept.seed) || 1 + Math.floor(Math.random() * 2147483646);
-    const morning = kept.seed ? Boolean(kept.morning) : TOWNEV.now() < 12;   // the shift's half of the day, kept with it: taken up later, the same shift
+    const morning = kept.seed ? Boolean(kept.morning) : TOWNEV.now() < 12;   // the shift's half of the day, kept with it: taken up later, the same shift (its tasks; the greeting goes by the hour: M-2)
     let tip = Number(kept.tip) || 0, praised = false;
     const keep = () => ctx.keep(Object.assign({ seed, morning }, tip ? { tip } : {}));   // the book and the 心付け kept with the day's record: the same after a break
     if (!kept.seed) keep();
     const shift = FRONT.make(TOWNEV.reachedIdx(), morning, seed), book = shift.book.map((p) => Object.assign({}, p)), first = !Object.values(state.work.res).some((r) => r.place === 'front' && r.yen !== undefined);
+    // who comes to the desk at task k: as made — but never a guest back who left in a huff at their check-in (fix round 1, M-12: FRONT.instead,
+    // from the day's scores, so the same on a resume)
+    const swapped = {}, scores = () => (WORK.today() || {}).score || {};
+    function taskAt(k) {
+      if (swapped[k]) return swapped[k];
+      const t = shift.tasks[k], sc = scores(), j = ['memo', 'dinner'].includes(t.kind) ? shift.tasks.findIndex((x) => x.kind === 'checkin' && x.who === t.who) : -1;
+      return (swapped[k] = j >= 0 && j < k && sc[j] >= 3 ? FRONT.instead(shift, k, sc, TOWNEV.reachedIdx()) : t);
+    }
     // a shift taken up again: the book and the board as the guests before left them — each checked in, their key out; each dinner told
-    const done = (WORK.today() || {}).score || {};
-    shift.tasks.slice(0, ctx.done).forEach((t, k) => { if (done[k] >= 3) return; if (t.kind === 'checkin') book[t.party].in = true; if (t.kind === 'dinner') book[t.party].dinner = t.time; });
-    // this run's own card (box, once drawn): a shift's goodbye still being said when the next one's card opens never touches that one
-    let box = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), all = (q) => (box && box.isConnected ? [...box.querySelectorAll(q)] : []);
+    { const sc = scores(); for (let k = 0; k < ctx.done; k++) { const t = taskAt(k); if (sc[k] >= 3) continue; if (t.kind === 'checkin') book[t.party].in = true; if (t.kind === 'dinner') book[t.party].dinner = t.time; } }
+    // this run's own card (box, once drawn): a shift's goodbye still being said when the next one's card opens never touches that one; its
+    // own desk (D: never another run's)
+    let box = null, D = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), all = (q) => (box && box.isConnected ? [...box.querySelectorAll(q)] : []);
     const live = () => mine === runs && Boolean(el('.fr-desk')) && ctx.on();
-    // a short phone: the card holds the book, the board, the guest, the replies and the talk line; when a line lands below its fold the
-    // card scrolls itself just far enough to show it, and is back at its top for each guest (the 案内所's way)
-    const card = () => (box && box.isConnected ? box.querySelector('.cls-card') : null);
-    const glide = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
-    const seeTalk = () => requestAnimationFrame(() => { const c = card(), t = el('.fr-talk'); if (!c || !t) return;
-      const d = t.getBoundingClientRect().bottom - (c.getBoundingClientRect().top + c.clientTop + c.clientHeight) + 6; if (d > 0) c.scrollBy({ top: d, behavior: glide() }); });
-    // 佐藤 and the hero share the line under the replies (whoever spoke last); the hero's 中文 on the job's first shift only, under the
-    // reply once said — never under the buttons (ruling 23)
-    const talk = (who) => { const t = el('.fr-talk'); if (t) t.dataset.who = who; seeTalk(); };
-    const word = ([ja, zh], cls = '') => { talk('drv'); const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(A.who, ja); };
-    const me = ([ja, zh]) => { talk('me'); const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
-    const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
+    // the book wanted (a book question; a check-in's key): the card's self-scroll never takes it out of sight (fix round 1, M-1)
+    const wanted = () => { const R = D && D.now(); return Boolean(R) && R.phase !== 'done' && (R.task.kind === 'memo' || (Boolean(R.task.steps) && R.step === 1)); };
+    // 佐藤 and the hero share the line under the replies (whoever spoke last; the hero's 中文 on the job's first shift only, under the
+    // reply once said — ruling 23); a short phone: the card scrolls itself just far enough to show it, never past the book while it is
+    // wanted, and is back at its top for each guest: JOBS.talkLine (M-10), every line awaited within the lane's cap (I-1)
+    const TL = JOBS.talkLine({ box: () => box, sel: '.fr-talk', who: A.who, first, keep: () => (wanted() ? el('.fr-book') : null) }), { word, me, said, seeTalk } = TL;
     // the guest's bubble: their words heard first (……, 🔊), shown once right, after two misses, or as they go (line: their word after)
     function bub(open, line) {
       const R = D.now(), b = el('.wk-cust .wk-bub'); if (!b || !R) return; const [ja, zh] = line || R.task.q;
@@ -152,7 +177,7 @@ const FRONT_RUN = (() => {
     }
     // a guest comes up: the bell rung, the book and the board unlit, the card from its top (the book first); their luggage in hand
     function draw(t) {
-      const cc = card(); if (cc) cc.scrollTop = 0;
+      TL.toTop();
       all('.fr-row.fr-lit').forEach((x) => x.classList.remove('fr-lit')); all('.fr-key.wk-hint').forEach((x) => x.classList.remove('wk-hint')); all('.fr-dn.fr-new').forEach((x) => x.classList.remove('fr-new'));
       const c = el('.wk-cust'); c.dataset.kind = t.kind; c.dataset.fun = t.fun || ''; if (t.kind === 'luggage') c.insertAdjacentHTML('beforeend', `<i class="fr-hold" aria-label="提著很多行李">${BAGS}</i>`);
       const bell = el('.fr-bell'); if (bell) { bell.classList.remove('fr-ding'); void bell.getBoundingClientRect(); bell.classList.add('fr-ding'); } SND.play('desk-bell', { vol: 0.45 });
@@ -163,17 +188,23 @@ const FRONT_RUN = (() => {
       const p = book[t.party], row = el(`.fr-row[data-room="${p.room}"]`); if (row) row.classList.add('fr-lit');
       if (t.kind === 'checkin' && !p.in) { const k = el(`.fr-key[data-room="${p.room}"]`); if (k) k.classList.add('wk-hint'); }
     }
-    // after a step right, as each asks: the key handed over (off the board, their row marked in, the room said); the hero's reply — the
-    // birthday wish (their gladness, a 心付け, kept), dinner's time asked (their answer, the book takes it: かしこまりました)
+    // their key handed over the moment it is tapped (fix round 1, M-9: never after a line still being said) — off the board, a bare hook
+    // left (nothing to tap), their row ticked
+    function handOver(t) {
+      const p = book[t.party]; p.in = true; SND.play('kuji', { vol: 0.5 });
+      const k = el(`.fr-key[data-room="${p.room}"]`); if (k) { k.classList.remove('wk-hint'); k.classList.add('fr-out'); k.disabled = true; }
+      const row = el(`.fr-row[data-room="${p.room}"]`); if (row) row.classList.add('fr-in');
+    }
+    // after a step right, as each asks: their key in their hand — their name and room said (M-7); the hero's reply — the birthday wish
+    // (their gladness in the bubble while said, a 心付け kept; then the bubble back to their words unread, what 🔊 plays: M-8), dinner's time
+    // asked (their answer, the book takes it: かしこまりました)
     async function then(t, R, i, lv) {
-      if (i === undefined) {
-        const p = book[t.party]; p.in = true; SND.play('kuji', { vol: 0.5 });
-        const k = el(`.fr-key[data-room="${p.room}"]`); if (k) { k.classList.remove('wk-hint'); k.classList.add('fr-out'); k.disabled = true; }   // a bare hook: nothing to tap
-        const row = el(`.fr-row[data-room="${p.room}"]`); if (row) row.classList.add('fr-in');
-        await said(me(FRONT.roomLine(p.room)), 700); return;
-      }
+      if (i === undefined) { await said(me(FRONT.roomLine(t.who, t.room)), 700); return; }
       const o = t.opts[i]; await said(me(o), 900); if (!lv()) return;
-      if (o[3] === 'bday') { const glad = F.named[t.who].bday, got = !tip; if (got) { tip = F.tip; keep(); } bub(true, glad); await said(speakAs(t.who, glad[0]), 600); if (lv() && got) SND.play('coins', { vol: 0.5 }); return; }   // one birthday a shift: a 心付け kept from before a break is never given twice
+      if (o[3] === 'bday') {   // one birthday a shift: a 心付け kept from before a break is never given twice
+        const glad = F.named[t.who].bday, got = !tip; if (got) { tip = F.tip; keep(); } bub(true, glad); await said(speakAs(t.who, glad[0]), 600); if (!lv()) return;
+        if (got) SND.play('coins', { vol: 0.5 }); bub(false); return;
+      }
       if (t.kind === 'dinner') {
         bub(true, t.answer); await said(speakAs(t.who, t.answer[0]), 600); if (!lv()) return;
         const p = book[t.party]; p.dinner = t.time; const c = el(`.fr-row[data-room="${p.room}"] .fr-dn`); if (c) { c.textContent = hm(t.time); c.classList.add('fr-new'); }
@@ -189,14 +220,14 @@ const FRONT_RUN = (() => {
       el('.wk-cust').classList.add('bye');
       if (!R.miss && (!praised || JOBS.rng((seed ^ Math.imul(R.k + 1, 0x9e3779b1)) >>> 0)() < 0.5)) { const l = praised ? A.ok[(R.k + seed) % A.ok.length] : A.ok[0]; praised = true; await said(word(l, 'ok')); }
     }
-    D = JOBS.desk({ job: 'front', ctx, N, box: () => box, alive: '.fr-desk', mine: () => mine === runs, tasks: shift.tasks,
+    D = cur = JOBS.desk({ job: 'front', ctx, N, box: () => box, alive: '.fr-desk', mine: () => mine === runs, tasks: shift.tasks, taskAt,
       isRight: (t, i) => Boolean(t.opts[i] && t.opts[i][2]), secs: (t, step) => (step ? SECS.key : SECS.say), cost: MISS, fresh: () => ({ seed, morning }),
-      hi: (t) => (t.kind === 'checkin' || t.fun === 'michiyama' ? F.hi.in : morning ? F.hi.am : F.hi.pm),   // arriving: いらっしゃいませ; else the time of day's
+      hi: (t) => (t.kind === 'checkin' || t.fun === 'michiyama' ? F.hi.in : TOWNEV.now() < 12 ? F.hi.am : F.hi.pm),   // arriving: いらっしゃいませ; else by the hour now (M-2)
       me, word, bub, opts, draw, hint, then, served, optSel: '.fr-opt', earSel: '.fr-ear', rightCls: 'fr-right', once: true,
       miss: (t, i) => { const o = t.opts[i]; return [A[o[3]][0], o[1]]; },   // 佐藤: whose doing it is (or the book misread), the reply's why under it
       tap: (e, R) => { const k = e.target.closest('.fr-key'); if (!k) return false;   // a key: theirs at a check-in's second step, another a miss
         if (!R.task.steps || R.step !== 1 || k.classList.contains('fr-out')) return true;
-        if (k.dataset.room === R.task.room) D.right(); else D.miss(k, [A.key[0], F.keyWhy]); return true; },
+        if (k.dataset.room === R.task.room) { handOver(R.task); D.right(); } else D.miss(k, [A.key[0], F.keyWhy]); return true; },
       end: A.end, all: A.all, extra: () => (tip ? { tip, tipName: F.tipName } : {}) });
     CLASS.card('wk-front', '旅館櫃台', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja">フロント</b><span class="wk-n">${Math.min(ctx.done + 1, N)}／${N}</span></div>
@@ -216,9 +247,9 @@ const FRONT_RUN = (() => {
     Object.values(F.fun).forEach((f) => { say(f.who, f.line[0]); say(f.who, f.after[0]); });
     FRONT.guests().forEach((w) => (fun.includes(w) ? [] : [F.thanks]).concat([X.again, X.hey, X.out, X.out0]).forEach((l) => say(w, l[0])));   // their thanks; kept waiting (JOBS.patience)
     Object.values(F.hi).forEach((l) => say('hero', l[0])); [F.ok, F.bday].forEach((l) => say('hero', l[0]));
-    FRONT.rights().forEach((l) => say('hero', l)); F.rooms.forEach(([id]) => say('hero', FRONT.roomLine(id)[0]));
+    FRONT.rights().forEach((l) => say('hero', l)); Object.keys(F.named).forEach((w) => F.rooms.forEach(([id]) => say('hero', FRONT.roomLine(w, id)[0])));   // each guest's name with each room (M-7)
     Object.entries(A).filter(([k]) => k !== 'who').forEach(([, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x) => say(A.who, x[0])));
   }
-  return { run, lines, now: () => (D ? D.now() : null), N, SECS };
+  return { run, lines, now: () => (cur ? cur.now() : null), N, SECS };
 })();
 WORK.register('front', { run: FRONT_RUN.run, lines: FRONT_RUN.lines });

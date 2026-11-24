@@ -328,7 +328,7 @@ const HERO = (() => {
     ['中分觸角', 'center', 'wisps', 'long', 'none'], ['公主切', 'blunt', 'hime', 'long', 'none'], ['空氣丸子', 'airy', 'wisps', 'short', 'bun'], ['斜瀏海丸子長髮', 'swept', 'long', 'long', 'bun'],
     ['雙辮子', 'blunt', 'tucked', 'short', 'braids'], ['側辮', 'swept', 'tucked', 'short', 'sidebraid'], ['旁分雙辮', 'sidepart', 'chin', 'short', 'braids'], ['圓瀏海', 'incurl', 'incurl', 'shoulder', 'none']
   ];
-  return { FRINGE, SIDES, BACKS, TOPS, STYLES, assemble };
+  return { FRINGE, SIDES, BACKS, TOPS, STYLES, assemble, TIE };
   })();
   [['fringe', HAIRP.FRINGE], ['sides', HAIRP.SIDES], ['hairBack', HAIRP.BACKS], ['hairTop', HAIRP.TOPS]].forEach(([k, m]) => { OPTS[k] = Object.entries(m).map(([v, p]) => [v, p.name]); });
   // ===== the body (test, 2026-11-09): Q版 after the user's pick — a big head on a small body: an A-line top, short arms held a
@@ -877,6 +877,6 @@ const HERO = (() => {
     el._nya = ((el._nya || 0) + 1) % NYA.length; b.textContent = NYA[el._nya];
     el.appendChild(b); setTimeout(() => b.remove(), 1400);
   }
-  return { svg, head, thumb, clothes, idle, still, react, norm, OPTS, LOOK0, STYLES: HAIRP.STYLES, slots: Object.keys(WEAR).concat(Object.keys(FULL)),
+  return { svg, head, thumb, clothes, idle, still, react, norm, OPTS, LOOK0, TIE: HAIRP.TIE, STYLES: HAIRP.STYLES, slots: Object.keys(WEAR).concat(Object.keys(FULL)),
     tucked: (look, id) => tucked(norm(look), id), whole: (id) => !!FULL[id], headTop: (id) => HY(!id ? -184 : HEAD_TOP[id] || -196) };   // in the body's units
 })();

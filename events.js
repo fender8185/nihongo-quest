@@ -9,7 +9,7 @@ const TOWN = {
   // drawn since 2026-11-14 — with t5's stops there, 2026-11-23)
   PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi', 'oku', 'onsen', 'yudori', 'yubatake', 'ryokan', 'washitsu'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源', '湯の花', '森下', '花月', 'ゆのはな堂', '湯けむり通り', '湯畑', '花村', '千代', '竹内', '桜の間', '菊の間', '松の間', '湯の花の湯', '梅の間', '竹の間', '金子', '吉川', '岸本', '水田', '水口', '木村', '野村'],
+  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源', '湯の花', '森下', '花月', 'ゆのはな堂', '湯けむり通り', '湯畑', '花村', '千代', '竹内', '桜の間', '菊の間', '松の間', '湯の花の湯', '金子', '吉川', '岸本', '水田', '水口', '木村', '野村'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
   HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21], dori: [10, 19], rairai: [10, 20], yunohanado: [9, 21], shateki: [10, 23], yukataya: [9, 18] },   // ゆのはな堂 (湯けむり通り, 2026-11-23): 竹内's hours too (CAST.makoto, the same: test_onsen pins them); its 射的 and ゆかた屋 (2026-11-24, rulings 21, 26: the 観光案内所's boards say the same)
   // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
@@ -177,7 +177,8 @@ const TOWN = {
     chiyo: { name: '花村 千代', kana: 'はなむら ちよ', role: '旅館「花月」の女将', look: { face: 'oval', skin: '#f8dcc8', cheeks: 'soft', fringe: 'sidepart', sides: 'tucked', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'droopy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'kimono', top: '#3f4660', bottomStyle: 'skirt', bottom: '#3f4660', shoeStyle: 'zori', shoe: '#e9e2d0' },
       bio: ['旅館「花月」的女將，63 歲。總是穿著和服、盤著髮髻，優雅又溫柔，可是對細節非常嚴格。', '這間旅館從她母親那一代傳下來。對客人說敬語，對你是溫和的です・ます。口頭禪是「お客様が 来る 前に、ぜんぶ 用意して おきましょうね」。'],
       hours: [[8, 21, 'ryokan', 'lobby']], shift: ['nakai', 'washitsu', 'nakai'] },   // shift: in 桜の間 while her 仲居 card is up (TOWNEV.whereIs; spec §4)
-    sato: { name: '佐藤 一', kana: 'さとう はじめ', role: '旅館「花月」の番頭', look: { face: 'round', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'flat', beard: 'mustache', topStyle: 'samue', top: '#6e4f3a', bottomStyle: 'wide', bottom: '#6e4f3a', shoeStyle: 'zori', shoe: '#2b2b33' }, wear: { face: 'glasses' },
+    // 2026-11-25 (ruling 36): dark hair neatly parted, no moustache, a long face — told at a glance from the grey moustaches of 金田 and 味村 at a card's size
+    sato: { name: '佐藤 一', kana: 'さとう はじめ', role: '旅館「花月」の番頭', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'sidepart', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'sleepy', eyeColor: '#2a2730', brows: 'straight', mouth: 'flat', beard: 'none', topStyle: 'samue', top: '#6e4f3a', bottomStyle: 'wide', bottom: '#6e4f3a', shoeStyle: 'zori', shoe: '#2b2b33' }, wear: { face: 'glasses' },
       bio: ['旅館「花月」的掌櫃（番頭），72 歲。穿作務衣、戴圓眼鏡，在櫃台站了五十年。', '敬語的達人，一句一句說得很慢、很正式，偶爾冷冷地冒出一句好笑的。口頭禪是「お客様には、敬語で ございます」。'],
       hours: [[7, 11, 'ryokan', 'desk'], [14, 22, 'ryokan', 'desk']] },
     makoto: { name: '竹内 まこと', kana: 'たけうち まこと', role: '「ゆのはな堂」の店主', look: { face: 'round', skin: '#e8bd98', cheeks: 'soft', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'happy', eyeColor: '#2a2730', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'tee', top: '#ecebe6', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'sankakukin', body: 'apron', apron: '#2f4f7a', mark: 'ゆのはな' },
@@ -3823,9 +3824,11 @@ const TOWN = {
       like: { kaneda: [['金子', 'かねこ']], yoshimoto: [['吉川', 'よしかわ'], ['岸本', 'きしもと']], mizuno: [['水田', 'みずた'], ['水口', 'みずぐち']], ajimura: [['木村', 'きむら'], ['野村', 'のむら']] },
       // a party's note in the book: [Japanese, 中文]
       memo: { bday: ['お{誕生日|たんじょうび}', '生日'], kids: ['お{子|こ}さま {二人|ふたり}', '帶兩個小孩'], ebi: ['えびが だめ', '不能吃蝦'] },
-      // the rooms, a key each on the board: [id, its name, reading, 中文]; the hero's word as he hands one over ({R}: 桜の間 …)
-      rooms: [['sakura', '桜', 'さくら', '櫻'], ['kiku', '菊', 'きく', '菊'], ['matsu', '松', 'まつ', '松'], ['ume', '梅', 'うめ', '梅'], ['take', '竹', 'たけ', '竹']],
-      room: ['お{部屋|へや}は {R}で ございます。', '您的房間是「{r}之間」。'],
+      // the rooms, a key each on the board: [id, its name, reading, 中文, the room as said]; the hero's word as he hands one over — the guest's
+      // name at last ({P}: kept out of the greeting, heard and found in the book: fix round 1, M-7) and the room ({R})
+      rooms: [['sakura', '桜', 'さくら', '櫻', '{桜|さくら}の{間|ま}'], ['kiku', '菊', 'きく', '菊', '{菊|きく|菊花}の{間|ま}'], ['matsu', '松', 'まつ', '松', '{松|まつ}の{間|ま}'], ['ume', '梅', 'うめ', '梅', '{梅|うめ}の{間|ま}'],
+        ['take', '竹', 'たけ', '竹', '{竹|たけ|竹子}の{間|ま}']],
+      room: ['{P}{様|さま|（敬稱）}、お{部屋|へや}は {R}で ございます。', '{p}，您的房間是「{r}之間」。'],
       // dinner's times on the book (18:00 …) as said: [hour, Japanese, 中文]
       times: [[18, '{六|ろく}{時|じ}', '六點'], [18.5, '{六|ろく}{時|じ}{半|はん}', '六點半'], [19, '{七|しち}{時|じ}', '七點'], [19.5, '{七|しち}{時|じ}{半|はん}', '七點半']],
       // the guests who give no name, one each (existing people, each in their own voice): who, kind, what they say (line; a later wording
@@ -3939,9 +3942,11 @@ const TOWN = {
     hamayaki: { at: 'harbor', market: true, name: '浜焼きのお姉さん', kana: 'はまやきの おねえさん', role: '朝市的燒烤攤：烤扇貝', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'blush', fringe: 'swept', sides: 'tucked', hairBack: 'short', hairTop: 'ponytail', hairColor: '#6b4a32', eyes: 'big', eyeColor: '#5a3a28', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#d0574b', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'nejiri' } }
   },
   // people seen only as a guest at a job (2026-11-24, フロント): no hours, no spot, no trip — drawn in the hero's parts as the town's people
-  // are (TOWNEV.face) and voiced (CAST_VOICE); the sumo wrestler staying at 花月, whose futon is too small (his topknot the 丸子 on top)
+  // are (TOWNEV.face) and voiced (CAST_VOICE); tie: the colour of the band round a 丸子 (one of the clothes' colours; the hero's is red). The
+  // sumo wrestler staying at 花月, whose futon is too small: a broad tanned face, heavy brows, no blush, his topknot the 丸子 on top tied
+  // with a 元結's white (2026-11-25, fix round 1, M-4: blush and a red band read as a girl's odango)
   GUESTS: {
-    rikishi: { name: 'おすもうさん', kana: 'おすもうさん', role: '力士・花月的住客', look: { face: 'mochi', skin: '#e8bd98', cheeks: 'blush', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'bun', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'smile', beard: 'none', topStyle: 'yukata', top: '#3f4660', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'geta', shoe: '#6e4f3a' } }
+    rikishi: { name: 'おすもうさん', kana: 'おすもうさん', role: '力士・花月的住客', tie: '#ecebe6', look: { face: 'mochi', skin: '#d39f78', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'bun', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'thick', mouth: 'smile', beard: 'none', topStyle: 'yukata', top: '#3f4660', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'geta', shoe: '#6e4f3a' } }
   },
   // what the wallet's 円 buys (2026-11-13, the second round of the guide's pay): a menu a place's thing has (PLACE_USE buy) —
   // items [id, name as said, Chinese, price 円, { k: a food (f) or a drink (d) — two foods and a drink a day; w: the course's

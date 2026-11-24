@@ -969,8 +969,9 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 /* ---- フロント (2026-11-24, fr-): 旅館「花月」's front desk seen from behind the counter (spec §5.4) — on the left the open 予約台帳 (cream
    pages, the spine's shadow; a row a party: the name and its reading, how many, the room, dinner, the note under it), on the right the
    key board (a wooden tag on its hook for each room, a bare hook once handed out) and the bell rung as a guest comes up; across the
-   counter the guest in the lobby — a 和紙 wall, the garden through a window by the hour (--day: dark by night, the lamps' glow), the
-   counter's edge under them; the replies (or, at a key, a tip), 佐藤's and the hero's line. Lit indoors: the same by day and night ---- */
+   counter the guest before the lobby's 障子 — white paper by day, the lamps' glow on it by night (--day) — with the counter's edge under
+   them, their mood mark on their face's corner; the replies (or, at a key, a tip), 佐藤's and the hero's line. The book and the card's
+   own colours are lit indoors: the same by day and night ---- */
 .cls.wk-front { align-items: start; }   /* the book never moves as the replies come and go */
 .wk-front .cls-card { width: min(480px, 100%); margin-top: clamp(0px, calc(50dvh - 430px), 160px); background: #f3ece0; color: #2b2b33; border-bottom: 10px solid #26386a; padding: 12px 12px 10px; }
 .wk-front .cls-x { width: 40px; height: 40px; }
@@ -996,10 +997,11 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .fr-key.wk-bad { animation: shake .3s ease; } .fr-board .fr-key.wk-hint:not(.fr-out) { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }   /* lit over the keys-to-tap ring */
 .fr-bell { display: grid; place-items: end center; padding-bottom: 2px; } .fr-bell svg { width: 40px; height: 31px; }
 .fr-bell .fr-cap { transform-box: fill-box; transform-origin: 50% 100%; } .fr-bell.fr-ding .fr-cap { animation: rkBell .14s ease-out 4 alternate; }
-.fr-lobby { position: relative; margin: 6px -6px 0; padding: 6px 10px 8px; overflow: hidden; border-bottom: 9px solid #c99a62; border-radius: 10px 10px 3px 3px;
+.fr-lobby { position: relative; margin: 6px -6px 0; padding: 10px 10px 8px; overflow: hidden; border-bottom: 9px solid #c99a62; border-radius: 10px 10px 3px 3px;   /* room over the face for its mood mark, never cut (fix round 1, M-3); a guest leaving slides out of sight */
   background: linear-gradient(#5e3e28 0 4px, transparent 4px), repeating-linear-gradient(90deg, transparent 0 25px, rgba(110, 74, 48, .55) 25px 27px), linear-gradient(transparent calc(50% - 1px), rgba(110, 74, 48, .45) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
     linear-gradient(color-mix(in srgb, #f8f2e4 calc(var(--day, 1) * 100%), #f3d9a8), color-mix(in srgb, #efe5d0 calc(var(--day, 1) * 100%), #e9c48a)); }   /* behind the guest the lobby's 障子: white paper by day, the lamps' glow on it by night */
-.fr-lobby .wk-cust { position: relative; z-index: 1; margin: 0; min-height: 0; gap: 4px 8px; } .wk-front .wk-cust .kr-face { width: 44px; height: 44px; }
+.fr-lobby .wk-cust { position: relative; z-index: 1; align-items: flex-start; margin: 0; min-height: 0; gap: 10px 8px; } .wk-front .wk-cust .kr-face { width: 44px; height: 44px; }   /* the face at the row's top: its mood mark (.wk-emo, top −6) stays on its corner however tall the words grow; the patience bar 10 px under the words, so a leaving word on it never meets them (N-4) */
+.wk-front .wk-emo { left: 20px; }   /* on the 44 px face's top corner, clear of the bubble's edge (which would cover it at the 56 px faces' 38 px) */
 .wk-front .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; padding: 4px 9px 4px 4px; font-size: 16px; line-height: 1.45; } .wk-front .wk-bub span { font-size: 12.5px; } .wk-front .wk-bub rt { font-size: 9px; }
 .wk-front .wk-bub .wk-ear { grid-row: span 2; min-height: 40px; min-width: 44px; } .wk-front .wk-bub > :not(.wk-ear) { grid-column: 2; } .fr-dots { color: #8a7a6e; letter-spacing: .1em; }
 .wk-front .wk-grr { top: -2px; left: 44px; }

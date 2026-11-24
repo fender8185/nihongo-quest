@@ -230,6 +230,16 @@ def test_window_misses_and_resume(b):
       return JSON.stringify(out); })()"""))
     assert r['lit'] and r['score'] == {'0': 2, '1': 0, '2': 0} and r['k'] == 3, r
 
+# ruling 35 (Task 7's desk): a window customer missed three times — the same wrong reply tapped thrice (a window reply stays tappable) —
+# then right scores 2, not 3: 3 is a customer who left
+def test_a_window_customer_missed_three_times_scores_two(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + WIN_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      WORK.start(yard(), 'window'); const at = (n) => MADO_RUN.now() && MADO_RUN.now().phase === 'ask' && MADO_RUN.now().k === n;
+      for (let i = 0; i < 200 && !at(0); i++) await wait(30); const t = MADO_RUN.now().task, bad = [0, 1, 2].find((i) => i !== t.right && i < t.opts.length);
+      for (let n = 0; n < 3; n++) { click(`.md-opt[data-o="${bad}"]`); await wait(80); } const miss = MADO_RUN.now().miss; click(`.md-opt[data-o="${t.right}"]`); await wait(200);
+      const out = { miss, score: WORK.today().score[0] }; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r == {'miss': 3, 'score': 2}, r
+
 # ---- 落とし物 (spec §7) ----
 # a thing described by two of its looks joined with くて／で (茶色, 緑: で); the 中に line with あります (m3) or 入って います (m4)
 def test_lost_descriptions(b):
