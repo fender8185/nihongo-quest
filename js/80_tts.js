@@ -145,6 +145,12 @@ const CAST_VOICE = {
   // stall's) Laomedeia — the upbeat one — with neither ever where she is (nobody from the harbour town comes up to 湯の花): made a
   // little slower and played a semitone up, so she is brighter and younger than 陽菜, at much her pace
   akari: ['Laomedeia', 0.96, 0, 1],
+  // 旅館「花月」's 千代 and 佐藤, ゆのはな堂's 竹内 (2026-11-24): no Chirp 3 HD voice is left unused, so each shares one with someone never
+  // at 湯の花 (nor anyone who comes there: not あかり, the hero, the announcements, nor the cruise's 金田, 道山 and ミヨコ the onsen's jobs
+  // bring up), said their own way — 千代 和子's Gacrux (the mature one; ハル's and the りんごあめ grandmother's too), unhurried and a
+  // semitone down; 佐藤 原田's Iapetus (the goldfish stall's old man's too), slow — a word at a time — and a semitone down; 竹内 健太's
+  // Achird (the friendly one; the たこやき stall's and 張's too), quicker and a semitone up
+  chiyo: ['Gacrux', 0.94, 0, -1], sato: ['Iapetus', 0.86, 0, -1], makoto: ['Achird', 1.04, 0, 1],
   ann: ['Kore', 0.96]   // みなと線's announcements in the car (2026-11-20); やまなみ線's too (2026-11-23)
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a

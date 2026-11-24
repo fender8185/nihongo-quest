@@ -217,7 +217,7 @@ def test_no_ticket_is_sold_that_cannot_be_ridden(b):
 # ---- Task 2: 湯けむり通り, 湯畑, the food and 射的 (spec §3.2, §3.3, §6) ----
 # motion reduced (a walk out is there at once, a meal straight to its end) and nobody about the street
 CALM = """const mm = window.matchMedia; window.matchMedia = (q) => (/reduced-motion/.test(q) ? { matches: true } : mm.call(window, q));
-  const eat = async () => { await watch(() => document.querySelector('.eat-scene'), 6000); const es = document.querySelector('.eat-scene'); if (!es) return null;
+  const eat = async () => { await watch(() => { const tk = document.querySelector('.talk-card') && document.querySelector('.talk'); if (tk) tk.click(); return document.querySelector('.eat-scene'); }, 6000); const es = document.querySelector('.eat-scene'); if (!es) return null;   // a keeper's order said first (竹内, Task 3): tapped through
     const o = { bg: es.querySelector('.es-face').dataset.bg, name: es.querySelector('.es-name').textContent, look: 0, say: 0 };
     while (es.querySelector('.es-face').dataset.mood === 'drool') { o.look += 1; es.querySelector('.es-ok').click(); await wait(60); }
     while (document.querySelector('.eat-scene')) { o.say += 1; document.querySelector('.es-ok').click(); await wait(60); } return o; };"""
@@ -237,11 +237,11 @@ def test_the_town_walks_station_street_yubatake(b):
       return JSON.stringify(out); })()"""))
     assert r['ways'] == [] and r['routes'] == ['#/yudori', '#/yubatake'] and r['names'] == ['湯けむり通り', '湯畑'], r
     assert r['hops'] == ['yudori', 'yudori', None, None, None, 'beach'], r   # its own ring; the harbour town's as it was
-    assert r['station'] == ['yudori'] and r['street'] == ['onsen', 'yubatake'] and r['square'] == ['yudori'], r
+    assert r['station'] == ['yudori'] and r['street'] == ['onsen', 'ryokan', 'yubatake'] and r['square'] == ['yudori'], r   # 旅館「花月」's door off the street (Task 3)
     assert r['walked'] == ['#/yudori', '#/yubatake', '#/yudori', '#/onsen'] and r['cam'] == 0, r   # down the street: one screen, seen down its length
 
 # ゆのはな堂 (ruling 2) keeps 竹内's hours, 9–21 (TOWN.HOURS.yunohanado): outside them its front is shut — a tap says when it opens, never
-# an empty menu — and in them its 温泉まんじゅう is sold, nobody standing there yet (竹内 comes in Task 3: SPOTS.yudori.yunohanado)
+# an empty menu — and in them its 温泉まんじゅう is sold (竹内 by his steamers since Task 3: SPOTS.yudori.yunohanado, his hours the same)
 def test_the_manju_shop_keeps_its_hours(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
       const look = async (h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; await at('yudori'); const o = [Boolean(yard().querySelector('.use-btn[data-use="yunohanado"]')), Boolean(yard().querySelector('.use-btn[data-use="junbi"]'))];
@@ -379,6 +379,137 @@ def test_street_passers_never_more_than_seven(b):
       for (let i = 0; i < 10; i++) PASSERS.spawn(); Math.random = rnd; await wait(100);
       return JSON.stringify({ n: document.querySelectorAll('.yard .passer').length }); })()"""))
     assert 6 <= r['n'] <= 7, r
+
+# ---- Task 3: 旅館「花月」 — its lobby, 桜の間 and the onsen town's people (spec §3.4, §3.5, §4) ----
+# 花月's gate on 湯けむり通り (its door to tap, and its way sign) into the lobby (#/ryokan), seen at 45° as the town's rooms; up its stairs
+# 「客室 ↑」 to 桜の間 (#/washitsu); down and out again — both in the onsen's own ring (ruling 1: the harbour's ring as it was)
+def test_the_ryokan_and_its_room(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {};
+      out.ways = [['yudori', 'ryokan'], ['ryokan', 'washitsu']].filter(([a, c]) => !(WAYS[a + '>' + c] && WAYS[c + '>' + a]));
+      out.routes = ['ryokan', 'washitsu'].map((p) => PLACE_ROUTE[p]); out.names = ['ryokan', 'washitsu'].map((p) => TOWNEV.PLACE_NAME[p]);
+      out.indoor = ['ryokan', 'washitsu'].map((p) => INDOOR.includes(p)); out.places = ['ryokan', 'washitsu'].map((p) => TOWN.PLACES.includes(p));
+      out.hops = [TOWNEV.hop('onsen', 'washitsu'), TOWNEV.hop('washitsu', 'onsen'), TOWNEV.hop('ryokan', 'town'), TOWNEV.hop('harbor', 'ryokan'), TOWNEV.hop('harbor', 'beach')];
+      const ways = () => [...yard().querySelectorAll('.way-btn')].map((w) => w.dataset.to).sort();
+      const walk = async (to, hash) => { click(`.yard .way-btn[data-to="${to}"]`); await watch(() => location.hash === hash, 8000); await wait(500); return location.hash; };
+      await at('yudori'); click('.yard .use-btn[data-use="kagetsu"]'); await watch(() => location.hash === '#/ryokan', 8000); await wait(500);
+      out.door = location.hash; out.lobby = ways(); out.iso = [Boolean(yard().querySelector('.indoor-land.iso')), yard().classList.contains('indoor')];
+      out.walked = [await walk('washitsu', '#/washitsu')]; out.room = ways(); out.iso.push(Boolean(yard().querySelector('.indoor-land.iso')));
+      out.walked.push(await walk('ryokan', '#/ryokan'), await walk('yudori', '#/yudori'), await walk('ryokan', '#/ryokan'));
+      return JSON.stringify(out); })()"""))
+    assert r['ways'] == [] and r['routes'] == ['#/ryokan', '#/washitsu'] and r['indoor'] == [True, True] and r['places'] == [True, True], r
+    assert r['names'] == ['旅館「花月」', '花月・桜の間'], r
+    assert r['hops'] == ['yudori', 'ryokan', None, None, 'beach'], r   # the onsen's own ring; the harbour's as it was
+    assert r['door'] == '#/ryokan' and r['lobby'] == ['washitsu', 'yudori'] and r['room'] == ['ryokan'] and r['iso'] == [True, True, True], r
+    assert r['walked'] == ['#/washitsu', '#/ryokan', '#/yudori', '#/ryokan'], r
+
+# spec §4 (ruling 2): 千代 in the lobby 8–21, 佐藤 at the front desk 7–11 and 14–22, 竹内 by ゆのはな堂's steamers 9–21 — his hours the
+# shop's own (TOWN.HOURS.yunohanado), pinned equal; tapped, each greets and has a word (no work talk yet: Task 4), 竹内 his まんじゅう to
+# order; each has ten things to say or more, from m1 for one who rides up at N5, more by the N4 units
+def test_keepers_by_their_hours(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {};
+      const who = async (place, h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; await at(place); return [...yard().querySelectorAll('.npc')].map((n) => n.dataset.npc).sort(); };
+      out.lobby = [await who('ryokan', 7.5), await who('ryokan', 9), await who('ryokan', 12), await who('ryokan', 15), await who('ryokan', 21.5), await who('ryokan', 22.5)];
+      out.street = [await who('yudori', 8.5), await who('yudori', 20), await who('yudori', 21.5)];
+      out.hours = [TOWN.CAST.makoto.hours.map((x) => [x[0], x[1], x[2]]), TOWN.HOURS.yunohanado];
+      const tap = async (place, h, id) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; await at(place); TALK.close(); click(`.yard .npc-${id}`); await watch(() => document.querySelector('.talk-card'), 4000);
+        const c = document.querySelector('.talk-card'); return c ? { name: c.querySelector('.talk-name').firstChild.textContent, ja: c.querySelector('.talk-ja').textContent.trim(), picks: [...c.querySelectorAll('[data-go]')].map((x) => x.dataset.go) } : null; };
+      out.chiyo = await tap('ryokan', 12, 'chiyo'); out.sato = await tap('ryokan', 9, 'sato'); out.makoto = await tap('yudori', 10, 'makoto');
+      click('.talk-card [data-go="order"]'); await wait(150); click('.talk'); await watch(() => document.querySelector('.mc-item'), 3000); out.menu = [...document.querySelectorAll('.mc-item')].map((x) => x.dataset.item); closeModal(); TALK.close();
+      state.currentUnit = 'm1'; saveState(); out.n5 = ['chiyo', 'sato', 'makoto'].map((id) => TOWNEV.chatLine(id)[0]);
+      const ch = (id) => TOWN.CHAT[id] || [], ix = (u) => TOWNEV.unitIdx(u);
+      out.lines = Object.fromEntries(['chiyo', 'sato', 'makoto'].map((id) => [id, [ch(id).length, ch(id).filter((l) => l[0] === 'm1' && !l[3]).length, ch(id).filter((l) => ix(l[0]) <= ix('m6')).length, ch(id).filter((l) => ix(l[0]) >= ix('m7') && ix(l[0]) <= ix('m18')).length]]));
+      return JSON.stringify(out); })()"""))
+    assert r['lobby'] == [['sato'], ['chiyo', 'sato'], ['chiyo'], ['chiyo', 'sato'], ['sato'], []], r   # 佐藤 7–11 and 14–22, 千代 8–21
+    assert r['street'] == [[], ['makoto'], []] and r['hours'] == [[[9, 21, 'yudori']], [9, 21]], r   # 竹内 by his shop's hours, pinned
+    assert r['chiyo'] and r['chiyo']['name'] == '花村 千代' and r['chiyo']['ja'] and r['chiyo']['picks'] == [], r   # a word: no work talk yet (ruling 2)
+    assert r['sato'] and r['sato']['name'] == '佐藤 一' and r['sato']['ja'] and r['sato']['picks'] == [], r
+    assert r['makoto'] and r['makoto']['name'] == '竹内 まこと' and r['makoto']['picks'] == ['order', 'chat'] and r['menu'] == ['onsenmanju'], r   # his まんじゅう to order
+    assert all(x and x != '……' for x in r['n5']), r   # an N5 visitor (m1) has a word from each
+    for k, (n, m1, n5, n4) in r['lines'].items():
+        assert n >= 10 and m1 >= 2 and n4 >= 5 and n4 >= n5, (k, r['lines'])   # ten or more, two from m1, more by the N4 units
+
+# spec §3.4–§3.5, §6 (ruling 10): the lobby's tea 「ご自由に どうぞ」 is free — had there, no 円 — and 桜の間's welcome 温泉まんじゅう waits on
+# its 座卓, a gift (TOWN.GIFTS): tapped while not had today it is had (no 円, not one of the day's two foods, stamped in 美食手帳), had
+# before 桜の間 on a screen of its own; the plate then holds only its wrapper till tomorrow, a second the same day refused; the day kept
+# as purse.gifts.<id> through a load
+def test_welcome_manju_once_a_day_and_free_tea(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
+      const btn = (id) => Boolean(yard().querySelector(`.use-btn[data-use="${id}"]`)), bal = yenBalance(), pops = () => [...yard().querySelectorAll('.ypop')].map((e) => e.textContent).join('|');
+      const plate = () => [Boolean(yard().querySelector('.rk-plate .rk-manju')), Boolean(yard().querySelector('.rk-plate .rk-wrap'))];
+      await at('ryokan'); click('.yard .use-btn[data-use="tea"]'); await wait(1600);
+      out.tea = [bal - yenBalance(), Boolean(document.querySelector('.mc-item')), Boolean(document.querySelector('.eat-scene')), pops(), (state.purse.today || {}).d || 0];
+      await at('washitsu'); out.before = [btn('manju'), btn('wrapper'), ...plate()];
+      click('.yard .use-btn[data-use="manju"]'); out.manju = await eat(); await wait(300);
+      const g = Object.keys(TOWN.GIFTS).find((k) => TOWN.GIFTS[k].place === 'washitsu'), it = g ? TOWN.GIFTS[g].item : [];
+      out.gift = [(state.purse.gifts || {})[g], state.purse.book[it[0]], (state.purse.today || {}).f || 0, bal - yenBalance()];
+      out.after = [btn('manju'), btn('wrapper'), ...plate()];
+      click('.yard .use-btn[data-use="wrapper"]'); await wait(1500); out.again = [Boolean(document.querySelector('.eat-scene')), pops()];
+      await at('ryokan'); await at('washitsu'); out.later = [btn('manju'), btn('wrapper'), ...plate()];   // still had today, drawn anew
+      out.kept = (normalizeState(JSON.parse(JSON.stringify(state))).purse.gifts || {})[g]; out.how = g ? TOWN.GIFTS[g].how : '';
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 11) }; await at('washitsu'); out.next = [btn('manju'), btn('wrapper'), ...plate()];
+      return JSON.stringify(out); })()"""))
+    t = r['tea']
+    assert t[0] == 0 and not t[1] and not t[2] and t[3] and t[4] == 0, r   # the tea: no 円, no menu, not the day's drink; a word as he has it
+    assert r['before'] == [True, False, True, False], r   # the まんじゅう on its plate
+    m = r['manju']
+    assert m and m['bg'] == 'washitsu' and m['look'] >= 3 and m['say'] >= 5 and 'まんじゅう' in m['name'], r   # before 桜の間, its own lines
+    assert r['gift'] == ['2026-11-10', '2026-11-10', 0, 0], r   # given today: stamped, free, not one of the day's two foods
+    assert r['after'] == [False, True, False, True] and not r['again'][0] and r['again'][1], r   # its wrapper till tomorrow; a second refused
+    assert r['later'] == [False, True, False, True] and r['kept'] == '2026-11-10' and r['how'], r
+    assert r['next'] == [True, False, True, False], r   # the next day: a new one
+
+# ruling 3: 桜の間 front-on for the 仲居 card — washitsuArt(state) draws the room from { window, shoji, light, ac, tv, futon 0–3, zabuton 0–4,
+# tea, yukata, flower } (and room: sakura | kiku | matsu — the scroll and the flower; cat: the inn's cat asleep on a futon): every key
+# changes the drawing; each thing its own group carrying data-k, 40 px or more to tap at 360 px wide; with everything out nothing lies
+# over another but the cat, asleep on a futon
+def test_washitsu_art_draws_every_state(b):
+    r = json.loads(ev(b, """(() => { const none = { window: false, shoji: false, light: false, ac: false, tv: false, futon: 0, zabuton: 0, tea: false, yukata: false, flower: false, room: 'sakura', cat: false };
+      const all = { window: true, shoji: true, light: true, ac: true, tv: true, futon: 3, zabuton: 4, tea: true, yukata: true, flower: true, room: 'sakura', cat: true };
+      const art = (o) => washitsuArt(Object.assign({}, none, o)), keys = ['window', 'shoji', 'light', 'ac', 'tv', 'futon', 'zabuton', 'tea', 'yukata', 'flower', 'cat'];
+      const same = keys.filter((k) => art({ [k]: all[k] }) === art({}));
+      const counts = [[0, 1, 2, 3].map((n) => art({ futon: n })), [0, 1, 2, 3, 4].map((n) => art({ zabuton: n }))].map((xs) => new Set(xs).size);
+      const rooms = new Set(['sakura', 'kiku', 'matsu'].map((room) => art({ room, flower: true }))).size, bare = new Set(['sakura', 'kiku', 'matsu'].map((room) => art({ room }))).size;
+      const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:0;top:0;width:360px;z-index:9999'; document.body.appendChild(host);
+      const box = (o) => { host.innerHTML = art(o); const svg = host.querySelector('svg'); svg.style.width = '360px'; svg.style.height = 'auto';
+        return Object.fromEntries(keys.map((k) => [k, [...host.querySelectorAll(`[data-k="${k}"]`)].map((e) => { const q = e.getBoundingClientRect(); return [q.left, q.top, q.right, q.bottom].map(Math.round); })])); };
+      const on = box(all), off = box({}), lone = box({ cat: true });
+      const small = keys.flatMap((k) => on[k].concat(off[k]).filter(([l, t, rr, bb]) => rr - l < 40 || bb - t < 40).map(() => k));
+      const missing = keys.filter((k) => !on[k].length || (k !== 'cat' && !off[k].length));
+      const meet = (a, c) => a[0] < c[2] - 1 && c[0] < a[2] - 1 && a[1] < c[3] - 1 && c[1] < a[3] - 1, over = [], items = keys.filter((k) => k !== 'cat');
+      items.forEach((a, i) => items.slice(i + 1).forEach((c) => { if (on[a].some((p) => on[c].some((q) => meet(p, q)))) over.push(a + '/' + c); }));
+      const catOn = [on, lone].map((s) => s.cat.length > 0 && s.cat.every((p) => s.futon.some((q) => meet(p, q))));
+      host.remove(); return JSON.stringify({ same, counts, rooms, bare, small, missing, over, catOn, svg: /^<svg[^>]*viewBox/.test(art({}).trim()) }); })()"""))
+    assert r['svg'] and r['same'] == [] and r['counts'] == [4, 5], r   # every key changes the drawing, each count its own
+    assert r['rooms'] == 3 and r['bare'] == 3, r   # each room its own scroll (and flower)
+    assert r['missing'] == [] and r['small'] == [], r   # every thing its own group, 40 px or more to tap at 360 px
+    assert r['over'] == [] and r['catOn'] == [True, True], r   # nothing over another; the cat asleep on a futon (laid or still to lay)
+
+# ruling 2 (as 湯畑's review found): each room's floor walked round its things — the lobby's front desk (never behind it), its 土間 (in and
+# out at the 上がり框 only), the sofas, the tea table; 桜の間's 座卓 with its 座椅子, the TV, the 広縁's chairs — a tap on one ends beside
+# it, a spot kept inside one or off the floor comes back onto the floor beside it
+def test_the_inn_keeps_him_on_its_floor(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {};
+      const uv = () => isoUV(yh.X, yh.Y), inBlock = () => { const [u, v] = uv(), p = yard().dataset.place; return walkBlocks(p).filter((k) => u > k[0] + 0.01 && u < k[1] - 0.01 && v > k[2] + 0.01 && v < k[3] - 0.01).length; };
+      const onFloor = () => { const [u, v] = uv(); return u >= 0.5 && u <= ISO.RW - 0.5 && v >= 0.5 && v <= ISO.RD - 0.5; };
+      const go = async (u, v) => { await new Promise((q) => yHeroWalk(yard(), isoXY(u, v), q)); return [inBlock(), onFloor(), ...uv().map((n) => Math.round(n * 10) / 10)]; };
+      const mid = (k) => [(k[0] + k[1]) / 2, (k[2] + k[3]) / 2], clear = (p, w) => w.map((q) => isoUV(q[0], q[1])).every((q, i, a) => !i || walkBlocks(p).every((k) => !yCross(k, a[i - 1], q)));
+      const kept = async (p, u, v) => { localStorage.setItem('nq_hero', JSON.stringify({ [p]: { X: Math.round(isoXY(u, v)[0]), Y: Math.round(isoXY(u, v)[1]) } })); yPlace = 'yard'; await at(p); return [inBlock(), onFloor()]; };
+      await at('ryokan'); const D = RYOKAN.DESK;
+      out.desk = await go((D[0] + D[1]) / 2, D[2] - 1.2); out.deskV = D[3];   // behind the front desk, where 佐藤 stands
+      out.doma = await go(...mid(RYOKAN.DOMA)); out.domaU = RYOKAN.DOMA[1];   // down into the 土間
+      out.sofa = await go(...mid(RYOKAN.SOFA)); out.tea = await go(...mid(RYOKAN.TEA)); out.wall = await go(30, -6);
+      out.round = [clear('ryokan', yRoute('ryokan', isoXY(12, 9.5), isoXY(15.4, 2))), clear('ryokan', yRoute('ryokan', isoXY(5, 12.5), isoXY(21, 8)))];
+      out.keptLobby = [await kept('ryokan', ...mid(D)), await kept('ryokan', 40, 40)];
+      await at('washitsu'); out.zataku = await go(...mid(RYOKAN.ZATAKU)); out.engawa = await go(...mid(RYOKAN.ENGAWA_SET)); out.tv = await go(...mid(RYOKAN.TV));
+      out.round.push(clear('washitsu', yRoute('washitsu', isoXY(13, 13.5), isoXY(14, 2.4))));
+      out.keptRoom = [await kept('washitsu', ...mid(RYOKAN.ZATAKU)), await kept('washitsu', -8, 30)];
+      return JSON.stringify(out); })()"""))
+    for k in ('desk', 'doma', 'sofa', 'tea', 'wall', 'zataku', 'engawa', 'tv'):
+        assert r[k][:2] == [0, True], (k, r)   # beside it, on the floor
+    assert r['desk'][3] >= r['deskV'], r   # in front of the front desk, never behind it
+    assert r['doma'][2] >= r['domaU'] - 0.01, r   # up on the floor, not down in the 土間
+    assert r['round'] == [True, True, True], r   # round the things, never through
+    assert r['keptLobby'] == [[0, True], [0, True]] and r['keptRoom'] == [[0, True], [0, True]], r   # a spot kept in a thing or off the floor: back beside it
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

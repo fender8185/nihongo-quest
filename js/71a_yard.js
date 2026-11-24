@@ -694,6 +694,7 @@ function renderOutside(view, place = 'yard') {
   CRUISE.mount(y, place);   // the cruise ship's passengers and 高橋, the ship far out (CRUISE)
   PLATFORM.mount(y, place);   // みなと駅's trains in and out (2026-11-20)
   ONSEN.mount(y, place);   // 湯の花駅前 (2026-11-23): あかり's ようこそ the first time
+  RYOKAN.mount(y, place);   // 旅館「花月」 (2026-11-24): the 鹿威し's コーン as it strikes
   const yel = y.querySelector('.yhero');   // idling now and then while left be
   HERO.idle(yel, () => !yh.climb && !yh.use && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer, .reach, .crouch, .look, .bow'), true);
   y.addEventListener('pointerdown', (e) => { y._at = yardPoint(y, e); if (!y.classList.contains('dressing')) { yardDragStart(y, e); yPanStart(y, e); } });   // _at: which seat a tap on a row of them meant

@@ -35,6 +35,7 @@ const YEN = (() => {
     Object.values(M()).forEach((mu) => { if (mu.keeper) { mu.items.forEach((it) => { add('hero', order(mu, it)[0]); add(mu.keeper[0], price(mu, it)[0]); }); add(mu.keeper[0], AGAIN[0]); if (mu.hello) add(mu.keeper[0], mu.hello[0]); } });
     [FULL.f, FULL.d, FULL.b, FULL.o, EAT.start, EAT.end, ASK.menu, ASK.bath].forEach((l) => add('hero', l[0]));
     Object.values(M()).forEach((mu) => mu.items.forEach((it) => [...((it[4] || {}).look || []), ...((it[4] || {}).say || [])].forEach((l) => add('hero', l[0]))));   // what he says about each before and once had
+    Object.values(G()).forEach((x) => { if (x.ask) add('hero', x.ask[0]); (x.give || []).forEach((l) => add(x.who, l[0])); [...((x.item[4] || {}).look || []), ...((x.item[4] || {}).say || [])].forEach((l) => add('hero', l[0])); });   // a gift's too: the word asking, the giver's, his (2026-11-24: missed till now)
   }
   // ---- what may be had: its word learned (or the course past its level), two foods and a drink a day, the bath and おみくじ once
   // (k: f, d, b, o); a bath makes him hungry again — the day's foods and drinks begin anew ----
@@ -124,7 +125,8 @@ const YEN = (() => {
   // tap) and 「ごちそうさまでした！」; the first time, its stamp ----
   // where it is had, for the scene's backdrop (EATSCENE BG): the menu's own place; a machine in the street or the station; the stalls
   const WHERE = { shokudo: 'shokudo', izakaya: 'izakaya', cafe: 'cafe', milk: 'sento', vend: 'street', bakery: 'bakery', chaya: 'chaya', butaman: 'chinatown', ryuho: 'chinatown', ekiben: 'platform', evend: 'platform', sushi: 'sushi', ichiba: 'ichiba',   // みなと寿司's counter, the 朝市 by the sea (2026-11-23)
-    yunohanado: 'yudori', tamago: 'yubatake' };   // 湯の花温泉 (2026-11-23): before ゆのはな堂 on 湯けむり通り, by the 湯畑's steam
+    yunohanado: 'yudori', tamago: 'yubatake',   // 湯の花温泉 (2026-11-23): before ゆのはな堂 on 湯けむり通り, by the 湯畑's steam
+    washitsu: 'washitsu' };   // 旅館「花月」's welcome まんじゅう (TOWN.GIFTS.kangei, bg 'washitsu': no menu of its own there) — before 桜の間 (2026-11-24)
   const where = (m) => WHERE[m] || (typeof SHRINE_STALLS !== 'undefined' && SHRINE_STALLS.some(([id]) => id === m) ? 'fair' : 'shokudo');
   function eat(it, first, m) {
     const o = opt(it), drink = o.k === 'd', el = document.createElement('div');

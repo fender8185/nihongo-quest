@@ -31,7 +31,7 @@ const HERO = (() => {
     shoeStyle: [['sneaker', '球鞋'], ['boots', '短靴'], ['loafer', '皮鞋'], ['geta', '木屐'], ['rainboots', '雨靴'], ['bunnyslippers', '兔子拖鞋'], ['elfshoes', '精靈鞋']],   // the first three everyone's; the rest sold (2026-11-12, the user)
     shoe: CLOTH
   };
-  const ROLE_STYLES = { topStyle: ['hakui', 'samue', 'kappogi', 'chef', 'jacket', 'happi', 'yuhappi', 'vest'], bottomStyle: ['hakama'], shoeStyle: ['zori'] };   // the town's own, never sold
+  const ROLE_STYLES = { topStyle: ['hakui', 'samue', 'kappogi', 'chef', 'jacket', 'happi', 'yuhappi', 'vest', 'kimono'], bottomStyle: ['hakama'], shoeStyle: ['zori'] };   // the town's own, never sold
   const LOOK0 = { face: 'chubby', skin: '#f3d1b5', cheeks: 'blush', fringe: 'blunt', sides: 'wisps', hairBack: 'crop', hairTop: 'bun', hairColor: '#6b4a32', eyes: 'normal', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#d0574b', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' };   // 2026-11-10, the user's pick: 包子臉, 齊瀏海, 觸角, 清爽, 丸子, 棕髮; a red hoodie, black trousers and sneakers — neither boy nor girl
   // the 16 hairstyles before the hair came in parts (1.2.1): each as its nearest 瀏海, 兩側, 後面, 造型
   const OLD_HAIR = { crop: ['round', 'short', 'short', 'none'], neat: ['swept', 'short', 'short', 'none'], curtain: ['center', 'chin', 'short', 'none'], ahoge: ['round', 'short', 'short', 'ahoge'],
@@ -397,6 +397,14 @@ const HERO = (() => {
         <path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path d="M-18 -38.6 Q2 -34.6 22 -38.6" fill="none" stroke="${d}" stroke-opacity=".5" stroke-width=".9"/>`,
       collar: (F, c) => `<path ${F(lt(c, 0.85), 1.6)} d="M-8 -67 L5 -53 L12 -67 L9 -67 L5 -59 L-5 -67 Z"/>`,
       back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path ${F(lt(c, 0.7), 1.3)} d="M-7 -46 L2 -39 L11 -46 L11 -30 L2 -36 L-7 -30 Z"/>` },
+    // 着物 (旅館「花月」's 女将, 2026-11-24): a plain-coloured kimono to the ankles, its own colour's sleeves; at the neck a white 半襟 inside
+    // its collar; a brocade obi with a pale 帯揚げ along its top and a red 帯締め across it; a spray of small flowers at the hem; from
+    // behind the obi tied in its お太鼓
+    kimono: { sleeve: 'kimono',
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-9 -66 L12 -40 M12 -33 L17 -5" fill="none" stroke="${d}" stroke-width="1.3"/>${[[-14, -11], [-6, -8], [6, -12], [16, -9], [22, -14]].map(([x, y], k) => `<g fill="${lt(c, 0.55 + (k % 2) * 0.15)}">${[0, 72, 144, 216, 288].map((a) => `<circle cx="${(x + 1.7 * Math.cos(a * Math.PI / 180)).toFixed(1)}" cy="${(y + 1.7 * Math.sin(a * Math.PI / 180)).toFixed(1)}" r="1.15"/>`).join('')}</g><circle cx="${x}" cy="${y}" r=".7" fill="#e6c25a"/>`).join('')}
+        <path ${F('#e2cc96', 1.3)} d="M-18 -44 Q2 -40 22 -44 V-33 Q2 -29 -18 -33 Z"/><path d="M-18 -41 Q2 -37 22 -41 M-18 -36 Q2 -32 22 -36" fill="none" stroke="#b8923a" stroke-opacity=".6" stroke-width=".7"/><path d="M-18 -44 Q2 -40 22 -44 V-42.4 Q2 -38.4 -18 -42.4 Z" fill="#f2c4cc"/><path d="M-18 -38.4 Q2 -34.4 22 -38.4" fill="none" stroke="#c8323a" stroke-width="1.3"/><circle cx="4" cy="-34.6" r="1.3" fill="#c8323a"/>`,
+      collar: (F, c, d) => `<path ${F(dk(c, 0.8), 1.6)} d="M-9.4 -67 L4 -50.4 L13.4 -67 L11.6 -67 L4 -54.6 L-7.4 -67 Z"/><path ${F('#f6f2ea', 1.65)} d="M-7.4 -67 L4 -54.6 L11.6 -67 L9.4 -67 L4 -58.4 L-5 -67 Z"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path ${F('#e2cc96', 1.3)} d="M-18 -44 Q2 -40 22 -44 V-33 Q2 -29 -18 -33 Z"/><path ${F('#e2cc96', 1.32)} d="M-7 -47 H11 Q12 -47 12 -46 V-27 Q2 -25 -8 -27 V-46 Q-8 -47 -7 -47 Z"/><path d="M-8 -43 H12 M-8 -31 Q2 -29 12 -31" fill="none" stroke="#b8923a" stroke-opacity=".6" stroke-width=".7"/><path d="M-18 -38.4 Q2 -34.4 22 -38.4" fill="none" stroke="#c8323a" stroke-width="1.3"/><path d="M2 -66 V-47" stroke="${d}" stroke-opacity=".35" stroke-width="1"/>` },
     // 聖誕老人外套 (Christmas, 2026-11-14): to the hips in the top's colour, white fur down the front, round the hem and the neck, a
     // black belt with a gold buckle; the fur cuffs on the sleeves (fur, in arm). From behind the fur hem and the belt
     santacoat: { sleeve: 'long', fur: true,

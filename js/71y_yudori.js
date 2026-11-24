@@ -7,7 +7,7 @@
 // readings. On the left ゆのはな堂 (温泉まんじゅう out of the steamers before its door, 9–21: TOWN.HOURS.yunohanado — 竹内's hours
 // too; shut, its shutters drawn and a tap says when it opens), the 射的 (its prizes on red tiers under a red-and-white curtain: a go
 // once a day, 300 円, state.oneADay.shateki) and a sake shop (its cedar ball); on the right 旅館「花月」's gate (stone lantern, long
-// noren, a pine in a pot: its door is Task 3's), a ゆかた屋's window and a 甘味処 (its red parasol, its bench). A gutter of hot water
+// noren, a pine in a pot: through it into the inn, RYOKAN), a ゆかた屋's window and a 甘味処 (its red parasol, its bench). A gutter of hot water
 // steaming along the left, stone lanterns, a cat asleep on a step, visitors in yukata and geta (PASSERS); at the far end the 湯畑's
 // steam over its railing — lit in slowly changing colours by night — and the way on to it.
 const YUDORI = (() => {
@@ -358,6 +358,7 @@ const YUDORI = (() => {
       ${TOWNEV.castHtml('yudori')}
       <button type="button" class="thing way-btn" data-act="go-place" data-to="onsen" aria-label="回湯の花駅前" style="margin-left:-32px;bottom:2px"><span class="tag">${ySign('back', '回駅前')}</span></button>
       <button type="button" class="thing way-btn way-edge" data-act="go-place" data-to="yubatake" aria-label="往湯畑" style="margin-left:-32px;bottom:${FAR + 4}px"><span class="tag">${ySign('onsen', '湯畑')}</span></button>
+      ${(([x, y]) => `<button type="button" class="thing way-btn way-edge" data-act="go-place" data-to="ryokan" aria-label="進旅館「花月」" style="margin-left:${Math.round(x) - 32}px;bottom:${Math.round(y) + 70}px"><span class="tag">${ySign('door', '花月')}</span></button>`)(door('kagetsu'))}
       <div class="ysel"></div>`;
   }
 
@@ -447,7 +448,7 @@ PLACE_USE.yudori = (() => {
     thing('junbi', 'yunohanado', { name: 'ゆのはな堂（準備中）', when: () => !YUDORI.open(), pick: () => ['しまってる…', YUDORI.shutSay()] }),
     thing('shateki', 'shateki', { name: '射的', open: (y) => YUDORI.shateki(y), say: 'わくわく…！' }),
     thing('sakaya', 'sakaya', { name: '酒屋', say: 'おさけの におい…', toast: '酒屋（賣酒的店）：屋簷下掛著用杉樹葉做的「杉玉」，表示今年的新酒釀好了。' }),
-    thing('kagetsu', 'kagetsu', { name: '旅館「花月」', say: 'りっぱ…！', toast: '旅館「花月」：石燈籠、松樹盆景，長長的暖簾上寫著「花月」。' }),   // its door: Task 3
+    thing('kagetsu', 'kagetsu', { name: '旅館「花月」', pick: () => [''], open: (y) => yGo(y.querySelector('.use-btn[data-use="kagetsu"]') || y, 'ryokan') }),   // in through its gate (2026-11-24: RYOKAN)
     thing('yukataya', 'yukataya', { name: 'ゆかた屋', say: 'きれい…！', toast: 'ゆかた屋：櫥窗裡掛著各種顏色的浴衣，可以租來穿著逛街。' }),
     thing('kanmi', 'kanmi', { name: '甘味処', say: 'あまい におい…', toast: '甘味処（日式甜點店）：紅色大傘下的長椅，坐著吃糰子、喝茶。' }),
     { id: 'neko', name: '貓', box: [Math.round(cx - 30 * k), Math.round(cy - 22 * k), Math.round(cx + 30 * k), Math.round(cy + 10 * k)], over: 1, kind: 'do', go: [Math.round(YUDORI.half(YUDORI.H - p) - 14), Math.round(YUDORI.H - p)], back: 1, pose: 'crouch', say: 'ニャ…', fx: 'neko', fxc: 'stir', ms: 2200 }];

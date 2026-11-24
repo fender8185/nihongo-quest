@@ -23,7 +23,7 @@ const SND = (() => {
   }
   // a loop's or a footstep file's length as made (s): a decoder that leaves the encoder's 2112 samples of lead-in at the start
   // (Chrome and Safari take them off) gives a longer buffer, and the sound then begins that much later (lead)
-  const MADE = { 'amb-harbor': 37.5, 'amb-station': 31.4, 'amb-clock': 20, 'amb-river': 11, 'amb-steam': 9, 'amb-falls': 11 };
+  const MADE = { 'amb-harbor': 37.5, 'amb-station': 31.4, 'amb-clock': 20, 'amb-river': 11, 'amb-steam': 9, 'amb-falls': 11, 'amb-garden': 9 };
   const made = (name) => MADE[name] || (name.startsWith('amb-') ? 38 : name.startsWith('steps-') ? 2 : 0);
   const lead = (name, b) => { const n = made(name), x = n ? b.duration - n : 0; return x > 0.03 && x < 0.2 ? 2112 / 44100 : 0; };
   function load(c, name) {
@@ -89,7 +89,14 @@ const SND = (() => {
     // fading away); the 射的's cork gun, ポン: a pop and its hollow note falling
     'steps-geta': (c, to, v) => { const hi = Math.random() < 0.5; noise(c, to, 0, 0.045, 0.32 * v, hi ? 2700 : 2000, 0, 3); tone(c, to, hi ? 860 : 660, 0, 0.1, 0.12 * v, 'triangle', hi ? 720 : 560); },
     geta: (c, to, v) => [0, 0.34, 0.68, 1.02, 1.36].forEach((at, k) => { const g = v * (1 - k * 0.16), hi = k % 2; noise(c, to, at, 0.045, 0.3 * g, hi ? 2700 : 2000, 0, 3); tone(c, to, hi ? 860 : 660, at, 0.1, 0.11 * g, 'triangle', hi ? 720 : 560); }),
-    pon: (c, to, v) => { noise(c, to, 0, 0.06, 0.6 * v, 1500, 600, 1.4); tone(c, to, 440, 0.005, 0.18, 0.26 * v, 'sine', 170); }
+    pon: (c, to, v) => { noise(c, to, 0, 0.06, 0.6 * v, 1500, 600, 1.4); tone(c, to, 440, 0.005, 0.18, 0.26 * v, 'sine', 170); },
+    // 旅館「花月」 (2026-11-24): the 鹿威し's コーン — a hollow knock of bamboo on stone, its tube ringing a moment, the water after it; the
+    // front desk's bell, チーン — its strike, then its bright partials dying away; a fusuma or shoji slid — the paper's swish on its
+    // track, a soft トン at its end; a step on tatami, soft and dull
+    kon: (c, to, v) => { noise(c, to, 0, 0.025, 0.45 * v, 2600, 0, 2); tone(c, to, 960, 0, 0.3, 0.3 * v, 'triangle', 860); tone(c, to, 1910, 0, 0.12, 0.07 * v, 'sine', 1760); tone(c, to, 430, 0, 0.46, 0.12 * v, 'sine', 410); noise(c, to, 0.16, 0.7, 0.04 * v, 3200, 2200, 3); },
+    'desk-bell': (c, to, v) => { noise(c, to, 0, 0.02, 0.35 * v, 5200, 0, 2); [[1975, 0.13, 1.9], [2964, 0.045, 1.3], [4872, 0.035, 0.9], [6350, 0.015, 0.5]].forEach(([f, a, len]) => tone(c, to, f, 0, len, a * v)); },
+    fusuma: (c, to, v) => { noise(c, to, 0, 0.46, 0.2 * v, 650, 1250, 1.4); noise(c, to, 0.04, 0.4, 0.08 * v, 2100, 2600, 2); tone(c, to, 150, 0.45, 0.1, 0.2 * v, 'sine', 100); noise(c, to, 0.45, 0.05, 0.16 * v, 420, 0, 1.2); },
+    'steps-tatami': (c, to, v) => { noise(c, to, 0, 0.07, 0.22 * v, 760, 380, 1.1); tone(c, to, 110, 0, 0.06, 0.05 * v, 'sine', 80); }
   };
   // a note held (a horn's): in, held, out — tone's own is a pluck
   function held(c, to, f, at, len, vol, type) {
@@ -121,6 +128,15 @@ const SND = (() => {
     for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1, t = i / sr; lo += 0.03 * (w - lo); lo2 += 0.12 * (w - lo2); hi += 0.6 * (w - hi); d[i] = (lo * 2.4 + (lo2 - lo) * 0.9 + (w - hi) * 0.05) * (0.86 + 0.14 * Math.sin(t * 1.7) * Math.sin(t * 0.43 + 2)); }
     for (let k = 0; k < 160; k++) { const at = Math.floor(Math.random() * (n - sr * 0.2)), len = Math.floor(sr * (0.02 + Math.random() * 0.05)), a = 0.04 + Math.random() * 0.05; for (let j = 0; j < len; j++) d[at + j] += a * (Math.random() * 2 - 1) * Math.exp(-4 * j / len); }   // splashes
     return seam(b, sr, 0.06);
+  },
+  // 旅館「花月」's garden (2026-11-24): the thin stream off its bamboo spout into the stone basin — a soft trickle, now and then a drop
+  // (10 s made, looped over 9)
+  'amb-garden': (c) => {
+    const sr = c.sampleRate, n = Math.floor(sr * 10), b = c.createBuffer(1, n, sr), d = b.getChannelData(0);
+    let lo = 0, hi = 0;
+    for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1, t = i / sr; lo += 0.3 * (w - lo); hi += 0.85 * (w - hi); d[i] = (lo - hi * 0.6) * 0.35 * (0.7 + 0.3 * Math.sin(t * 7.3) * Math.sin(t * 2.1 + 0.6)); }
+    for (let k = 0; k < 60; k++) { const at = Math.floor(Math.random() * (n - sr * 0.1)), f = 700 + Math.random() * 900, len = Math.floor(sr * (0.03 + Math.random() * 0.04)), a = 0.04 + Math.random() * 0.05; for (let j = 0; j < len; j++) d[at + j] += a * Math.sin(2 * Math.PI * f * (1 + 0.5 * j / len) * j / sr) * Math.exp(-4 * j / len); }   // drops
+    return seam(b, sr, 0.03);
   } };
   // a loop made here: its last xf samples faded into its first (seamless over [0, n − xf)), brought to an rms of `to` (about −26 dBFS, as the files: 0.05)
   function seam(b, xf, to) {
@@ -161,7 +177,8 @@ const SND = (() => {
     yard: { way: 'gravel', off: 'grass' }, park: { way: 'concrete', off: 'gravel' }, beach: { way: 'wood', off: 'sand' }, harbor: { way: 'sand', off: 'concrete' },
     street: { off: 'concrete' }, town: { off: 'concrete' }, station: { off: 'concrete' }, sento: { off: 'concrete' },
     shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }, kominkan: { off: 'concrete' }, kyoshitsu: { off: 'wood' }, rairai: { off: 'concrete' }, sushi: { off: 'concrete' }, chinatown: { off: 'concrete' }, platform: { off: 'concrete' }, chinadori: { off: 'concrete' }, onsen: { off: 'concrete' },
-    yudori: { off: 'geta' }, yubatake: { off: 'geta' }   // 湯の花温泉 (2026-11-23): geta on the stones, カランコロン (SYNTH steps-geta)
+    yudori: { off: 'geta' }, yubatake: { off: 'geta' },   // 湯の花温泉 (2026-11-23): geta on the stones, カランコロン (SYNTH steps-geta)
+    ryokan: { off: 'wood' }, washitsu: { off: 'tatami' }   // 旅館「花月」 (2026-11-24): the lobby's boards in slippers; 桜の間's tatami (SYNTH steps-tatami)
   };
   const groundOf = (place, kind) => { const g = GROUND[place]; return g ? g[kind] || g.off : ''; };
   // ---- each place's background: [layer, how loud by day, by night] (sounds/amb-<layer>-1.m4a, looping); room: through the window,
@@ -190,6 +207,8 @@ const SND = (() => {
     onsen: [['river', 0.55, 0.5], ['birds', 0.55, 0], ['wind', 0.25, 0.2], ['insects', 0, 0.2]],   // 湯の花駅前 (2026-11-23): the river below, the mountain's birds
     yudori: [['town', 0.42, 0.24], ['river', 0.16, 0.14], ['steam', 0.22, 0.24], ['insects', 0, 0.12]],   // 湯けむり通り (2026-11-23): people about, the gutter's hot water, steam
     yubatake: [['falls', 0.62, 0.56], ['steam', 0.4, 0.4], ['town', 0.22, 0.14], ['birds', 0.22, 0], ['insects', 0, 0.14]],   // 湯畑 (2026-11-23): its water down the troughs and over the fall, the steam
+    ryokan: [['garden', 0.5, 0.45], ['birds', 0.16, 0], ['insects', 0, 0.1]],   // 旅館「花月」's lobby (2026-11-24): quiet, the garden's water through the window (its 鹿威し: RYOKAN.mount)
+    washitsu: [['river', 0.14, 0.12], ['birds', 0.28, 0], ['garden', 0.1, 0.08], ['insects', 0, 0.14]],   // 桜の間: the river far below the 広縁's window, the mountain's birds
     izakaya: [['izakaya', 0.6, 0.6]],
     shop: [['clock', 0.5, 0.5]],
     room: [['birds', 0.18, 0], ['insects', 0, 0.07]]
@@ -200,7 +219,8 @@ const SND = (() => {
     beach: [['gull', 35, 80, 0.25, 'day']], harbor: [['gull', 30, 70, 0.25, 'day']],
     town: [['bike', 40, 90, 0.5, 'day']], street: [['piyo', 50, 110, 0.6, '']], station: [['chime', 70, 140, 0.5, '']],
     onsen: [['diesel-horn', 70, 150, 0.12, ''], ['crow', 90, 180, 0.15, 'day']],   // 湯の花 (2026-11-23): the diesel's horn far off down the valley
-    yudori: [['geta', 9, 22, 0.55, '']], yubatake: [['geta', 16, 36, 0.4, ''], ['crow', 90, 180, 0.12, 'day']]   // visitors in geta going by (2026-11-23)
+    yudori: [['geta', 9, 22, 0.55, '']], yubatake: [['geta', 16, 36, 0.4, ''], ['crow', 90, 180, 0.12, 'day']],   // visitors in geta going by (2026-11-23)
+    ryokan: [['furin', 14, 34, 0.3, '']], washitsu: [['furin', 18, 40, 0.2, ''], ['kon', 24, 48, 0.14, '']]   // 旅館「花月」: its wind chime; up in 桜の間 the 鹿威し heard faint from the garden below
   };
   // more while something stands there (2026-11-23): the 朝市 at the harbour — people about it, gulls after the fish (ICHIBA)
   const MARKET = () => typeof ICHIBA === 'object' && ICHIBA.now();
@@ -303,6 +323,8 @@ const USE_SND = {
   'chinatown.post': 'paper', 'chinatown.notice': 'paper', 'chinatown.shirt': 'cloth', 'chinatown.seiro': 'pour', 'chinatown.panda': 'cushion', 'chinatown.rmenu': 'paper', 'chinatown.yuka': 'place', 'chinatown.shishi': 'clap', 'chinatown.uranai': 'sparkle',
   'yudori.yunohanado': 'paper', 'yudori.junbi': 'knock', 'yudori.shateki': 'pon', 'yudori.sakaya': 'barrel', 'yudori.kagetsu': 'furin', 'yudori.yukataya': 'cloth', 'yudori.kanmi': 'dishes', 'yudori.neko': 'meow',   // 湯けむり通り (2026-11-23)
   'yubatake.tamago': 'plop', 'yubatake.yubatake': 'pour', 'yubatake.taki': 'splash', 'yubatake.yumomi': 'splash',   // 湯畑 (2026-11-23)
+  'ryokan.niwa': 'furin', 'ryokan.keys': 'kuji', 'ryokan.noren': 'cloth', 'ryokan.ikebana': 'rustle', 'ryokan.getabako': 'drawer', 'ryokan.sofa': 'cushion', 'ryokan.daicho': 'page', 'ryokan.bell': 'desk-bell', 'ryokan.tea': 'pour',   // 旅館「花月」 (2026-11-24)
+  'washitsu.mado': 'slide-door', 'washitsu.toko': 'rustle', 'washitsu.oshiire': 'fusuma', 'washitsu.tv': 'switch', 'washitsu.ac': 'ic', 'washitsu.shoji': 'fusuma', 'washitsu.engawa': 'sit', 'washitsu.zaisu': 'cushion', 'washitsu.yukata': 'cloth', 'washitsu.manju': 'paper', 'washitsu.wrapper': 'paper',
   'onsen.gate': 'tick', 'onsen.clock': 'tick', 'onsen.post': 'letter', 'onsen.ashiyu': 'plop', 'onsen.annai': 'slide-door', 'onsen.jobs': 'paper', 'onsen.map': 'paper', 'onsen.rick': 'cushion',   // 湯の花駅前 (2026-11-23)
   'harbor.sushi': 'slide-door', 'harbor.sakana': 'flop', 'harbor.himono': 'rustle', 'harbor.yaki': 'sizzle',
   'sushi.stool': 'sit', 'sushi.table': 'dishes', 'sushi.menu': 'paper', 'sushi.fuda': 'paper', 'sushi.case': 'sparkle', 'sushi.gyotaku': 'paper',

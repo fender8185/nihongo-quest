@@ -807,6 +807,30 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .yb-closeup .yb-drop { opacity: 0; } .yb-closeup.paid .yb-drop { animation: ybDrop .42s ease-in forwards; } @keyframes ybDrop { 0% { opacity: 1; transform: translateY(-20px); } 100% { opacity: 0; transform: translateY(32px) scaleX(.4); } }
 .yb-closeup .yb-take { transform-box: fill-box; transform-origin: center; } .yb-closeup.paid .yb-take { animation: ybTake .7s ease-out .4s forwards; } @keyframes ybTake { to { transform: translate(0, -36px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .sky .land :is(.yb-flow, .yb-fall path, .yb-hue, .os-steam.yb-cloud), .yb-sign.look, .yb-closeup :is(.yb-drop, .yb-take), .yb-standsvg .os-steam { animation: none !important; } .sky .land .yb-hue { opacity: .34; } .yb-standsvg .os-steam { opacity: .6; } }
+/* 旅館「花月」 (2026-11-24, rk-): its rooms are lit alike day and night (.yard.indoor --day: 1); what is out of doors through their
+   windows — the garden, the view, a stone lantern — and the lamps' glow by night go by the clock: --rk-out, body's own --day (a
+   room's override of --day does not reach it) */
+body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); }
+.sky .land .rk-hc { fill: color-mix(in srgb, var(--c) calc(var(--rk-md, 1) * 100%), var(--n)); transition: fill 3s; }
+.sky .land .rk-hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--rk-md, 1) * 100%), var(--n)); stroke-linecap: round; transition: stroke 3s; }
+.sky .land .rk-glow { opacity: calc((1 - var(--rk-out, 1)) * .85); transition: opacity 3s; } .sky .land .rk-night { opacity: calc(1 - var(--rk-out, 1)); transition: opacity 3s; } .sky .land .rk-day { opacity: var(--rk-out, 1); transition: opacity 3s; }
+/* the 鹿威し: it fills slowly, tips, pours into its basin, swings back onto its stone — each turn's end its コーン (RYOKAN.mount) */
+.sky .land .rk-shishi { transform-box: fill-box; transform-origin: 50% 50%; animation: rkShishi 9s ease-in-out infinite; }
+@keyframes rkShishi { 0% { transform: rotate(-20deg); } 2% { transform: rotate(-16deg); } 5% { transform: rotate(-20deg); } 80% { transform: rotate(-13deg); } 85% { transform: rotate(24deg); } 92% { transform: rotate(24deg); } 99% { transform: rotate(-21deg); } 100% { transform: rotate(-20deg); } }
+.sky .land .rk-pour { opacity: 0; animation: rkPour 9s linear infinite; } @keyframes rkPour { 0%, 84% { opacity: 0; } 86%, 92% { opacity: .9; } 96%, 100% { opacity: 0; } }
+.sky .land [data-fx="furin"].ring .fx-sway { animation-duration: .24s !important; }   /* the wind chime rung as the garden is looked at */
+.sky .land .rk-bellcap { transform-box: fill-box; transform-origin: 50% 100%; } .sky .land [data-fx="rkbell"].ding .rk-bellcap { animation: rkBell .14s ease-out 4 alternate; } @keyframes rkBell { to { transform: scale(1.08, .86); } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.rk-shishi, .rk-pour), .sky .land [data-fx="rkbell"].ding .rk-bellcap { animation: none; } }
+/* 桜の間's things looked at: the TV on a moment (a weather map), the air conditioner's breath and its light, the 押し入れ's fusuma slid
+   open on its futons, the front shoji slid a little */
+.sky .land .rk-screen, .sky .land .rk-acon { opacity: 0; transition: opacity .3s; } .sky .land [data-fx="rktv"].on .rk-screen, .sky .land [data-fx="rkac"].on .rk-acon { opacity: 1; }
+.sky .land [data-fx="rkac"].on .rk-acled { fill: #5ad07a; }
+.sky .land .rk-fusuma-r { transition: transform .5s ease-out; } .sky .land [data-fx="oshiire"].open .rk-fusuma-r { transform: translateX(-1.5px); }
+.sky .land .rk-shoji { transition: transform .45s ease-out; } .sky .land [data-fx="shoji"].slide .rk-shoji { transform: translateX(-1.2px); }
+/* washitsuArt (the 仲居 card's 桜の間): its window and shoji onto the day or the night; the light off, the room dimmer (more so by night) */
+.rk-art { display: block; width: 100%; height: auto; }
+.rk-art .rk-hc { fill: color-mix(in srgb, var(--c) calc(var(--rk-md, 1) * 100%), var(--n)); } .rk-art .rk-night { opacity: calc(1 - var(--rk-out, 1)); }
+.rk-art .rk-dim { opacity: calc(.12 + .4 * (1 - var(--rk-out, 1))); }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */
 :is(.wk-bento, .wk-window, .wk-lost, .wk-taxi) .wk-ear { min-height: 40px; min-width: 44px; }
 .wk-lock { margin: 10px 0 4px; padding: 8px 10px; border-radius: 10px; background: #fde4cf; color: #8a3a1a; font-size: 14px; line-height: 1.5; }
