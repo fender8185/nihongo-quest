@@ -27,7 +27,7 @@ const WORK = (() => {
     taxi: { area: 'ekimae', pay: 180, place: 'station', shop: 'taxi', who: 'suzuki', course: 'm4', present: true, name: '計程車導航', at: '鈴木タクシー', n: 5, credit: [1, 0.6, 0.3, 0], unit: '順利載到的客人', tune: 'ekimae', shut: '鈴木 8–12 點、15–19 點在計程車招呼站（中午在食堂吃飯）。' },
     // 湯の花温泉 (2026-11-23, docs/superpowers/specs/2026-11-23-onsen-work-design.md §1): the N4 area, open once the card is ベテラン; each
     // job by its unit, its keeper there. All four on the board from the start (ruling 2); a job is offered and started only once its
-    // runner is in (観光案内所 here, 仲居・おみやげ屋・フロント in their own tasks). tune: the onsen's own (none yet: no music, quietly)
+    // runner is in (観光案内所 here, 仲居・おみやげ屋・フロント in their own tasks). tune: the onsen's own (湯けむり, 2026-11-25)
     annai: { area: 'onsen', pay: 200, place: 'onsen', shop: 'annai', who: 'akari', course: 'm7', present: true, name: '觀光服務台', at: '観光案内所', tune: 'onsen', shut: '森あかり 9 點到 18 點在観光案内所的窗口。' },
     nakai: { area: 'onsen', pay: 220, place: 'ryokan', shop: 'kagetsu', who: 'chiyo', course: 'm8', present: true, name: '仲居（準備客房）', at: '旅館「花月」', n: 16, tune: 'onsen', shut: '女將花村千代 8 點到 21 點在旅館花月的大廳。' },   // 16: three rooms, ten things to do in them, a check and a guest each (2026-11-24)
     miyage: { area: 'onsen', pay: 240, place: 'yudori', shop: 'yunohanado', who: 'makoto', course: 'm11', present: true, name: '伴手禮店', at: 'ゆのはな堂', tune: 'onsen', shut: '竹内まこと 9 點到 21 點在ゆのはな堂。' },

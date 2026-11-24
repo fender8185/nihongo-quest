@@ -642,7 +642,7 @@ def test_annai_answers_come_from_the_board(b):
     assert r['book'][0] > 20 and r['book'][1] == [], r   # マイク's yukata question in 愛's own place, never as well as hers
 
 # spec §5, §5.1: the first shift — あかり's first word (the answers are on the board), the Chinese under the hero's reply; ten tourists,
-# all right at once: S, 200 + 50 and the ベテラン card's 4%; the onsen's tune is not in yet (Task 8): no music, quietly; the next day's
+# all right at once: S, 200 + 50 and the ベテラン card's 4%; the town's own record playing (Task 8, 「湯けむり」); the next day's
 # shift shut after three tourists picks up at the fourth, on the same board
 def test_annai_shift_grade_pay_and_resume(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; state.settings.musicVol = 1; saveState(); const out = {};
@@ -659,7 +659,7 @@ def test_annai_shift_grade_pay_and_resume(b):
       for (let n = 0; n < 3; n++) { await watch(() => asking(n), 12000); pick(); } await watch(() => (WORK.today() || {}).done >= 3, 6000); await wait(300); CLASS.close(); await wait(200);
       out.score = (WORK.today() || {}).score; WORK.start(yard(), 'annai'); await watch(() => now() && now().phase === 'ask', 12000); out.k = now() && now().k; out.same = Boolean(now()) && now().seed === seed; CLASS.close();
       return JSON.stringify(out); })()"""))
-    assert r['first'] and r['music'] == '' and r['zh'], r   # her first word, then the card; no tune yet; the Chinese under the reply (first shift)
+    assert r['first'] and r['music'] == 'onsen' and r['zh'], r   # her first word, then the card and the town's record; the Chinese under the reply (first shift)
     assert r['paid'] == ['S', 260, [0] * 10], r   # 200 + S 50, ベテラン's 4%
     assert not r['talk'] and r['score'] == {'0': 0, '1': 0, '2': 0} and r['k'] == 3 and r['same'], r
 
@@ -1518,7 +1518,7 @@ def test_miyage_a_second_step_starts_calm(b):
       const out = { was, now: mood(), bar: parseFloat(cu().querySelector('.wk-pat').style.getPropertyValue('--p')) }; CLASS.close(); return JSON.stringify(out); })()"""))
     assert r['was'] == ['meh', '💦'] and r['now'] == ['', ''] and r['bar'] > 0.9, r
 
-# spec §5, Review Focus 2: the first shift — 竹内's first word, then the card (no music yet: no onsen tune); the Chinese of the hero's
+# spec §5, Review Focus 2: the first shift — 竹内's first word, then the card (the town's record, 「湯けむり」); the Chinese of the hero's
 # reply under it once said (ruling 23); ten customers all right at once: S, 240 + 50 and ベテラン's 4% (302 円); the next day's shift shut
 # after three customers is taken up at the fourth on the same seed, nothing counted twice
 def test_miyage_shift_and_resume(b):
@@ -1537,7 +1537,7 @@ def test_miyage_shift_and_resume(b):
       await work(3); await watch(() => (WORK.today() || {}).done >= 3 && my().k === 3, 8000); await wait(300); CLASS.close(); await wait(200);
       out.score = (WORK.today() || {}).score; WORK.start(yard(), 'miyage'); await watch(() => my() && my().k === 3 && ready(), 12000); out.k = my() && my().k; out.same = Boolean(my()) && my().seed === seed; CLASS.close();
       return JSON.stringify(out); })()"""))
-    assert r['first'] and r['music'] == '' and r['firstWord'] >= 1, r   # 竹内's first word, then the card; no tune yet
+    assert r['first'] and r['music'] == 'onsen' and r['firstWord'] >= 1, r   # 竹内's first word, then the card and the town's record
     assert r['zh'] and r['opts'] == [True, 1], r   # the hero's reply with its Chinese under it (the first shift), never under the buttons
     assert r['paid'] == ['S', 302, [0] * 10] and r['result'] and r['bye'] == [True, False], r   # 240 + S 50, ベテラン's 4%; 竹内's 「すごい！…」
     assert not r['talk'] and r['score'] == {'0': 0, '1': 0, '2': 0} and r['k'] == 3 and r['same'], r
@@ -1773,7 +1773,7 @@ def test_front_birthday_line_adds_a_tip(b):
     assert r['tip'] == 50 and r['grade'] == 'S' and r['yen'] == 260 + 50 + 50 + round((260 + 50 + 50) * 0.04) and r['row'], r   # 374
     assert r['plain'] == [0, 260 + 50 + round((260 + 50) * 0.04)], r   # 322: the plain greeting, no tip
 
-# spec §5, Review Focus 2: the first shift — 佐藤's first word, then the card (no music yet: no onsen tune); the hero's reply with its
+# spec §5, Review Focus 2: the first shift — 佐藤's first word, then the card (the town's record, 「湯けむり」); the hero's reply with its
 # Chinese under it once said, never under the reply buttons (ruling 23); ten guests right at once: S, 260 + 50 and ベテラン's 4% (322 円),
 # 佐藤's all-right word; the next day's shift shut after three guests is taken up at the fourth on the same seed — the same book, the keys
 # handed out still out — nothing counted twice
@@ -1795,7 +1795,7 @@ def test_front_shift_and_resume(b):
       out.score = (WORK.today() || {}).score; WORK.start(yard(), 'front'); await watch(() => fr() && fr().k === 3 && ready(), 12000);
       out.k = fr() && fr().k; out.same = Boolean(fr()) && fr().seed === seed; out.keys = [outBefore, outKeys()]; CLASS.close();
       return JSON.stringify(out); })()"""))
-    assert r['first'] and r['music'] == '' and r['firstWord'] >= 1, r   # 佐藤's first word, then the card; no tune yet
+    assert r['first'] and r['music'] == 'onsen' and r['firstWord'] >= 1, r   # 佐藤's first word, then the card and the town's record
     assert r['zh'] and r['opts'] == [True, 1], r   # the hero's reply with its Chinese under it (the first shift), never under the buttons
     assert r['paid'] == ['S', 322, [0] * 10] and r['result'] and r['bye'] == [True, False], r   # 260 + S 50, ベテラン's 4%; 佐藤's all-right word
     assert not r['talk'] and r['score'] == {'0': 0, '1': 0, '2': 0} and r['k'] == 3 and r['same'], r

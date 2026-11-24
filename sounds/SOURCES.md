@@ -93,3 +93,12 @@ The `-1` in each name is a version: change it whenever a file's content changes.
 |  | [Medium Crowd Chatter.mp3](https://freesound.org/people/thetrain1919/sounds/182738/) | thetrain1919 | CC0 1.0 | 60-100.5 s (-5 dB layer) |
 |  | [crowd int medium murmur restaurant busy buffet dishes cutlery tinkling Montreal, Canada.flac](https://freesound.org/people/kyles/sounds/455727/) | kyles | CC0 1.0 | 100-140.5 s (-3 dB layer); high-pass 60 Hz, low-pass 8000 Hz, voice band 1000-4000 Hz -3 dB, 38 s loop, 2.5 s equal-power crossfade of the tail into the head, RMS -26 dBFS, peaks under -6 dBFS (limited by at most 3 dB, so quieter when a source is very peaky) |
 | amb-clock-1.m4a | [1min Clock Ticking - CC0](https://freesound.org/people/bulkmoerls/sounds/813355/) | bulkmoerls | CC0 1.0 | 3.3-23.45 s; high-pass 60 Hz, 20 s loop, 0.15 s equal-power crossfade of the tail into the head, RMS -26 dBFS, peaks under -6 dBFS (limited by at most 3 dB, so quieter when a source is very peaky) |
+
+## Music
+
+`music/` holds no recordings: `scripts/render-music.py` renders each record from its score in `scripts/music-synth.js`
+(synthesized with Web Audio in headless Chrome, encoded to AAC with macOS `afconvert`).
+
+| Output | Source | Author | Licence | Taken / processing |
+|---|---|---|---|---|
+| onsen-1.m4a | 「湯けむり」 (2026-11-25), 湯の花温泉's music: an original piece written for the app, no existing song, folk tune or film or game theme | Nihongo Quest | the app's own | score `onsen` in `scripts/music-synth.js` (shakuhachi, koto and shamisen, all synthesized), rendered by `scripts/render-music.py`; a 70 s seamless loop, 44.1 kHz stereo AAC at 128 kbps |

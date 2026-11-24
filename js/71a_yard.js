@@ -459,14 +459,20 @@ const MUSIC = (() => {
     // 中華街の打工's (2026-11-18, the user: the jobs wanted a little music): while a shift runs (WORK.tune), under its voices
     { id: 'chukagai', place: 'work', file: 'music/chukagai-1.m4a', name: '中華街の しごと', kana: 'ちゅうかがいのしごと', zh: '中華街打工', style: '笛子・揚琴・木魚', color: '#d0453a', vol: 0.5 },
     { id: 'rairai', place: 'work', file: 'music/rairai-1.m4a', name: 'らいらいけん', kana: 'らいらいけん', zh: '來來軒', style: '二胡・琵琶・古箏', color: '#c8763a', vol: 0.7 },
-    { id: 'ekimae', place: 'work', file: 'music/ekimae-1.m4a', name: '駅前の しごと', kana: 'えきまえのしごと', zh: '駅前打工', style: '鋼琴・撥弦・鐵琴', color: '#3f9a8c', vol: 0.5 }   // the four jobs at みなと駅 (2026-11-20)
+    { id: 'ekimae', place: 'work', file: 'music/ekimae-1.m4a', name: '駅前の しごと', kana: 'えきまえのしごと', zh: '駅前打工', style: '鋼琴・撥弦・鐵琴', color: '#3f9a8c', vol: 0.5 },   // the four jobs at みなと駅 (2026-11-20)
+    // 湯の花温泉's own (2026-11-25): in its five places (PLACE_REC) and while any of its four jobs' cards is up (WORK.tune), as quiet as
+    // the café's jazz under the river, the steam and the geta
+    { id: 'onsen', place: 'onsen', file: 'music/onsen-1.m4a', name: '湯けむり', kana: 'ゆけむり', zh: '溫泉的熱氣', style: '尺八・琴・三味線', color: '#5f9ea0', vol: 0.55 }
   ];
-  // the record a place plays by itself: the izakaya's own, the café's jazz out of its door while it is open, the festival's at the shrine;
-  // and where the cruise's passengers are while a trip is under way, its own (CRUISE.tune, 2026-11-13: the user missed music on the tour)
+  // the record a place plays by itself: the izakaya's own, the café's jazz out of its door while it is open, the festival's at the shrine,
+  // 湯の花温泉's in each of its five places (2026-11-25); and where the cruise's passengers are while a trip is under way, its own
+  // (CRUISE.tune, 2026-11-13: the user missed music on the tour)
   // Christmas (2026-11-14, the user): the six places of the ring (the yard, the beach, the town, the bus stop, the harbor, the park)
-  // play ジングルベル while it is on, over their own; in the house only once it is bought, on the gramophone
+  // play ジングルベル while it is on, over their own; in the house only once it is bought, on the gramophone. 湯の花温泉 is a town of
+  // its own, up the line: its places keep their own record then too
   const XMAS_PLACES = ['outside', 'beach', 'town', 'street', 'harbor', 'park'];
-  const PLACE_REC = { izakaya: () => 'chochin', town: () => (TOWNEV.shopState('cafe') === 'open' ? 'kissa' : ''), shrine: () => (TOWNEV.festival() ? 'matsuri' : '') };
+  const PLACE_REC = { izakaya: () => 'chochin', town: () => (TOWNEV.shopState('cafe') === 'open' ? 'kissa' : ''), shrine: () => (TOWNEV.festival() ? 'matsuri' : ''),
+    onsen: () => 'onsen', yudori: () => 'onsen', yubatake: () => 'onsen', ryokan: () => 'onsen', washitsu: () => 'onsen' };
   const have = () => RECORDS.filter((r) => !r.place && (r.own || owns(r.id)));
   // a record sold in 古道具屋, as its card shows it: half out of its sleeve, its name on the sleeve
   const sleeve = (r) => `<svg class="rec-sleeve" viewBox="0 0 120 120" aria-hidden="true">

@@ -199,7 +199,28 @@ window.MUSIC_SYNTH = (() => {
         B: 'B4:3 D5 E5:2 F#5:2 | E5:4 -:4 | F#5:3 E5 D5:2 B4:2 | B4:4 -:4 | D5:3 E5 F#5:2 A5:2 | B5:2 A5 F#5 E5:4 | D5:2 B4 A4 B4:2 D5 B4 | A4:4 -:4' }),
       comp: { inst: 'pipa', vol: 0.07, roll: 0.025, pats: rep(8, [[2, 1], [6, 1]]) },
       parts: [{ inst: 'koto', vol: 0.4, mel: '-:128 | -:8 | -:4 A5 F#5 E5 D5 | -:8 | -:4 F#5 D5 B4 A4 | -:8 | -:8 | -:8 | -:4 E5 D5 B4 A4' }],
-      drums: [{ inst: 'muyu', f: 980, vol: 0.06, pats: form('A A2 B A2', { A: rep(8, 'o.......x.....g.'), A2: rep(8, 'o.......x.....g.'), B: rep(8, 'o.......x...x...') }) }] }
+      drums: [{ inst: 'muyu', f: 980, vol: 0.06, pats: form('A A2 B A2', { A: rep(8, 'o.......x.....g.'), A2: rep(8, 'o.......x.....g.'), B: rep(8, 'o.......x...x...') }) }] },
+    // 湯けむり (2026-11-25, docs/superpowers/specs/2026-11-23-onsen-work-design.md §7): 湯の花温泉's own — its five places and its four
+    // jobs — an unhurried 和風 piece of our own in the yo scale on G (G A C D E), its chords open, mostly without their thirds. K: the
+    // koto alone, rolling broken chords and two strings pressed up (the top, and again after the end); A: the shakuhachi's tune over
+    // the koto's lighter chords; B, the shamisen strumming the off beats: the koto takes a tune of its own round A (the minyo colour
+    // of the same five notes), its last note pressed up, then the shakuhachi climbs in answer to C6, the koto echoing it; A': the tune
+    // again with the shamisen beside it an octave down, as the three play one melody together in sankyoku, its second half higher;
+    // 70 s round
+    onsen: { bpm: 96, peak: 0.42, bar: 8, tail: 0, lead: 'shakuhachi', leadVol: 0.1, low: 'G2', bassVol: 0.5, pad: 0.008, wet: 0.24, arpInst: 'so', arpOct: 1, arpVol: 4.8,
+      chords: form('K A B A', { K: ['G3 D4 G4 A4', 'A3 E4 G4 C5', 'C4 G4 A4 D5', 'D4 G4 A4 D5'],
+        A: ['G3 D4 G4 A4', 'C4 G4 A4 D5', 'A3 E4 G4 C5', 'D4 G4 A4 D5', 'G3 D4 G4 A4', 'E3 A3 D4 G4', 'C4 G4 A4 D5', 'G3 D4 G4 A4'],
+        B: ['A3 E4 G4 C5', 'C4 G4 A4 D5', 'D4 G4 A4 D5', 'A3 E4 A4 C5', 'C4 G4 A4 D5', 'G3 D4 G4 A4', 'A3 E4 G4 C5', 'D4 G4 A4 D5'] }),
+      arps: form('K A B A', { K: rep(3, [0, 1, 2, 3, 1, 2, 3, 2]).concat([[0, 1, 2, 3, -1, -1, -1, -1]]), A: rep(8, [0, -1, 1, -1, 2, 3, 2, -1]),
+        B: rep(4, [0, -1, -1, -1, 1, -1, -1, -1]).concat(rep(4, [0, -1, 1, -1, 2, 3, 2, -1])) }),
+      mel: form('K A B A2', { K: '-:32',
+        A: 'D5:3 E5 G5:2 E5:2 | D5:6 -:2 | C5:3 D5 E5:2 D5 C5 | A4:6 -:2 | D5:3 E5 G5:2 A5:2 | G5:3 E5 D5:4 | E5:2 D5 C5 A4:2 C5:2 | G4:6 -:2',
+        B: '-:32 | G5:3 A5 G5:2 E5:2 | D5:6 -:2 | E5:2 G5:2 A5:3 C6 | A5:4 G5:2 E5:2',
+        A2: 'D5:3 E5 G5:2 E5:2 | D5:6 -:2 | C5:3 D5 E5:2 D5 C5 | A4:6 -:2 | D5:3 E5 G5:2 A5:2 | C6:3 A5 G5:2 E5:2 | D5:2 E5 D5 C5:2 A4:2 | G4:6 -:2' }),
+      comp: { inst: 'shamisen', vol: 0.1, roll: 0.06, pats: form('K A B A', { K: rep(4, []), A: rep(8, []), B: rep(8, [[2, 1], [6, 1]]) }) },
+      parts: [{ inst: 'so', vol: 0.3, mel: '-:96 | A4 C5 E5:2 D5 E5 G5:2 | A5 G5 E5:2 G5 E5 D5:2 | G5 A5 D6:2 C6 A5 G5:2 | E5:2 G5:2 -:4 | -:8 | -:4 G5 A5 G5 E5' },
+        { inst: 'sooshi', vol: 0.3, mel: '-:8 | -:4 E5:4 | -:8 | -:4 A4:4 | -:64 | -:24 | -:4 A5:4' },
+        { inst: 'shamisen', vol: 0.22, mel: '-:160 | D4:3 E4 G4:2 E4:2 | D4:2 -:2 D4 E4 D4:2 | C4:3 D4 E4:2 D4 C4 | A3:2 -:2 A3 G3 A3 C4 | D4:3 E4 G4:2 A4:2 | C5:3 A4 G4:2 E4:2 | D4:2 E4 D4 C4:2 A3:2 | G3:2 -:6' }] }
   };
   const NOTE = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
   const hz = (n) => { const m = /^([A-G]#?)(\d)$/.exec(n); return 440 * Math.pow(2, ((+m[2] + 1) * 12 + NOTE[m[1]] - 69) / 12); };
@@ -424,6 +445,38 @@ window.MUSIC_SYNTH = (() => {
       const o = out(0.1), d = Math.min(1.2, Math.max(0.4, len)), c = osc('sine', f, at, at + d + 0.2, fade(at, vol, 0.002, d, o)), m = quiet(c.frequency);
       c.frequency.setValueAtTime(f, at); c.frequency.exponentialRampToValueAtTime(f * 1.12, at + 0.25);
       m.gain.setValueAtTime(f * 0.8, at); m.gain.exponentialRampToValueAtTime(f * 0.05, at + d); osc('sine', f * 1.48, at, at + d + 0.2, m);
+    },
+    // 湯の花温泉's (2026-11-25): the shakuhachi, the koto in tune (箏, so) and a koto string pressed up after its pluck (sooshi)
+    shakuhachi(at, f, len, vol) {   // a shakuhachi: breathier and darker than the flute — a puff of breath as a note starts, more on a
+      // long note (muraiki); a long note scooped up from under its pitch (meri to kari), swelling to its middle, brighter as it swells,
+      // and sinking toward its end, a slow, wide vibrato (yuri) growing in its second half, its pitch falling a little as it is let go
+      const o = out(-0.15), long = len > 0.6, off = at + Math.max(len, 0.14), end = off + 0.5, top = at + (long ? len * 0.5 : 0.1);
+      const t = ctx.createOscillator(), lfo = ctx.createOscillator(), d = quiet(t.frequency), g = quiet(o), lp = filter('lowpass', f * 2, 0, g);
+      t.setPeriodicWave(wave([1, 0.32, 0.12, 0.07, 0.03])); t.connect(lp);
+      t.frequency.setValueAtTime(f * (long ? 0.96 : 0.99), at); t.frequency.exponentialRampToValueAtTime(f, at + (long ? 0.2 : 0.05));
+      if (long) { t.frequency.setValueAtTime(f, off); t.frequency.exponentialRampToValueAtTime(f * 0.98, off + 0.35); }
+      lfo.frequency.value = 4.2; d.gain.setValueAtTime(0, at); if (long) { d.gain.setValueAtTime(0, at + len * 0.45); d.gain.linearRampToValueAtTime(f * 0.012, off); } lfo.connect(d);
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol * (long ? 0.55 : 0.9), at + 0.08); g.gain.linearRampToValueAtTime(vol, top);
+      g.gain.linearRampToValueAtTime(vol * (long ? 0.6 : 0.8), off); g.gain.exponentialRampToValueAtTime(0.0001, off + 0.35);
+      lp.frequency.setValueAtTime(f * 2, at); lp.frequency.linearRampToValueAtTime(f * 4, top); lp.frequency.linearRampToValueAtTime(f * 2, off);
+      [t, lfo].forEach((x) => { x.start(at); x.stop(end); });
+      const b = quiet(o), air = vol * 0.35;   // the breath round the note
+      b.gain.setValueAtTime(0.0001, at); b.gain.exponentialRampToValueAtTime(air * (long ? 5 : 2.5), at + 0.03); b.gain.exponentialRampToValueAtTime(air, at + (long ? 0.25 : 0.12));
+      b.gain.setValueAtTime(air, off); b.gain.exponentialRampToValueAtTime(0.0001, off + 0.3);
+      hiss(at, end, filter('bandpass', f * 1.4, 0.6, filter('lowpass', 5000, 0, b)));
+    },
+    so(at, f, len, vol) {   // a koto (箏), in tune — the first koto above rings a little flat, its strings whole samples long: the
+      // ivory tsume's bright pluck that rings on, darkening, whatever its written length (let go just before its string's sound ends)
+      const o = out(0.25), p = pluck(f, 1.3, 0.85, 0.3), s = ctx.createBufferSource(); s.buffer = p.b; s.playbackRate.value = p.rate;
+      s.connect(strike(at, vol, 0.45, 1.25, 0.06, filter('lowpass', 4200, 0, o))); s.start(at); s.stop(at + 1.6);
+      hiss(at, at + 0.025, filter('bandpass', 3000, 1.5, fade(at, vol * 0.3, 0.001, 0.012, o)));
+    },
+    sooshi(at, f, len, vol) {   // a koto string pressed after its pluck (ato-oshi), the koto's sigh: plucked a whole tone under the
+      // note and pressed up onto it a moment later (its string's sound, played faster once pressed, ends sooner)
+      const o = out(0.25), p = pluck(f / 1.1225, 1.3, 0.85, 0.3), s = ctx.createBufferSource(); s.buffer = p.b;
+      s.playbackRate.setValueAtTime(p.rate, at); s.playbackRate.setValueAtTime(p.rate, at + 0.14); s.playbackRate.exponentialRampToValueAtTime(p.rate * 1.1225, at + 0.34);
+      s.connect(strike(at, vol, 0.45, 1.1, 0.06, filter('lowpass', 4200, 0, o))); s.start(at); s.stop(at + 1.45);
+      hiss(at, at + 0.025, filter('bandpass', 3000, 1.5, fade(at, vol * 0.3, 0.001, 0.012, o)));
     }
   };
   // a record as a file: rendered offline twice round with the second kept — its start carries the first's echoes, so it loops

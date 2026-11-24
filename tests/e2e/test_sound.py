@@ -175,6 +175,53 @@ def test_a_record_plays_through_web_audio_and_obeys_the_volume_and_the_dip(b):
       return JSON.stringify({ wants, mode, how: how.startsWith('Web Audio'), full, half, dip, back, off }); })()"""))
     assert r == {'wants': 'kissa', 'mode': 'buffer', 'how': True, 'full': 0.28, 'half': 0.14, 'dip': 0.042, 'back': 0.14, 'off': ['', False]}, r   # the café's jazz (vol .35 of .8), on every device alike (2026-11-12)
 
+# 2026-11-25 (docs/superpowers/specs/2026-11-23-onsen-work-design.md §7): 湯の花温泉 has a record of its own — in its five places by day
+# and by night, and at Christmas too (a town of its own: the ring's ジングルベル is the harbour town's); the harbour town's places as
+# they were (the café's jazz while it is open, the 居酒屋's own, none on the beach or at the station)
+ONSEN5 = "['onsen', 'yudori', 'yubatake', 'ryokan', 'washitsu']"
+def test_the_onsen_town_plays_its_own_record_in_its_five_places(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ state.town.seen = { nagisa: 1 }; TOWNLIFE.still = true; const out = {};
+      for (const [k, theme, h] of [['day', 'day', 10], ['night', 'night', 22]]) { state.settings.theme = theme; TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; saveState(); out[k] = [];
+        for (const p of """ + ONSEN5 + """) { await at('#/' + p); out[k].push([location.hash, MUSIC.wants()]); } }
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; out.harbour = [];
+      for (const p of ['town', 'izakaya', 'beach', 'station']) { await at('#/' + p); out.harbour.push(MUSIC.wants()); }
+      saleDay = { day: '2026-12-20', at: Date.now(), ask: null, failed: false }; out.xmas = [];
+      for (const p of [...""" + ONSEN5 + """, 'town', 'izakaya']) { await at('#/' + p); out.xmas.push(MUSIC.wants()); }
+      state.settings.musicVol = 0; saveState(); await at('#/yudori'); out.off = MUSIC.wants();
+      return JSON.stringify(out); })()"""))
+    five = [['#/' + p, 'onsen'] for p in ['onsen', 'yudori', 'yubatake', 'ryokan', 'washitsu']]
+    assert r['day'] == five and r['night'] == five, r
+    assert r['harbour'] == ['kissa', 'chochin', '', ''], r
+    assert r['xmas'] == ['onsen'] * 5 + ['jingle', 'chochin'], r   # Christmas on (the ring's ジングルベル): 湯の花 keeps its own
+    assert r['off'] == '', r   # 設定 › 音樂 at none: none there either
+
+# while any of 湯の花温泉's four jobs' cards is up (WORK.tune): its record — the job's tune before the place's own
+def test_the_onsen_jobs_play_the_towns_record_while_their_cards_are_up(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ localStorage.setItem('nq_work_onsen', '1'); localStorage.setItem('nq_work_free', '1');   // the test site's switches: any unit, a shift after another
+      window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      state.currentUnit = 'm15'; state.work.res = {}; ['annai', 'nakai', 'miyage', 'front'].forEach((j, k) => { state.work.res['2026-10-0' + (k + 1)] = { place: j, done: 10, score: {}, yen: 1, grade: 'S' }; });   // each done before: no first word
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; saveState(); const out = {};
+      for (const [job, place] of [['annai', 'onsen'], ['nakai', 'ryokan'], ['miyage', 'yudori'], ['front', 'ryokan']]) {
+        await at('#/' + place); WORK.start(document.querySelector('.yard'), job);
+        for (let i = 0; i < 50 && !document.querySelector('.cls.wk-' + job); i++) await wait(100);
+        await wait(300); out[job] = [Boolean(document.querySelector('.cls.wk-' + job)), WORK.tune(), MUSIC.wants(), MUSIC.playing()]; CLASS.close(); await wait(300); }
+      return JSON.stringify(out); })()"""))
+    assert r == {j: [True, 'onsen', 'onsen', True] for j in ['annai', 'nakai', 'miyage', 'front']}, r
+
+# its file is there and served, played through Web Audio at its record's level and dipped under spoken Japanese like the others
+def test_the_onsen_record_is_served_and_dips_under_the_voices(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; saveState(); await at('#/yubatake');
+      for (let i = 0; i < 80 && !(MUSIC.mode() === 'buffer' && MUSIC.level() > 0); i++) await wait(100);
+      const r3 = (v) => Math.round(v * 1000) / 1000, rec = MUSIC.RECORDS.find((x) => x.id === 'onsen') || {}, head = rec.file ? await fetch(rec.file, { method: 'HEAD' }) : { ok: false };
+      const full = r3(MUSIC.level()); SND.duck(true); await wait(400); const dip = r3(MUSIC.level()); SND.duck(false); await wait(1200); const back = r3(MUSIC.level());
+      return JSON.stringify({ wants: MUSIC.wants(), mode: MUSIC.mode(), full, dip, back, want: r3(0.8 * (rec.vol || 1)), file: rec.file || '', ok: head.ok, place: rec.place || '',
+        sold: WARES.some((w) => w.id === 'onsen'), told: ['name', 'kana', 'zh', 'style', 'color'].every((k) => rec[k]) }); })()"""))
+    assert r['wants'] == 'onsen' and r['mode'] == 'buffer' and r['file'] == 'music/onsen-1.m4a' and r['ok'], r
+    assert r['place'] and not r['sold'] and r['told'], r   # a place's own: never sold in 古道具屋, named like the others
+    assert r['full'] == r['want'] and r['dip'] == round(r['want'] * 0.3, 3) and r['back'] == r['want'], r
+    size = os.path.getsize(os.path.join(ROOT, 'music', 'onsen-1.m4a'))
+    assert 600 * 1024 < size < 1400 * 1024, size   # about the other records' size (128 kbps, about 70 s)
+
 def test_a_talk_keeps_the_sounds_down_till_it_ends_or_the_page_changes(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ state.town.seen = { kenta: 1 }; TOWNLIFE.still = true; TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; await at('#/town');
       speakAs = () => {};   /* no reading here: only the talk's own dip counted */
