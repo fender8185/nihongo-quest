@@ -9,7 +9,7 @@ const TOWN = {
   // drawn since 2026-11-14 — with t5's stops there, 2026-11-23)
   PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi', 'oku', 'onsen', 'yudori', 'yubatake', 'ryokan', 'washitsu'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源', '湯の花', '森下', '花月', 'ゆのはな堂', '湯けむり通り', '湯畑', '花村', '千代', '竹内', '桜の間', '菊の間', '松の間', '湯の花の湯'],
+  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源', '湯の花', '森下', '花月', 'ゆのはな堂', '湯けむり通り', '湯畑', '花村', '千代', '竹内', '桜の間', '菊の間', '松の間', '湯の花の湯', '梅の間', '竹の間', '金子', '吉川', '岸本', '水田', '水口', '木村', '野村'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
   HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21], dori: [10, 19], rairai: [10, 20], yunohanado: [9, 21], shateki: [10, 23], yukataya: [9, 18] },   // ゆのはな堂 (湯けむり通り, 2026-11-23): 竹内's hours too (CAST.makoto, the same: test_onsen pins them); its 射的 and ゆかた屋 (2026-11-24, rulings 21, 26: the 観光案内所's boards say the same)
   // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
@@ -3351,6 +3351,7 @@ const TOWN = {
     first: {
       nakai: [['chiyo', 'お{部屋|へや}は {二階|にかい}です。いっしょに {行|い}きましょう。', '客房在二樓。我們一起去吧。'], ['chiyo', 'わたしの {言|い}う ことを、よく {聞|き}いて くださいね。', '要仔細聽我說的話喔。']],   // 仲居 (2026-11-24): up to 桜の間 with her
       miyage: [['makoto', 'お{客|きゃく}さんの {話|はなし}を よく {聞|き}いて、{棚|たな}から とって あげて ください。', '仔細聽客人說的話，從架子上拿給他們。'], ['makoto', 'まよって いる {人|ひと}には、{試食|ししょく|試吃}も すすめて くださいね！', '對猶豫不決的客人，也要推薦試吃喔！']],   // おみやげ屋 (2026-11-24)
+      front: [['sato', 'お{客|きゃく}さまの お{名前|なまえ}と お{部屋|へや}は、この {台帳|だいちょう|帳簿}に ございます。', '客人的名字和房間，都在這本台帳上。'], ['sato', '{話|はな}す {前|まえ}に、だれの {動作|どうさ|動作}か、よく {考|かんが}えて ください。', '說話之前，先好好想想是誰的動作。']],   // フロント (2026-11-24): the book, and whose doing it is
       annai: [['akari', 'こたえは ぜんぶ、{上|うえ}の {看板|かんばん|看板}に ありますよ！', '答案全都在上面的看板上喔！'], ['akari', '{看板|かんばん|看板}は {毎日|まいにち} かわるので、よく {見|み}て くださいね。', '看板每天都會換，要仔細看喔。']],   // 観光案内所 (2026-11-24)
       bento: [['haru', 'でんしゃは まって くれないよ！ はやく わたしてね！', '電車可不會等人喔！要快點遞給客人喔！']],   // 駅前 (2026-11-20)
       taxi: [['suzuki', 'おれの となりで、{道|みち}を おしえて くれ！', '坐我旁邊，告訴我怎麼走！'], ['suzuki', '{右|みぎ}と {左|ひだり}は、くるまの むきで かんがえろよ！', '左右要照車子的方向想喔！']],
@@ -3790,6 +3791,132 @@ const TOWN = {
         end: ['おつかれさまでした！ たくさん {売|う}れました！', '辛苦了！賣出好多！'], all: ['すごい！ うちの {父|ちち}より {売|う}るのが {上手|じょうず}かも！', '好厲害！說不定比我爸爸還會賣！'] },
       // the hero's greeting, his どうぞ (駅弁's words: the clips they have) and the customers' thanks (the 案内所's)
       hi: ['いらっしゃいませ。', '歡迎光臨。'], give: ['はい、どうぞ！', '來，請拿好！'], thanks: ['ありがとうございます。', '謝謝。']
+    },
+    // フロント (2026-11-24, spec §5.4; FRONT, js/71y_front.js): 花月's front desk with 佐藤, seen from behind the counter — today's 予約台帳
+    // open on it (five parties: the name and its reading, how many, the room, dinner, a note), the key board (桜・菊・松・梅・竹) and the
+    // bell; ten guests a shift, each heard first. Every reply is keigo and every wrong one turns it the wrong way (ruling 15): 尊敬語 on what
+    // we do ('self'), 謙譲語 on what the guest does ('guest'), いらっしゃる／おる for a thing ('thing') — or, what the book answers, the book
+    // misread ('fact'); never a plain reply that would do, never one a native could take for fair; each wrong one's 中文 says whose doing
+    // it is and why the form is wrong. Check-outs only on the morning shift (佐藤 7–11), check-ins mostly in the afternoon (14–22)
+    front: {
+      // the guests who give a name (the cruise's people with a surname, each in their own voice): the name and its reading as the book has
+      // it; what they say checking in (in: a later wording from its unit), asking of the book (ebi: the shrimp in tonight's dinner; when:
+      // dinner's time), with dinner's time not yet told (late), the time they want ([hour, what they say]), glad of the birthday wish (bday)
+      named: {
+        kaneda: { name: ['金田', 'かねだ'], in: ['{予約|よやく}した {金田|かねだ}です！', '我是有預約的金田！', ['m16', '{予約|よやく}した {金田|かねだ}です！ やっと {着|つ}きました！', '我是有預約的金田！終於到了！']],
+          ebi: ['{金田|かねだ}ですが、{今日|きょう}の {夕食|ゆうしょく|晚餐}に えびは {出|で}ますか。', '我是金田。今天的晚餐會有蝦嗎？'], when: ['{金田|かねだ}ですが、{夕食|ゆうしょく|晚餐}は {何時|なんじ}からでしたか。', '我是金田。晚餐是幾點開始呢？'],
+          late: ['{金田|かねだ}です！ {夕食|ゆうしょく|晚餐}の {時間|じかん}を まだ {言|い}って いませんでした！', '我是金田！晚餐的時間我還沒說！'], dinner: [18, ['{六|ろく}{時|じ}で お{願|ねが}いします！ おなかが すきました！', '六點，麻煩了！肚子餓了！']],
+          bday: ['おお、{知|し}って いたんですか！ これ、ほんの {気持|きも}ちです！', '喔，你們知道啊！這是一點小心意！'] },
+        yoshimoto: { name: ['吉本', 'よしもと'], in: ['{予約|よやく}した {吉本|よしもと}です。', '我是有預約的吉本。'],
+          ebi: ['{吉本|よしもと}ですけど、{今日|きょう}の {夕食|ゆうしょく|晚餐}に えびは {出|で}ますか。', '我是吉本。今天的晚餐會有蝦嗎？'], when: ['{吉本|よしもと}ですけど、{夕食|ゆうしょく|晚餐}は {何時|なんじ}からでしたか。', '我是吉本。晚餐是幾點開始呢？'],
+          late: ['{吉本|よしもと}です。{夕食|ゆうしょく|晚餐}の {時間|じかん}、まだ {言|い}って へんかったわ。', '我是吉本。晚餐的時間還沒說呢。'], dinner: [19, ['{七|しち}{時|じ}で たのむわ。', '七點，拜託啦。']],
+          bday: ['えっ、ほんまに？ うれしいなあ！ これ、とっといて！', '咦，真的嗎？好開心啊！這個你收著！'] },
+        mizuno: { name: ['水野', 'みずの'], in: ['{予約|よやく}した {水野|みずの}です。', '我是有預約的水野。'],
+          ebi: ['{水野|みずの}ですが、{今日|きょう}の {夕食|ゆうしょく|晚餐}に えびは {出|で}ますか。', '我是水野。今天的晚餐會有蝦嗎？'], when: ['{水野|みずの}ですが、{夕食|ゆうしょく|晚餐}は {何時|なんじ}からでしたか。', '我是水野。晚餐是幾點開始呢？'],
+          late: ['{水野|みずの}です。{夕食|ゆうしょく|晚餐}の {時間|じかん}を まだ {言|い}って いませんでした。', '我是水野。晚餐的時間我還沒說。'], dinner: [18.5, ['{六|ろく}{時|じ}{半|はん}で お{願|ねが}いします。{泳|およ}いだら、おなかが すくので！', '六點半，麻煩了。游完泳肚子會餓！']],
+          bday: ['わあ、うれしい！ ありがとうございます！ これ、お{礼|れい}です！', '哇，好開心！謝謝！這是謝禮！'] },
+        ajimura: { name: ['味村', 'あじむら'], in: ['{予約|よやく}した {味村|あじむら}です。', '我是有預約的味村。'],
+          ebi: ['{味村|あじむら}ですが、{今日|きょう}の {夕食|ゆうしょく|晚餐}に えびは {出|で}ますか。', '我是味村。今天的晚餐會有蝦嗎？'], when: ['{味村|あじむら}ですが、{夕食|ゆうしょく|晚餐}は {何時|なんじ}からでしたか。', '我是味村。晚餐是幾點開始呢？'],
+          late: ['{味村|あじむら}です。{夕食|ゆうしょく|晚餐}の {時間|じかん}を まだ {言|い}って いませんでした。', '我是味村。晚餐的時間我還沒說。'], dinner: [19.5, ['{七|しち}{時|じ}{半|はん}で。…ゆっくり いただきたいので。', '七點半。……因為想慢慢享用。']],
+          bday: ['ほう…、{気|き}が {利|き|機靈}きますね。これは、ほんの {心付|こころづ|小費}けです。', '喔……真貼心。這是一點小費。'] } },
+      // other parties in the book (arriving after the shift): names that sound like a guest's (かねだ・かねこ), so the book is read by ear
+      like: { kaneda: [['金子', 'かねこ']], yoshimoto: [['吉川', 'よしかわ'], ['岸本', 'きしもと']], mizuno: [['水田', 'みずた'], ['水口', 'みずぐち']], ajimura: [['木村', 'きむら'], ['野村', 'のむら']] },
+      // a party's note in the book: [Japanese, 中文]
+      memo: { bday: ['お{誕生日|たんじょうび}', '生日'], kids: ['お{子|こ}さま {二人|ふたり}', '帶兩個小孩'], ebi: ['えびが だめ', '不能吃蝦'] },
+      // the rooms, a key each on the board: [id, its name, reading, 中文]; the hero's word as he hands one over ({R}: 桜の間 …)
+      rooms: [['sakura', '桜', 'さくら', '櫻'], ['kiku', '菊', 'きく', '菊'], ['matsu', '松', 'まつ', '松'], ['ume', '梅', 'うめ', '梅'], ['take', '竹', 'たけ', '竹']],
+      room: ['お{部屋|へや}は {R}で ございます。', '您的房間是「{r}之間」。'],
+      // dinner's times on the book (18:00 …) as said: [hour, Japanese, 中文]
+      times: [[18, '{六|ろく}{時|じ}', '六點'], [18.5, '{六|ろく}{時|じ}{半|はん}', '六點半'], [19, '{七|しち}{時|じ}', '七點'], [19.5, '{七|しち}{時|じ}{半|はん}', '七點半']],
+      // the guests who give no name, one each (existing people, each in their own voice): who, kind, what they say (line; a later wording
+      // from its unit: later), its replies (reply); at: the shift it comes on (am, pm; none: either)
+      ask: {
+        bags1: { who: 'ai', kind: 'luggage', at: 'pm', line: ['おみやげを たくさん {買|か}いました…。{重|おも}いです…。', '買了好多伴手禮……好重……'], later: ['m17', 'おみやげを {買|か}いすぎました…。{重|おも}いです…。', '伴手禮買太多了……好重……'], reply: 'bags' },
+        bags2: { who: 'ai', kind: 'luggage', at: 'am', line: ['すみません、{荷物|にもつ}が {多|おお}くて…。', '不好意思，我的行李很多……'], reply: 'bags' },
+        towel: { who: 'umeko', kind: 'request', line: ['タオルを もう {一枚|いちまい} いただけますか。', '可以再給我一條毛巾嗎？'], reply: 'towel' },
+        yukata: { who: 'mike', kind: 'request', line: ['{大|おお}きい {浴衣|ゆかた|浴衣}は ありますか。', '有大件的浴衣嗎？'], reply: 'yukata' },
+        kasa: { who: 'rina', kind: 'request', line: ['{傘|かさ}を {貸|か}して いただけますか。', '可以借我一把傘嗎？'], reply: 'kasa' },
+        bath: { who: 'ken', kind: 'where', line: ['{大浴場|だいよくじょう|大浴場}は どちらですか。', '大浴場在哪裡？'], reply: 'bath' },
+        toilet: { who: 'yuta', kind: 'where', line: ['トイレ、どこですか？', '廁所在哪裡？'], reply: 'toilet' },
+        okami: { who: 'miyoko', kind: 'where', line: ['{女将|おかみ|老闆娘}さんは いらっしゃいますか。', '老闆娘在嗎？'], reply: 'okami' },
+        out1: { who: 'sophia', kind: 'checkout', at: 'am', line: ['お{世話|せわ}に なりました。', '這段時間承蒙照顧了。'], reply: 'out' },
+        out2: { who: 'alex', kind: 'checkout', at: 'am', line: ['{楽|たの}しかったです。お{世話|せわ}に なりました。', '玩得很開心。承蒙照顧了。'], reply: 'out' },
+        out3: { who: 'hikaru', kind: 'checkout', at: 'am', line: ['いい {写真|しゃしん}が とれました！ お{世話|せわ}に なりました。', '拍到了好照片！承蒙照顧了。'], reply: 'out' } },
+      // the replies: [right [Japanese, 中文], wrong [[Japanese, whose doing it is and why the form is wrong, how: self | guest | thing | fact]]]
+      reply: {
+        in: [['お{待|ま}ちして おりました。', '我們一直在恭候您。'], [
+          ['お{待|ま}ちに なって おりました。', '等的是我們（旅館這一方）→ 要用謙讓語「お待ちして おります」；「お待ちに なる」是尊敬語，用在自己的動作上，就變成在抬高自己。', 'self'],
+          ['お{待|ま}ちして いらっしゃいました。', '等的是我們 →「いらっしゃる」是尊敬語，不能用在自己的動作上；要說「おりました」。', 'self']]],
+        bags: [['お{荷物|にもつ}を お{持|も}ちします。', '我來幫您拿行李。'], [
+          ['お{荷物|にもつ}を お{持|も}ちに なります。', '拿行李的是我 → 要用謙讓語「お持ちします」；「お持ちに なる」是尊敬語，是客人自己拿的時候說的。', 'self'],
+          ['お{荷物|にもつ}を {持|も}って くださいます。', '拿行李的是我 →「〜て くださる」是別人（客人、長輩）為我做事的尊敬說法，用在自己身上不對。', 'self']]],
+        dinner: [['{夕食|ゆうしょく|晚餐}は {何時|なんじ}に なさいますか。', '晚餐要幾點用呢？'], [
+          ['{夕食|ゆうしょく|晚餐}は {何時|なんじ}に いただきますか。', '吃晚餐的是客人 → 要用尊敬語（なさる、召し上がる）；「いただく」是謙讓語，是自己吃的時候說的。', 'guest'],
+          ['{夕食|ゆうしょく|晚餐}は {何時|なんじ}に お{決|き}めしますか。', '決定時間的是客人 → 要用尊敬語（なさる、お決めに なる）；「お決めする」是謙讓語，是我們替客人決定的時候才用。', 'guest']]],
+        towel: [['はい、すぐに お{持|も}ちします。', '好的，馬上為您送過去。'], [
+          ['はい、すぐに お{持|も}ちに なります。', '送毛巾過去的是我 → 要用謙讓語「お持ちします」；「お持ちに なる」是尊敬語。', 'self'],
+          ['はい、すぐに いらっしゃいます。', '送過去的是我們這邊的人 →「いらっしゃる」是尊敬語（來、去、在），不能用在自己人身上。', 'self']]],
+        yukata: [['はい、ございます。', '有的。'], [
+          ['はい、いらっしゃいます。', '浴衣是東西 →「ある」的禮貌說法是「ございます」；「いらっしゃる」是人在的尊敬語，不能用在東西上。', 'thing'],
+          ['はい、おります。', '浴衣是東西 →「おる」是人在（自己這一方）的謙讓語，東西要用「ございます」。', 'thing']]],
+        kasa: [['はい、こちらを お{貸|か}しします。', '好的，這把借給您。'], [
+          ['はい、こちらを お{貸|か}しに なります。', '借出去的是我們 → 要用謙讓語「お貸しします」；「お貸しに なる」是尊敬語。', 'self'],
+          ['はい、こちらを {貸|か}して くださいます。', '借出去的是我們 →「〜て くださる」是對方為我做事的尊敬說法，自己借給客人不能這樣說。', 'self']]],
+        bath: [['{一|いっ}{階|かい}の {奥|おく}に ございます。', '在一樓的最裡面。'], [
+          ['{一|いっ}{階|かい}の {奥|おく}に いらっしゃいます。', '大浴場是地方（東西）→ 要用「ございます」；「いらっしゃる」只用在人身上。', 'thing'],
+          ['{一|いっ}{階|かい}の {奥|おく}に おります。', '大浴場是地方 →「おる」是人在（自己這一方）的謙讓語，東西、地方要用「ございます」。', 'thing']]],
+        toilet: [['あちらに ございます。', '在那邊。'], [
+          ['あちらに いらっしゃいます。', '洗手間是地方（東西）→ 要用「ございます」；「いらっしゃる」只用在人身上。', 'thing'],
+          ['あちらに おります。', '洗手間是地方 →「おる」是人在的謙讓語，地方要用「ございます」。', 'thing']]],
+        okami: [['ただいま {二階|にかい}に おります。', '她現在在二樓。'], [
+          ['ただいま {二階|にかい}に いらっしゃいます。', '老闆娘是我們旅館的人 → 對客人說自己人要用謙讓語「おります」；用「いらっしゃる」等於在客人面前抬高自己人。', 'self'],
+          ['ただいま {二階|にかい}に おいでに なります。', '老闆娘是我們旅館的人 →「おいでに なる」是尊敬語，不能用在自己人身上；要說「おります」。', 'self']]],
+        out: [['ありがとうございました。またの お{越|こ|光臨}しを お{待|ま}ちして おります。', '謝謝您。期待您再度光臨。'], [
+          ['ありがとうございました。またの お{越|こ|光臨}しを お{待|ま}ちに なって おります。', '等的是我們 → 要用謙讓語「お待ちして おります」；「お待ちに なる」是尊敬語，用在自己身上不對。', 'self'],
+          ['ありがとうございました。また ぜひ こちらに {伺|うかが}って くださいませ。', '再來的是客人 → 要用尊敬語（いらっしゃる、お越しに なる）；「伺う」是謙讓語，是自己去拜訪時說的。', 'guest']]],
+        // what the book answers: tonight's shrimp, by the party's note (えびが だめ: ebiNo; none: ebiYes); dinner's time, by its row ({T} said,
+        // {t} 中文; the wrong time another row's)
+        ebiNo: [['{伺|うかが}って おります。えびは お{出|だ}ししません。', '我們已經知道了，晚餐不會上蝦。'], [
+          ['はい、えびの てんぷらを お{出|だ}しいたします。', '台帳上這位客人的備註寫著「えびが だめ」（不能吃蝦）。', 'fact'],
+          ['お{聞|き}きに なって おります。えびは お{出|だ}ししません。', '聽說這件事的是我們 → 要用謙讓語「伺って おります」；「お聞きに なる」是尊敬語，是客人聽的時候說的。', 'self']]],
+        ebiYes: [['はい、えびの てんぷらを お{出|だ}しいたします。', '會的，晚餐有炸蝦天婦羅。'], [
+          ['{伺|うかが}って おります。えびは お{出|だ}ししません。', '台帳上這位客人沒有「えびが だめ」的備註：晚餐照常有蝦。', 'fact'],
+          ['はい、えびの てんぷらを お{出|だ}しに なります。', '端菜上桌的是我們 → 要用謙讓語「お出しします」；「お出しに なる」是尊敬語。', 'self']]],
+        when: [['{T}から ご{用意|ようい}して おります。', '{t}開始，都為您準備好了。'], [
+          ['{T}から ご{用意|ようい}して おります。', '看台帳上這位客人那一列的晚餐時間。', 'fact'],
+          ['{T}から ご{用意|ようい}なさいます。', '準備晚餐的是我們 →「なさる」是尊敬語（客人做的事），自己的動作要說「ご用意して おります」。', 'self']]] },
+      // the birthday wish (a party whose note says お誕生日: a fourth reply at their check-in — glad, they leave a 心付け of tip 円)
+      bday: ['お{誕生日|たんじょうび} おめでとう ございます。', '生日快樂。'], tip: 50, tipName: '心付け（小費）',
+      // the fun ones (at most one a shift, never in the book): 道山 of the cruise at the wrong inn, a sumo wrestler (TOWN.GUESTS) whose
+      // futon is too small — each who, kind, what they say, the replies, their word after
+      fun: {
+        michiyama: { who: 'michiyama', kind: 'where', line: ['あのう…、ここは どこですか？', '請問……這裡是哪裡？'],
+          reply: [['{旅館|りょかん}「{花月|かげつ}」で ございます。', '這裡是旅館「花月」。'], [
+            ['{旅館|りょかん}「{花月|かげつ}」で いらっしゃいます。', '旅館是地方（東西）→ 要說「で ございます」；「で いらっしゃる」只用在人身上（〜様で いらっしゃいますか）。', 'thing'],
+            ['{旅館|りょかん}「{花月|かげつ}」で おります。', '旅館是地方 →「おる」是人在的謙讓語；說東西、地方是什麼要用「で ございます」。', 'thing']]],
+          after: ['えっ、{旅館|りょかん}？ {船|ふね}に {帰|かえ}る つもりだったんですが…。', '咦，旅館？我本來是要回船上的……'] },
+        rikishi: { who: 'rikishi', kind: 'request', line: ['すみません…。お{布団|ふとん}が ちょっと {小|ちい}さくて…。', '不好意思……棉被有點小……'],
+          reply: [['お{布団|ふとん}は {二枚|にまい|兩床}で よろしいでしょうか。', '棉被幫您鋪兩床，可以嗎？'], [
+            ['お{布団|ふとん}は {二枚|にまい|兩床}で いらっしゃいますか。', '棉被是東西 →「で いらっしゃる」只用在人身上；問東西可不可以，要說「で よろしいでしょうか」。', 'thing'],
+            ['お{布団|ふとん}を {二枚|にまい|兩床} お{敷|し|鋪}きに なります。', '鋪棉被的是我們 → 要用謙讓語（お敷きします）；「お敷きに なる」是尊敬語。', 'self']]],
+          after: ['ごっつぁんです！', '謝啦！（相撲力士說的「謝謝」）'] } },
+      // 佐藤 beside the hero: his start; right at once (ok); a wrong reply — whose doing it is (self: ours, guest: theirs, thing: no
+      // person), the book misread (fact), another key (key); his word to 道山; the end, all right from the start (all)
+      say: { who: 'sato', start: ['お{客|きゃく}さまには、{敬語|けいご}で ございます。', '對客人，要用敬語。'],
+        ok: [['{結構|けっこう}で ございます。', '很好。'], ['たいへん {結構|けっこう}で ございます。', '非常好。']],
+        self: ['…それは、わたくしどもの {動作|どうさ|動作}で ございますよ。', '……那是我們自己的動作喔。'],
+        guest: ['…それは、お{客|きゃく}さまの {動作|どうさ|動作}で ございますよ。', '……那是客人的動作喔。'],
+        thing: ['…それは、{人|ひと}では ございませんよ。', '……那可不是人喔。'],
+        fact: ['…{台帳|だいちょう|帳簿}を、よく ご{覧|らん}ください。', '……請仔細看台帳。'],
+        key: ['…その {鍵|かぎ}では ございません。{台帳|だいちょう|帳簿}を、よく ご{覧|らん}ください。', '……不是那把鑰匙。請仔細看台帳。'],
+        lost: ['…{駅|えき}まで、ご{案内|あんない}いたしましょうか。', '……要不要我帶您到車站？'],
+        end: ['おつかれさまでした。…またの お{越|こ|光臨}しを、お{待|ま}ちして おります。', '辛苦了。……期待您再度光臨。'],
+        all: ['…お{見事|みごと|漂亮}で ございます。わたくしの {若|わか}い ころより、ずっと お{上手|じょうず}で ございます。', '……漂亮。比我年輕的時候強多了。'] },
+      keyWhy: '看台帳上這位客人那一列的房間，點那把鑰匙。',
+      // the hero: to a guest arriving (in), to any other in the morning (am) or the afternoon (pm); once dinner's time is told (ok); the
+      // guests' thanks (the 案内所's)
+      hi: { in: ['いらっしゃいませ。', '歡迎光臨。'], am: ['おはようございます。', '早安。'], pm: ['はい、いかが なさいましたか。', '您好，請問有什麼需要嗎？'] },
+      ok: ['かしこまりました。', '好的，我知道了。'], thanks: ['ありがとうございます。', '謝謝。']
     }
   },
   YATAI: {
@@ -3810,6 +3937,11 @@ const TOWN = {
     himonoya: { at: 'harbor', market: true, name: '干物屋のおばあさん', kana: 'ひものやの おばあさん', role: '朝市的魚乾攤', look: { face: 'round', skin: '#e8bd98', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#d9a43a', bottomStyle: 'wide', bottom: '#4a4a55', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'sankakukin', body: 'apron', apron: '#6e4f3a' },
       call: [['アジの ひもの、{焼|や|烤}くと おいしいよ。', '竹筴魚乾，烤了很好吃喔。'], ['お{日|ひ}さまで ほした ひものだよ。', '用太陽曬的魚乾喔。'], ['{寒|さむ}い {日|ひ}は、ひものと ごはんが いちばん。', '冷天就是要魚乾配白飯。']] },
     hamayaki: { at: 'harbor', market: true, name: '浜焼きのお姉さん', kana: 'はまやきの おねえさん', role: '朝市的燒烤攤：烤扇貝', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'blush', fringe: 'swept', sides: 'tucked', hairBack: 'short', hairTop: 'ponytail', hairColor: '#6b4a32', eyes: 'big', eyeColor: '#5a3a28', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#d0574b', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'nejiri' } }
+  },
+  // people seen only as a guest at a job (2026-11-24, フロント): no hours, no spot, no trip — drawn in the hero's parts as the town's people
+  // are (TOWNEV.face) and voiced (CAST_VOICE); the sumo wrestler staying at 花月, whose futon is too small (his topknot the 丸子 on top)
+  GUESTS: {
+    rikishi: { name: 'おすもうさん', kana: 'おすもうさん', role: '力士・花月的住客', look: { face: 'mochi', skin: '#e8bd98', cheeks: 'blush', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'bun', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'smile', beard: 'none', topStyle: 'yukata', top: '#3f4660', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'geta', shoe: '#6e4f3a' } }
   },
   // what the wallet's 円 buys (2026-11-13, the second round of the guide's pay): a menu a place's thing has (PLACE_USE buy) —
   // items [id, name as said, Chinese, price 円, { k: a food (f) or a drink (d) — two foods and a drink a day; w: the course's

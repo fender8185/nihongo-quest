@@ -151,6 +151,9 @@ const CAST_VOICE = {
   // semitone down; 佐藤 原田's Iapetus (the goldfish stall's old man's too), slow — a word at a time — and a semitone down; 竹内 健太's
   // Achird (the friendly one; the たこやき stall's and 張's too), quicker and a semitone up
   chiyo: ['Gacrux', 0.94, 0, -1], sato: ['Iapetus', 0.86, 0, -1], makoto: ['Achird', 1.04, 0, 1],
+  // the フロント's sumo wrestler (TOWN.GUESTS, 2026-11-24): a guest of 花月's only, so he shares 鉄平's and 王's Algenib (the gravelly
+  // one) — neither ever at 湯の花, nor anyone the フロント's other guests' voices are — slower and two semitones down, big and slow-spoken
+  rikishi: ['Algenib', 0.88, 0, -2],
   ann: ['Kore', 0.96]   // みなと線's announcements in the car (2026-11-20); やまなみ線's too (2026-11-23)
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
@@ -954,7 +957,7 @@ function castPreviewHtml() {
     return `<div class="list-item cast-row${k === '' ? '' : ' cast-try'}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="cast-preview" data-who="${id}" data-try="${k}" aria-label="試聽${esc(name)}"${CAST_PREVIEW.busy === key ? ' disabled' : ''}>${CAST_PREVIEW.busy === key ? '…' : icon('speaker')}</button>
       <div class="grow"><div><b>${esc(name)}</b> <span class="muted small">${esc(sub)}</span></div>${line ? `<div class="small muted jp">${esc(line)}</div>` : ''}${said ? `<div class="small ${said.bad ? 'bad' : 'muted'}">${esc(said.text)}</div>` : ''}</div></div>`; };
   return Object.keys(CAST_VOICE).map((id) => {
-    const p = id === 'hero' ? { name: '主角', role: '' } : id === 'ann' ? { name: '車內廣播', role: 'みなと線' } : NPCS[id] || TOWN.CAST[id] || CRUISE.person(id) || (TOWN.YATAI || {})[id] || { name: id, role: '' }, v = CAST_VOICE[id];   // the cruise's passengers, the 緣日's stall keepers too
+    const p = id === 'hero' ? { name: '主角', role: '' } : id === 'ann' ? { name: '車內廣播', role: 'みなと線' } : NPCS[id] || TOWN.CAST[id] || CRUISE.person(id) || (TOWN.YATAI || {})[id] || (TOWN.GUESTS || {})[id] || { name: id, role: '' }, v = CAST_VOICE[id];   // the cruise's passengers, the 緣日's stall keepers, a job's guests too
     return row(id, '', p.name, `${p.role || ''}${p.role ? '・' : ''}${v[0]}${v[2] ? `（音調 +${v[2]}）` : ''}（${voiceGender(v) === 'f' ? '女聲' : '男聲'}）`, castLine(castSample(id)).replace(CAST_MARK, '$1'))
       + (CAST_TRY[id] || []).map((t, k) => row(id, String(k), `${p.name}候選 ${k + 1}`, t[3], '')).join('');
   }).join('');

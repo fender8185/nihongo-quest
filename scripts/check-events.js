@@ -265,7 +265,7 @@ function check(T, D, opts = {}) {
   // someone with a voice in the town or on the cruise; a question asks one of the kinds the job practises
   const on = T.ONSEN;
   if (on) {
-    const people = (T.CRUISE || {}).PEOPLE || {}, person = (id, at) => { if (!cast[id] && !people[id]) bad('ref', at, `no one called ${id}`); };
+    const people = (T.CRUISE || {}).PEOPLE || {}, guests = T.GUESTS || {}, person = (id, at) => { if (!cast[id] && !people[id] && !guests[id]) bad('ref', at, `no one called ${id}`); };
     const pair = (l, u, at) => { if (!Array.isArray(l) || typeof l[0] !== 'string') { bad('onsen', at, 'a line is [Japanese, 中文]'); return; } text(l[0], u, at); if (!l[1]) bad('onsen', at, 'no Chinese'); };
     if (on.welcome) pair(on.welcome, 'm1', 'onsen welcome');
     if (on.bell) pair(on.bell, 'm1', 'onsen bell');
@@ -349,7 +349,47 @@ function check(T, D, opts = {}) {
       Object.entries(ms).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U11, `miyage say ${k}#${i}`)));
       ['hi', 'give', 'thanks'].forEach((k) => { if (M[k]) pair(M[k], U11, `miyage ${k}`); });
     }
+    // フロント (2026-11-24, spec §5.4): 佐藤's desk at its unit (m15) — each guest someone with a voice (the town's, the cruise's, a job's own:
+    // GUESTS); a named guest's name as the book has it, their lines, the time they want one the book shows; the other guests one of the kinds
+    // the job practises, on a shift of the day (am, pm) or either, their replies a set there is; every wrong reply turns the keigo one of
+    // the four ways (ruling 15: self, guest, thing, fact) with its reason; a later wording at its own unit; every line its 中文
+    const FR = on.front, U15 = 'm15', FKINDS = ['luggage', 'request', 'where', 'checkout'], HOWS = ['self', 'guest', 'thing', 'fact'];
+    if (FR) {
+      const voiced = (who, at) => { if (VOICES.size && (cast[who] || people[who] || guests[who]) && !VOICES.has(who)) bad('onsen', at, `${who} has no voice (CAST_VOICE)`); };
+      const later = (l, at) => { if (!l) return; if (unitIdx(l[0]) < 0) bad('ref', at, `no unit ${l[0]}`); else pair(l.slice(1), l[0], `${at} later`); };
+      const hours = (FR.times || []).map((x) => x[0]), sets = FR.reply || {};
+      (FR.times || []).forEach(([h, ja, zh], i) => { const at = `front time ${i}`; if (typeof h !== 'number') bad('onsen', at, 'a time is an hour'); text(String(ja || ''), U15, at); if (!zh) bad('onsen', at, 'no Chinese'); });
+      Object.entries(FR.named || {}).forEach(([who, p]) => {
+        const at = `front named ${who}`; person(who, at); voiced(who, at);
+        if (!Array.isArray(p.name) || !p.name[0] || !p.name[1]) bad('onsen', at, 'a name is [kanji, reading]'); else text(`{${p.name[0]}|${p.name[1]}}`, U15, `${at} name`);
+        ['in', 'ebi', 'when', 'late', 'bday'].forEach((k) => pair(p[k], U15, `${at} ${k}`)); later(p.in && p.in[2], `${at} in`);
+        if (!Array.isArray(p.dinner) || !hours.includes(p.dinner[0])) bad('onsen', at, `the time they want is one the book shows: ${p.dinner && p.dinner[0]}`); else pair(p.dinner[1], U15, `${at} dinner`);
+      });
+      Object.entries(FR.like || {}).forEach(([who, ns]) => { if (!(FR.named || {})[who]) bad('ref', `front like ${who}`, `no named guest ${who}`); (ns || []).forEach(([n, r], i) => text(`{${n}|${r}}`, U15, `front like ${who}#${i}`)); });
+      Object.entries(FR.memo || {}).forEach(([k, l]) => pair(l, U15, `front memo ${k}`));
+      (FR.rooms || []).forEach(([id, k, r, zh], i) => { if (!id || !k || !r || !zh) bad('onsen', `front room ${i}`, 'a room is [id, name, reading, 中文]'); });
+      ['room', 'bday', 'ok', 'thanks'].forEach((k) => { if (FR[k]) pair(FR[k], U15, `front ${k}`); });
+      if (FR.tip !== undefined && !(Number.isInteger(FR.tip) && FR.tip > 0)) bad('onsen', 'front tip', `a tip is a number of 円: ${FR.tip}`);
+      const replies = (set, at) => { if (!Array.isArray(set) || !Array.isArray(set[1]) || !set[1].length) { bad('onsen', at, 'replies are [right, [wrong …]]'); return; } pair(set[0], U15, at);
+        set[1].forEach(([ja, why, how], i) => { text(String(ja || ''), U15, `${at} wrong${i}`); if (!why || !HOWS.includes(how)) bad('onsen', `${at} wrong${i}`, 'a wrong reply is [Japanese, why, self | guest | thing | fact]'); }); };
+      Object.entries(sets).forEach(([k, set]) => replies(set, `front reply ${k}`));
+      Object.entries(FR.ask || {}).forEach(([id, a]) => {
+        const at = `front ask ${id}`; person(a.who, at); voiced(a.who, at); if (!FKINDS.includes(a.kind)) bad('onsen', at, `no kind ${a.kind}`);
+        pair(a.line, U15, at); later(a.later, at); if (!sets[a.reply]) bad('ref', at, `no replies ${a.reply}`); if (a.at !== undefined && !['am', 'pm'].includes(a.at)) bad('onsen', at, 'at is am or pm');
+      });
+      Object.entries(FR.fun || {}).forEach(([id, f]) => { const at = `front fun ${id}`; person(f.who, at); voiced(f.who, at); if (!['where', 'request'].includes(f.kind)) bad('onsen', at, `no kind ${f.kind}`); pair(f.line, U15, at); pair(f.after, U15, `${at} after`); replies(f.reply, at); });
+      const fs = FR.say || {}; person(fs.who, 'front say'); voiced(fs.who, 'front say');
+      Object.entries(fs).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U15, `front say ${k}#${i}`)));
+      Object.entries(FR.hi || {}).forEach(([k, l]) => pair(l, U15, `front hi ${k}`));
+    }
   }
+  // a job's guests (TOWN.GUESTS, 2026-11-24: the フロント's sumo wrestler) — a name and a look, none of the town's, the cruise's or a
+  // stall's ids, a voice
+  Object.entries(T.GUESTS || {}).forEach(([id, g]) => {
+    if (cast[id] || ((T.CRUISE || {}).PEOPLE || {})[id] || (T.YATAI || {})[id]) bad('ref', `guest ${id}`, 'a guest with the id of someone else');
+    if (!g || !g.name || !g.look || typeof g.look !== 'object') bad('onsen', `guest ${id}`, 'a guest has a name and a look');
+    if (VOICES.size && !VOICES.has(id)) bad('onsen', `guest ${id}`, `${id} has no voice (CAST_VOICE)`);
+  });
   // where someone stands on a shift of their job (CAST shift: [job, place, spot] — 千代 in 桜の間 while her 仲居 card is up): a spot drawn
   Object.entries(cast).forEach(([id, c]) => { if (c.shift !== undefined && (!Array.isArray(c.shift) || !JOB_IDS.has(c.shift[0]) || !places.includes(c.shift[1]) || !spots[c.shift[1]] || !spots[c.shift[1]][c.shift[2]])) bad('host', `cast ${id}`, 'shift is [a job (WORK.PLACES), a place drawn, a spot there]'); });
   return out;

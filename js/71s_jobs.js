@@ -118,6 +118,87 @@ const JOBS = (() => {
   const pickR = (a, R) => a[Math.floor(R() * a.length)];
   const shuffleR = (arr, R) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const custHtml = (who) => `<span class="kr-face">${TOWNEV.face(who)}</span><i class="wk-emo"></i><p class="wk-bub"></p><span class="wk-pat"><i></i></span>`;
+  // ---- a desk (2026-11-24, ruling 28): the flow 原田's window, the 観光案内所 and the フロント share — one customer after another: the
+  // hero's greeting (after any line still being said), their words heard first (……; 🔊 again: the clock held till they are said in full),
+  // then each step of what they came for — a reply picked, or the job's own taps (a station on the chart, a key on the board: D.right,
+  // D.miss) — right (the step's lines after any line being said; a step after the first on a fresh clock: the one before pleased them),
+  // wrong (the keeper's word said to its end, the clock held meanwhile and its cost after it — ruling 27; a reply so picked may not be
+  // picked again where the job says so; two in a step and their words show, the right one lit), out of patience (their words whole, the
+  // right one lit, their leaving word); then the next — at the last, the keeper's word and the card shut, paid at once and the results
+  // once it is said. Each job keeps its words, its card and its checks in its own file and hands in (o):
+  //   job, ctx, N; box() its own card (null till drawn); alive a selector in it while its shift is up; mine() this run the last begun;
+  //   tasks [{ who, q: [ja, zh], steps? (['say', its own …]; a step not 'say' is the job's taps) }]; isRight(t, i) reply i right;
+  //   secs(t, step) and cost: patience and a miss's; hi(t) the hero's greeting; fresh(t) the job's own of a customer (in now());
+  //   me(l), word(l, cls) the hero's and the keeper's lines shown and said (their promise); bub(open, line), opts(on), draw(t) its card;
+  //   optSel, earSel, rightCls; once: a wrong reply cannot be picked again; dim: the customer dimmed once served right;
+  //   miss(t, i) the keeper's word to wrong reply i; hint(t, R, gone) the job's own lit with the right reply; tap(e, R) its own taps
+  //   (true: one of them); then(t, R, i, live) the lines after a right step (default: the hero says the reply); served(t, R, live) once
+  //   the last step is right; end, all the keeper's last words (all: right at once from the shift's start); extra() finish's (a tip)
+  function desk(o) {
+    const { ctx, N } = o, box = () => o.box(), steps = (t) => t.steps || ['say'];
+    const el = (q) => { const b = box(); return b && b.isConnected ? b.querySelector(q) : null; };
+    const all = (q) => { const b = box(); return b && b.isConnected ? [...b.querySelectorAll(q)] : []; };
+    const live = () => o.mine() && Boolean(el(o.alive)) && ctx.on(), still = (me0) => live() && R === me0;
+    let k = ctx.done, R = null, P = null, rep = 0, missed = 0, lost = 0;
+    const clockFor = (me0) => (P = patience(o.job, me0.task.who, o.secs(me0.task, me0.step), () => Boolean(el('.wk-cust')) && R === me0 && ctx.on(), gone, box()));
+    function show() {
+      const t = o.tasks[k]; R = Object.assign({ k, task: t, phase: 'hi', step: 0, miss: 0, miss2: 0 }, o.fresh ? o.fresh(t) : {}); rep = 0;
+      const n = el('.wk-n'); if (n) n.textContent = `${k + 1}／${N}`;
+      const c = el('.wk-cust'); c.className = 'wk-cust'; c.removeAttribute('data-mood'); c.innerHTML = custHtml(t.who); o.opts(false); if (o.draw) o.draw(t);
+      const me0 = R; clockFor(me0);
+      said(queue(() => o.me(o.hi(t)), box()), 700).then(() => {
+        if (!still(me0)) return; R.phase = 'ask'; o.bub(false); el('.wk-cust').classList.add('on'); o.opts(true);
+        said(voice(speakAs(t.who, t.q[0]), box())).then(() => { if (!rep && R === me0) P.go(); });
+      });
+    }
+    // the next step of their task, on a fresh clock (calm again: the step before pleased them)
+    function stepOn(me0) {
+      R.step++; R.miss2 = 0; R.phase = 'ask'; const c = el('.wk-cust'); if (c) { c.removeAttribute('data-mood'); const e = c.querySelector('.wk-emo'); if (e) e.textContent = ''; }
+      o.opts(true); clockFor(me0).go();
+    }
+    // a step right (i: the reply picked; none: the job's own tap)
+    function right(i) {
+      const t = R.task, me0 = R, last = R.step >= steps(t).length - 1;
+      R.phase = last ? 'done' : 'wait'; P.stop(); playSfx('good');
+      if (i !== undefined) all(o.optSel).forEach((b) => { b.disabled = true; b.classList.toggle(o.rightCls, Number(b.dataset.o) === i); });
+      const then = (lv) => (o.then ? o.then(t, R, i, lv) : i === undefined ? Promise.resolve() : said(o.me(t.opts[i]), 900));
+      if (!last) { (async () => { await quiet(box()); if (!still(me0)) return; await then(() => still(me0)); if (still(me0)) stepOn(me0); })(); return; }   // after any line still being said (ruling 27)
+      ctx.right(k, Math.min(R.miss, 2)); o.bub(true); if (o.dim) el('.wk-cust').classList.remove('on');
+      next(async (lv) => { await quiet(box()); if (!lv()) return; await then(lv); if (!lv()) return; await o.served(t, R, lv); });
+    }
+    // a miss: the keeper's word ([ja, zh]) said to its end, the clock held meanwhile and its cost after it; two in a step: their words, the right one lit
+    function wrong(b, l) {
+      R.miss++; R.miss2++; missed++; playSfx('bad');
+      if (b) { b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); if (o.once && b.matches(o.optSel)) b.disabled = true; }   // a reply only: a key, a station stays
+      missWord(P, () => o.word(l, 'bad'), o.cost, box());
+      if (R.miss2 >= 2) { o.bub(true); hint(false); }
+    }
+    function hint(out) { all(o.optSel).forEach((x) => { if (out) x.disabled = true; x.classList.toggle('wk-hint', o.isRight(R.task, Number(x.dataset.o))); }); if (o.hint) o.hint(R.task, R, out); }
+    // patience out: off they go — their words shown whole, the right one lit, their leaving word popping up beside them (M-2), said in full
+    // from its own start (N-2); the task lost
+    function gone(leave) {
+      const t = R.task; R.phase = 'done'; ctx.right(k, 3); lost++; playSfx('bad'); o.bub(true); grr(el('.wk-cust'), leave[0]); hint(true);
+      next(async (lv) => { await Promise.all([line(t.who, leave[0], box()), sleep(1200)]); if (lv()) { el('.wk-cust').classList.add('bye'); await sleep(450); } });
+    }
+    // the customer gone (to the next one, or the keeper's last word and the card shut once every line is said): the shift's last paid at
+    // once, its results once its lines are said (finish's promise)
+    function next(lines) {
+      const lv = () => Boolean(el(o.alive)) && (ctx.on() || k >= N); k++;
+      const bye = (async () => { await lines(lv); if (!lv()) return; if (k < N) { show(); return; }
+        await said(o.word(!missed && !lost && ctx.done === 0 ? o.all : o.end, 'ok'), 800); if (el(o.alive)) CLASS.close(); })();
+      if (k >= N) ctx.finish(o.extra ? o.extra() : {}, bye);
+    }
+    // a tap on the card while a step waits: 🔊 again (the clock held till it is said in full, after any line being said: N-2), the job's
+    // own taps, a reply
+    function click(e) {
+      if (!R || R.phase !== 'ask' || !live()) return;
+      if (e.target.closest(o.earSel)) { const q = P, r = rep = rep + 1; q.hold(); line(R.task.who, R.task.q[0], box()).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }
+      if (o.tap && o.tap(e, R)) return;
+      const b = e.target.closest(o.optSel); if (!b || b.disabled || steps(R.task)[R.step] !== 'say') return;
+      const i = Number(b.dataset.o); if (o.isRight(R.task, i)) right(i); else wrong(b, o.miss(R.task, i));
+    }
+    return { start: show, click, now: () => R, right: () => right(), miss: (b, l) => wrong(b, l), live, el, all };
+  }
   const COUNTER_SECS = 5, TILL_SECS = [0, 30, 45];   // a customer's patience (s): 站櫃's one (5, 2026-11-20: 20 was too long), from the end of their asking; 收銀's by the things bought
   const MISS_COST = { counter: 0.2, till: 0.1 };   // of a whole patience: the wrong thing handed, a wrong piece said
 
@@ -425,5 +506,5 @@ const JOBS = (() => {
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
   WORK.register('till', { run: tillRun, lines: tillLines, left: tillLeft, open: allNums });
-  return { pat: PAT, clock, said, voice, quiet, queue, line, missWord, grr, patience, custHtml, goodPic, rng, pickR, shuffleR, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
+  return { pat: PAT, clock, said, voice, quiet, queue, line, missWord, grr, patience, custHtml, desk, goodPic, rng, pickR, shuffleR, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
 })();

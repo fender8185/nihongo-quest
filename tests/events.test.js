@@ -264,3 +264,30 @@ test('おみやげ屋 (fix round 1, M-7): with the drawings given (pics) a good 
   const quiet = Object.assign(my({}, { a: Object.assign({}, A, { who: 'quiet' }) }), { CAST: Object.assign({}, CAST, { quiet: { name: '靜', hours: [] } }) });
   assert.deepEqual(kinds(check(town([ev()], quiet), D11)), ['onsen']);   // someone (in CAST), no voice
 });
+test('フロント\'s lines (TOWN.ONSEN.front) are checked at m15: a bare kanji, an above-level word, a guest no one is, a wrong reply that turns no way (self, guest, thing, fact) or has no reason, a dinner time the book has not, a line with no Chinese; a guest of a job (TOWN.GUESTS) has a name, a look and a voice and is no one else (2026-11-24)', () => {
+  const D15 = Object.assign({}, DATA, { UNITS: DATA.UNITS.concat([{ id: 'm15', lv: 'N4' }, { id: 'm16', lv: 'N4' }]) });
+  const L = (ja) => [ja, '中文'];
+  const P = { name: ['美玖', 'みく'], in: L('{美玖|みく}です。'), ebi: L('えびは？'), when: L('なんじ？'), late: L('まだ。'), dinner: [18, L('はい。')], bday: L('わあ！') };
+  const RIGHT = [L('はい、ございます。'), [['はい、いらっしゃいます。', '浴衣是東西。', 'thing'], ['はい、おります。', '浴衣是東西。', 'thing']]];
+  const LOOK = { face: 'mochi', skin: '#e8bd98' };
+  const fr = (o = {}, top = {}) => Object.assign({ ONSEN: { front: Object.assign({ named: { miku: P }, like: { miku: [['美玖', 'みく']] }, memo: { ebi: L('えびが だめ') },
+    rooms: [['sakura', '花', 'はな', '花']], room: L('{R}です。'), times: [[18, 'ろくじ', '六點']],
+    ask: { a: { who: 'kenta', kind: 'request', line: L('{花|はな}は ありますか。'), reply: 'r' } }, reply: { r: RIGHT },
+    fun: { s: { who: 'rikishi', kind: 'request', line: L('すみません。'), reply: RIGHT, after: L('ごっつぁんです！') } },
+    bday: L('おめでとう ございます。'), tip: 50, say: { who: 'kenta', start: L('はい。'), ok: [L('けっこう。')] }, hi: { in: L('いらっしゃいませ。') }, ok: L('かしこまりました。'), thanks: L('どうも。') }, o) },
+    GUESTS: { rikishi: { name: 'おすもうさん', look: LOOK } } }, top);
+  assert.deepEqual(check(town([ev()], fr()), D15), []);
+  assert.deepEqual(kinds(check(town([ev()], fr({ ask: { a: { who: 'kenta', kind: 'request', line: L('花は ありますか。'), reply: 'r' } } })), D15)), ['bare-kanji']);
+  assert.deepEqual(kinds(check(town([ev()], fr({ ask: { a: { who: 'kenta', kind: 'request', line: L('{経済|けいざい}は？'), reply: 'r' } } })), D15)), ['level']);   // N3 at m15: gloss it
+  assert.deepEqual(kinds(check(town([ev()], fr({ ask: { a: { who: 'nobody', kind: 'request', line: L('はい。'), reply: 'r' } } })), D15)), ['ref']);
+  assert.deepEqual(kinds(check(town([ev()], fr({ ask: { a: { who: 'kenta', kind: 'sing', line: L('はい。'), reply: 'r' } } })), D15)), ['onsen']);   // a kind it does not practise
+  assert.deepEqual(kinds(check(town([ev()], fr({ ask: { a: { who: 'kenta', kind: 'request', line: L('はい。'), reply: 'none' } } })), D15)), ['ref']);   // no such replies
+  assert.deepEqual(kinds(check(town([ev()], fr({ reply: { r: [L('はい。'), [['いいえ。', '不對。', 'rude']]] } })), D15)), ['onsen']);   // turns no way
+  assert.deepEqual(kinds(check(town([ev()], fr({ reply: { r: [L('はい。'), [['いいえ。', '', 'self']]] } })), D15)), ['onsen']);   // no reason
+  assert.deepEqual(kinds(check(town([ev()], fr({ named: { miku: Object.assign({}, P, { dinner: [17, L('はい。')] }) } })), D15)), ['onsen']);   // a time the book has not
+  assert.deepEqual(kinds(check(town([ev()], fr({ named: { miku: Object.assign({}, P, { ebi: ['えびは？', ''] }) } })), D15)), ['onsen']);   // no 中文
+  assert.deepEqual(kinds(check(town([ev()], fr({ named: { miku: Object.assign({}, P, { in: ['はい。', '是。', ['m99', 'はい。', '是。']] }) } })), D15)), ['ref']);   // a later wording's unit
+  assert.deepEqual(kinds(check(town([ev()], fr({}, { GUESTS: { rikishi: { name: 'おすもうさん' } } })), D15)), ['onsen']);   // a guest with no look
+  assert.deepEqual(kinds(check(town([ev()], fr({}, { GUESTS: { rikishi: { name: 'おすもうさん', look: LOOK }, miku: { name: '美玖', look: LOOK } } })), D15)), ['ref']);   // someone of the town's
+  assert.deepEqual(kinds(check(town([ev()], fr({ fun: { s: { who: 'sumo', kind: 'request', line: L('はい。'), reply: RIGHT, after: L('はい。') } } }, { GUESTS: { sumo: { name: 'おすもうさん', look: LOOK } } })), D15)), ['onsen']);   // no voice
+});

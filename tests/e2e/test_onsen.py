@@ -404,7 +404,7 @@ def test_the_ryokan_and_its_room(b):
 
 # spec §4 (ruling 2): 千代 in the lobby 8–21, 佐藤 at the front desk 7–11 and 14–22, 竹内 by ゆのはな堂's steamers 9–21 — his hours the
 # shop's own (TOWN.HOURS.yunohanado), pinned equal; tapped, each greets and has a word — 千代 her 仲居 too (Task 5: its runner in), 佐藤
-# no work talk yet (Task 7), 竹内 his まんじゅう to order and his おみやげ屋 (Task 6); each has ten things to say or more, from m1 for one
+# his フロント too (Task 7), 竹内 his まんじゅう to order and his おみやげ屋 (Task 6); each has ten things to say or more, from m1 for one
 # who rides up at N5, more by the N4 units
 def test_keepers_by_their_hours(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {};
@@ -423,7 +423,7 @@ def test_keepers_by_their_hours(b):
     assert r['lobby'] == [['sato'], ['chiyo', 'sato'], ['chiyo'], ['chiyo', 'sato'], ['sato'], []], r   # 佐藤 7–11 and 14–22, 千代 8–21
     assert r['street'] == [[], ['makoto'], []] and r['hours'] == [[[9, 21, 'yudori']], [9, 21]], r   # 竹内 by his shop's hours, pinned
     assert r['chiyo'] and r['chiyo']['name'] == '花村 千代' and r['chiyo']['ja'] and r['chiyo']['picks'] == ['work', 'chat'], r   # her 仲居 (Task 5): work, or a word
-    assert r['sato'] and r['sato']['name'] == '佐藤 一' and r['sato']['ja'] and r['sato']['picks'] == [], r
+    assert r['sato'] and r['sato']['name'] == '佐藤 一' and r['sato']['ja'] and r['sato']['picks'] == ['work', 'chat'], r   # his フロント (Task 7: its runner in): work, or a word
     assert r['makoto'] and r['makoto']['name'] == '竹内 まこと' and r['makoto']['picks'] == ['order', 'work', 'chat'] and r['menu'] == ['onsenmanju'], r   # his まんじゅう to order, his おみやげ屋 (Task 6: its runner in)
     assert all(x and x != '……' for x in r['n5']), r   # an N5 visitor (m1) has a word from each
     for k, (n, m1, n5, n4) in r['lines'].items():
@@ -860,7 +860,7 @@ def test_the_generator_has_the_annai_lines(b):
       return JSON.stringify({ miss: [...new Set(miss)].slice(0, 6), keepers, akari, first: ((W.first || {}).annai || []).length, voices: Object.keys(CAST_VOICE).length,
         book: [book.q[0], book.after[0]], yes: (W.yes.akari || [])[1] }); })()"""))
     assert r['miss'] == [] and r['keepers'] == [[True, True, True]] * 3 + [[False, False, False]] and r['akari'] == [True, True] and r['first'] >= 1, r   # 竹内's never heard (ruling 29)
-    assert r['voices'] == 68, r   # no new voice: the tourists are people the town already voices
+    assert r['voices'] == 69, r   # no new voice for the tourists: people the town already voices (69: the フロント's sumo wrestler, Task 7)
     assert 'ワ' in r['book'][0] and 'ハ' not in r['book'][0] and not r['book'][1].startswith('オー'), r   # マイク reads his phrasebook's sounds; no flat 「オー！」
     assert r['yes'] == '好啊，我很樂意！', r
 
@@ -1267,7 +1267,7 @@ def test_the_generator_has_the_nakai_lines(b):
       const S = TOWN.ONSEN.nakai.say; Object.entries(S).filter(([k]) => k !== 'who').forEach(([, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x) => need('chiyo', x[0])));
       ((TOWN.WORK.first || {}).nakai || []).forEach((l) => need(l[0], l[1]));
       return JSON.stringify({ miss: [...new Set(miss)].slice(0, 6), voices: Object.keys(CAST_VOICE).length }); })()"""))
-    assert r['miss'] == [] and r['voices'] == 68, r
+    assert r['miss'] == [] and r['voices'] == 69, r   # 69: the フロント's sumo wrestler (Task 7)
 
 # ---- Task 6: おみやげ屋 at ゆのはな堂 with 竹内 (spec §5, §5.3) ----
 # my(): the customer at the counter now (MIYAGE_RUN.now(): { k, c, step, phase, tray, seed, miss, busy, plate }); good(g): a good on the
@@ -1640,7 +1640,7 @@ def test_the_generator_has_the_miyage_lines(b):
       const M = TOWN.ONSEN.miyage, S = M.say; Object.entries(S).filter(([k]) => k !== 'who').forEach(([, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x) => need('makoto', x[0])));
       need('hero', M.hi[0]); need('hero', M.give[0]); ((TOWN.WORK.first || {}).miyage || []).forEach((l) => need(l[0], l[1]));
       return JSON.stringify({ miss: [...new Set(miss)].slice(0, 6), voices: Object.keys(CAST_VOICE).length, first: ((TOWN.WORK.first || {}).miyage || []).length }); })()"""))
-    assert r['miss'] == [] and r['voices'] == 68 and r['first'] >= 1, r
+    assert r['miss'] == [] and r['voices'] == 69 and r['first'] >= 1, r   # 69: the フロント's sumo wrestler (Task 7)
 
 # the shelves' pictures (spec §5.3, ruling 4): each good drawn — the town's own (PICS_TOWN) for those that are no course word, the まんじゅう's
 # two boxes each its own; each picture a drawing of some detail (a dozen shapes or more), the six and the twelve not the same drawing
@@ -1649,6 +1649,327 @@ def test_the_miyage_goods_are_drawn(b):
       return JSON.stringify({ drawn: gs.map((g) => [g[0], Boolean(pic(g[4])), (pic(g[4]).match(/<(path|ellipse|circle|rect|polygon)/g) || []).length]), town: gs.map((g) => Boolean(PICS_TOWN[g[4]])),
         boxes: pic(gs[0][4]) !== pic(gs[1][4]) }); })()"""))
     assert all(x[1] and x[2] >= 12 for x in r['drawn']) and all(r['town']) and r['boxes'], r
+
+# ---- Task 7: フロント (spec §5.4, §3.4; rulings 15, 23, 27, 28 and the dispatch's) ----
+# fr(): the guest at the desk now (FRONT_RUN.now(): k, task, phase, step, miss, morning); fc(): its card; opt(right): a right reply (never the
+# birthday wish) or a wrong one; key(room): a tag on the board; serve(): the step there now done right (a reply; their key); work(to): guests
+# served up to task `to`; shiftAt(seed, morning, done, score): the day's record (been before: no first word); seedWhere(f, morning): a shift
+# (FRONT.make) for which f holds; begin(seed, k, morning): the shift taken up at task k, its guest asked (9:00 a morning's, 15:00 an
+# afternoon's: 佐藤 is at the desk 7–11 and 14–22)
+FR = """const fr = () => FRONT_RUN.now(), m15 = TOWNEV.unitIdx('m15'), fc = () => document.querySelector('.wk-front');
+  const opt = (right) => { const n = fr(), i = n.task.opts.findIndex((o) => (right ? o[2] && o[3] !== 'bday' : !o[2])); return document.querySelector(`.wk-front .fr-opt[data-o="${i}"]`); };
+  const key = (room) => document.querySelector(`.wk-front .fr-key[data-room="${room}"]`);
+  const ready = () => { const n = fr(); return Boolean(n) && n.phase === 'ask'; };
+  async function serve() { const n = fr(); if (!ready()) return false; if (n.step === 1) { key(n.task.room).click(); return true; } const b = opt(true); if (b && !b.disabled) b.click(); return true; }
+  const before = (to) => Boolean(fr()) && fr().k < to;
+  async function work(to) { let at = -1, since = Date.now(); while (before(to) && Date.now() - since < 25000) { await watch(() => ready() || !before(to), 3000); if (!before(to)) break; if (fr().k !== at) { at = fr().k; since = Date.now(); } await serve(); await wait(150); } }
+  const shiftAt = (seed, morning, done = 0, score = {}) => { state.work.res['2026-10-20'] = { place: 'front', done: 10, score: {}, yen: 1, grade: 'C' }; state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done, score, keep: { seed, morning } }; saveState(); };
+  const seedWhere = (f, morning = false, from = 1) => { for (let s = from; s < 8000; s++) { if (f(FRONT.make(m15, morning, s))) return s; } return 0; };
+  const where = (s, morning, f) => FRONT.make(m15, morning, s).tasks.findIndex(f);
+  const upTo = (k) => Object.fromEntries(Array.from({ length: k }, (_, i) => [i, 0]));
+  const clock = (morning, d = 10) => { TOWNEV.clock = { h: morning ? 9 : 15, day: new Date(2026, 10, d) }; };
+  const begin = async (seed, k, morning = false) => { clock(morning); shiftAt(seed, morning, k, upTo(k)); await at('ryokan'); WORK.start(yard(), 'front'); await watch(() => fr() && fr().k === k && ready(), 15000); await wait(150); };"""
+
+# spec §5.4 (入住), the dispatch's ruling 2: a guest checking in gives their name — heard, not shown — the hero greets them (お待ちして
+# おりました), then finds them in today's 予約台帳 (five parties, names in kanji with their readings over them, each in its own room) and taps
+# their room's key on the board: another key is a miss (佐藤's word) and stays; theirs leaves the board for them, their row is marked in,
+# 「お部屋は …の間で ございます」; each check-in's party is in the book, its room the one its key opens
+def test_front_checkin_finds_the_key_in_the_book(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
+      const sweep = []; for (let s = 1; s <= 150; s++) [false, true].forEach((mo) => { const sh = FRONT.make(m15, mo, s);
+        if (sh.book.length !== 5 || new Set(sh.book.map((p) => p.room)).size !== 5 || new Set(sh.book.map((p) => p.name)).size !== 5 || sh.book.some((p) => !p.kana || !(p.n >= 1))) sweep.push(s + ':book');
+        sh.tasks.filter((t) => t.kind === 'checkin').forEach((t) => { const p = sh.book[t.party]; if (!p || p.room !== t.room || p.who !== t.who || p.in || !t.q[0].includes(p.name)) sweep.push(s + ':' + t.who); }); });
+      const seed = seedWhere((sh) => sh.tasks[0].kind === 'checkin' && !sh.tasks[0].bday), sh = FRONT.make(m15, false, seed); await begin(seed, 0);
+      const t = fr().task, out = { sweep: sweep.slice(0, 5), kind: t.kind, dots: Boolean(fc().querySelector('.wk-bub .fr-dots')), opts: fc().querySelectorAll('.fr-opt').length, rows: fc().querySelectorAll('.fr-row').length };
+      opt(true).click(); await watch(() => fr().step === 1 && ready(), 6000); await wait(100);
+      out.step = fr().step; out.dotsStill = Boolean(fc().querySelector('.wk-bub .fr-dots'));
+      const row = [...fc().querySelectorAll('.fr-row')].find((x) => (x.querySelector('.fr-nm rt') || {}).textContent === sh.book[t.party].kana);
+      out.room = row && row.dataset.room; out.want = t.room;
+      const other = FRONT.ROOMS.map((x) => x[0]).find((x) => x !== t.room && !key(x).classList.contains('fr-out')); key(other).click(); await wait(300);
+      out.miss = fr().miss; out.word = said.filter((x) => x.startsWith('sato:')).slice(-1)[0] || ''; out.otherOn = !key(other).classList.contains('fr-out');
+      key(t.room).click(); await watch(() => fr() && fr().k === 1, 8000); await wait(200);
+      out.gone = key(t.room).classList.contains('fr-out'); out.tick = Boolean(fc().querySelector(`.fr-row[data-room="${t.room}"].fr-in`));
+      out.roomLine = said.some((x) => x.startsWith('hero:') && x.includes('{部屋|へや}は') && x.includes(FRONT.ROOMS.find((q) => q[0] === t.room)[1]));
+      out.score = WORK.today().score[0]; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['sweep'] == [] and r['kind'] == 'checkin' and r['dots'] and r['opts'] == 3 and r['rows'] == 5, r
+    assert r['step'] == 1 and r['dotsStill'] and r['room'] == r['want'], r   # their name still only heard; their row's room is the key's
+    assert r['miss'] == 1 and '{鍵|かぎ}' in r['word'] and r['otherOn'], r   # another key: 佐藤's word, a miss; nothing handed over
+    assert r['gone'] and r['tick'] and r['roomLine'] and r['score'] == 1, r
+
+# rulings 15 and 1 of the dispatch: every wrong reply turns the keigo the wrong way — 尊敬語 on what we do ('self': お〜に なる, いらっしゃる,
+# おいでに なる, 〜て くださる, なさる), 謙譲語 on what the guest does ('guest': いただく, お〜する, 伺う), いらっしゃる／おる for a thing
+# ('thing') — or, where the book has the answer, misreads it ('fact'); never a plain reply, never 「何時に いたしますか」 (the inn's own
+# いたしましょうか) nor 「何時に いらっしゃいますか」 (the guest's); each wrong one's 中文 says whose doing it is; the spec's own (お待ちに なって
+# おりました, お持ちに なります, 一階の 奥に いらっしゃいます) among them; every kind turns up
+def test_front_keigo_decoys_are_direction_errors(b):
+    r = json.loads(ev(b, """(() => { const bad = [], seen = {}, MARK = /\\{([^|}]+)\\|[^}]+\\}/g, plain = (s) => s.replace(MARK, '$1'), words = new Set();
+      const SELF = /に な[りっ]|いらっしゃ|おいでに|くださ|なさ/, GUEST = /いただ|伺|お[^\\s、。]{1,4}し(ます|て)/, THING = /いらっしゃ|おり/;
+      const KEIGO = /ござい|おり|いたし|いらっしゃ|なさ|いただ|伺|くださ|お[^\\s、。]{1,4}し(ます|て|ません)|に な[りっ]|でしょうか|おめでとう/;
+      [TOWNEV.unitIdx('m15'), TOWNEV.unitIdx('m17')].forEach((u) => { for (let s = 1; s <= 200; s++) [false, true].forEach((mo) => FRONT.make(u, mo, s).tasks.forEach((t) => {
+        const id = t.kind + (t.fun ? ':' + t.fun : ''), w = t.opts.filter((o) => !o[2]), right = t.opts.filter((o) => o[2]);
+        if (t.opts.length !== (t.bday ? 4 : 3) || w.length !== 2 || right.length !== (t.bday ? 2 : 1) || new Set(t.opts.map((o) => o[0])).size !== t.opts.length) bad.push(id + ':count');
+        t.opts.forEach(([ja, zh, ok, how]) => { const p = plain(ja); words.add(p); seen[how || 'right'] = (seen[how || 'right'] || 0) + 1;
+          if (!KEIGO.test(p)) bad.push(id + ':plain:' + p);
+          if (!zh) bad.push(id + ':no zh:' + p);
+          if (/何時に いたしますか|何時に いらっしゃいますか|また 来て/.test(p)) bad.push(id + ':fair:' + p);
+          if (ok) { if (!['', 'bday'].includes(how)) bad.push(id + ':right how ' + how); return; }
+          if (!['self', 'guest', 'thing', 'fact'].includes(how)) bad.push(id + ':how:' + how);
+          if (how === 'fact' && t.kind !== 'memo') bad.push(id + ':fact outside the book');
+          if (how === 'self' && !(SELF.test(p) && /我/.test(zh))) bad.push(id + ':self:' + p);
+          if (how === 'guest' && !(GUEST.test(p) && /客人/.test(zh))) bad.push(id + ':guest:' + p);
+          if (how === 'thing' && !(THING.test(p) && /東西|地方/.test(zh))) bad.push(id + ':thing:' + p);
+          if (how === 'fact' && !/台帳/.test(zh)) bad.push(id + ':fact:' + p); }); })); });
+      return JSON.stringify({ bad: [...new Set(bad)].slice(0, 8), seen, spec: ['お待ちに なって おりました。', 'お荷物を お持ちに なります。', '一階の 奥に いらっしゃいます。'].map((x) => words.has(x)) }); })()"""))
+    assert r['bad'] == [], r
+    assert all(r['seen'].get(k, 0) > 0 for k in ('right', 'self', 'guest', 'thing', 'fact', 'bday')), r
+    assert r['spec'] == [True, True, True], r
+
+# spec §5.4: check-outs come only on the morning shift (佐藤 7–11) — three a morning, none an afternoon (14–22), where the check-ins are
+# (three or four; one in a morning); a morning's first guest is leaving, an afternoon's arriving; no guest twice running; a shift begun
+# at 9:00 is a morning's — kept with its seed, so the same shift is taken up in the afternoon — one begun at 15:00 an afternoon's
+def test_front_checkout_only_in_the_morning(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15'; window.speakAs = () => Promise.resolve();
+      const n = (sh, k) => sh.tasks.filter((t) => t.kind === k).length, bad = [];
+      for (let s = 1; s <= 300; s++) { const am = FRONT.make(m15, true, s), pm = FRONT.make(m15, false, s);
+        if (am.tasks.length !== 10 || pm.tasks.length !== 10 || !am.morning || pm.morning) bad.push(s + ':n');
+        if (n(am, 'checkout') !== 3 || n(pm, 'checkout') !== 0) bad.push(s + ':out');
+        if (n(am, 'checkin') !== 1 || ![3, 4].includes(n(pm, 'checkin'))) bad.push(s + ':in');
+        if (am.tasks[0].kind !== 'checkout' || pm.tasks[0].kind !== 'checkin') bad.push(s + ':first');
+        [am, pm].forEach((sh) => sh.tasks.forEach((t, k) => { if (k && t.who === sh.tasks[k - 1].who) bad.push(s + ':running'); })); }
+      const out = { bad: bad.slice(0, 6) }; state.work.res['2026-10-20'] = { place: 'front', done: 10, score: {}, yen: 1, grade: 'C' }; saveState();
+      clock(true); await at('ryokan'); WORK.start(yard(), 'front'); await watch(() => fr() && ready(), 15000); out.am = [fr().morning, fr().task.kind, WORK.today().keep.morning]; CLASS.close();
+      clock(false); await at('ryokan'); WORK.start(yard(), 'front'); await watch(() => fr() && ready(), 15000); out.later = [fr().morning, fr().k, fr().task.kind]; CLASS.close();
+      clock(false, 11); await at('ryokan'); WORK.start(yard(), 'front'); await watch(() => fr() && ready(), 15000); out.pm = [fr().morning, fr().task.kind]; CLASS.close();
+      return JSON.stringify(out); })()"""))
+    assert r['bad'] == [], r
+    assert r['am'] == [True, 'checkout', True] and r['later'] == [True, 0, 'checkout'] and r['pm'] == [False, 'checkin'], r
+
+# spec §5.4 (好玩的): a party whose row in the book says お誕生日 — at their check-in a fourth reply, 「お誕生日 おめでとう ございます。」: the
+# hero says it, they are glad (their own word) and leave a 心付け — 50 円, kept with the day's record over a break (the card shut before
+# their key and taken up again: the wish once more, the tip not twice), on top of the pay; the plain greeting is right too, with no tip;
+# no other guest has the wish
+def test_front_birthday_line_adds_a_tip(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
+      const bad = []; for (let s = 1; s <= 300; s++) [false, true].forEach((mo) => { const sh = FRONT.make(m15, mo, s);
+        sh.tasks.forEach((t) => { const wish = t.opts.some((o) => o[3] === 'bday'), row = t.kind === 'checkin' && sh.book[t.party];
+          if (wish !== Boolean(row && row.memo === 'bday') || wish !== Boolean(t.bday)) bad.push(s + ':' + t.kind); }); });
+      const seed = seedWhere((sh) => sh.tasks.slice(1, 9).some((t) => t.bday)), k = where(seed, false, (t) => t.bday); await begin(seed, k);
+      const t = fr().task, i = t.opts.findIndex((o) => o[3] === 'bday'); fc().querySelector(`.fr-opt[data-o="${i}"]`).click();
+      await watch(() => fr().step === 1 && ready(), 8000); const keep = Object.assign({}, WORK.today().keep), glad = said.filter((x) => x.startsWith(t.who + ':')).slice(-1)[0] || '';
+      CLASS.close(); await wait(200); WORK.start(yard(), 'front'); await watch(() => fr() && fr().k === k && ready(), 15000);   // shut before their key, taken up again: the wish again, no second tip
+      fc().querySelector(`.fr-opt[data-o="${i}"]`).click(); await watch(() => fr().step === 1 && ready(), 8000); const again = WORK.today().keep.tip;
+      await work(10); await watch(() => WORK.today() && WORK.today().yen !== undefined, 30000); const x = WORK.today();
+      const out = { bad: bad.slice(0, 5), keep, again, glad: glad === t.who + ':' + TOWN.ONSEN.front.named[t.who].bday[0], wish: said.includes('hero:' + TOWN.ONSEN.front.bday[0]), tip: x.tip, yen: x.yen, grade: x.grade };
+      await watch(() => document.querySelector('.wk-result'), 15000); out.row = /心付け/.test((document.querySelector('.wk-result') || {}).textContent || ''); document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close();
+      clock(false, 11); shiftAt(seed, false, k, upTo(k)); await at('ryokan'); WORK.start(yard(), 'front'); await watch(() => fr() && fr().k === k && ready(), 15000);
+      opt(true).click(); await work(10); await watch(() => WORK.today() && WORK.today().yen !== undefined, 30000); out.plain = [WORK.today().tip, WORK.today().yen]; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close();
+      return JSON.stringify(out); })()"""))
+    assert r['bad'] == [], r
+    assert r['wish'] and r['glad'] and r['keep'].get('tip') == 50 and r['keep'].get('seed') and r['again'] == 50, r   # kept over a break, never given twice
+    assert r['tip'] == 50 and r['grade'] == 'S' and r['yen'] == 260 + 50 + 50 + round((260 + 50 + 50) * 0.04) and r['row'], r   # 374
+    assert r['plain'] == [0, 260 + 50 + round((260 + 50) * 0.04)], r   # 322: the plain greeting, no tip
+
+# spec §5, Review Focus 2: the first shift — 佐藤's first word, then the card (no music yet: no onsen tune); the hero's reply with its
+# Chinese under it once said, never under the reply buttons (ruling 23); ten guests right at once: S, 260 + 50 and ベテラン's 4% (322 円),
+# 佐藤's all-right word; the next day's shift shut after three guests is taken up at the fourth on the same seed — the same book, the keys
+# handed out still out — nothing counted twice
+def test_front_shift_and_resume(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15'; state.settings.musicVol = 1; saveState(); const out = {};
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); }; clock(false); await at('ryokan'); WORK.start(yard(), 'front');
+      for (let i = 0; i < 40 && !fc(); i++) { click('.talk'); await wait(150); }   // 佐藤's first word, tapped through
+      out.first = Boolean(fc()); out.music = MUSIC.wants(); out.firstWord = ((TOWN.WORK.first || {}).front || []).length;
+      let zh = '', kids = 0, seen = 0; const look = setInterval(() => { const m = document.querySelector('.wk-front .fr-talk .wk-me span'); if (m && m.textContent) zh = m.textContent;
+        document.querySelectorAll('.wk-front .fr-opt').forEach((o) => { seen++; kids = Math.max(kids, o.children.length); }); }, 30);   // the replies: their Japanese only (ruling 23)
+      await watch(() => fr() && ready(), 15000); /* 佐藤's start word first: no guest till it is said */ await work(10); await watch(() => WORK.today() && WORK.today().yen !== undefined, 30000); clearInterval(look); const x = WORK.today() || {};
+      out.paid = [x.grade, x.yen, Object.values(x.score || {})]; out.zh = zh; out.opts = [seen > 0, kids];
+      await watch(() => document.querySelector('.wk-result'), 15000); out.result = Boolean(document.querySelector('.wk-result')); document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close();
+      const S = TOWN.ONSEN.front.say; out.bye = [said.includes('sato:' + S.all[0]), said.includes('sato:' + S.end[0])];
+      clock(false, 11); await at('ryokan'); WORK.start(yard(), 'front'); await watch(() => fr() && fr().k === 0 && ready(), 12000);
+      out.talk = Boolean(document.querySelector('.talk-card')); const seed = fr().seed;
+      await work(3); await watch(() => (WORK.today() || {}).done >= 3 && fr().k === 3, 8000); await wait(300);
+      const outKeys = () => [...document.querySelectorAll('.wk-front .fr-key.fr-out')].map((e) => e.dataset.room).sort().join(), outBefore = outKeys(); CLASS.close(); await wait(200);
+      out.score = (WORK.today() || {}).score; WORK.start(yard(), 'front'); await watch(() => fr() && fr().k === 3 && ready(), 12000);
+      out.k = fr() && fr().k; out.same = Boolean(fr()) && fr().seed === seed; out.keys = [outBefore, outKeys()]; CLASS.close();
+      return JSON.stringify(out); })()"""))
+    assert r['first'] and r['music'] == '' and r['firstWord'] >= 1, r   # 佐藤's first word, then the card; no tune yet
+    assert r['zh'] and r['opts'] == [True, 1], r   # the hero's reply with its Chinese under it (the first shift), never under the buttons
+    assert r['paid'] == ['S', 322, [0] * 10] and r['result'] and r['bye'] == [True, False], r   # 260 + S 50, ベテラン's 4%; 佐藤's all-right word
+    assert not r['talk'] and r['score'] == {'0': 0, '1': 0, '2': 0} and r['k'] == 3 and r['same'], r
+    assert r['keys'][0] and r['keys'][0] == r['keys'][1], r   # the keys handed out before the break still out after it
+
+# the dispatch's ruling 4: 佐藤 coaches in his own voice — a wrong reply: his word naming whose doing it is (わたくしどもの 動作 for ours,
+# お客さまの 動作 for the guest's, 人では ございません for a thing), the reply's own 中文 (whose, and why) under it; the reply cannot be
+# picked again; two and the guest's words show with the right one lit; a guest served right at once: 「結構で ございます」 (the shift's first
+# always)
+def test_front_sato_coaches(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); }; const S = TOWN.ONSEN.front.say, out = {};
+      const last = () => said.filter((x) => x.startsWith('sato:')).slice(-1)[0] || '', shown = () => (fc().querySelector('.fr-talk .wk-say') || {}).textContent || '';
+      const wrongOf = (how) => { const t = fr().task, i = t.opts.findIndex((o) => !o[2] && o[3] === how); return [document.querySelector(`.wk-front .fr-opt[data-o="${i}"]`), t.opts[i]]; };
+      for (const [how, f] of [['self', (t) => t.kind === 'checkin' && !t.bday], ['guest', (t) => t.kind === 'dinner'], ['thing', (t) => t.kind === 'where' && t.opts.some((o) => o[3] === 'thing')]]) {
+        const seed = seedWhere((sh) => sh.tasks.slice(1).some(f)), k = where(seed, false, f); await begin(seed, k);
+        const [b1, o1] = wrongOf(how); b1.click(); await wait(250);
+        const rec = { word: last() === 'sato:' + S[how][0], zh: shown().includes(o1[1]), off: b1.disabled, miss: fr().miss, open: Boolean(fc().querySelector('.wk-bub.wk-open')) };
+        if (how === 'self') { const [b2] = fr().task.opts.map((o, i) => [document.querySelector(`.wk-front .fr-opt[data-o="${i}"]`), o]).find(([b, o]) => !o[2] && !b.disabled); b2.click(); await wait(250);
+          rec.two = [Boolean(fc().querySelector('.wk-bub.wk-open')), fc().querySelectorAll('.fr-opt.wk-hint').length]; }
+        out[how] = rec; CLASS.close(); }
+      clock(false, 11); const seed = seedWhere((sh) => sh.tasks[0].kind === 'checkin' && !sh.tasks[0].bday); shiftAt(seed, false); await at('ryokan'); WORK.start(yard(), 'front');
+      await watch(() => fr() && fr().k === 0 && ready(), 15000); const from = said.length; await work(1); await watch(() => fr() && fr().k === 1 && ready(), 15000);
+      out.ok = said.slice(from).includes('sato:' + S.ok[0][0]); CLASS.close(); return JSON.stringify(out); })()"""))
+    for how in ('self', 'guest', 'thing'):
+        x = r[how]
+        assert x['word'] and x['zh'] and x['off'] and x['miss'] == 1 and not x['open'], (how, r)
+    assert r['self']['two'] == [True, 1] and r['ok'], r   # two wrong: their words shown, the right one lit; served right at once: 結構で ございます
+
+# spec §5.4 (好玩的): 道山 of the cruise, lost again, at the wrong inn — 「ここは どこですか？」 in his own voice; 「こちらは 旅館「花月」で
+# ございます。」 (いらっしゃいます／おります for a place: wrong); his after-word and 佐藤's offer to see him to the station; a sumo wrestler —
+# a guest of the inn's own (TOWN.GUESTS: drawn in the hero's parts, a look HERO.norm keeps, his own voice) — whose futon is too small:
+# 「お布団は 二枚で よろしいでしょうか。」 and his ごっつぁんです; each at most one a shift, never in the book
+def test_front_michiyama_and_the_rikishi(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); }; const F = TOWN.ONSEN.front, out = {}, bad = [], seen = { michiyama: 0, rikishi: 0 };
+      for (let s = 1; s <= 400; s++) [false, true].forEach((mo) => { const sh = FRONT.make(m15, mo, s), f = sh.tasks.filter((t) => t.fun);
+        if (f.length > 1 || f.some((t) => !['michiyama', 'rikishi'].includes(t.fun)) || sh.book.some((p) => ['michiyama', 'rikishi'].includes(p.who))) bad.push(s); f.forEach((t) => { seen[t.fun]++; }); });
+      out.bad = bad.slice(0, 5); out.seen = seen;
+      const g = (TOWN.GUESTS || {}).rikishi || {}, n = HERO.norm(g.look || {}); out.look = [Boolean(g.name), Object.keys(n).filter((k) => n[k] !== (g.look || {})[k])]; out.voice = Boolean(CAST_VOICE.rikishi) && CAST_VOICE.rikishi[2] === 0;
+      for (const fun of ['michiyama', 'rikishi']) {
+        const seed = seedWhere((sh) => sh.tasks.slice(1).some((t) => t.fun === fun)), k = where(seed, false, (t) => t.fun === fun); await begin(seed, k);
+        const t = fr().task, face = fc().querySelector('.wk-cust .kr-face svg'); const rec = { who: t.who, asked: said.includes(t.who + ':' + F.fun[fun].line[0]), face: Boolean(face) };
+        rec.right = t.opts.find((o) => o[2])[0]; opt(true).click(); await watch(() => fr().k === k + 1, 12000); await wait(100);
+        rec.after = said.includes(t.who + ':' + F.fun[fun].after[0]); rec.sato = fun !== 'michiyama' || said.includes('sato:' + F.say.lost[0]);
+        out[fun] = rec; CLASS.close(); }
+      return JSON.stringify(out); })()"""))
+    assert r['bad'] == [] and r['seen']['michiyama'] > 40 and r['seen']['rikishi'] > 40, r
+    assert r['look'][0] and r['look'][1] == [] and r['voice'], r
+    m, k = r['michiyama'], r['rikishi']
+    assert m['who'] == 'michiyama' and m['asked'] and m['face'] and m['right'] == '{旅館|りょかん}「{花月|かげつ}」で ございます。' and m['after'] and m['sato'], r
+    assert k['who'] == 'rikishi' and k['asked'] and k['face'] and k['right'] == 'お{布団|ふとん}は {二枚|にまい|兩床}で よろしいでしょうか。' and k['after'], r
+
+# spec §5.4 (晚餐, 看台帳): a guest who has not said when to dine — the hero asks (なさいますか), they say a time, the book has it; a guest
+# asking of the book: shrimp tonight — 「伺って おります。えびは お出ししません。」 where their row says えびが だめ, else 「はい、えびの てんぷら
+# を お出しいたします。」; when dinner is — the time on their row (another row's: a miss); the book's notes: お誕生日, お子さま 二人, えびが だめ
+def test_front_the_book_answers_and_takes_the_dinner_time(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); }; const F = TOWN.ONSEN.front, bad = [], memos = new Set(), asks = new Set();
+      const mark = (h) => F.times.find((x) => x[0] === h)[1], has = (s, h) => s.includes(mark(h) + 'から');   /* 六時 is in 六時半: the time and its から */
+      for (let s = 1; s <= 300; s++) [false, true].forEach((mo) => { const sh = FRONT.make(m15, mo, s);
+        sh.book.forEach((p) => { if (p.memo) memos.add(p.memo); });
+        sh.tasks.forEach((t, k) => { const p = sh.book[t.party], right = (t.opts.find((o) => o[2]) || [''])[0];
+          if (t.kind === 'dinner') { if (!p || p.dinner !== null || p.who !== t.who || !t.time || Boolean(p.in) !== mo) bad.push(s + ':dinner'); }   /* staying on (in) only on a morning */
+          if (t.kind !== 'memo') return; asks.add(t.ask); if (!p || p.who !== t.who) { bad.push(s + ':memo who'); return; }
+          if (t.ask === 'ebi' && right !== (p.memo === 'ebi' ? F.reply.ebiNo[0][0] : F.reply.ebiYes[0][0])) bad.push(s + ':ebi');
+          if (t.ask === 'when') { if (p.dinner === null || !has(right, p.dinner)) bad.push(s + ':when');
+            const f = t.opts.find((o) => o[3] === 'fact'); if (!f || has(f[0], p.dinner) || !sh.book.some((q) => q !== p && q.dinner !== null && has(f[0], q.dinner))) bad.push(s + ':when fact'); } }); });
+      const out = { bad: bad.slice(0, 6), memos: [...memos].sort(), asks: [...asks].sort() };
+      const seed = seedWhere((sh) => sh.tasks.slice(1).some((t) => t.kind === 'dinner')), k = where(seed, false, (t) => t.kind === 'dinner'), sh = FRONT.make(m15, false, seed); await begin(seed, k);
+      const t = fr().task, cell = () => (fc().querySelector(`.fr-row[data-room="${sh.book[t.party].room}"] .fr-dn`) || {}).textContent || '';
+      out.before = cell(); opt(true).click(); await watch(() => fr().k === k + 1, 12000); await wait(100);
+      out.after = cell(); out.time = t.time; out.asked = said.includes('hero:' + F.reply.dinner[0][0]) && said.includes(t.who + ':' + F.named[t.who].dinner[1][0]);
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['bad'] == [] and r['memos'] == ['bday', 'ebi', 'kids'] and r['asks'] == ['ebi', 'when'], r
+    hh = int(r['time']); mm = '30' if r['time'] % 1 else '00'
+    assert r['before'] == '―' and r['after'] == f"{hh}:{mm}" and r['asked'], r
+
+# Review Focus 5 (ruling 27): each line said to its end — a wrong reply while the guest is still speaking (佐藤's word after theirs), the
+# next guest's greeting after the thanks, a check-in's key after the hero's greeting; on a shift taken up at its last guest, the thanks
+# and 佐藤's goodbye said whole before the results
+def test_front_says_each_line_to_its_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + FR + SAYS + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15'; const out = {};
+      const seed = seedWhere((sh) => sh.tasks[0].kind === 'checkin' && !sh.tasks[0].bday); clock(false); shiftAt(seed, false); await at('ryokan'); WORK.start(yard(), 'front');
+      await watch(() => fr() && fr().k === 0 && fr().phase === 'ask' && talking, 15000);   // the guest speaking
+      opt(false).click();   // a wrong reply while they speak
+      await work(3); await watch(() => fr() && fr().k === 3 && ready(), 30000); await hush();
+      out.miss = WORK.today().score[0]; CLASS.close();
+      clock(false, 11); shiftAt(seed, false, 9, upTo(9)); await at('ryokan'); WORK.start(yard(), 'front'); await work(10);
+      await watch(() => document.querySelector('.wk-result'), 30000); out.end = [__log.slice(-1)[0], talking, Boolean(document.querySelector('.wk-result'))];
+      out.cut = __cut; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); return JSON.stringify(out); })()"""))
+    assert r['cut'] == [] and r['miss'] == 1, r
+    assert r['end'][0].startswith('sato:') and r['end'][1] is None and r['end'][2], r   # his goodbye the last line, said whole before the results
+
+# N-1 of Task 4: the voice lane is its card's — a wrong reply while the guest is still speaking queues 佐藤's word; the card shut at once
+# and the job begun again: the old word is never said nor shown in the new card, and the new shift's first lines are said whole
+def test_a_shut_front_card_says_nothing_more(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + FR + LANE + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15';
+      const seed = seedWhere((sh) => sh.tasks[0].kind === 'checkin' && !sh.tasks[0].bday); clock(false); shiftAt(seed, false); await at('ryokan'); WORK.start(yard(), 'front');
+      const begun = () => { const n = fr(); return n && n.phase === 'ask' && log.some(([, w, l]) => w === n.task.who && l === n.task.q[0]); };
+      await watch(begun, 20000); await wait(200); opt(false).click(); await wait(100);
+      const at0 = ms(); CLASS.close(); WORK.start(yard(), 'front'); await wait(4500);
+      const S = TOWN.ONSEN.front.say, after = log.filter(([m]) => m >= at0), out = { old: after.filter(([, w, l]) => w === 'sato' && l === S.self[0]).length,
+        cut: cuts.filter(([m]) => m >= at0).map(([, x]) => x), bad: Boolean(document.querySelector('.wk-front .wk-say.bad')), card: Boolean(fc()), said: after.map(([, w]) => w) };
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['old'] == 0 and r['cut'] == [] and not r['bad'] and r['card'], r
+    assert r['said'][:1] == ['sato'] and 'hero' in r['said'], r   # the new shift's start, then the hero's greeting, each whole
+
+# the card (spec §5.4, §9): from behind the counter — the open 予約台帳 on the left (five rows: a name with its reading, how many, the room,
+# dinner, a note), the key board (five tags) and the bell on the right, the guest across the counter with their patience, the replies,
+# 佐藤; on a 360-px phone and a 390-px one it stays inside the screen, every button and key 40 px or more, the book's words 11 px or more
+# and their readings 8 or more; at the key step and after two misses the book, the keys and the talk row in sight
+def test_the_front_card_fits_a_phone(b):
+    out = {}
+    for w, h in ((360, 640), (390, 844)):
+        out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15';
+          window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => sh.tasks.slice(1, 9).some((t) => t.bday)), k = where(seed, false, (t) => t.bday);
+          clock(false); state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: k, score: upTo(k), keep: { seed, morning: false } }; saveState();   // a first shift: the hero's 中文 shown
+          await at('ryokan'); WORK.start(yard(), 'front'); for (let i = 0; i < 40 && !fc(); i++) { click('.talk'); await wait(120); }
+          await watch(() => fr() && fr().k === k && ready(), 12000); await wait(300);
+          const c = fc().querySelector('.cls-card'), R = (e) => e.getBoundingClientRect(), q = R(c), top = q.top + c.clientTop, bot = top + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;
+          const btns = () => [...c.querySelectorAll('button')].filter((x) => x.offsetParent && !x.classList.contains('fr-out')).map((x) => [x.className, Math.round(R(x).width), Math.round(R(x).height)]).filter(([, ww, hh]) => ww < 40 || hh < 40);
+          const txt = (e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+          const small = [...c.querySelectorAll('.fr-book *')].filter((e) => e.tagName !== 'RT' && txt(e) && parseFloat(getComputedStyle(e).fontSize) < 11).map((e) => e.className + ':' + e.textContent);
+          const rt = Math.min(...[...c.querySelectorAll('.fr-book rt, .fr-board rt')].map((e) => parseFloat(getComputedStyle(e).fontSize)));
+          const book = c.querySelector('.fr-book'), board = c.querySelector('.fr-board'), first = { inside: q.left >= 0 && q.right <= innerWidth + 1 && q.top >= 0 && q.bottom <= innerHeight + 1,
+            rows: c.querySelectorAll('.fr-row').length, keys: c.querySelectorAll('.fr-key').length, bell: Boolean(c.querySelector('.fr-bell svg')), left: R(book).right <= R(board).left + 1,
+            cust: Boolean(c.querySelector('.wk-cust .kr-face') && c.querySelector('.wk-cust .wk-pat')), opts: c.querySelectorAll('.fr-opt').length, btns: btns(), small: small.slice(0, 5), rt,
+            names: [...c.querySelectorAll('.fr-row .fr-nm')].every((e) => e.querySelector('ruby rt') && R(e).right <= R(book).right + 0.5) };
+          const fit = () => [inv(book), [...c.querySelectorAll('.fr-key')].every(inv), inv(c.querySelector('.fr-talk')), inv(c.querySelector('.wk-cust .wk-bub'))];
+          const i = fr().task.opts.findIndex((o) => o[3] === 'bday'); c.querySelector(`.fr-opt[data-o="${i}"]`).click(); await watch(() => fr().step === 1 && ready(), 8000); await wait(400);
+          const keyStep = fit(), btns2 = btns(); const t = fr().task, other = FRONT.ROOMS.map((x) => x[0]).filter((x) => x !== t.room && !key(x).classList.contains('fr-out'));
+          key(other[0]).click(); await wait(300); key(other[1]).click(); await wait(500); const two = fit(), lit = [key(t.room).classList.contains('wk-hint'), Boolean(c.querySelector('.fr-row.fr-lit'))];
+          CLASS.close(); return JSON.stringify({ first, keyStep, two, lit, btns2 }); })()""")])[-1])
+    for w, x in out.items():
+        f = x['first']
+        assert f['inside'] and f['rows'] == 5 and f['keys'] == 5 and f['bell'] and f['left'] and f['cust'] and f['opts'] == 4 and f['names'], (w, out)
+        assert f['btns'] == [] and x['btns2'] == [] and f['small'] == [] and f['rt'] >= 8, (w, out)
+        assert x['keyStep'] == [True, True, True, True] and x['two'] == [True, True, True, True] and x['lit'] == [True, True], (w, out)
+
+# Task 4's N-3: no reply stands out by its shape — every set of replies (each of the book's dinner times too, the birthday wish with the
+# greeting's), laid out as the card lays them out on a 360-px phone, a 390-px one and a 1280-px screen: each of a set on as many lines as
+# the others, and as tall
+def test_no_front_reply_stands_out_by_its_shape(b):
+    out = {}
+    for w, h in ((360, 640), (390, 844), (1280, 800)):
+        out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15';
+          window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => sh.tasks[0].kind === 'checkin' && !sh.tasks[0].bday); await begin(seed, 0);
+          const F = TOWN.ONSEN.front, box = fc().querySelector('.fr-opts'), rb = (ja) => ja.replace(/\\{([^|}]+)\\|([^|}]+)(?:\\|[^}]+)?\\}/g, '<ruby>$1<rt>$2</rt></ruby>');
+          const sets = Object.entries(F.reply).flatMap(([k, v]) => (k === 'when' ? F.times.map((x) => [k + x[0], v, x[1]]) : [[k, v, '']])).map(([k, v, m]) => [k, [v[0][0]].concat(v[1].map((x) => x[0])).map((ja) => ja.replace('{T}', m))])
+            .concat(Object.entries(F.fun).map(([k, f]) => ['fun:' + k, [f.reply[0][0]].concat(f.reply[1].map((x) => x[0]))]), [['bday', [F.reply.in[0][0], F.bday[0]].concat(F.reply.in[1].map((x) => x[0]))]]);
+          const lines = (e) => { const tw = document.createTreeWalker(e.querySelector('span'), NodeFilter.SHOW_TEXT), bs = []; let n;   /* the lines its words sit on (not their readings): a .btn lays its span out as a block, one box however many lines */
+            while ((n = tw.nextNode())) { if (n.parentElement.closest('rt') || !n.textContent.trim()) continue; const rg = document.createRange(); rg.selectNodeContents(n); [...rg.getClientRects()].forEach((x) => bs.push(x.bottom)); }
+            bs.sort((p, q) => p - q); let c = 0, last = -1e9; bs.forEach((y) => { if (y - last > 8) c++; last = y; }); return c; }, bad = [];
+          for (const [k, opts] of sets) { box.innerHTML = opts.map((ja, i) => `<button type="button" class="btn fr-opt" data-o="${i}" lang="ja"><span>${rb(ja)}</span></button>`).join(''); await wait(30);
+            const bs = [...box.children], ls = bs.map(lines), hs = bs.map((e) => Math.round(e.getBoundingClientRect().height));
+            if (new Set(ls).size > 1) bad.push(k + ':' + ls.join('/'));   // every one on as many lines (the right one never alone, nor a wrong one: 道山's いらっしゃいます wrapped alone once)
+            if (Math.max(...hs) - Math.min(...hs) > 1) bad.push(k + ':h' + hs.join('/')); }
+          CLASS.close(); return JSON.stringify({ bad, sets: sets.length }); })()""")])[-1])
+    assert all(x['bad'] == [] and x['sets'] >= 16 for x in out.values()), out
+
+# the generator (生成) has the フロント's lines: every guest's words in their own voice (their name, the book's questions, the dinner time,
+# their gladness at the wish, the fun ones), the hero's every right reply and greeting, 佐藤's words and his first; one new voice (the
+# sumo wrestler's, TOWN.GUESTS) — every other guest one the town already voices
+def test_the_generator_has_the_front_lines(b):
+    r = json.loads(ev(b, """(() => { const all = new Set(talkLines().map(([w, l]) => w + '|' + l)), miss = [], need = (w, l) => { if (l && !all.has(w + '|' + l)) miss.push(w + '|' + l); };
+      const m15 = TOWNEV.unitIdx('m15'), F = TOWN.ONSEN.front, X = TOWN.WORK.say.waiter.cust;
+      for (const u of [m15, TOWNEV.unitIdx('m17')]) for (let s = 1; s <= 60; s++) [false, true].forEach((mo) => { const sh = FRONT.make(u, mo, s);
+        sh.tasks.forEach((t) => { need(t.who, t.q[0]); t.opts.filter((o) => o[2]).forEach((o) => need('hero', o[0])); if (t.after) need(t.who, t.after[0]); if (t.answer) need(t.who, t.answer[0]); }); });
+      Object.entries(F.named).forEach(([w, p]) => [p.in, p.ebi, p.when, p.late, p.dinner[1], p.bday].forEach((l) => need(w, l[0])));
+      FRONT.ROOMS.forEach((x) => need('hero', FRONT.roomLine(x[0])[0])); Object.values(F.hi).forEach((l) => need('hero', l[0])); need('hero', F.ok[0]);
+      const fun = Object.values(F.fun).map((f) => f.who); FRONT.guests().forEach((w) => (fun.includes(w) ? [] : [F.thanks]).concat([X.again, X.hey, X.out, X.out0]).forEach((l) => need(w, l[0])));   // the fun ones' own word after, not thanks
+      Object.entries(F.say).filter(([k]) => k !== 'who').forEach(([, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x) => need('sato', x[0])));
+      ((TOWN.WORK.first || {}).front || []).forEach((l) => need(l[0], l[1]));
+      return JSON.stringify({ miss: [...new Set(miss)].slice(0, 6), voices: Object.keys(CAST_VOICE).length, first: ((TOWN.WORK.first || {}).front || []).length, guests: FRONT.guests().length }); })()"""))
+    assert r['miss'] == [] and r['voices'] == 69 and r['first'] >= 1 and r['guests'] >= 15, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

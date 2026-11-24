@@ -184,7 +184,7 @@ const TOWNEV = (() => {
   // Christmas (2026-11-14, the user: the people of the shops in Santa hats): a Santa hat over whatever is on their head while it is on
   const wearOf = (w) => (festOn('christmas') && !HERO.whole(w && w.head) ? Object.assign({}, w, { head: 'santahat' }) : w || {});
   const art = (id, place) => { const c = T().CAST[id]; return c.art === 'npc' ? NPC.art(id) : HERO.svg({ look: look(id, place), wear: wearOf(c.wear) }); };
-  const face = (id) => { if (id === 'hero') return HERO.head(state.look, 'bust'); const c = T().CAST[id], v = (T().YATAI || {})[id]; if (v) return HERO.head(v.look, 'bust'); if (!c) return CRUISE.face(id); return c.art === 'npc' ? NPC.face(id) : HERO.head(c.look, 'bust'); };   // not of the town: a stall keeper (YATAI), the cruise's
+  const face = (id) => { if (id === 'hero') return HERO.head(state.look, 'bust'); const c = T().CAST[id], v = (T().YATAI || {})[id] || (T().GUESTS || {})[id]; if (v) return HERO.head(v.look, 'bust'); if (!c) return CRUISE.face(id); return c.art === 'npc' ? NPC.face(id) : HERO.head(c.look, 'bust'); };   // not of the town: a stall keeper (YATAI), a job's guest (GUESTS: the フロント's sumo wrestler), the cruise's
   // an event's lines as said to this learner: met — { if: an event, head: lines, from: k } — the opening for one who has done that
   // event already, said in place of the first k lines (2026-11-13: m1-7 meets 高橋 for those who came to know him in m10-2 first)
   const linesOf = (e) => (e.met && state.town.done[e.met.if] ? e.met.head.concat(e.lines.slice(e.met.from)) : e.lines);
@@ -510,7 +510,7 @@ const TALK = (() => {
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|([^}]+))?\}/g;
   const ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>'), plain = (s) => s.replace(MARK, '$1');
   const glosses = (s) => [...new Set([...s.matchAll(MARK)].filter((m) => m[3]).map((m) => `${m[1]}（${m[2]}）${m[3]}`))];   // a word twice in a line: noted once
-  const who = (id) => (id === 'hero' ? { name: '我', role: '' } : NPCS[id] || TOWN.CAST[id] || CRUISE.tag(id) || (TOWN.YATAI || {})[id]);   // the cruise's passengers too (CRUISE), the 緣日's stall keepers
+  const who = (id) => (id === 'hero' ? { name: '我', role: '' } : NPCS[id] || TOWN.CAST[id] || CRUISE.tag(id) || (TOWN.YATAI || {})[id] || (TOWN.GUESTS || {})[id]);   // the cruise's passengers too (CRUISE), the 緣日's stall keepers, a job's guests
   // a line as shown: { id, ja, zh, kind } or a reply choice { ask, opts }; an event's line may have a sound as it shows (snd: SND's),
   // a cry said instead of reading it out (cry: VOICE_FX's) and someone moving as it is said (move, for onLine; 2026-11-13, the cruise)
   const line = (l) => (!cur.ev ? { id: cur.id, ja: l[0], zh: l[1], kind: l[2] } : Array.isArray(l) ? Object.assign({}, l[3], { id: l[0], ja: l[1], zh: l[2] }) : l);

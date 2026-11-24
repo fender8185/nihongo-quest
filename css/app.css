@@ -858,7 +858,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .wk-annai .wk-ear { min-height: 40px; min-width: 44px; } .wk-annai .wk-grr { top: -2px; left: 44px; }   /* inside the glass (it clips) */
 /* the question shown (an open bubble, at 案内所 and 原田's window): a customer's word pops up below it, on the spent patience bar under
    their face — never over the question (2026-11-24, fix round 2, N-4) */
-:is(.wk-annai, .wk-window, .wk-miyage) .wk-bub.wk-open ~ .wk-grr { top: auto; bottom: -7px; left: 0; padding: 1px 7px; font-size: 13px; line-height: 20px; }
+:is(.wk-annai, .wk-window, .wk-miyage, .wk-front) .wk-bub.wk-open ~ .wk-grr { top: auto; bottom: -7px; left: 0; padding: 1px 7px; font-size: 13px; line-height: 20px; }
 .wk-annai .wk-cust:is([data-fun="book"], [data-fun="ghost"], [data-fun="future"])::before { position: absolute; left: 26px; top: 24px; z-index: 1; font-size: 19px; line-height: 1; pointer-events: none; }   /* the face clips (.kr-face): the mark hangs on the row */
 .wk-annai .wk-cust[data-fun="book"]::before { content: '📖'; } .wk-annai .wk-cust[data-fun="ghost"]::before { content: '👻'; } .wk-annai .wk-cust[data-fun="future"]::before { content: '🔮'; }
 .an-opts { display: grid; gap: 5px; margin-top: 6px; }
@@ -966,6 +966,52 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .om-talk { display: flex; align-items: center; gap: 8px; min-height: 40px; margin-top: 5px; } .om-talk .om-mini { flex: none; width: 30px; height: 30px; }
 .om-talk .wk-say { font-size: 14px; } .om-talk:has(.wk-say:empty) .om-mini { visibility: hidden; } .om-talk .wk-say.om-me b { color: #2f7a6a; }
 @media (prefers-reduced-motion: reduce) { .om-chip.om-in, .om-tray.om-off .om-chip, .om-plate .om-bit.om-eat, .om-give.wk-bad, .om-opt.wk-bad { animation: none; } .om-tray.om-off .om-chip { opacity: 0; } }
+/* ---- フロント (2026-11-24, fr-): 旅館「花月」's front desk seen from behind the counter (spec §5.4) — on the left the open 予約台帳 (cream
+   pages, the spine's shadow; a row a party: the name and its reading, how many, the room, dinner, the note under it), on the right the
+   key board (a wooden tag on its hook for each room, a bare hook once handed out) and the bell rung as a guest comes up; across the
+   counter the guest in the lobby — a 和紙 wall, the garden through a window by the hour (--day: dark by night, the lamps' glow), the
+   counter's edge under them; the replies (or, at a key, a tip), 佐藤's and the hero's line. Lit indoors: the same by day and night ---- */
+.cls.wk-front { align-items: start; }   /* the book never moves as the replies come and go */
+.wk-front .cls-card { width: min(480px, 100%); margin-top: clamp(0px, calc(50dvh - 430px), 160px); background: #f3ece0; color: #2b2b33; border-bottom: 10px solid #26386a; padding: 12px 12px 10px; }
+.wk-front .cls-x { width: 40px; height: 40px; }
+.fr-desk { display: flex; align-items: flex-start; gap: 6px; margin: 4px -6px 0; padding: 6px; border-radius: 10px; background: linear-gradient(#c99a62, #b8875a); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .3), 0 2px 0 rgba(0, 0, 0, .15); }
+.fr-book { flex: 1 1 0; min-width: 0; padding: 3px 6px 5px 11px; border-radius: 3px 7px 7px 3px; background: #fbf6e8; box-shadow: inset 7px 0 6px -5px rgba(90, 60, 30, .45), 0 1px 0 rgba(0, 0, 0, .25); color: #2b2b33; }
+.fr-btitle { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; margin: 0 0 1px; } .fr-btitle b { font-size: 14px; color: #3a2a20; } .fr-btitle small { font-size: 11.5px; color: #6e5a48; } .fr-btitle rt { font-size: 8.5px; }
+.wk-front :is(.fr-book, .wk-bub, .fr-talk, .fr-tip) rt { color: #6e5a48; }   /* readings on the cream and the white: the theme's own (pale by night) would not read */
+.fr-hd, .fr-row { display: grid; grid-template-columns: minmax(0, 1fr) 31px 25px 40px; column-gap: 4px; align-items: end; }
+.fr-hd { padding-bottom: 1px; border-bottom: 1.5px solid #8a6a46; font-size: 11px; color: #6e5a48; } .fr-hd span { white-space: nowrap; text-align: center; } .fr-hd span:first-child { text-align: left; } .fr-hd span:last-child { text-align: right; } .fr-hd rt { font-size: 8.5px; letter-spacing: -.04em; }
+.fr-row { position: relative; padding: 2px 0; border-bottom: 1px dotted #c9b48a; font-size: 12px; }
+.fr-nm { min-width: 0; font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; } .wk-front .fr-nm rt { font-size: 9px; font-weight: 400; color: #4e3c2c; } .fr-nm small { margin-left: 1px; font-size: 11px; font-weight: 400; } .fr-nm small rt { font-size: 8.5px; }
+.fr-n { font-size: 12px; white-space: nowrap; text-align: center; } .fr-rm { font-size: 14px; font-weight: 700; text-align: center; } .fr-rm rt { font-size: 8.5px; font-weight: 400; } .fr-dn { font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+.fr-memo { grid-column: 1 / -1; justify-self: start; margin-top: 1px; padding: 0 5px; border-radius: 4px; background: #fbe4da; color: #a8322a; font-size: 11.5px; line-height: 1.55; } .wk-front .fr-memo rt { font-size: 8.5px; color: #a8584a; }
+.fr-row.fr-in .fr-nm::before { content: '✓'; margin-right: 2px; color: #2f7a4a; font-size: 12px; }   /* checked in, or staying on: their key out */
+.fr-row.fr-lit { border-radius: 3px; background: #fff1b8; box-shadow: 0 0 0 2px #f6e08a; }   /* the party the guest is (two misses, or as they go) */
+.fr-dn.fr-new { color: #a8322a; font-weight: 700; animation: frNew .6s ease-out; } @keyframes frNew { from { transform: scale(1.4); } }
+.fr-board { flex: none; display: grid; grid-template-columns: repeat(2, 44px); grid-auto-rows: 46px; gap: 4px; padding: 5px; border-radius: 6px; background: #4a3020; box-shadow: inset 0 0 0 2px #3a2418, 0 1px 0 rgba(0, 0, 0, .25); }
+.fr-key { position: relative; display: grid; place-items: end center; padding: 0 0 3px; border: 0; border-radius: 4px 4px 8px 8px; background: linear-gradient(#e6c48a, #c9a46a); box-shadow: 0 2px 0 #8a6a3a; font: inherit; color: #3b2a1c; cursor: pointer; }
+.fr-key b { font-size: 17px; line-height: 1.1; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; } .wk-front .fr-key rt { font-size: 8.5px; font-weight: 600; color: #5e3e22; font-family: system-ui, sans-serif; }
+.fr-hook { position: absolute; top: 2px; left: 50%; width: 8px; height: 8px; margin-left: -4px; border: 2px solid #b8963c; border-radius: 50%; }   /* its ring on the hook */
+.fr-key.fr-out { background: none; box-shadow: none; cursor: default; } .fr-key.fr-out b { visibility: hidden; } .fr-key.fr-out .fr-hook { border-color: #8a6a3a; }   /* handed out: the hook bare */
+.fr-board.fr-pick .fr-key:not(.fr-out) { box-shadow: 0 2px 0 #8a6a3a, 0 0 0 2px #fbf6e8; }   /* the keys to tap now */
+.fr-key.wk-bad { animation: shake .3s ease; } .fr-board .fr-key.wk-hint:not(.fr-out) { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }   /* lit over the keys-to-tap ring */
+.fr-bell { display: grid; place-items: end center; padding-bottom: 2px; } .fr-bell svg { width: 40px; height: 31px; }
+.fr-bell .fr-cap { transform-box: fill-box; transform-origin: 50% 100%; } .fr-bell.fr-ding .fr-cap { animation: rkBell .14s ease-out 4 alternate; }
+.fr-lobby { position: relative; margin: 6px -6px 0; padding: 6px 10px 8px; overflow: hidden; border-bottom: 9px solid #c99a62; border-radius: 10px 10px 3px 3px;
+  background: linear-gradient(#5e3e28 0 4px, transparent 4px), repeating-linear-gradient(90deg, transparent 0 25px, rgba(110, 74, 48, .55) 25px 27px), linear-gradient(transparent calc(50% - 1px), rgba(110, 74, 48, .45) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(color-mix(in srgb, #f8f2e4 calc(var(--day, 1) * 100%), #f3d9a8), color-mix(in srgb, #efe5d0 calc(var(--day, 1) * 100%), #e9c48a)); }   /* behind the guest the lobby's 障子: white paper by day, the lamps' glow on it by night */
+.fr-lobby .wk-cust { position: relative; z-index: 1; margin: 0; min-height: 0; gap: 4px 8px; } .wk-front .wk-cust .kr-face { width: 44px; height: 44px; }
+.wk-front .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; padding: 4px 9px 4px 4px; font-size: 16px; line-height: 1.45; } .wk-front .wk-bub span { font-size: 12.5px; } .wk-front .wk-bub rt { font-size: 9px; }
+.wk-front .wk-bub .wk-ear { grid-row: span 2; min-height: 40px; min-width: 44px; } .wk-front .wk-bub > :not(.wk-ear) { grid-column: 2; } .fr-dots { color: #8a7a6e; letter-spacing: .1em; }
+.wk-front .wk-grr { top: -2px; left: 44px; }
+.fr-hold { position: absolute; left: -6px; top: 27px; z-index: 2; width: 30px; height: 23px; pointer-events: none; } .fr-hold svg { display: block; width: 100%; height: 100%; }   /* their luggage in hand, before them (clear of the bubble) */
+.fr-opts { display: grid; grid-auto-rows: 1fr; gap: 5px; margin-top: 6px; }   /* every reply as tall as the tallest: none stands out by its shape (Task 4's N-3) */
+.fr-opt { min-height: 44px; padding-block: 3px; font-size: 15.5px; line-height: 1.45; text-align: left; justify-content: flex-start; white-space: normal; } .fr-opt rt { font-size: 9px; }
+.fr-opt.fr-right { box-shadow: 0 0 0 2px #3f9a6a; } .fr-opt:disabled:not(.fr-right):not(.wk-hint) { opacity: .5; }
+.fr-opt.wk-bad { animation: shake .3s ease; } .fr-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
+.fr-tip { margin: 2px 0; padding: 6px 10px; border-radius: 8px; background: #fbeee0; color: #6a3a1c; font-size: 13.5px; line-height: 1.5; }
+.fr-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } .fr-talk .kr-face { width: 34px; height: 34px; flex: none; } .fr-talk .wk-say { font-size: 14px; }
+.fr-talk[data-who="me"] :is(.kr-face, .wk-say), .fr-talk:not([data-who="me"]) .wk-me { display: none; } .fr-talk .wk-me { flex: 1; margin: 0; }
+@media (prefers-reduced-motion: reduce) { :is(.fr-opt, .fr-key).wk-bad, .fr-bell.fr-ding .fr-cap, .fr-dn.fr-new { animation: none; } }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */
 :is(.wk-bento, .wk-window, .wk-lost, .wk-taxi) .wk-ear { min-height: 40px; min-width: 44px; }
 .wk-lock { margin: 10px 0 4px; padding: 8px 10px; border-radius: 10px; background: #fde4cf; color: #8a3a1a; font-size: 14px; line-height: 1.5; }
