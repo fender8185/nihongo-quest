@@ -153,7 +153,7 @@ const CLASS = (() => {
   let el = null, timers = [], token = 0;
   const later = (fn, ms) => { const t = token; timers.push(setTimeout(() => { if (t === token && el) fn(); }, ms)); };
   const radio = (on) => { const r = document.querySelector('#view .land [data-fx="radio"]'); if (r) r.classList.toggle('playing', on); };   // the scene's radio plays while the class sings
-  function close() { token++; timers.forEach(clearTimeout); timers = []; stopSpeaking(); if (songSrc.length) stopSong(); radio(false); if (el) { el.remove(); el = null; MUSIC.sync(); sceneMinute(); } }   // a job's card shut: its music off (WORK.tune); the town as it is now at once — who stood there only for the card (千代 in 桜の間 on her 仲居 shift) gone back, no minute's wait (2026-11-24, 仲居 fix round 1)
+  function close() { token++; timers.forEach(clearTimeout); timers = []; stopSpeaking(); if (songSrc.length) stopSong(); radio(false); if (el) { el.remove(); el = null; MUSIC.sync(); if (document.body.classList.contains('scene')) sceneMinute(); } }   // a job's card shut: its music off (WORK.tune); on a scene, the town as it is now at once — who stood there only for the card (千代 in 桜の間 on her 仲居 shift) gone back, no minute's wait (2026-11-24, 仲居 fix round 1); never elsewhere (a practice page's 寫寫看: the theme stays put mid-questions, as TALK.close; fix round 2)
   function open(cls, label, html, onClick) {
     close();
     el = document.createElement('div'); el.className = 'cls ' + cls; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', label);

@@ -279,11 +279,13 @@ const NAKAI_RUN = (() => {
       if (live() && P) { if (firstDo) P.go(); else P.resume(); }
       return p;
     }
-    // a guest comes in: what they say is so of the room as it stands — once a thing tapped wrong is back as it was — and never of a
-    // thing its instructions wanted the other way (ruling 33); the room keeps a thing for that from its start (make), so there always
-    // is one: were there none, the guest only comes in (scored as done, said so) — never a remark the room does not show (I-1)
+    // a guest comes in: what they say is so of the room as it stands — once a thing tapped wrong is back as it was (a card shut in that
+    // wait: nothing more, no guest, no door; fix round 2) — and never of a thing its instructions wanted the other way (ruling 33); the
+    // room keeps a thing for that from its start (make), so there always is one: were there none, the task would be scored as done and
+    // passed over with an error logged — never a remark the room does not show (I-1)
     async function guestIn(plan) {
       for (let i = 0; i < 40 && (busy || catGo) && live(); i++) await sleep(50);
+      if (!live()) return new Promise(() => {});
       const rm = shift.rooms[ri], wants = rm.tasks.filter((x) => x.kind === 'do').map((x) => x.target);
       const g = NAKAI.guest(st, plan.plan, guests, NAKAI.rng((seed + 7919 * (k + 1)) >>> 0), wants);
       if (!g) { console.error(`仲居: nothing in room ${rm.id} (seed ${seed}) for a guest to remark on`); ctx.right(k, 0); if (k >= N - 1) { closeShift(Promise.resolve()); return new Promise(() => {}); } return 'none'; }

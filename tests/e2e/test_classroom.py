@@ -234,6 +234,20 @@ def test_the_board_writes_on_through_the_kana(b):
     assert (r['a'], r['on'], r['stay'], r['last']) == ('あ', 'い', 'い', 'う') and r['cards'] == 1, r
     assert r['missBtns'] == '再寫一次|下一個 ▶' and '這次寫了 3 個字' in r['end'] and 'はなまる 2 朵' in r['end'] and r['endBtns'] == '再寫一次|從「あ」再寫一遍', r
 
+# 2026-11-24 (仲居 fix round 2): the theme never changes in the middle of questions — on #/practice (not a scene) with the light theme
+# by the clock, 寫寫看's card opened from the practice preview, dusk passing while it is up: closing it leaves data-theme as it was
+# (a card's close catches the town up only when the page is a scene)
+def test_closing_the_write_card_mid_practice_keeps_the_theme(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ window.speak = () => Promise.resolve(); state.settings.theme = 'auto'; localStorage.removeItem('nq_wake');
+      const h0 = sceneHour(), setHour = (h) => localStorage.setItem('nq_wake', JSON.stringify({ day: todayStr(), off: ((h - h0 + 24) % 24) })), th = () => document.documentElement.getAttribute('data-theme');
+      setHour(12); applyTheme(); const it = REG.byKey.get('a:さ'); delete state.srs[it.key]; startSession('items', { items: [it, REG.byKey.get('a:し')] });
+      location.hash = '#/practice'; route(); await wait(200); const before = th(), scene = document.body.classList.contains('scene');
+      document.querySelector('[data-act="kana-write"]').click(); const card = Boolean(document.querySelector('.cls-write'));
+      setHour(21); CLASS.close(); await wait(100); const after = th();   // dusk passed while the card was up
+      localStorage.removeItem('nq_wake'); exitPractice && exitPractice();
+      return JSON.stringify({ before, scene, card, after }); })()"""))
+    assert r == {'before': 'light', 'scene': False, 'card': True, 'after': 'light'}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -169,14 +169,15 @@ const WORK = (() => {
       '上面「お客様 到着まで」是客人到達前的倒數，千代說話、按喇叭重聽時會暫停；時間到了還沒做好的事算失敗。最後 10 秒會變紅。',
       '客人進房會說一句話（「あれ、窓が 開いて いますね」），選你要回的那句：事先做好的是「開けて おきました」——自動詞（開く、つく）不能加「ておく」。',
       '睡在要鋪棉被的地方的貓，點牠就會走開，不算失誤。'],
-      uses: ['自動詞・他動詞（開く／開ける、つく／つける…）', '〜て ある・〜て いる', '〜て おく', '數棉被「組」、坐墊「枚」'], n: '一班 3 間房：10 件要準備的事、3 次確認、3 位客人' } };
+      uses: ['自動詞・他動詞（開く／開ける、つく／つける…）', '〜て ある・〜て いる', '〜て おく', '數棉被「組」、坐墊「枚」'],
+      n: () => { const rooms = 3, n = PLACES.nakai.n; return `一班 ${rooms} 間房：${n - 2 * rooms} 件要準備的事、${rooms} 次確認、${rooms} 位客人`; } } };   // from n, as NAKAI.make (its three rooms: 桜・菊・松; fix round 2)
   function intro(yard, job) {
     const c = can(job); if (!c.ok) { toast(c.why, 3600); return false; }
     const P = PLACES[job], R = RULES[job] || { how: [DOES[job] || ''], uses: [], n: `一班 ${nOf(job)} 件` }, t = today(), back = t && t.place === job && !fin(t) ? t.done : 0, p = pay(job, 'E');   // a job without its card yet: what the board says of it
     CLASS.card('wk-rules', P.name, `<div class="wk-rhead"><span class="kr-face">${TOWNEV.face(P.who)}</span><p><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span></p></div>
       <h4>玩法</h4><ul class="wk-how">${R.how.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
       <h4>需要的能力</h4><p class="wk-uses">${R.uses.map((u) => `<span lang="ja">${esc(u)}</span>`).join('')}</p>
-      <p class="wk-pay">${esc(R.n)}・底薪 ${p.base} 円＋評級加給最多 50 円${job === 'waiter' ? '＋店長紅包' : ''}${p.pct ? `・打工證加給 +${p.pct}%` : ''}</p>
+      <p class="wk-pay">${esc(typeof R.n === 'function' ? R.n() : R.n)}・底薪 ${p.base} 円＋評級加給最多 50 円${job === 'waiter' ? '＋店長紅包' : ''}${p.pct ? `・打工證加給 +${p.pct}%` : ''}</p>
       ${back ? `<p class="wk-back">今天做到 ${back}／${nOf(job)}，按「はい」接著做。</p>` : ''}
       <p class="wk-ask"><b lang="ja">はたらきますか？</b><span>要開始打工嗎？</span></p>
       <div class="wk-yn"><button type="button" class="btn" data-rules="yes" lang="ja">はい</button><button type="button" class="btn" data-rules="no" lang="ja">いいえ</button></div>`,

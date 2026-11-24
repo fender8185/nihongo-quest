@@ -1044,6 +1044,8 @@ def test_nakai_three_rooms_ten_tasks_and_resume(b):
       WORK.PLACES.nakai.n = 13; const s13 = NAKAI.make(m8, 5); WORK.PLACES.nakai.n = 16;   // the count from one source: WORK's n (M-6)
       out.n13 = [s13.tasks.length, s13.rooms.map((rm) => rm.tasks.filter((t) => t.kind === 'do').length).reduce((a, x) => a + x, 0)];
       out.dice = ['rng', 'pickR', 'shuffleR'].every((f) => typeof JOBS[f] === 'function') && NAKAI.rng === JOBS.rng;
+      const rules = () => { WORK.intro(yard(), 'nakai'); const t = (document.querySelector('.wk-rules .wk-pay') || {}).textContent || ''; CLASS.close(); return t; };   // the rules card says the shift's length from n too (fix round 2)
+      out.rules = [rules()]; WORK.PLACES.nakai.n = 13; out.rules.push(rules()); WORK.PLACES.nakai.n = 16;
       await at('ryokan'); WORK.start(yard(), 'nakai');
       for (let i = 0; i < 40 && !document.querySelector('.wk-nakai'); i++) { click('.talk'); await wait(150); }   // 千代's first word, tapped through
       await watch(() => location.hash === '#/washitsu' && yard() && yard().querySelector('.npc-chiyo'), 6000);
@@ -1058,6 +1060,7 @@ def test_nakai_three_rooms_ten_tasks_and_resume(b):
       await watch(() => document.querySelector('.wk-result'), 15000); out.result = Boolean(document.querySelector('.wk-result')); document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close();
       return JSON.stringify(out); })()"""))
     assert r['bad'] == [] and r['n'] == 16 and r['n13'] == [13, 7] and r['dice'], r   # make()'s count is WORK's n; the seeded dice are JOBS'
+    assert '3 間房：10 件要準備的事、3 次確認、3 位客人' in r['rules'][0] and '3 間房：7 件要準備的事' in r['rules'][1], r['rules']
     assert r['up'] == ['#/washitsu', True, 'washitsu'] and r['down'] == 'ryokan', r   # in 桜の間 with her while the card is up
     assert r['resume'] == [3, True, True, '0,1,2'], r   # at the fourth, the same room, nothing counted twice
     assert r['paid'] == ['S', 281, 16, True] and r['result'], r
@@ -1150,6 +1153,15 @@ def test_the_nakai_card_fits_a_phone(b):
           CLASS.close(); return JSON.stringify(out); })()""")])[-1])
     for w, x in gfit.items():
         assert x['n'] == 3 and x['ask'] == x['wrong'] == x['right'] == [True, True, True, True], (w, gfit)
+    # fix round 2: on a desktop (1280×800) the room keeps its size when a guest comes in — the smaller room is a narrow card's only
+    big = json.loads(b.run([("metrics", (1280, 800)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + NK + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm8';
+      window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => ['window', 'shoji', 'ac', 'light'].includes(sh.rooms[0].tasks.slice(-1)[0].key)), g0 = NAKAI.make(m8, seed).rooms[0].tasks.slice(-1)[0].k;
+      shiftAt(seed, g0, Object.fromEntries(Array.from({ length: g0 }, (_, k) => [k, 0]))); await at('ryokan'); WORK.start(yard(), 'nakai');
+      const h = () => Math.round(document.querySelector('.wk-nakai .nk-art svg').getBoundingClientRect().height);
+      await watch(() => nk() && nk().k === g0 && ready(), 12000); await wait(300); const guest = h();
+      await solve(); await watch(() => nk() && nk().k === g0 + 1 && ready(), 12000); await wait(300); const check = h();
+      CLASS.close(); return JSON.stringify({ guest, check }); })()""")])[-1])
+    assert big['guest'] == big['check'] and big['guest'] > 300, big   # at a guest as at a check
 
 # I-1, ruling 33 (fix round 1): over 6,000 shifts every room's guest says something true of the room as it stands when they come in —
 # with nothing done (the countdown beat the hero), with everything done, with some done — and never of a thing whose instruction this
@@ -1206,6 +1218,20 @@ def test_a_shut_nakai_card_says_nothing_more(b):
     assert r['alone'] == 0, r   # no sound after a shut
     a = r['again']
     assert a['old'] == 0 and a['snd'] == 0 and a['cut'] == [] and not a['bad'] and a['card'] and a['said'][:1] == ['chiyo'], r
+
+# fix round 2 (New Breakage 3): the countdown runs out while a thing tapped wrong is still going back, so the guest waits for it to be
+# back; the card shut in that wait — no guest comes in, no door is heard, nothing at all plays after the shut
+def test_a_nakai_card_shut_while_its_guest_waits_stays_quiet(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + NK + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm8';
+      const said = [], played = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); }; SND.play = (n) => played.push([Date.now(), n]);
+      const seed = seedWhere((sh) => sh.tasks[1].kind === 'do'); shiftAt(seed); NAKAI.speed = 30; await at('ryokan'); WORK.start(yard(), 'nakai');
+      await watch(() => nk() && nk().k === 0 && ready(), 12000); await solve();
+      await watch(() => document.querySelector('.wk-nakai .nk-dep.late'), 15000);
+      const tk = nk().task.target[0], w = ['tv', 'yukata', 'flower', 'tea', 'ac', 'shoji', 'window', 'light'].find((x) => x !== tk); NAKAI.tap(w);   // tapped wrong: back in 650 ms
+      const late = 'chiyo:' + TOWN.ONSEN.nakai.say.late[0]; await watch(() => said.includes(late), 4000); const busy = Boolean(nk() && nk().busy);   // the guests come while it goes back
+      const t0 = Date.now(); CLASS.close(); await wait(1200); NAKAI.speed = 1;
+      return JSON.stringify({ late: said.includes(late), busy, after: played.filter(([t]) => t >= t0).map(([, n]) => n) }); })()"""))
+    assert r['late'] and r['busy'] and r['after'] == [], r   # the wait was under way when shut; then nothing (no 'fusuma')
 
 # M-8 (fix round 1, Review Focus 2): a shift taken up in the middle of laying three futons goes on at the same task with the one laid,
 # and counts it once; one taken up after the countdown failed a room goes on at that room's guest with the room as it stood (its
