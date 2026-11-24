@@ -887,6 +887,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .nk-stage.nk-enter .nk-art { animation: nkEnter .45s ease-out; } @keyframes nkEnter { from { opacity: 0; transform: translateX(14px); } }
 .nk-art svg { display: block; width: 100%; height: auto; }
 .wk-nakai .cls-card.nk-ask .nk-art svg { max-height: max(230px, calc(100dvh - 404px)); }   /* a short phone: the room a little smaller while a reply is picked */
+.wk-nakai .cls-card.nk-ask.nk-guest .nk-art svg { max-height: max(126px, calc(100dvh - 512px)); }   /* a guest in: their three replies run to two lines and the talk row has the hero's reply and its 中文 — the room smaller still (the room is not needed to answer a guest; fix round 1, M-2) */
 .nk-art [data-k] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nk-art :is([data-k="futon"], [data-k="zabuton"]) > rect:only-child { fill: #fffdf0; fill-opacity: .14; stroke: #6e6a3e; stroke-opacity: .4; stroke-width: 1.2; stroke-dasharray: 5 4; }   /* a futon's or a cushion's place, empty: faintly marked, every one (none is given away) */
 .nk-art :is(.nk-in, .nk-drop, .nk-back, .nk-out, .nk-catgo) { transform-box: fill-box; transform-origin: 50% 100%; }

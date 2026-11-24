@@ -216,7 +216,22 @@ test('仲居\'s lines (TOWN.ONSEN.nakai) are checked at m8: a bare kanji, an abo
   assert.deepEqual(kinds(check(town([ev()], nk({ guest: { tea: ['nobody', ['はい。', '是。'], ['はい。', '是。'], [], ['わあ。', '哇。']] } })), D8)), ['ref']);
   assert.deepEqual(kinds(check(town([ev()], nk({ guest: { tea: ['kenta', ['はい。', '是。'], ['はい。', '是。'], [['いいえ。', '', 'fact']], ['わあ。', '哇。']] } })), D8)), ['onsen']);
   assert.deepEqual(kinds(check(town([ev()], nk({ check: { tea: { want: true, q: ['はい？', '是？'], yes: ['はい。', '是。'], no: ['いいえ。', '不。'], then: ['じゃあ。', '那。'] } } })), D8)), ['onsen']);
-  const shifted = (spot) => Object.assign(nk({}), { CAST: Object.assign({}, CAST, { miku: Object.assign({}, CAST.miku, { shift: ['nakai', 'town', spot] }) }) });
+  const shifted = (spot, job = 'nakai') => Object.assign(nk({}), { CAST: Object.assign({}, CAST, { miku: Object.assign({}, CAST.miku, { shift: [job, 'town', spot] }) }) });
   assert.deepEqual(check(town([ev()], shifted('bakery')), D8), []);
   assert.deepEqual(kinds(check(town([ev()], shifted('moon')), D8)), ['host']);
+  // fix round 1 (M-7): a shift's job is one of WORK's; an instruction's value fits its thing (a futon 1–3, a cushion 1–4, on/off a
+  // boolean); a check says what she wants (a boolean) and its wrong form both ways; she finds seen to only what she can; every line its 中文
+  assert.deepEqual(kinds(check(town([ev()], shifted('bakery', 'moon')), D8)), ['host']);
+  assert.deepEqual(check(town([ev()], nk({ do: { a: ['futon', 3, 'はい。', '好。'], b: ['zabuton', 4, 'はい。', '好。'], c: ['window', false, 'はい。', '好。'] } })), D8), []);
+  for (const v of [4, 0, 1.5]) assert.deepEqual(kinds(check(town([ev()], nk({ do: { a: ['futon', v, 'はい。', '好。'] } })), D8)), ['onsen'], `futon ${v}`);
+  assert.deepEqual(kinds(check(town([ev()], nk({ do: { a: ['zabuton', 5, 'はい。', '好。'] } })), D8)), ['onsen']);
+  assert.deepEqual(kinds(check(town([ev()], nk({ do: { a: ['window', 'yes', 'はい。', '好。'] } })), D8)), ['onsen']);
+  const ck = (o) => nk({ check: { tea: Object.assign({ want: true, q: ['はい？', '是？'], yes: ['はい。', '是。'], no: ['いいえ。', '不。'], fact: ['有。', '沒有。'], then: ['じゃあ。', '那。'] }, o) } });
+  assert.deepEqual(check(town([ev()], ck({})), D8), []);
+  assert.deepEqual(kinds(check(town([ev()], ck({ want: undefined })), D8)), ['onsen']);
+  assert.deepEqual(kinds(check(town([ev()], ck({ want: 'yes' })), D8)), ['onsen']);
+  assert.deepEqual(kinds(check(town([ev()], ck({ form: [['はい、ある。'], '要說「あります」。'] })), D8)), ['onsen']);
+  assert.deepEqual(kinds(check(town([ev()], nk({ self: { tv: ['あら、もう けして ありますね。', '哎呀，已經關了。'] } })), D8)), ['onsen']);   // the TV: not one she finds seen to
+  assert.deepEqual(kinds(check(town([ev()], nk({ do: { a: ['tea', true, 'はい。', ''] } })), D8)), ['onsen']);   // no 中文
+  assert.deepEqual(kinds(check(town([ev()], nk({ guest: { tea: ['kenta', ['{花|はな}ですね。', ''], ['はい。', '是的。'], [['いいえ。', '是花。', 'fact']], ['わあ。', '哇。']] } })), D8)), ['onsen']);
 });

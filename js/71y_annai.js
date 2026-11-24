@@ -32,13 +32,7 @@ const ANNAI = (() => {
   const SHOP = { shateki: 'shateki', yukata: 'yukataya' };   // whose hours are the street's own (TOWN.HOURS)
   const hoursOfShop = (id) => ((TOWN.HOURS || {})[SHOP[id]] || [10, 20]).slice();
   const BATHS = ['yu', 'kagetsu', 'ashiyu'];   // where a towel may be sold, in the order a reply names another
-  // a shift's own dice: the same seed, the same board and tourists (mulberry32)
-  function rng(seed) {
-    let a = (Number(seed) >>> 0) || 1;
-    return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  }
-  const pickR = (a, R) => a[Math.floor(R() * a.length)];
-  const shuffleR = (arr, R) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const { rng, pickR, shuffleR } = JOBS;   // a shift's own dice: the same seed, the same board and tourists
   const at = (b, id) => b.find((f) => f.id === id);
   // the board: [facility { id, name, hours: [h0, h1], price, dog, kids, towel: price|null, rent, night }]; a towel to buy somewhere
   // (when no bath sells one, 湯の花の湯 does), so 「どこで買えますか」 always has an answer

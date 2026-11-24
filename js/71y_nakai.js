@@ -22,13 +22,7 @@ const NAKAI = (() => {
   const CHECKS = ['tea', 'yukata', 'flower', 'window', 'light', 'ac', 'tv', 'shoji'];   // what 千代 asks after
   const GUESTS = ['window', 'shoji', 'ac', 'light', 'tea', 'flower', 'yukata', 'futon'];   // what a guest remarks on — those of a pair (three replies) first
   const SELF = ['window', 'tea', 'flower', 'yukata'];   // what she may find seen to already
-  // a shift's own dice: the same seed, the same rooms (mulberry32, as the 案内所's)
-  function rng(seed) {
-    let a = (Number(seed) >>> 0) || 1;
-    return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  }
-  const pickR = (a, R) => a[Math.floor(R() * a.length)];
-  const shuffleR = (arr, R) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const { rng, pickR, shuffleR } = JOBS;   // a shift's own dice (JOBS', the 案内所's too): the same seed, the same rooms
   const places = (n, size) => Array.from({ length: size }, (_, i) => i < n);
   const count = (v) => (Array.isArray(v) ? v.filter(Boolean).length : Number(v) || 0);
   // a room's state (washitsuArt's): each thing, the futons' and cushions' places, the room (its scroll and flowers), the cat
@@ -47,16 +41,28 @@ const NAKAI = (() => {
     return { kind: 'check', key, on, line: C.q, opts: R ? shuffleR(opts, R) : opts };
   }
   // a guest coming in: they remark on what is so in the room as it stands (st) — what was planned for them if it is, else the first
-  // thing that is (those of a pair first), one no guest has spoken of this shift if there is such (used)
-  function guest(st, plan, used = [], R) {
-    const G = T().guest, so = GUESTS.filter((key) => G[key] && isReady(st, key)), order = (plan && so.includes(plan) ? [plan] : []).concat(so.filter((x) => x !== plan));
+  // thing that is (those of a pair first), one no guest has spoken of this shift if there is such (used); never a thing this room's
+  // instructions (wants: their targets) wanted the other way — 「窓を 閉めて」 left undone, its window still open, is no 「窓が 開いて
+  // いますね」 (ruling 33: the reply would claim it was opened on purpose); the room keeps a thing untouched for that (make)
+  function guest(st, plan, used = [], R, wants = []) {
+    const other = (key) => wants.some(([k, v]) => k === key && typeof v === 'boolean' && v !== READY[k]);
+    const G = T().guest, so = GUESTS.filter((key) => G[key] && isReady(st, key) && !other(key)), order = (plan && so.includes(plan) ? [plan] : []).concat(so.filter((x) => x !== plan));
     const key = order.find((x) => !used.includes(x)) || order[0]; if (!key) return null;
     const [who, line, right, wrong, after] = G[key], opts = [[right[0], right[1], true, '']].concat(wrong.map(([ja, why, how]) => [ja, why, false, how]));
     return { kind: 'guest', key, plan: plan || null, who, line, opts: R ? shuffleR(opts, R) : opts, after };
   }
-  // how long a room's countdown runs (s): a little to begin, then for each thing to do (a futon or a cushion more for each more to lay)
+  // how long a room's countdown runs (s), for the instructions still to do there: a little to begin, then each (a futon or a cushion
+  // more for each more to lay) — the one formula (the runner's clock)
   const secsFor = (dos) => 14 + dos.reduce((a, t) => a + 8 + (SLOTS[t.key] ? 2 * (t.target[1] - 1) : 0), 0);
-  // a shift: { seed, rooms: [{ id, name, kana, start, tasks, cat, self, secs }], tasks } — each room its check first (a thing, as 千代
+  // the rooms' instructions: WORK's n (16) less a check and a guest a room — ten — split 2–4 a room, each way it splits (the order the
+  // split was first picked in: 3+3+4, then 2+4+4); n is the one source of the shift's length
+  const splits = (total) => { const out = []; for (let x = 4; x >= 2; x--) for (let y = x; y <= 4; y++) { const z = total - x - y; if (z >= y && z <= 4) out.push([x, y, z]); } return out; };
+  const instructions = () => (WORK.PLACES.nakai || {}).n - 2 * ROOMS.length;
+  // what may be left set from a room's start for a guest to remark on, untouched by any instruction (I-1, fix round 1): first the
+  // things that are only set out, then those with a pair — a room uses at most six things (its check, four instructions, one found
+  // seen to), so two of these eight are always free
+  const FALLBACK = ['flower', 'tea', 'yukata', 'light', 'ac', 'window', 'shoji', 'futon'];
+  // a shift: { seed, rooms: [{ id, name, kana, start, tasks, cat, self }], tasks } — each room its check first (a thing, as 千代
   // wants it or not yet: then her first instruction is to see it done — じゃあ、…て おいて ください), then its instructions (2–4, ten in
   // the shift: one thing each, as yet not so), its guest last (planned on what the room will be once done: a thing the hero set out
   // first, those of a pair first, no guest's thing twice in a shift). The cat asleep where a futon is to go in one room in about half
@@ -64,7 +70,8 @@ const NAKAI = (() => {
   // that no instruction touches — so a guest has something true to say even when the countdown beat the hero. u: the unit reached
   // (the job's grammar is m8's at any unit)
   function make(u = TOWNEV.reachedIdx(), seed = 1 + Math.floor(Math.random() * 2147483646)) {
-    const R = rng(seed), D = T().do, ids = Object.keys(D), nDo = shuffleR(pickR([[3, 3, 4], [2, 4, 4]], R), R);
+    const ways = splits(instructions()); if (!ways.length) throw new Error(`仲居: ${instructions()} instructions do not split 2–4 over three rooms (WORK.PLACES.nakai.n)`);
+    const R = rng(seed), D = T().do, ids = Object.keys(D), nDo = shuffleR(pickR(ways, R), R);
     const catRoom = R() < 0.5 ? Math.floor(R() * 3) : -1, selfRoom = R() < 0.5 ? Math.floor(R() * 3) : -1, said = [];
     const rooms = ROOMS.map(([id, name, kana], ri) => {
       const st = roomState(id), used = new Set(), dos = [], ck = pickR(CHECKS, R), C = T().check[ck], on = R() < 0.5;
@@ -75,17 +82,21 @@ const NAKAI = (() => {
       const cat = ri === catRoom && dos.some((t) => t.key === 'futon'); st.cat = cat;
       const free = shuffleR(SELF.filter((k) => !used.has(k)), R), self = ri === selfRoom && free.length ? free[0] : null;
       if (self) { put(st, [self, READY[self]]); used.add(self); }
-      // something true for a guest to say however the countdown goes: a thing so from the start that no instruction touches
-      if (!GUESTS.some((key) => !dos.some((t) => t.key === key) && isReady(st, key))) { const f = ['flower', 'tea', 'yukata', 'light'].find((key) => !used.has(key)); if (f) { put(st, [f, READY[f]]); used.add(f); } }
-      const end = JSON.parse(JSON.stringify(st)); dos.forEach((t) => put(end, t.target));   // the room once all is done
+      // something true for a guest to say however the countdown goes: a thing so from the start that no instruction touches (never
+      // silently none: a room that could not keep one is a bug, said so)
+      if (!GUESTS.some((key) => !dos.some((t) => t.key === key) && isReady(st, key))) {
+        const f = FALLBACK.find((key) => !used.has(key)); if (!f) throw new Error(`仲居: room ${id} of seed ${seed} has nothing a guest may remark on`);
+        put(st, [f, SLOTS[f] ? 2 : READY[f]]); used.add(f);
+      }
+      const end = JSON.parse(JSON.stringify(st)), wants = dos.map((t) => t.target); dos.forEach((t) => put(end, t.target));   // the room once all is done
       const made = GUESTS.filter((key) => dos.some((t) => t.key === key) && isReady(end, key)), plan = made.find((key) => !said.includes(key)) || made[0] || null;
-      const g = guest(end, plan, said, R); said.push(g.key);
-      return { id, name, kana, start: st, tasks: [check(ck, on, R), ...dos, g], cat, self, secs: secsFor(dos) };
+      const g = guest(end, plan, said, R, wants); said.push(g.key);
+      return { id, name, kana, start: st, tasks: [check(ck, on, R), ...dos, g], cat, self };
     });
     const tasks = []; rooms.forEach((rm, ri) => rm.tasks.forEach((t) => { t.room = ri; t.k = tasks.length; tasks.push(t); }));
     return { seed, rooms, tasks };
   }
-  return { make, check, guest, readyState, rng, count, meets, isReady, put, tap: (key, i) => NAKAI_RUN.tap(key, i), speed: 1, ROOMS, KEYS, SLOTS, READY, CHECKS, GUESTS, SELF };
+  return { make, check, guest, readyState, rng, count, meets, isReady, put, secsFor, tap: (key, i) => NAKAI_RUN.tap(key, i), speed: 1, ROOMS, KEYS, SLOTS, READY, CHECKS, GUESTS, SELF };
 })();
 
 // ---- the card: the room plate and the countdown over 桜の間 front-on (washitsuArt: every thing its own tap), under it whoever speaks
@@ -176,14 +187,14 @@ const NAKAI_RUN = (() => {
       busy = true; miss++; missed++; playSfx('bad');
       JOBS.missWord(P, () => word(S().miss, 'bad'), 0, box);   // her word to its end, the countdown held meanwhile (ruling 27)
       if (miss >= 2 && !hint) { hint = true; bub(true); }
-      setTimeout(() => { if (mine !== runs || !st) return; if (many) st[key][j] = before; else st[key] = before; SND.play(SOUND[key], { vol: 0.4 }); draw(key, j, 'nk-back'); busy = false; }, WRONG_MS);
+      setTimeout(() => { if (mine !== runs || !st || !live()) return; if (many) st[key][j] = before; else st[key] = before; SND.play(SOUND[key], { vol: 0.4 }); draw(key, j, 'nk-back'); busy = false; }, WRONG_MS);   // a card shut meanwhile: nothing more (M-5)
     }
     // the cat off with ニャ — its sound, the word popping up, it gets up and goes: the place is the futon's then
     function catOff() {
       if (!st || !st.cat || catGo) return; catGo = true; SND.play('meow', { vol: 0.7 });
       const s = el('.nk-stage'); if (s) { const n = document.createElement('b'); n.className = 'nk-nya'; n.lang = 'ja'; n.textContent = 'ニャ'; s.appendChild(n); setTimeout(() => n.remove(), 1500); }
       const g = el('.nk-art [data-k="cat"]'); if (g) g.classList.add('nk-catgo');
-      setTimeout(() => { catGo = false; if (mine !== runs || !st) return; st.cat = false; draw(); keepNow(); }, CAT_MS);
+      setTimeout(() => { catGo = false; if (mine !== runs || !st || !live()) return; st.cat = false; draw(); keepNow(); }, CAT_MS);
     }
     const unhint = () => { const a = el('.nk-art'); if (!a) return; a.querySelectorAll('.nk-hint').forEach((g) => g.classList.remove('nk-hint')); a.querySelectorAll('.nk-glow').forEach((x) => x.remove()); };
     // the thing she asked for so: right (its misses), her words shown; the countdown held till her next one is said
@@ -207,18 +218,22 @@ const NAKAI_RUN = (() => {
       }
       phase = 'said'; ctx.right(k, Math.min(miss, 2)); playSfx('good'); bub(true);
       el('.nk-opts').querySelectorAll('.nk-opt').forEach((x) => { x.disabled = true; x.classList.toggle('nk-right', Boolean(t.opts[Number(x.dataset.o)][2])); });
-      const task = t, last = k >= N - 1, on2 = () => mine === runs && Boolean(el('.nk-art'));
+      const task = t, last = k >= N - 1;
       const lines = (async () => {
         await JOBS.quiet(box); if (!on2()) return;
         await JOBS.queue(() => me(o), box); if (!on2() || task.kind !== 'guest') return;
         await Promise.all([JOBS.queue(() => { bub(true, task.after); return speakAs(task.who, task.after[0]); }, box), sleep(400)]);
         const r = el('.nk-task'); if (r && on2()) { r.classList.add('nk-bye'); await sleep(420); }
       })();
-      if (last) {   // the shift's last: paid at once, its results once the guest's word and 千代's goodbye are said (finish's promise)
-        const bye = lines.then(() => on2() && sayWord(!missed && !lost && ctx.done === 0 ? S().all : S().end, 'ok')).then(() => { if (on2()) CLASS.close(); });
-        ctx.finish({}, bye); return;
-      }
+      if (last) { closeShift(lines); return; }
       lines.then(() => fire('right'));
+    }
+    // the shift's last task done: paid at once, its results once its last lines and 千代's goodbye are said (finish's promise); its
+    // card still up is enough (finish ends the shift: ctx.on() no more)
+    const on2 = () => mine === runs && Boolean(el('.nk-art'));
+    function closeShift(lines) {
+      const bye = lines.then(() => on2() && sayWord(!missed && !lost && ctx.done === 0 ? S().all : S().end, 'ok')).then(() => { if (on2()) CLASS.close(); });
+      ctx.finish({}, bye);
     }
     function replay() {   // heard again (after any line being said): the countdown held till it is said in full
       if (!t || !t.line || (phase !== 'ask' && phase !== 'do')) return;
@@ -231,8 +246,7 @@ const NAKAI_RUN = (() => {
       if (late && !hurried) { hurried = true; sayWord(S().hurry, 'bad'); }
     }
     function clockOn(rm) {
-      const left = rm.tasks.filter((x) => x.kind === 'do' && x.k >= k), room = ri;
-      total = 14 + left.reduce((a, x) => a + 8 + (SL[x.key] ? 2 * (x.target[1] - 1) : 0), 0); hurried = false;
+      const room = ri; total = NAKAI.secsFor(rm.tasks.filter((x) => x.kind === 'do' && x.k >= k)); hurried = false;   // for what is left to do in the room
       const d = el('.nk-dep'); if (d) d.classList.remove('idle', 'late');
       P = JOBS.clock(total / Math.max(0.01, Number(NAKAI.speed) || 1), () => live() && ri === room, dep, timeUp);   // held till her first instruction is said
     }
@@ -254,20 +268,27 @@ const NAKAI_RUN = (() => {
       const d = el('.nk-dep'); if (d) { d.classList.add('idle'); d.classList.remove('late'); d.style.setProperty('--p', '1'); }
       draw(); const s = el('.nk-stage'); if (s) { s.classList.remove('nk-enter'); void s.offsetWidth; s.classList.add('nk-enter'); }
     }
+    const guestOff = () => { const c = el('.cls-card'); if (c) c.classList.remove('nk-guest'); };
     async function check(task) {
-      t = task; miss = 0; hint = false; who('chiyo'); bub(false); opts(true); phase = 'ask';
+      t = task; miss = 0; hint = false; guestOff(); who('chiyo'); bub(false); opts(true); phase = 'ask';
       const p = until(); await JOBS.line('chiyo', task.line[0], box); return p;
     }
     async function instruct(task, firstDo) {
-      t = task; miss = 0; hint = false; who('chiyo'); bub(false); opts(false); phase = 'do';
+      t = task; miss = 0; hint = false; guestOff(); who('chiyo'); bub(false); opts(false); phase = 'do';
       const p = until(); await JOBS.line('chiyo', task.line[0], box);   // heard first, the countdown held while she says it
       if (live() && P) { if (firstDo) P.go(); else P.resume(); }
       return p;
     }
+    // a guest comes in: what they say is so of the room as it stands — once a thing tapped wrong is back as it was — and never of a
+    // thing its instructions wanted the other way (ruling 33); the room keeps a thing for that from its start (make), so there always
+    // is one: were there none, the guest only comes in (scored as done, said so) — never a remark the room does not show (I-1)
     async function guestIn(plan) {
-      const g = NAKAI.guest(st, plan.plan, guests, NAKAI.rng((seed + 7919 * (k + 1)) >>> 0)) || plan;   // what is so as they come in
+      for (let i = 0; i < 40 && (busy || catGo) && live(); i++) await sleep(50);
+      const rm = shift.rooms[ri], wants = rm.tasks.filter((x) => x.kind === 'do').map((x) => x.target);
+      const g = NAKAI.guest(st, plan.plan, guests, NAKAI.rng((seed + 7919 * (k + 1)) >>> 0), wants);
+      if (!g) { console.error(`仲居: nothing in room ${rm.id} (seed ${seed}) for a guest to remark on`); ctx.right(k, 0); if (k >= N - 1) { closeShift(Promise.resolve()); return new Promise(() => {}); } return 'none'; }
       guests.push(g.key); t = Object.assign({}, g, { k, room: ri }); miss = 0; hint = false;
-      SND.play('fusuma', { vol: 0.5 }); who(g.who); bub(false); opts(true); phase = 'ask';
+      SND.play('fusuma', { vol: 0.5 }); who(g.who); bub(false); opts(true); phase = 'ask'; const c = el('.cls-card'); if (c) c.classList.add('nk-guest');
       const p = until(); await JOBS.line(g.who, g.line[0], box); return p;
     }
     CLASS.card('wk-nakai', '仲居', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>

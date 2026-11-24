@@ -109,6 +109,14 @@ const JOBS = (() => {
       const l = m === 'mad' ? CROSS().hey : CROSS().again; line(who, l[0], box); grr(e, l[0]);   // called again, then cross — after any line being said
     }, () => out(learned('もう') ? CROSS().out : CROSS().out0));
   }
+  // a shift's own dice (mulberry32): the same seed, the same shift — a board, its tourists (案内所), its rooms (仲居); kept with the day's
+  // record so a shift taken up again is the one left (2026-11-24, fix round 1 of 仲居: one copy for the onsen's runners)
+  function rng(seed) {
+    let a = (Number(seed) >>> 0) || 1;
+    return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  const pickR = (a, R) => a[Math.floor(R() * a.length)];
+  const shuffleR = (arr, R) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const custHtml = (who) => `<span class="kr-face">${TOWNEV.face(who)}</span><i class="wk-emo"></i><p class="wk-bub"></p><span class="wk-pat"><i></i></span>`;
   const COUNTER_SECS = 5, TILL_SECS = [0, 30, 45];   // a customer's patience (s): 站櫃's one (5, 2026-11-20: 20 was too long), from the end of their asking; 收銀's by the things bought
   const MISS_COST = { counter: 0.2, till: 0.1 };   // of a whole patience: the wrong thing handed, a wrong piece said
@@ -417,5 +425,5 @@ const JOBS = (() => {
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
   WORK.register('till', { run: tillRun, lines: tillLines, left: tillLeft, open: allNums });
-  return { pat: PAT, clock, said, voice, quiet, queue, line, missWord, grr, patience, custHtml, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
+  return { pat: PAT, clock, said, voice, quiet, queue, line, missWord, grr, patience, custHtml, rng, pickR, shuffleR, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
 })();

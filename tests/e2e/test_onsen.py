@@ -1021,11 +1021,13 @@ def test_nakai_clock_fails_what_is_left(b):
       NAKAI.speed = 30; await at('ryokan'); WORK.start(yard(), 'nakai');
       await watch(() => nk() && nk().k === 0 && ready(), 12000); await solve();
       let red = false; await watch(() => { const d = document.querySelector('.wk-nakai .nk-dep'); if (d && d.classList.contains('late')) red = true; return nk() && nk().k === g0; }, 15000);
-      const sc = WORK.today().score || {}; NAKAI.speed = 1;
-      const out = { dos: dos.map((k) => sc[k]), at: Boolean(nk()) && nk().k === g0, red, hurry: said.includes('chiyo:いそいで！'), late: said.some((x) => /もう お\\{客\\|きゃく\\}さまが/.test(x)) };
+      const sc = WORK.today().score || {}; NAKAI.speed = 1; await watch(() => ready(), 6000);
+      const wants = sh.rooms[0].tasks.filter((t) => t.kind === 'do').map((t) => t.target), g = nk().task;   // the late guest: what they say is so (M-8)
+      const out = { dos: dos.map((k) => sc[k]), at: Boolean(nk()) && nk().k === g0, red, hurry: said.includes('chiyo:いそいで！'), late: said.some((x) => /もう お\\{客\\|きゃく\\}さまが/.test(x)),
+        true: Boolean(g && g.key) && NAKAI.isReady(nk().st, g.key) && !wants.some(([k, v]) => k === g.key && typeof v === 'boolean' && v !== NAKAI.READY[k]) };
       CLASS.close(); return JSON.stringify(out); })()"""))
     assert r['dos'] and all(x == 3 for x in r['dos']), r   # every instruction left undone: failed
-    assert r['at'] and r['red'] and r['hurry'] and r['late'], r
+    assert r['at'] and r['red'] and r['hurry'] and r['late'] and r['true'], r   # the guest in, saying what is so of the room as it stands
 
 # spec §5.2, Review Focus 2: a shift is three rooms — 桜, 菊 and 松 (the same room, its scroll and flowers its own) — each with 2–4 things
 # to do (ten in all), one check first and one guest last: 16 tasks. The first shift: 千代's first word, then up to 桜の間 with her (she
@@ -1039,6 +1041,9 @@ def test_nakai_three_rooms_ten_tasks_and_resume(b):
           || sh.rooms.some((rm) => rm.tasks[0].kind !== 'check' || rm.tasks[rm.tasks.length - 1].kind !== 'guest' || rm.tasks.filter((t) => t.kind === 'check').length !== 1 || rm.tasks.filter((t) => t.kind === 'guest').length !== 1)
           || sh.tasks.some((t, k) => t.k !== k)) bad.push(s); }
       out.bad = bad.slice(0, 5); out.n = WORK.PLACES.nakai.n;
+      WORK.PLACES.nakai.n = 13; const s13 = NAKAI.make(m8, 5); WORK.PLACES.nakai.n = 16;   // the count from one source: WORK's n (M-6)
+      out.n13 = [s13.tasks.length, s13.rooms.map((rm) => rm.tasks.filter((t) => t.kind === 'do').length).reduce((a, x) => a + x, 0)];
+      out.dice = ['rng', 'pickR', 'shuffleR'].every((f) => typeof JOBS[f] === 'function') && NAKAI.rng === JOBS.rng;
       await at('ryokan'); WORK.start(yard(), 'nakai');
       for (let i = 0; i < 40 && !document.querySelector('.wk-nakai'); i++) { click('.talk'); await wait(150); }   // 千代's first word, tapped through
       await watch(() => location.hash === '#/washitsu' && yard() && yard().querySelector('.npc-chiyo'), 6000);
@@ -1052,7 +1057,7 @@ def test_nakai_three_rooms_ten_tasks_and_resume(b):
       out.paid = [x.grade, x.yen, Object.keys(x.score).length, Object.values(x.score).every((m) => m === 0)];
       await watch(() => document.querySelector('.wk-result'), 15000); out.result = Boolean(document.querySelector('.wk-result')); document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close();
       return JSON.stringify(out); })()"""))
-    assert r['bad'] == [] and r['n'] == 16, r
+    assert r['bad'] == [] and r['n'] == 16 and r['n13'] == [13, 7] and r['dice'], r   # make()'s count is WORK's n; the seeded dice are JOBS'
     assert r['up'] == ['#/washitsu', True, 'washitsu'] and r['down'] == 'ryokan', r   # in 桜の間 with her while the card is up
     assert r['resume'] == [3, True, True, '0,1,2'], r   # at the fourth, the same room, nothing counted twice
     assert r['paid'] == ['S', 281, 16, True] and r['result'], r
@@ -1127,6 +1132,104 @@ def test_the_nakai_card_fits_a_phone(b):
         assert x['small'] == [] and x['btns'] == [] and x['top'], (w, out)
         assert x['ask'] == {'inside': True, 'opts': True, 'art': True}, (w, out)   # the room in sight with the replies
         assert x['d'] == {'bub': True, 'art': True, 'scroll': True}, (w, out)
+    # M-2 (fix round 1): a guest with three replies of two lines (the window's, the shoji's, the AC's, the light's), on 360×640 and
+    # 390×844 — asking, after a wrong reply (千代's reason in the talk row) and after the right one (the hero's reply with its 中文 on a
+    # first shift, the guest's word in the bubble): the card never scrolls, the bubble, the replies and the talk row all in sight
+    gfit = {}
+    for w, h in ((360, 640), (390, 844)):
+        gfit[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + NK + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm8';
+          window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => ['window', 'shoji', 'ac', 'light'].includes(sh.rooms[0].tasks.slice(-1)[0].key)), g0 = NAKAI.make(m8, seed).rooms[0].tasks.slice(-1)[0].k;
+          state.work.res[dateStr(TOWNEV.today())] = { place: 'nakai', done: g0, score: Object.fromEntries(Array.from({ length: g0 }, (_, k) => [k, 0])), keep: { seed } }; saveState();   // a first shift: the hero's 中文 shown
+          await at('ryokan'); WORK.start(yard(), 'nakai'); await watch(() => nk() && nk().k === g0 && ready(), 12000); await wait(400);
+          const c = document.querySelector('.wk-nakai .cls-card'), R = (e) => e.getBoundingClientRect();
+          const fit = () => { const q = R(c), top = q.top + c.clientTop, bot = top + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;
+            return [c.scrollHeight <= c.clientHeight + 1, [...c.querySelectorAll('.nk-opt')].every(inv), inv(c.querySelector('.nk-talk')), inv(c.querySelector('.nk-bub'))]; };
+          const out = { n: c.querySelectorAll('.nk-opt').length, tall: Math.max(...[...c.querySelectorAll('.nk-opt')].map((o) => Math.round(R(o).height))), ask: fit() };
+          opt(false).click(); await wait(500); out.wrong = fit();
+          opt(true).click(); await watch(() => c.querySelector('.nk-talk .wk-say.nk-me span'), 4000); await wait(600); out.right = fit();
+          CLASS.close(); return JSON.stringify(out); })()""")])[-1])
+    for w, x in gfit.items():
+        assert x['n'] == 3 and x['ask'] == x['wrong'] == x['right'] == [True, True, True, True], (w, gfit)
+
+# I-1, ruling 33 (fix round 1): over 6,000 shifts every room's guest says something true of the room as it stands when they come in —
+# with nothing done (the countdown beat the hero), with everything done, with some done — and never of a thing whose instruction this
+# room wanted the other way and left undone (窓を 閉めて left: no 「窓が 開いて いますね」); the room keeps a thing for that, untouched by
+# any instruction, from its start. Seed 2955 (桜の間: the light check off, then light, flower, yukata, tea) had nothing to say
+def test_nakai_every_guest_is_true_of_the_room(b):
+    r = json.loads(ev(b, """(() => { const m8 = TOWNEV.unitIdx('m8'), RD = NAKAI.READY, bad = [], cp = (o) => JSON.parse(JSON.stringify(o)); let n = 0;
+      const against = (key, wants) => wants.some(([k, v]) => k === key && typeof v === 'boolean' && v !== RD[k]);   // this room wanted it the other way (a futon or a cushion: always laid)
+      const look = (s, ri, rm, name, done, used) => { const dos = rm.tasks.filter((t) => t.kind === 'do'), wants = dos.map((t) => t.target), st = cp(rm.start); done.forEach((t) => NAKAI.put(st, t.target)); n++;
+        const g = NAKAI.guest(st, rm.tasks[rm.tasks.length - 1].plan, used, null, wants);
+        if (!g) bad.push(`${s}.${ri}.${name}:none`); else if (!NAKAI.isReady(st, g.key) || against(g.key, wants)) bad.push(`${s}.${ri}.${name}:${g.key}`); };
+      for (let s = 1; s <= 6000; s++) { const sh = NAKAI.make(m8, s), used = []; sh.rooms.forEach((rm, ri) => { const dos = rm.tasks.filter((t) => t.kind === 'do');
+        look(s, ri, rm, 'none', [], used); look(s, ri, rm, 'all', dos, used); look(s, ri, rm, 'mix', dos.filter((t, i) => (s + ri + i) % 2 === 0), used); look(s, ri, rm, 'mix2', dos.filter((t, i) => (s * 7 + ri + i) % 3 === 1), used);
+        used.push(rm.tasks[rm.tasks.length - 1].key); }); }
+      const rm = NAKAI.make(m8, 2955).rooms[0], g = NAKAI.guest(rm.start, rm.tasks[rm.tasks.length - 1].plan, [], null, rm.tasks.filter((t) => t.kind === 'do').map((t) => t.target));
+      return JSON.stringify({ n, nbad: bad.length, bad: bad.slice(0, 8), s2955: g ? [g.key, NAKAI.isReady(rm.start, g.key)] : null }); })()"""))
+    assert r['n'] >= 72000 and r['nbad'] == 0, r
+    assert r['s2955'] and r['s2955'][1], r   # the room that had nothing true to say has its untouched thing now
+
+# M-3 (fix round 1): 千代 stands in 桜の間 only while her card is up, and only at this hour (whereIs asked of another hour: her hours);
+# once the card is gone — ✕ halfway, or the shift's results — she is back in the lobby at once: 桜の間 drawn without her, no minute's wait
+def test_nakai_chiyo_back_in_the_lobby_at_once(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + NK + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm8'; window.speakAs = () => Promise.resolve(); const out = {};
+      const where = (h) => (TOWNEV.whereIs('chiyo', h, TOWNEV.today()) || {}).place, drawn = () => Boolean(yard() && yard().querySelector('.npc-chiyo'));
+      const seed = seedWhere(() => true); shiftAt(seed); await at('ryokan'); WORK.start(yard(), 'nakai');
+      await watch(() => nk() && ready() && location.hash === '#/washitsu' && drawn(), 12000); out.up = [where(10), where(15), drawn()];   // now: 桜の間; at 15 (her hours): the lobby
+      CLASS.close(); await wait(1200); out.shut = [yard().dataset.place, drawn(), where(10)];   // ✕ halfway
+      await at('ryokan'); out.lobby = drawn();
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 11) }; shiftAt(seed, 15, Object.fromEntries(Array.from({ length: 15 }, (_, k) => [k, 0])));   // the next day, at its last guest
+      WORK.start(yard(), 'nakai'); await watch(() => nk() && nk().k === 15 && ready() && drawn(), 12000); await solve();
+      await watch(() => document.querySelector('.wk-result') && !document.querySelector('.wk-nakai'), 15000); await wait(1200);
+      out.end = [yard().dataset.place, drawn(), where(10)]; document.querySelectorAll('.wk-result').forEach((e) => e.remove());
+      return JSON.stringify(out); })()"""))
+    assert r['up'] == ['washitsu', 'ryokan', True], r
+    assert r['shut'] == ['washitsu', False, 'ryokan'] and r['lobby'], r   # ✕ halfway: gone from 桜の間 at once, in the lobby
+    assert r['end'] == ['washitsu', False, 'ryokan'], r   # the shift's end: the same
+
+# M-5 (fix round 1): a 仲居 card shut while a wrong thing is still to go back says and plays nothing more — no sound after the shut, even
+# with no new shift; and shut at once and begun again at once: her old word never said, nothing old in the new card, the new lines whole
+def test_a_shut_nakai_card_says_nothing_more(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + NK + LANE + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm8'; const out = {}, played = []; SND.play = (n) => played.push([ms(), n]);
+      const SND_OF = { window: 'slide-door', shoji: 'fusuma', light: 'switch', ac: 'ic', tv: 'ic', tea: 'dishes', yukata: 'cloth', flower: 'rustle' };
+      const seed = seedWhere((sh) => sh.tasks[1].kind === 'do'); shiftAt(seed);
+      const wrongTap = async () => { await watch(() => nk() && nk().phase === 'do' && ready() && log.some(([, w, l]) => w === 'chiyo' && l === nk().task.line[0]), 20000);   // her instruction begun
+        const tk = nk().task.target[0], w = ['tv', 'yukata', 'flower', 'tea', 'ac', 'shoji', 'window', 'light'].find((x) => x !== tk); NAKAI.tap(w); await wait(60); return SND_OF[w]; };
+      await at('ryokan'); WORK.start(yard(), 'nakai'); await watch(() => nk() && nk().k === 0 && ready(), 20000); await solve();
+      const s1 = await wrongTap(), at1 = ms(); CLASS.close(); await wait(1000);   // shut, nothing begun
+      out.alone = played.filter(([m, n]) => m >= at1 && n === s1).length;
+      WORK.start(yard(), 'nakai'); const s2 = await wrongTap(), at2 = ms(); CLASS.close(); WORK.start(yard(), 'nakai'); await wait(2600);   // shut and begun again at once
+      const after = log.filter(([m]) => m >= at2), A = TOWN.ONSEN.nakai.say;
+      out.again = { old: after.filter(([, w, l]) => w === 'chiyo' && l === A.miss[0]).length, snd: played.filter(([m, n]) => m >= at2 && n === s2).length, cut: cuts.filter(([m]) => m >= at2).map(([, x]) => x),
+        bad: Boolean(document.querySelector('.wk-nakai .wk-say.bad')), card: Boolean(document.querySelector('.wk-nakai')), said: after.map(([, w]) => w) };
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['alone'] == 0, r   # no sound after a shut
+    a = r['again']
+    assert a['old'] == 0 and a['snd'] == 0 and a['cut'] == [] and not a['bad'] and a['card'] and a['said'][:1] == ['chiyo'], r
+
+# M-8 (fix round 1, Review Focus 2): a shift taken up in the middle of laying three futons goes on at the same task with the one laid,
+# and counts it once; one taken up after the countdown failed a room goes on at that room's guest with the room as it stood (its
+# instructions not done) and its 3s kept, not counted again
+def test_nakai_resumes_mid_futon_and_after_a_failed_room(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + NK + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm8'; window.speakAs = () => Promise.resolve(); const out = {};
+      const seed = seedWhere((sh) => sh.tasks[1].kind === 'do' && sh.tasks[1].target.join() === 'futon,3' && !sh.rooms[0].cat); shiftAt(seed);
+      await at('ryokan'); WORK.start(yard(), 'nakai'); await watch(() => nk() && nk().k === 0 && ready(), 12000); await solve();
+      await watch(() => nk() && nk().k === 1 && ready(), 12000); NAKAI.tap('futon', 2); await wait(200);
+      const st1 = JSON.stringify(nk().st); CLASS.close(); await wait(200);
+      WORK.start(yard(), 'nakai'); await watch(() => nk() && nk().k === 1 && ready(), 12000);
+      out.futon = [nk().k, JSON.stringify(nk().st) === st1, nk().st.futon, Object.keys(WORK.today().score).join()];
+      NAKAI.tap('futon', 0); await wait(120); NAKAI.tap('futon', 1); await watch(() => WORK.today().score[1] !== undefined, 4000);
+      out.laid = [WORK.today().score[1], Object.keys(WORK.today().score).join()]; CLASS.close(); await wait(200);
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 11) }; const s2 = seedWhere(() => true, 40); shiftAt(s2);
+      const sh2 = NAKAI.make(m8, s2), dos = sh2.rooms[0].tasks.filter((t) => t.kind === 'do'), g0 = sh2.rooms[0].tasks.slice(-1)[0].k;
+      NAKAI.speed = 30; await at('ryokan'); WORK.start(yard(), 'nakai'); await watch(() => nk() && nk().k === 0 && ready(), 12000); await solve();
+      await watch(() => nk() && nk().k === g0 && ready(), 15000); NAKAI.speed = 1; const st2 = JSON.stringify(nk().st), sc2 = JSON.stringify(WORK.today().score); CLASS.close(); await wait(200);
+      WORK.start(yard(), 'nakai'); await watch(() => nk() && nk().k === g0 && ready(), 12000);
+      out.failed = [nk().k === g0, JSON.stringify(nk().st) === st2, JSON.stringify(WORK.today().score) === sc2, dos.every((t) => WORK.today().score[t.k] === 3), dos.every((t) => !NAKAI.meets(nk().st, t.target))];
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['futon'] == [1, True, [False, False, True], '0'], r   # the one laid kept, the same task, nothing counted
+    assert r['laid'] == [0, '0,1'], r   # then done once
+    assert r['failed'] == [True, True, True, True, True], r
 
 # the generator (生成) has the 仲居's lines: 千代's every instruction, check, follow-up and word, each guest's remark and word in their own
 # voice (the town's and the cruise's people: no new voice), the hero's every right reply

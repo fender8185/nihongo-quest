@@ -22,6 +22,14 @@ const SOUNDS = new Set([...fs.readdirSync(path.join(ROOT, 'sounds')).map((f) => 
   ...[...fs.readFileSync(path.join(ROOT, 'js', '82_sound.js'), 'utf8').matchAll(/^ {4}'?([\w-]+)'?: \(c, to, v\)/gm)].map((m) => m[1])]);
 const CRIES = new Set([...((/const VOICE_FX = \{([^}]*)\}/.exec(fs.readFileSync(path.join(ROOT, 'js', '80_tts.js'), 'utf8')) || ['', ''])[1]).matchAll(/(\w+):/g)].map((m) => m[1]));
 
+// the 仲居's room (js/71y_nakai.js, NAKAI — read from there, never copied): the things in it (washitsuArt's keys), the futons' and the
+// cushions' places, what 千代 may find seen to; and the jobs there are (js/71r_work.js, WORK.PLACES): a CAST shift is one of them
+const NAKAI_SRC = fs.readFileSync(path.join(ROOT, 'js', '71y_nakai.js'), 'utf8');
+const listIn = (src, name) => [...((new RegExp(`const ${name} = \\[([^\\]]*)\\]`).exec(src) || ['', ''])[1]).matchAll(/'(\w+)'/g)].map((m) => m[1]);
+const NAKAI_KEYS = listIn(NAKAI_SRC, 'KEYS'), NAKAI_SELF = listIn(NAKAI_SRC, 'SELF');
+const NAKAI_SLOTS = Object.fromEntries([...((/const SLOTS = \{([^}]*)\}/.exec(NAKAI_SRC) || ['', ''])[1]).matchAll(/(\w+): (\d+)/g)].map((m) => [m[1], Number(m[2])]));
+const JOB_IDS = new Set([...fs.readFileSync(path.join(ROOT, 'js', '71r_work.js'), 'utf8').matchAll(/^ {4}(\w+): \{ area: '/gm)].map((m) => m[1]));
+
 // what the hero can wear (古道具屋's wear and clothes): a chat line may be about one (when.look)
 function loadWares(file = path.join(__dirname, '..', 'js', '71d_wares.js')) {
   return new Set([...fs.readFileSync(file, 'utf8').matchAll(/\{ id: '([a-zA-Z0-9]+)', kind: '(?:wear|clothes)'/g)].map((m) => m[1]));
@@ -276,26 +284,34 @@ function check(T, D, opts = {}) {
     }
     // 仲居 (2026-11-24, spec §5.2): 千代's instructions, checks and words and each guest's at its unit (m8); each thing one the room draws
     // (washitsuArt's keys), a guest someone with a voice, every wrong reply with its reason and how it is wrong
-    const K = on.nakai, U8 = 'm8', THINGS = ['window', 'shoji', 'light', 'ac', 'tv', 'futon', 'zabuton', 'tea', 'yukata', 'flower'];
-    const thing = (key, at) => { if (!THINGS.includes(key)) bad('onsen', at, `no thing ${key} in the room`); };
+    const K = on.nakai, U8 = 'm8';
+    const thing = (key, at) => { if (!NAKAI_KEYS.includes(key)) bad('onsen', at, `no thing ${key} in the room`); };
+    if (K && !NAKAI_KEYS.length) bad('onsen', 'nakai', 'NAKAI.KEYS not found in js/71y_nakai.js');
     if (K) {
-      Object.entries(K.do || {}).forEach(([id, [key, , ja, zh]]) => { const at = `nakai do ${id}`; thing(key, at); pair([ja, zh], U8, at); });
+      Object.entries(K.do || {}).forEach(([id, [key, v, ja, zh]]) => {   // what it is to be: on/off a boolean; a futon 1–3, a cushion 1–4 (its places)
+        const at = `nakai do ${id}`; thing(key, at); pair([ja, zh], U8, at);
+        if (NAKAI_SLOTS[key] ? !(Number.isInteger(v) && v >= 1 && v <= NAKAI_SLOTS[key]) : typeof v !== 'boolean') bad('onsen', at, `${key} cannot be ${v}`);
+      });
       Object.entries(K.check || {}).forEach(([key, c]) => {
         const at = `nakai check ${key}`; thing(key, at); ['q', 'yes', 'no', 'then'].forEach((x) => pair(c[x], U8, `${at} ${x}`));
+        if (typeof c.want !== 'boolean') bad('onsen', at, 'want is what she wants it to be: true or false');
         if (!Array.isArray(c.fact) || c.fact.length !== 2 || !c.fact.every(Boolean)) bad('onsen', at, 'fact is [why when it is so, why when not]');
-        if (c.form) { (c.form[0] || []).forEach((ja) => text(ja, U8, `${at} form`)); if (!c.form[1]) bad('onsen', at, 'a form reply with no why'); }
+        if (c.form) {
+          if (!Array.isArray(c.form[0]) || c.form[0].length !== 2 || !c.form[0].every((ja) => typeof ja === 'string' && ja)) bad('onsen', at, 'form is [[when it is so, when not], why]');
+          (c.form[0] || []).forEach((ja) => text(ja, U8, `${at} form`)); if (!c.form[1]) bad('onsen', at, 'a form reply with no why');
+        }
       });
       Object.entries(K.guest || {}).forEach(([key, [who, line, right, wrong, after]]) => {
         const at = `nakai guest ${key}`; thing(key, at); person(who, at); [line, right, after].forEach((l, i) => pair(l, U8, `${at}#${i}`));
         (wrong || []).forEach(([ja, why, how], i) => { text(ja, U8, `${at} wrong${i}`); if (!why || !['form', 'fact'].includes(how)) bad('onsen', `${at} wrong${i}`, 'a wrong reply is [Japanese, why, form | fact]'); });
       });
-      Object.entries(K.self || {}).forEach(([key, l]) => { thing(key, `nakai self ${key}`); pair(l, U8, `nakai self ${key}`); });
+      Object.entries(K.self || {}).forEach(([key, l]) => { if (!NAKAI_SELF.includes(key)) bad('onsen', `nakai self ${key}`, `${key} is not a thing she finds seen to (NAKAI.SELF)`); pair(l, U8, `nakai self ${key}`); });
       const ks = K.say || {}; person(ks.who, 'nakai say');
       Object.entries(ks).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U8, `nakai say ${k}#${i}`)));
     }
   }
   // where someone stands on a shift of their job (CAST shift: [job, place, spot] — 千代 in 桜の間 while her 仲居 card is up): a spot drawn
-  Object.entries(cast).forEach(([id, c]) => { if (c.shift !== undefined && (!Array.isArray(c.shift) || !places.includes(c.shift[1]) || !spots[c.shift[1]] || !spots[c.shift[1]][c.shift[2]])) bad('host', `cast ${id}`, 'shift is [a job, a place drawn, a spot there]'); });
+  Object.entries(cast).forEach(([id, c]) => { if (c.shift !== undefined && (!Array.isArray(c.shift) || !JOB_IDS.has(c.shift[0]) || !places.includes(c.shift[1]) || !spots[c.shift[1]] || !spots[c.shift[1]][c.shift[2]])) bad('host', `cast ${id}`, 'shift is [a job (WORK.PLACES), a place drawn, a spot there]'); });
   return out;
 }
 
