@@ -100,7 +100,8 @@ const LOST_RUN = (() => {
   const GLASSES = '<svg class="lf-onhead" viewBox="-30 -12 60 24" aria-hidden="true"><circle cx="-11" cy="0" r="8" fill="#dfeff6" fill-opacity=".5" stroke="#2b2b33" stroke-width="2.6"/><circle cx="11" cy="0" r="8" fill="#dfeff6" fill-opacity=".5" stroke="#2b2b33" stroke-width="2.6"/><path d="M-3 -1 Q0 -4 3 -1" fill="none" stroke="#2b2b33" stroke-width="2.2"/></svg>';
   function run(ctx) {
     const mine = ++runs, s = S(), tasks = LOST.make(), first = !Object.values(state.work.res).some((r) => r.place === 'lost' && r.yen !== undefined);
-    const el = (q) => document.querySelector('.wk-lost ' + q), live = () => mine === runs && Boolean(el('.lf-room')) && ctx.on();
+    // this run's own card (box, once drawn; 2026-11-24, ruling 22): an ended shift's goodbye still being said never touches the next card
+    let box = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), live = () => mine === runs && Boolean(el('.lf-room')) && ctx.on();
     let k = ctx.done, miss = 0, P = null, rep = 0, missed = 0, lost = 0;
     const talk = (who) => { const t = el('.lf-talk'); if (t) t.dataset.who = who; };
     const word = ([ja, zh], cls = '') => { talk('drv'); const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(s.who, ja); };
@@ -108,7 +109,7 @@ const LOST_RUN = (() => {
     const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
     // what they have said that counts now: while asking, all of it so far; then what it looks like (and, once asked, what is in it)
     const view = () => { const t = R.task; if (R.phase === 'ask') return R.heard; return t.in && R.phase !== 'ask2' ? [[t.desc, ''], [t.in, t.descZh]] : [[t.desc, t.descZh]]; };
-    let ear = 0; const hear = () => { const n = ++ear, me0 = R; return view().reduce((p, [ja]) => p.then(() => (n === ear && R === me0 && live() ? speakAs(R.task.who, ja) : null)), Promise.resolve()); };
+    let ear = 0; const hear = () => { const n = ++ear, me0 = R; return JOBS.voice(JOBS.quiet().then(() => view().reduce((p, [ja]) => p.then(() => (n === ear && R === me0 && live() ? speakAs(R.task.who, ja) : null)), Promise.resolve()))); };   // after any line being said (ruling 27)
     function bub(open) {
       const b = el('.wk-cust .wk-bub'); if (!b) return;
       b.innerHTML = `<button type="button" class="wk-ear lf-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? view().map(([ja, zh]) => `<b lang="ja">${ruby(ja)}</b>${zh ? `<span>${esc(zh)}</span>` : ''}`).join('') : '<b class="bt-dots">……</b>'}`;
@@ -131,15 +132,16 @@ const LOST_RUN = (() => {
       (async () => {
         if (hat) await said(word(s.hat), 900); if (!live() || R !== me0) return;
         await said(word(s.hi), 500); if (!live() || R !== me0) return;
-        el('.wk-cust').classList.add('on'); R.phase = 'ask'; bub(false); stage(); await said(speakAs(t.who, t.lost[0]));
+        el('.wk-cust').classList.add('on'); R.phase = 'ask'; bub(false); stage(); await said(JOBS.voice(speakAs(t.who, t.lost[0])));
       })();
     }
     // a question asked that was not yet told: its answer heard (the looks tell what it is too); all told, the four out (two alike on
     // the counter: what is in it asked, then)
     async function ask(q) {
-      const t = R.task, me0 = R, a = LOST.answer(t, q); R.phase = 'tell'; stage(); await said(me(LOST.question(t, q, R.know)), 500); if (!live() || R !== me0) return;
+      const t = R.task, me0 = R, a = LOST.answer(t, q); R.phase = 'tell'; stage(); await JOBS.quiet(); if (!live() || R !== me0) return;   // asked after any line still being said (ruling 27)
+      await said(me(LOST.question(t, q, R.know)), 500); if (!live() || R !== me0) return;
       R.know[q] = true; if (q === 'look') R.know.what = true; if (q !== 'inside') R.heard.push(a);
-      bub(false); await said(speakAs(t.who, a[0])); if (!live() || R !== me0) return;
+      bub(false); await said(JOBS.voice(speakAs(t.who, a[0]))); if (!live() || R !== me0) return;
       if (!R.know.what || !R.know.where || !R.know.look) { R.phase = 'ask'; bub(miss >= 2); stage(); return; }
       if (t.type === 'twin' && !R.know.inside) { R.phase = 'ask2'; bub(miss >= 2); SND.play('drawer', { vol: 0.6 }); word(s.twin); stage(); return; }
       found();
@@ -153,34 +155,35 @@ const LOST_RUN = (() => {
         await said(word(!missed && !lost && ctx.done === 0 ? s.all : s.end, 'ok'), 800); if (el('.lf-room')) CLASS.close(); })();
       if (k >= 10) ctx.finish({}, bye);
     }
+    // a miss: the word that says why (小林's, or the customer's いいえ) said to its end with the clock held, its cost after it, so the
+    // customer's 「あの、すみません！」 never cuts it (ruling 27)
     function wrong(b, why) {
-      miss++; missed++; playSfx('bad'); if (b) { b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); } if (P) P.hit(0.15);
+      miss++; missed++; playSfx('bad'); if (b) { b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); }
       if (miss >= 2) bub(true);   // what they have said so far shown (asking: never the looks before they are asked)
-      if (why) return why();
-      return null;
+      return JOBS.missWord(P, why || (() => null), 0.15);
     }
     function done(lines) { R.phase = 'done'; P.stop(); ctx.right(k, miss); playSfx('good'); tellAll(); stage(); el('.wk-cust').classList.remove('on'); next(lines); }
     function gone(line) {
       R.phase = 'done'; ctx.right(k, 3); lost++; playSfx('bad'); tellAll(); stage(); const t = R.task;
-      next(async (live2) => { await said(speakAs(t.who, line[0]), 1200); if (live2()) { el('.wk-cust').classList.add('bye'); await sleep(450); } });
+      next(async (live2) => { await said(JOBS.line(t.who, line[0]), 1200); if (live2()) { el('.wk-cust').classList.add('bye'); await sleep(450); } });
     }
     function give() {
       const t = R.task, c = t.cands[R.sel]; if (!c) return;
       const right = t.type !== 'none' && t.type !== 'gag' && c.color === t.color && c.dim === t.dim && c.inside.join() === t.inside.join();
       if (!right) { const b = el(`.lf-cand[data-c="${R.sel}"]`); wrong(b, () => said(speakAs(t.who, s.cust.no[0]), 400).then(() => { if (live() && R.task === t && R.phase === 'find') hear(); })); return; }
-      done(async (live2) => { await said(me(s.me.give), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.yes[0]), 900); if (!live2()) return; el('.wk-cust').classList.add('bye'); if (!miss && Math.random() < 0.3) await said(word(s.ok[Math.floor(Math.random() * s.ok.length)], 'ok')); });
+      done(async (live2) => { await JOBS.quiet(); if (!live2()) return; await said(me(s.me.give), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.yes[0]), 900); if (!live2()) return; el('.wk-cust').classList.add('bye'); if (!miss && Math.random() < 0.3) await said(word(s.ok[Math.floor(Math.random() * s.ok.length)], 'ok')); });
     }
     function none() {
       const t = R.task;
       if (t.type === 'gag') {   // true enough: none of the four is his (2026-11-21, the review) — then 小林 sees them
-        done(async (live2) => { await said(me(s.me.none), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.sad[0]), 600); if (!live2()) return; await said(word(s.head, 'ok'), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.gag[0]), 600); voiceFx('laugh'); await sleep(900); if (live2()) el('.wk-cust').classList.add('bye'); }); return;
+        done(async (live2) => { await JOBS.quiet(); if (!live2()) return; await said(me(s.me.none), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.sad[0]), 600); if (!live2()) return; await said(word(s.head, 'ok'), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.gag[0]), 600); voiceFx('laugh'); await sleep(900); if (live2()) el('.wk-cust').classList.add('bye'); }); return;
       }
       if (t.type !== 'none') { wrong(el('.lf-none'), () => word(s.there, 'bad')); return; }
-      done(async (live2) => { await said(me(s.me.none), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.sad[0]), 800); if (!live2()) return; await said(word(s.call), 600); if (live2()) el('.wk-cust').classList.add('bye'); });
+      done(async (live2) => { await JOBS.quiet(); if (!live2()) return; await said(me(s.me.none), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.sad[0]), 800); if (!live2()) return; await said(word(s.call), 600); if (live2()) el('.wk-cust').classList.add('bye'); });
     }
     function gag() {
       const t = R.task;
-      done(async (live2) => { await said(me(s.me.gag), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.gag[0]), 700); voiceFx('laugh'); await sleep(900); if (live2()) el('.wk-cust').classList.add('bye'); });
+      done(async (live2) => { await JOBS.quiet(); if (!live2()) return; await said(me(s.me.gag), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.gag[0]), 700); voiceFx('laugh'); await sleep(900); if (live2()) el('.wk-cust').classList.add('bye'); });
     }
     CLASS.card('wk-lost', '失物招領', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja"><ruby>落<rt>お</rt></ruby>とし<ruby>物<rt>もの</rt></ruby></b><span class="wk-n"></span></div>
@@ -194,6 +197,7 @@ const LOST_RUN = (() => {
       const c = e.target.closest('.lf-cand'); if (c) { R.sel = Number(c.dataset.c); SND.play('place', { vol: 0.45 }); stage(); return; }
       if (e.target.closest('.lf-give')) give(); else if (e.target.closest('.lf-none')) none(); else if (e.target.closest('.lf-gag')) gag();
     });
+    box = document.querySelector('.cls.wk-lost');
     show();
   }
   function lines(add) {

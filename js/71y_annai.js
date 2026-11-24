@@ -11,22 +11,26 @@
 const ANNAI = (() => {
   const T = () => TOWN.ONSEN.annai;
   const SPOTS = ['ashiyu', 'yu', 'yubatake', 'shateki', 'kagetsu', 'yukata'];
-  // what a board may say of each, shift by shift (the 足湯's dogs and towel, the baths' and the shops' hours and prices, children at
-  // 射的 and in 花月's bath) — and what is the town's own, the same on every board: the 足湯 and the 湯畑 free and open all night (one
-  // sits in the 足湯 at any hour), the 湯畑 lit up by night, 射的 300 円 a go (YUDORI.PRICE); a public bath never takes dogs
+  // what a board may say of each, shift by shift (the 足湯's towel, the baths' hours and prices, ゆかた屋's price and dogs, children at
+  // 射的 and in 花月's bath) — and what is the town's own, the same on every board: the 足湯 free, open all night (one sits in it at any
+  // hour) and open to dogs (2026-11-24, ruling 25: あかり's 「去年から、犬も…」 true on every board); the 湯畑 free, open all night and
+  // lit up by night; 射的 300 円 a go (YUDORI.PRICE) and its hours, ゆかた屋's hours (TOWN.HOURS, the street's own: rulings 21, 26); a
+  // public bath never takes dogs
   const VARY = {
-    ashiyu: { dog: [true, false], towel: [null, 100, 150] },
+    ashiyu: { towel: [null, 100, 150] },
     yu: { hours: [[10, 21], [10, 22], [9, 20], [11, 23], [6, 22]], price: [500, 600, 700, 800], towel: [null, 200, 250] },
-    shateki: { hours: [[10, 22], [11, 23], [9, 21], [13, 22]], kids: [true, false] },
+    shateki: { kids: [true, false] },
     kagetsu: { hours: [[13, 20], [14, 21], [11, 15], [15, 22], [13, 19]], price: [800, 1000, 1200, 1500], towel: [null, 200], kids: [true, false] },
-    yukata: { hours: [[9, 18], [10, 19], [9, 17], [10, 20]], price: [1500, 2000, 2500, 3000] } };
+    yukata: { price: [1500, 2000, 2500, 3000], dog: [true, false] } };
   const FIXED = {
-    ashiyu: { hours: [0, 24], price: 0, kids: true, rent: false, night: false },
+    ashiyu: { hours: [0, 24], price: 0, dog: true, kids: true, rent: false, night: false },
     yu: { dog: false, kids: true, rent: false, night: false },
     yubatake: { hours: [0, 24], price: 0, dog: true, kids: true, towel: null, rent: false, night: true },
     shateki: { price: 300, dog: false, towel: null, rent: false, night: false },
     kagetsu: { dog: false, rent: false, night: false },
-    yukata: { dog: false, kids: true, towel: null, rent: true, night: false } };
+    yukata: { kids: true, towel: null, rent: true, night: false } };
+  const SHOP = { shateki: 'shateki', yukata: 'yukataya' };   // whose hours are the street's own (TOWN.HOURS)
+  const hoursOfShop = (id) => ((TOWN.HOURS || {})[SHOP[id]] || [10, 20]).slice();
   const BATHS = ['yu', 'kagetsu', 'ashiyu'];   // where a towel may be sold, in the order a reply names another
   // a shift's own dice: the same seed, the same board and tourists (mulberry32)
   function rng(seed) {
@@ -39,12 +43,12 @@ const ANNAI = (() => {
   // the board: [facility { id, name, hours: [h0, h1], price, dog, kids, towel: price|null, rent, night }]; a towel to buy somewhere
   // (when no bath sells one, 湯の花の湯 does), so 「どこで買えますか」 always has an answer
   function board(R) {
-    const b = SPOTS.map((id) => { const f = Object.assign({ id, name: T().spots[id][0] }, FIXED[id]); Object.entries(VARY[id] || {}).forEach(([k, vs]) => { f[k] = pickR(vs, R); }); return f; });
+    const b = SPOTS.map((id) => { const f = Object.assign({ id, name: T().spots[id][0] }, FIXED[id], SHOP[id] ? { hours: hoursOfShop(id) } : {}); Object.entries(VARY[id] || {}).forEach(([k, vs]) => { f[k] = pickR(vs, R); }); return f; });
     if (!BATHS.some((id) => at(b, id).towel)) at(b, 'yu').towel = 200;
     return b;
   }
   // a price and a time as said: in kanji with their reading (a board's digits read, not matched: 2,500円 → 二千五百円 にせんごひゃくえん,
-  // 21:00 → 夜九時 よる くじ — 午前 before noon, 午後 to 16, 夕方 17–18, 夜 from 19)
+  // 21:00 → 夜九時 よる くじ — 午前 before noon, 午後 to 16, 夕方 17–18, 夜 from 19; 12 昼の十二時, 0 and 24 夜中の十二時: never 午後十二時)
   const KD = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
   const kanjiNum = (n) => { const th = Math.floor(n / 1000) % 10, h = Math.floor(n / 100) % 10, t = Math.floor(n / 10) % 10, o = n % 10;
     return (th ? (th > 1 ? KD[th] : '') + '千' : '') + (h ? (h > 1 ? KD[h] : '') + '百' : '') + (t ? (t > 1 ? KD[t] : '') + '十' : '') + KD[o]; };
@@ -52,8 +56,8 @@ const ANNAI = (() => {
   const yenZh = (n) => `${yenStr(n)} 日圓`;
   const HK = ['十二', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一'], HR = ['じゅうに', 'いち', 'に', 'さん', 'よ', 'ご', 'ろく', 'しち', 'はち', 'く', 'じゅう', 'じゅういち'];
   const part = (h) => (h < 12 ? ['午前', 'ごぜん', '上午'] : h < 17 ? ['午後', 'ごご', '下午'] : h < 19 ? ['夕方', 'ゆうがた', '傍晚'] : ['夜', 'よる', '晚上']);
-  const timeMark = (h) => { const [p, r] = part(h); return `{${p}|${r}}{${HK[h % 12]}時|${HR[h % 12]}じ}`; };
-  const timeZh = (h) => `${part(h)[2]} ${h % 12 || 12} 點`;
+  const timeMark = (h) => (h % 24 === 0 ? '{夜中|よなか|半夜}の {十二時|じゅうにじ}' : h === 12 ? '{昼|ひる}の {十二時|じゅうにじ}' : (([p, r]) => `{${p}|${r}}{${HK[h % 12]}時|${HR[h % 12]}じ}`)(part(h)));
+  const timeZh = (h) => (h % 24 === 0 ? '半夜 12 點' : h === 12 ? '中午 12 點' : `${part(h)[2]} ${h % 12} 點`);
   const fill = (tpl, o) => tpl.replace(/\{([TtPpXxYy])\}/g, (m, k) => (o[k] !== undefined ? o[k] : m));
   const said = (id) => T().spots[id][1], zhName = (id) => T().spots[id][2];
   // a reply as said: its right form, or (form) the one that is no answer — [Japanese, 中文 or why]
@@ -67,7 +71,7 @@ const ANNAI = (() => {
   // each question: its reply read off the board — { right, fact: the right reply with a wrong fact, form } ([ja, 中文 or why])
   const TIME = { yuTo: ['yu', 1, 'inTo'], yuFrom: ['yu', 0, 'inFrom'], kaTo: ['kagetsu', 1, 'inTo'], kaFrom: ['kagetsu', 0, 'inFrom'], ykTo: ['yukata', 1, 'rentTo'], shTo: ['shateki', 1, 'playTo'] };
   const PRICE = { priceYu: ['yu', 'inFor'], priceKa: ['kagetsu', 'inFor'], priceYk: ['yukata', 'rentFor'], priceSh: ['shateki', 'playFor'] };
-  const YESNO = { dog: ['ashiyu', 'dog', 'dogYes', 'dogNo'], kidsKa: ['kagetsu', 'kids', 'kidYes', 'kidNo'], kidsSh: ['shateki', 'kids', 'playYes', 'playNo'], nightAshi: ['ashiyu', 'open', 'nightYes', 'nightNo'], lightup: ['yubatake', 'night', 'seeYes', 'seeNo'] };
+  const YESNO = { dog: ['yukata', 'dog', 'dogYes', 'dogNo'], kidsKa: ['kagetsu', 'kids', 'kidYes', 'kidNo'], kidsSh: ['shateki', 'kids', 'playYes', 'playNo'], nightAshi: ['ashiyu', 'open', 'nightYes', 'nightNo'], lightup: ['yubatake', 'night', 'seeYes', 'seeNo'] };
   function answer(b, id, R) {
     const why = T().why;
     if (TIME[id]) { const [f, i, key] = TIME[id], h = at(b, f).hours[i], w = other(hoursOf(b), h, at(b, f).hours[1 - i], R);
@@ -101,26 +105,37 @@ const ANNAI = (() => {
     const opts = [[...F.right, true, '']].concat(F.wrong.map((w, i) => [...w, false, i ? 'fact' : 'form']));
     return { id: kind, kind: 'mieru', who: F.who, q: F.q, opts: shuffleR(opts, R), fun: kind, after: F.after };
   }
+  // no tourist twice running (2026-11-24, M-1): each next one the first of those left whose tourist is not the one before; none such
+  // left, it goes in further back, between two not its own (a tourist asks two questions at most, so there is always such a place)
+  function spread(ts) {
+    const out = [ts[0]], left = ts.slice(1);
+    while (left.length) {
+      const i = left.findIndex((t) => t.who !== out[out.length - 1].who);
+      if (i >= 0) { out.push(left.splice(i, 1)[0]); continue; }
+      const t = left.shift(), j = out.findIndex((x, n) => n > 0 && x.who !== t.who && out[n - 1].who !== t.who);
+      if (j > 0) out.splice(j, 0, t); else out.push(t);
+    }
+    return out;
+  }
   // a shift: { seed, board, tasks } — the first tourist asks a time (the plainest: an hour read off the board), then every kind (three
   // times, three can, two rules, a ことができる, a 見られる), no question twice, no tourist twice running; now and then a fun one in
-  // place of one of them after the first two (force: that one, or null for none — the tests')
+  // place of one of them after the first two — マイク's yukata question in 愛's own place when the shift has hers, so it is never
+  // asked twice (force: that one, or null for none — the tests')
   function make(u = TOWNEV.reachedIdx(), seed = 1 + Math.floor(Math.random() * 2147483646), force) {
     const R = rng(seed), b = board(R), A = T().ask, byKind = (k) => Object.keys(A).filter((id) => A[id][1] === k), used = new Set();
     const kinds = ['time', ...shuffleR(['time', 'time', 'can', 'can', 'can', 'rule', 'rule', 'dekiru', 'mieru'], R)];
-    const tasks = kinds.map((k) => { const free = byKind(k).filter((id) => !used.has(id)), id = free.length ? pickR(free, R) : pickR(Object.keys(A).filter((x) => !used.has(x)), R); used.add(id); return ask(b, id, u, R); });
-    for (let i = 1; i < tasks.length; i++) if (tasks[i].who === tasks[i - 1].who) {   // no one twice running: the next who differs comes first
-      const j = tasks.findIndex((t, n) => n > i && t.who !== tasks[i - 1].who);
-      if (j > 0) [tasks[i], tasks[j]] = [tasks[j], tasks[i]];
-    }
+    const tasks = spread(kinds.map((k) => { const free = byKind(k).filter((id) => !used.has(id)), id = free.length ? pickR(free, R) : pickR(Object.keys(A).filter((x) => !used.has(x)), R); used.add(id); return ask(b, id, u, R); }));
     const kind = force !== undefined ? force : R() < 0.5 ? pickR(FUN, R) : null;
-    if (kind) { const n = 2 + Math.floor(R() * 7); tasks[n] = fun(b, kind, u, R); }
+    if (kind) { const n = 2 + Math.floor(R() * 7), own = T().fun[kind].ask ? tasks.findIndex((t) => t.id === T().fun[kind].ask) : -1; tasks[own > 0 ? own : n] = fun(b, kind, u, R); }
     return { seed, board: b, tasks };
   }
+  // あかり's news of the dogs let into the 足湯 (ruling 25): on the job's first shift, then about one shift in four, as its seed says
+  const tells = (seed) => rng((Number(seed) ^ 0x5bd1e995) >>> 0)() < 0.25;
   // every right reply a board can make (the generator's: each a clip in the hero's voice)
   function rights() {
     const out = new Set(), add = (key, o) => out.add(reply(key, o)[0]), hrs = (id, i) => VARY[id].hours.map((h) => h[i]);
     hrs('yu', 1).concat(hrs('kagetsu', 1)).forEach((h) => add('inTo', timeO(h))); hrs('yu', 0).concat(hrs('kagetsu', 0)).forEach((h) => add('inFrom', timeO(h)));
-    hrs('yukata', 1).forEach((h) => add('rentTo', timeO(h))); hrs('shateki', 1).forEach((h) => add('playTo', timeO(h)));
+    add('rentTo', timeO(hoursOfShop('yukata')[1])); add('playTo', timeO(hoursOfShop('shateki')[1]));
     VARY.ashiyu.towel.concat(VARY.yu.towel).filter(Boolean).forEach((p) => add('buyYes', priceO(p)));
     ['ashiyu', 'yu'].forEach((x) => BATHS.filter((s) => s !== x).forEach((y) => add('buyNo', { X: said(x), Y: said(y) })));
     VARY.yu.price.concat(VARY.kagetsu.price).forEach((p) => add('inFor', priceO(p))); VARY.yukata.price.forEach((p) => add('rentFor', priceO(p))); add('playFor', priceO(FIXED.shateki.price));
@@ -130,7 +145,7 @@ const ANNAI = (() => {
   }
   // the tourists: each one asking (and the fun ones)
   const tourists = () => [...new Set(Object.values(T().ask).map((x) => x[0]).concat(FUN.map((k) => T().fun[k].who)))];
-  return { make, ask, fun, rights, tourists, priceMark, timeMark, timeZh, yenZh, SPOTS, VARY, FIXED, FUN };
+  return { make, ask, fun, rights, tourists, tells, priceMark, timeMark, timeZh, yenZh, SPOTS, VARY, FIXED, FUN };
 })();
 
 const ANNAI_RUN = (() => {
@@ -173,8 +188,14 @@ const ANNAI_RUN = (() => {
     // this run's own card (box, once drawn): a shift's goodbye still being said when the next one's card opens never touches that one
     let box = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), live = () => mine === runs && Boolean(el('.an-glass')) && ctx.on();
     let k = ctx.done, miss = 0, P = null, rep = 0, missed = 0, lost = 0;
+    // a short phone (2026-11-24, fix round 1): the card holds the board, the glass, the replies and the talk line; when a line lands below
+    // its fold the card scrolls itself just far enough to show it, and is back at its top for each tourist (the board and the glass first)
+    const card = () => (box && box.isConnected ? box.querySelector('.cls-card') : null);
+    const glide = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+    const seeTalk = () => requestAnimationFrame(() => { const c = card(), t = el('.an-talk'); if (!c || !t) return;
+      const d = t.getBoundingClientRect().bottom - (c.getBoundingClientRect().top + c.clientTop + c.clientHeight) + 6; if (d > 0) c.scrollBy({ top: d, behavior: glide() }); });
     // あかり and the hero share the line under the replies (whoever spoke last), as at 原田's window
-    const talk = (who) => { const t = el('.an-talk'); if (t) t.dataset.who = who; };
+    const talk = (who) => { const t = el('.an-talk'); if (t) t.dataset.who = who; seeTalk(); };
     const word = ([ja, zh], cls = '') => { talk('drv'); const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(A.who, ja); };
     const me = ([ja, zh]) => { talk('me'); const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
     const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
@@ -182,19 +203,20 @@ const ANNAI_RUN = (() => {
     function bub(open, line) {
       const t = R.task, b = el('.wk-cust .wk-bub'); if (!b) return; const [ja, zh] = line || t.q;
       b.innerHTML = `<button type="button" class="wk-ear an-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="bt-dots">……</b>'}`;
+      if (open) seeTalk();   // the bubble grown: the talk line kept in sight
     }
     function opts(on) {
       const o = el('.an-opts'); if (!o) return;
       o.innerHTML = on ? R.task.opts.map(([ja], i) => `<button type="button" class="btn an-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('') : '';
     }
     function show() {
-      const t = tasks[k]; R = { k, task: t, phase: 'hi', seed }; miss = 0; rep = 0;
+      const t = tasks[k]; R = { k, task: t, phase: 'hi', seed }; miss = 0; rep = 0; const cc = card(); if (cc) cc.scrollTop = 0;   // the card from its top
       el('.wk-n').textContent = `${k + 1}／${N}`;
       const c = el('.wk-cust'); c.className = 'wk-cust'; c.removeAttribute('data-mood'); c.dataset.fun = t.fun || ''; c.innerHTML = JOBS.custHtml(t.who); opts(false);
       const me0 = R; P = JOBS.patience('annai', t.who, SECS, () => Boolean(el('.wk-cust')) && R === me0 && ctx.on(), gone);
       said(me(s.hi), 700).then(() => {
         if (!live() || R !== me0) return; R.phase = 'ask'; bub(false); el('.wk-cust').classList.add('on'); opts(true);
-        said(speakAs(t.who, t.q[0])).then(() => { if (!rep && R === me0) P.go(); });
+        said(JOBS.voice(speakAs(t.who, t.q[0]))).then(() => { if (!rep && R === me0) P.go(); });
       });
     }
     // the tourist gone (to the next one, or あかり's word and the card shut once every line is said)
@@ -208,24 +230,27 @@ const ANNAI_RUN = (() => {
       R.phase = 'done'; P.stop(); ctx.right(k, miss); playSfx('good'); const t = R.task; bub(true);   // the question shown, the tourist still there to read it till they go
       el('.an-opts').querySelectorAll('.an-opt').forEach((b) => { b.disabled = true; b.classList.toggle('an-right', Number(b.dataset.o) === rightAt()); });
       next(async (live2) => {
+        await JOBS.quiet(); if (!live2()) return;   // the reply after any line still being said: あかり's word, the tourist's (ruling 27)
         await said(me(t.opts[rightAt()]), 900); if (!live2()) return;
         const after = t.after || s.thanks; if (t.after) bub(true, after); await said(speakAs(t.who, after[0]), 600); if (!live2()) return;
         el('.wk-cust').classList.add('bye'); if (!miss && Math.random() < 0.3) await said(word(A.ok[Math.floor(Math.random() * A.ok.length)], 'ok'));
       });
     }
-    // a wrong one: あかり says what kind of miss it is (the board misread, or a form that answers nothing), and why under it; it cannot
-    // be picked again; two and the question is shown, the right reply lit
+    // a wrong one: あかり says what kind of miss it is (the board misread, or a form that answers nothing), and why under it — said to its
+    // end, the tourist's clock held meanwhile and the miss's cost after it (ruling 27); it cannot be picked again; two and the question
+    // is shown, the right reply lit
     function wrong(b) {
       const o = R.task.opts[Number(b.dataset.o)]; miss++; missed++; playSfx('bad');
       b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); b.disabled = true;
-      word([(o[3] === 'form' ? A.form : A.fact)[0], o[1]], 'bad'); P.hit(MISS);
+      JOBS.missWord(P, () => word([(o[3] === 'form' ? A.form : A.fact)[0], o[1]], 'bad'), MISS);
       if (miss >= 2) { bub(true); el('.an-opts').querySelectorAll('.an-opt').forEach((x) => x.classList.toggle('wk-hint', Number(x.dataset.o) === rightAt())); }
     }
-    function gone(line) {   // patience out: off they go, the question shown whole and the right reply lit; the task lost
-      R.phase = 'done'; ctx.right(k, 3); lost++; playSfx('bad'); bub(true); const t = R.task;
+    // patience out: off they go — the question shown whole (spec §5: their leaving word pops up beside it, never over it, M-2), the right
+    // reply lit; the task lost
+    function gone(line) {
+      R.phase = 'done'; ctx.right(k, 3); lost++; playSfx('bad'); bub(true); const t = R.task; JOBS.grr(el('.wk-cust'), line[0]);
       el('.an-opts').querySelectorAll('.an-opt').forEach((x) => { x.disabled = true; x.classList.toggle('wk-hint', Number(x.dataset.o) === rightAt()); });
-      el('.wk-cust .wk-bub').innerHTML = `<b lang="ja">${esc(line[0])}</b><span>${esc(line[1])}</span>`;
-      next(async (live2) => { await said(speakAs(t.who, line[0]), 1200); if (live2()) { el('.wk-cust').classList.add('bye'); await sleep(450); } });
+      next(async (live2) => { await said(JOBS.line(t.who, line[0]), 1200); if (live2()) { el('.wk-cust').classList.add('bye'); await sleep(450); } });
     }
     CLASS.card('wk-annai', '觀光服務台', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja"><ruby>観光<rt>かんこう</rt></ruby><ruby>案内所<rt>あんないじょ</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span></div>
@@ -233,13 +258,14 @@ const ANNAI_RUN = (() => {
       <div class="an-glass"><i class="an-rack" aria-hidden="true">${RACK}</i><div class="an-pane"><div class="wk-cust"></div><i class="an-acryl" aria-hidden="true"></i></div><i class="an-rack" aria-hidden="true">${RACK}</i></div>
       <div class="an-opts"></div><div class="an-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(A.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => {
       if (!R || R.phase !== 'ask' || !live()) return;
-      if (e.target.closest('.an-ear')) { const q = P, r = rep = rep + 1; q.hold(); said(speakAs(R.task.who, R.task.q[0])).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }   // heard again: the clock waits for it
+      if (e.target.closest('.an-ear')) { const q = P, r = rep = rep + 1; q.hold(); said(JOBS.line(R.task.who, R.task.q[0])).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }   // heard again (after any line being said): the clock waits for it
       const o = e.target.closest('.an-opt'); if (!o || o.disabled) return;
       if (Number(o.dataset.o) === rightAt()) right(); else wrong(o);
     });
     box = document.querySelector('.cls.wk-annai');
-    // a shift begun: あかり's word, and on a board that lets dogs into the 足湯 her news of it (〜ようになる, ruling 10); picked up again: on
-    const dogs = Boolean((shift.board.find((f) => f.id === 'ashiyu') || {}).dog);
+    // a shift begun: あかり's word, and her news of the dogs let into the 足湯 (〜ようになる) on the job's first shift and about one in four
+    // after it, as the seed says (ruling 25: the 足湯 takes dogs on every board); picked up again: on
+    const dogs = first || ANNAI.tells(seed);
     if (ctx.done) { show(); return; }
     (async () => { await said(word(A.start), 600); if (!live()) return; if (dogs) { await said(word(A.dogs), 700); if (!live()) return; } show(); })();
   }

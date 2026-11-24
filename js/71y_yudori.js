@@ -38,13 +38,16 @@ const YUDORI = (() => {
   // the passers (PASSERS): up the street into the 湯畑's steam, or out of it toward the station; lost in the steam at the far end
   const passWay = (rnd) => { const x = rnd(-36, 36), up = [[x, -40], [rnd(-22, 22), FAR + 30]]; return Math.random() < 0.55 ? up : up.reverse(); };
   const passFade = (X, Y) => Math.max(0, Math.min(1, (FAR + 30 - Y) / 26));
-  // ゆのはな堂 by its hours (TOWN.HOURS.yunohanado, 竹内's too): open, or when it opens next
-  const open = (h = TOWNEV.now()) => TOWNEV.isOpen('yunohanado', h);
-  function shutSay(h = TOWNEV.now()) {
-    const [a, b] = (TOWN.HOURS || {}).yunohanado || [9, 21], all = `${a}:00–${b}:00`;
-    return h < a ? `ゆのはな堂 準備中，${a}:00 開店（營業時間 ${all}）。` : `ゆのはな堂 今天的營業結束了，明天 ${a}:00 開店（營業時間 ${all}）。`;
+  // ゆのはな堂 by its hours (TOWN.HOURS.yunohanado, 竹内's too) — and its 射的 and ゆかた屋 by theirs (2026-11-24, rulings 21, 26: the
+  // 観光案内所's boards say the same): open, or when it opens next
+  const isOpen = (id, h = TOWNEV.now()) => TOWNEV.isOpen(id, h), open = (h = TOWNEV.now()) => isOpen('yunohanado', h);
+  const SHUT_NAME = { yunohanado: 'ゆのはな堂', shateki: '射的', yukataya: 'ゆかた屋' };
+  function shutSay(id = 'yunohanado', h = TOWNEV.now()) {
+    const [a, b] = (TOWN.HOURS || {})[id] || [9, 21], all = `${a}:00–${b}:00`, n = SHUT_NAME[id] || id;
+    return h < a ? `${n} 準備中，${a}:00 開店（營業時間 ${all}）。` : `${n} 今天的營業結束了，明天 ${a}:00 開店（營業時間 ${all}）。`;
   }
-  const sig = () => (open() ? 'o' : '');   // TOWNEV.sig: the street drawn anew as the shop opens and shuts
+  const hoursSay = (id) => { const [a, b] = (TOWN.HOURS || {})[id] || [9, 18]; return `${a}:00–${b}:00`; };
+  const sig = () => ['yunohanado', 'shateki', 'yukataya'].map((id) => (isOpen(id) ? 'o' : '-')).join('');   // TOWNEV.sig: the street drawn anew as a shop opens or shuts
 
   // ---- the street, drawn: a point of it is P(side, p, L, V) as on 大通り — p how far from the horizon (H − Y), L how far out from the
   // middle and V how high, both as they measure at the front (Y0); the eye above the roofs, the sun from the left ----
@@ -134,7 +137,7 @@ const YUDORI = (() => {
   const goods = (fr, t0, t1, v, cs, l) => Array.from({ length: 6 }, (_, i) => fr(t0 + (t1 - t0) * (i + 0.15) / 6, t0 + (t1 - t0) * (i + 0.8) / 6, v, v + 9 + (i % 2) * 3, hc(cs[i % cs.length], '#3a2a3a'), l)).join('');   // boxes on a shelf, l in from the street
   const sway = (i, body) => `<g class="fx-sway" style="animation-duration:${(3.6 + (i % 3) * 0.35).toFixed(2)}s;animation-delay:-${(i * 0.7).toFixed(1)}s">${body}</g>`;
   // a lantern hung from the pent roof's edge at t along a block
-  const hung = (b, at, t, c, i, on = true) => { const [x, y] = P(b.side, at(t), b.L - 22, 108); return lantern(x, y, 8 * at(t) / K, on ? c : '#9a5a50', i, on); };
+  const hung = (b, at, t, c, i, on = true, off = '#9a5a50') => { const [x, y] = P(b.side, at(t), b.L - 22, 108); return lantern(x, y, 8 * at(t) / K, on ? c : off, i, on); };   // off: its paper unlit
   const FRONT = {
     // a plain house: its lattice front, a sliding door
     house: (b, fr) => fr(0.08, 0.92, 7, 100, hc('#4a3424', '#16122a')) + fr(0.1, 0.9, 9, 98, hc('#d8c8a6', '#2a2440'))
@@ -154,18 +157,26 @@ const YUDORI = (() => {
       }
       return g;
     },
-    // 射的: red tiers of prizes inside under a lamp — caramel boxes, little kokeshi, daruma, the big bear on top — the red-and-white
-    // curtain along the opening, the counter with its cork guns
+    // 射的: open — red tiers of prizes inside under a lamp (caramel boxes, little kokeshi, daruma, the big bear on top), the red-and-white
+    // curtain along the opening, the counter with its cork guns; shut (TOWN.HOURS.shateki, 2026-11-24, ruling 21) — a canvas sheet let
+    // down over the stall from the curtain to the counter, hiding the prize shelf, a rope across it; a 準備中 plate hung on the counter's
+    // front (seen from above the street, the stall is under its eave: what shows is the counter and the lanterns); no guns
     shateki: (b, fr, at) => {
-      const sd = b.side, k = at(0.5) / K, back = b.L + 22;
-      let g = fr(0.05, 0.95, 7, 104, hc('#2e1e18', '#120e22')) + fr(0.05, 0.95, 20, 96, 'fill="#ffd08a" fill-opacity=".16"');
-      [[26, 36], [44, 54], [62, 72]].forEach(([v0, v1], r) => { g += fr(0.12, 0.9, v0, v1, hc('#b8262e', '#3a1a28'), back - r * 4) + fr(0.12, 0.9, v1 - 1.2, v1, 'fill="#fff" fill-opacity=".2"', back - r * 4);
-        g += Array.from({ length: 6 }, (_, i) => { const t = 0.15 + i * 0.125; return fr(t, t + 0.05, v1, v1 + 6 + ((i + r) % 3) * 2, hc(['#f6e08a', '#e86a8a', '#5a8ac8', '#f2f0ea', '#e8a060', '#8ab86e'][(i + r * 2) % 6], '#4a3a4a'), back - r * 4 - 1); }).join(''); });
-      g += (() => { const [x, y] = P(sd, at(0.52), back - 10, 80), r = 7 * k; return `<circle cx="${f(x)}" cy="${f(y - r * 1.1)}" r="${f(r * 1.25)}" ${hc('#c8955f', '#4a3a40')}/><circle cx="${f(x - r * 0.95)}" cy="${f(y - r * 2.1)}" r="${f(r * 0.45)}" ${hc('#c8955f', '#4a3a40')}/><circle cx="${f(x + r * 0.95)}" cy="${f(y - r * 2.1)}" r="${f(r * 0.45)}" ${hc('#c8955f', '#4a3a40')}/><circle cx="${f(x)}" cy="${f(y - r * 1.2)}" r="${f(r * 0.38)}" fill="#f0d6b0"/>`; })();
+      const sd = b.side, k = at(0.5) / K, back = b.L + 22, on = isOpen('shateki');
+      let g = fr(0.05, 0.95, 7, 104, hc('#2e1e18', '#120e22')) + (on ? fr(0.05, 0.95, 20, 96, 'fill="#ffd08a" fill-opacity=".16"') : '');
+      if (on) {
+        [[26, 36], [44, 54], [62, 72]].forEach(([v0, v1], r) => { g += fr(0.12, 0.9, v0, v1, hc('#b8262e', '#3a1a28'), back - r * 4) + fr(0.12, 0.9, v1 - 1.2, v1, 'fill="#fff" fill-opacity=".2"', back - r * 4);
+          g += Array.from({ length: 6 }, (_, i) => { const t = 0.15 + i * 0.125; return fr(t, t + 0.05, v1, v1 + 6 + ((i + r) % 3) * 2, hc(['#f6e08a', '#e86a8a', '#5a8ac8', '#f2f0ea', '#e8a060', '#8ab86e'][(i + r * 2) % 6], '#4a3a4a'), back - r * 4 - 1); }).join(''); });
+        g += (() => { const [x, y] = P(sd, at(0.52), back - 10, 80), r = 7 * k; return `<circle cx="${f(x)}" cy="${f(y - r * 1.1)}" r="${f(r * 1.25)}" ${hc('#c8955f', '#4a3a40')}/><circle cx="${f(x - r * 0.95)}" cy="${f(y - r * 2.1)}" r="${f(r * 0.45)}" ${hc('#c8955f', '#4a3a40')}/><circle cx="${f(x + r * 0.95)}" cy="${f(y - r * 2.1)}" r="${f(r * 0.45)}" ${hc('#c8955f', '#4a3a40')}/><circle cx="${f(x)}" cy="${f(y - r * 1.2)}" r="${f(r * 0.38)}" fill="#f0d6b0"/>`; })();
+      } else {
+        g += `<g data-shut="shateki">${fr(0.06, 0.94, 26, 88, hc('#e2d6ba', '#3a3650'), b.L - 0.5)}${Array.from({ length: 9 }, (_, i) => fr(0.06 + 0.88 * (i + 0.5) / 9, 0.06 + 0.88 * (i + 0.5) / 9 + 0.008, 26, 88, hc('#c4b593', '#2c2942'), b.L - 0.5)).join('')}${fr(0.06, 0.94, 56, 58.4, hc('#8a5a34', '#2a2030'), b.L - 0.6)}`
+          + '</g>';
+      }
       g += Array.from({ length: 14 }, (_, i) => fr(0.05 + 0.9 * i / 14, 0.05 + 0.9 * (i + 1) / 14, 88, 104, i % 2 ? hc('#f6f2ea', '#4a4a6a') : hc('#c8322a', '#4a1e2a'), b.L - 1)).join('')
         + fr(0.05, 0.95, 86, 88, 'fill="#2b1c12" fill-opacity=".3"', b.L - 1);
       return g + fr(0.08, 0.92, 7, 26, hc('#8a5a34', '#2a2030'), b.L - 10) + level(sd, at(0.08), at(0.92), b.L - 10, b.L + 2, 26, hc('#b07a48', '#3a2a3a'))
-        + [0.3, 0.62].map((t) => { const [x, y] = P(sd, at(t), b.L - 6, 26.5), r = at(t) / K; return `<path d="M${f(x - 10 * r)} ${f(y)} l${f(16 * r)} ${f(-3 * r)}" stroke="#3b2a1c" stroke-width="${f(2.2 * r)}" stroke-linecap="round"/><path d="M${f(x + 5 * r)} ${f(y - 2 * r)} l${f(3 * r)} ${f(-0.6 * r)}" stroke="#8a8a92" stroke-width="${f(2.6 * r)}"/>`; }).join('');
+        + (on ? '' : (() => { const [cx, cy] = P(sd, at(0.5), b.L - 10.6, 24.5), q = at(0.5) / K; return `<g data-shut="shateki-plate"><rect x="${f(cx - 5.5 * q)}" y="${f(cy)}" width="${f(11 * q)}" height="${f(17 * q)}" rx="${f(q)}" ${hc('#e8cf9a', '#6a5a52')} stroke="#5a3e2a" stroke-width="${f(0.7 * q)}"/>${vText(f(cx), cy + 1.3 * q, '準備中', 4.6 * q, `font-weight="800" fill="#3b2a1c" ${SERIF}`)}</g>`; })())
+        + (on ? [0.3, 0.62].map((t) => { const [x, y] = P(sd, at(t), b.L - 6, 26.5), r = at(t) / K; return `<path d="M${f(x - 10 * r)} ${f(y)} l${f(16 * r)} ${f(-3 * r)}" stroke="#3b2a1c" stroke-width="${f(2.2 * r)}" stroke-linecap="round"/><path d="M${f(x + 5 * r)} ${f(y - 2 * r)} l${f(3 * r)} ${f(-0.6 * r)}" stroke="#8a8a92" stroke-width="${f(2.6 * r)}"/>`; }).join('') : '');
     },
     // the sake shop: its lattice, the indigo noren with 酒 on it
     sakaya: (b, fr, at) => {
@@ -176,14 +187,17 @@ const YUDORI = (() => {
     // 旅館「花月」: the inn's own front behind its gate, latticed, lit inside
     kagetsu: (b, fr) => fr(0, 1, 7, 118, hc('#e9dfc8', '#2a2c4c')) + fr(0.08, 0.92, 10, 112, hc('#ead9b8', '#ffd98a')) + fr(0.08, 0.92, 10, 112, 'class="lit" style="opacity:calc(.06 + .5 * (1 - var(--day)))"')
       + Array.from({ length: 10 }, (_, i) => fr(0.08 + 0.84 * i / 10, 0.08 + 0.84 * i / 10 + 0.008, 10, 112, hc('#6e5236', '#24203a'))).join('') + fr(0.08, 0.92, 60, 62, hc('#6e5236', '#24203a')),
-    // ゆかた屋: its window of yukata on their stands, a pink noren at the door
+    // ゆかた屋: open — its window of yukata on their stands, a pink noren at the door; shut (TOWN.HOURS.yukataya, 2026-11-24, ruling 26)
+    // — its window dark, the noren taken in, the door's lattice drawn to
     yukataya: (b, fr, at) => {
-      const sd = b.side;
-      let g = fr(0.06, 0.62, 18, 104, hc('#4a3424', '#1e1830')) + fr(0.08, 0.6, 20, 102, hc('#e6eef0', '#ffd98a')) + fr(0.08, 0.6, 20, 102, 'class="lit" style="opacity:calc(.05 + .5 * (1 - var(--day)))"');
+      const sd = b.side, on = isOpen('yukataya');
+      let g = fr(0.06, 0.62, 18, 104, hc('#4a3424', '#1e1830')) + fr(0.08, 0.6, 20, 102, hc('#e6eef0', '#ffd98a')) + (on ? fr(0.08, 0.6, 20, 102, 'class="lit" style="opacity:calc(.05 + .5 * (1 - var(--day)))"') : '');
       g += [['#26407a', 0.14], ['#e58fa8', 0.29], ['#f2f0ea', 0.44]].map(([c, t]) => { const p = at(t), q = p / K, [x, y] = P(sd, p, b.L + 4, 36);
         return `<path d="M${f(x - 7 * q)} ${f(y)} l${f(1.4 * q)} ${f(-44 * q)} l${f(-6 * q)} ${f(4 * q)} l${f(-1 * q)} ${f(-6 * q)} l${f(8 * q)} ${f(-6 * q)} h${f(11 * q)} l${f(8 * q)} ${f(6 * q)} l${f(-1 * q)} ${f(6 * q)} l${f(-6 * q)} ${f(-4 * q)} l${f(1.4 * q)} ${f(44 * q)} Z" ${hc(c, '#4a4a6a')}/><path d="M${f(x - 5 * q)} ${f(y - 26 * q)} h${f(14 * q)}" stroke="#d9b04a" stroke-width="${f(3 * q)}"/><path d="M${f(x - 2 * q)} ${f(y - 50 * q)} l${f(4 * q)} ${f(8 * q)} l${f(4 * q)} ${f(-8 * q)}" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="${f(1 * q)}"/>${[[-2, -38], [4, -30], [-1, -14], [5, -8]].map(([dx, dy]) => `<circle cx="${f(x + dx * q)}" cy="${f(y + dy * q)}" r="${f(1.3 * q)}" fill="#fff" fill-opacity=".55"/>`).join('')}`; }).join('');
-      return g + fr(0.08, 0.6, 20, 102, 'fill="#fff" fill-opacity=".1"') + fr(0.66, 0.92, 7, 100, hc('#2e2018', '#120e22'))
-        + [0, 1].map((i) => sway(i, fr(0.67 + i * 0.125, 0.79 + i * 0.125, 66, 100, hc('#c8506a', '#4a2a40'), b.L - 1))).join('');
+      g += fr(0.08, 0.6, 20, 102, 'fill="#fff" fill-opacity=".1"') + fr(0.66, 0.92, 7, 100, hc('#2e2018', '#120e22'));
+      if (!on) return g + `<g data-shut="yukataya">${fr(0.08, 0.6, 20, 102, 'fill="#14142a" fill-opacity=".78"')}${fr(0.66, 0.92, 7, 100, hc('#8a6a48', '#2a2238'))}`
+        + Array.from({ length: 9 }, (_, k) => fr(0.67 + 0.24 * k / 9, 0.67 + 0.24 * k / 9 + 0.006, 7, 100, hc('#5a3e2a', '#1e1830'))).join('') + fr(0.66, 0.92, 52, 54, hc('#5a3e2a', '#1e1830')) + '</g>';
+      return g + [0, 1].map((i) => sway(i, fr(0.67 + i * 0.125, 0.79 + i * 0.125, 66, 100, hc('#c8506a', '#4a2a40'), b.L - 1))).join('');
     },
     // 甘味処: its lattice, a green noren at the door
     kanmi: (b, fr, at) => FRONT.house(b, fr, at) + fr(0.5, 0.86, 7, 100, hc('#2e2018', '#120e22')) + [0, 1].map((i) => sway(i, fr(0.5 + i * 0.18, 0.67 + i * 0.18, 66, 100, hc('#4f7a4a', '#1e3030'), b.L - 1))).join('')
@@ -205,8 +219,8 @@ const YUDORI = (() => {
       return hung(b, at, 0.1, '#d0302a', 0, on) + hung(b, at, 0.9, '#d0302a', 1, on) + board + st;
     },
     // 射的: a red lantern either end; its ポン seen from the street (the shot's moment)
-    shateki: (b, at) => { const [px, py] = P(b.side, at(0.5), b.L - 16, 70), k = at(0.5) / K;
-      return hung(b, at, 0.08, '#d0302a', 2) + hung(b, at, 0.92, '#f2e2c0', 3) + `<g data-fx="shateki"><text class="yd-pon" x="${f(px)}" y="${f(py)}" text-anchor="middle" font-size="${f(15 * k)}" font-weight="800" fill="#c8322a" stroke="#fff6e8" stroke-width="${f(2.6 * k)}" paint-order="stroke" font-family="'Hiragino Maru Gothic ProN', 'Zen Maru Gothic', sans-serif">ポン！</text></g>`; },
+    shateki: (b, at) => { const [px, py] = P(b.side, at(0.5), b.L - 16, 70), k = at(0.5) / K, on = isOpen('shateki');
+      return hung(b, at, 0.08, '#d0302a', 2, on) + hung(b, at, 0.92, '#f2e2c0', 3, on, '#b5a78c') + `<g data-fx="shateki"><text class="yd-pon" x="${f(px)}" y="${f(py)}" text-anchor="middle" font-size="${f(15 * k)}" font-weight="800" fill="#c8322a" stroke="#fff6e8" stroke-width="${f(2.6 * k)}" paint-order="stroke" font-family="'Hiragino Maru Gothic ProN', 'Zen Maru Gothic', sans-serif">ポン！</text></g>`; },
     // the sake shop: the cedar ball under the eaves, two barrels by the door
     sakaya: (b, at) => {
       const sd = b.side, k = at(0.2) / K, [sx, sy] = P(sd, at(0.2), b.L - 18, 108), r = 9 * k;
@@ -238,7 +252,7 @@ const YUDORI = (() => {
       return g + lightPool(...P(sd, at(0.54), gl - 10, 0), 30 * k);
     },
     // ゆかた屋: a lantern by its door
-    yukataya: (b, at) => hung(b, at, 0.94, '#f2e2c0', 4),
+    yukataya: (b, at) => hung(b, at, 0.94, '#f2e2c0', 4, isOpen('yukataya'), '#b5a78c'),   // out when shut (ruling 26)
     // 甘味処: a red parasol over a bench under red cloth, out front
     kanmi: (b, at) => {
       const sd = b.side, k = at(0.3) / K, [bx, by] = P(sd, at(0.3), b.L - 22, 0);
@@ -409,6 +423,7 @@ const YUDORI = (() => {
   // a go: paid (this device's 円 spent, the day kept), three corks — the prize's at the last if one is won — and what came of it
   function go(yard) {
     const c = document.querySelector('.yd-shateki'); if (!c || played() || yenEarned() <= 0 || yenBalance() < PRICE) return;
+    if (!isOpen('shateki')) { CLASS.close(); toast(shutSay('shateki'), 3600); return; }   // shut meanwhile (ruling 21): nothing paid, no day kept
     state.oneADay = Object.assign({}, state.oneADay, { shateki: day() }); yenSpend(PRICE); SND.play('coins');   // the day kept, saved with the 円 spent
     const won = prize(), [, , ja, zh] = PRIZES.find((x) => x[0] === won), me = ++shooting, foot = c.querySelector('.yd-foot'); foot.innerHTML = '';
     const target = { caramel: [0, 3, 7, 10], kokeshi: [2, 5, 6, 9], bear: [11] }[won], aims = [1, 4, 8];
@@ -429,7 +444,7 @@ const YUDORI = (() => {
     setTimeout(() => knock(c, i, hit), 340);
   }
   function knock(c, i, hit) { const g = c.querySelector(`.yd-prize[data-i="${i}"]`); if (!g) return; g.classList.remove('wob', 'down'); void g.getBoundingClientRect(); g.classList.add(hit ? 'down' : 'wob'); }
-  return { H, Y0, FAR, HALF0, K, END, scale, half, top, clamp, SHOPS, shop, pAt, door, BLOCKS, passWay, passFade, open, shutSay, sig, html, shateki, prize, PRIZES, PRICE, played };
+  return { H, Y0, FAR, HALF0, K, END, scale, half, top, clamp, SHOPS, shop, pAt, door, BLOCKS, passWay, passFade, open, isOpen, shutSay, hoursSay, sig, html, shateki, prize, PRIZES, PRICE, played };
 })();
 DOWN.yudori = YUDORI;   // seen down its length (71a_yard.js)
 WALK_BLOCK.yudori = YUDORI.BLOCKS.map((x) => x.box);   // the pavement's things reaching into the street (YUDORI.BLOCKS)
@@ -446,10 +461,11 @@ PLACE_USE.yudori = (() => {
   return [
     thing('yunohanado', 'yunohanado', { name: 'ゆのはな堂（溫泉饅頭）', when: () => YUDORI.open(), buy: 'yunohanado', say: 'いい におい…！' }),
     thing('junbi', 'yunohanado', { name: 'ゆのはな堂（準備中）', when: () => !YUDORI.open(), pick: () => ['しまってる…', YUDORI.shutSay()] }),
-    thing('shateki', 'shateki', { name: '射的', open: (y) => YUDORI.shateki(y), say: 'わくわく…！' }),
+    thing('shateki', 'shateki', { name: '射的', when: () => YUDORI.isOpen('shateki'), open: (y) => YUDORI.shateki(y), say: 'わくわく…！' }),
+    thing('shatekishut', 'shateki', { name: '射的（準備中）', when: () => !YUDORI.isOpen('shateki'), pick: () => ['しまってる…', YUDORI.shutSay('shateki')] }),   // its hours (ruling 21)
     thing('sakaya', 'sakaya', { name: '酒屋', say: 'おさけの におい…', toast: '酒屋（賣酒的店）：屋簷下掛著用杉樹葉做的「杉玉」，表示今年的新酒釀好了。' }),
     thing('kagetsu', 'kagetsu', { name: '旅館「花月」', open: (y) => yGo(y.querySelector('.use-btn[data-use="kagetsu"]') || y, 'ryokan') }),   // in through its gate (2026-11-24: RYOKAN)
-    thing('yukataya', 'yukataya', { name: 'ゆかた屋', say: 'きれい…！', toast: 'ゆかた屋：櫥窗裡掛著各種顏色的浴衣，可以租來穿著逛街。' }),
+    thing('yukataya', 'yukataya', { name: 'ゆかた屋', pick: () => (YUDORI.isOpen('yukataya') ? ['きれい…！', `ゆかた屋：櫥窗裡掛著各種顏色的浴衣，可以租來穿著逛街（營業時間 ${YUDORI.hoursSay('yukataya')}）。`] : ['しまってる…', YUDORI.shutSay('yukataya')]) }),   // its hours (ruling 26)
     thing('kanmi', 'kanmi', { name: '甘味処', say: 'あまい におい…', toast: '甘味処（日式甜點店）：紅色大傘下的長椅，坐著吃糰子、喝茶。' }),
     { id: 'neko', name: '貓', box: [Math.round(cx - 30 * k), Math.round(cy - 22 * k), Math.round(cx + 30 * k), Math.round(cy + 10 * k)], over: 1, kind: 'do', go: [Math.round(YUDORI.half(YUDORI.H - p) - 14), Math.round(YUDORI.H - p)], back: 1, pose: 'crouch', say: 'ニャ…', fx: 'neko', fxc: 'stir', ms: 2200 }];
 })();

@@ -592,42 +592,52 @@ def test_an_n5_visitor_gets_the_reason_not_a_card(b):
         assert 'work' in x['picks'] and 'ベテラン' in x['said'] and unit in x['said'] and not x['card'], (id, r)
     for id, picks in r['pre'].items():
         assert 'work' not in picks, (id, r)   # no runner yet: a chat (竹内: his まんじゅう too), no work talk
+    assert r['makoto']['picks'][0] == 'order', r   # 竹内 sells still, his runner in or not
 
-# spec §5.1 (rulings 6, 7, 8): every answer is read off the board — two shifts whose 足湯 differ (dogs in or not, a towel to buy or
-# not) flip the right reply; the hours and prices said are the board's; what the town itself shows is the same on every board (射的
-# 300 円 a go, the 湯畑 free, open all night and lit up by night, the 足湯 free and open all night); a shift is ten tourists, at most
-# one of them a fun one; every tourist's three replies all differ, one right, none a ら抜き form nor a 五段 verb + れる／られる (heard
-# as honorific: 入られます, 買われます); the fun ones — the phrasebook (マイク), the child's ghost (ゆうた: the playful reply right),
-# ミヨコ's future
+# spec §5.1 (rulings 6, 7, 8, 21, 24, 25, 26): every answer is read off the board — two shifts whose ゆかた屋 differs on dogs and whose
+# 足湯 differs on a towel to buy flip the right reply; the hours and prices said are the board's; what the town itself shows is the same
+# on every board (射的 300 円 a go and its hours, ゆかた屋's hours — both TOWN.HOURS —, the 湯畑 free, open all night and lit up by
+# night, the 足湯 free, open all night and open to dogs); a shift is ten tourists, at most one a fun one, no question twice, no tourist
+# twice running; every tourist's three replies all differ, one right, none a ら抜き form, a 五段 verb + れる／られる (heard as honorific:
+# 入られます, 買われます) nor 見せる; the fun ones — マイク's phrasebook (the yukata's price: at 愛's own place when the shift has it),
+# ゆうた's ghost (the playful reply right), ミヨコ's future. Swept at m7, m9, m10 and m15 (TOWNEV.unitIdx: index 7 is m7)
 def test_annai_answers_come_from_the_board(b):
     r = json.loads(ev(b, """(() => { const MARK = /\\{([^|}]+)\\|([^|}]+)(?:\\|[^}]+)?\\}/g, kana = (s) => s.replace(MARK, '$2').replace(/\\s/g, '');
       const m7 = TOWNEV.unitIdx('m7'), f = (sh, id) => sh.board.find((x) => x.id === id), right = (t) => t.opts.find((o) => o[2])[0], out = {};
-      let a = null, c = null; for (let s = 1; s < 500 && !(a && c); s++) { const x = ANNAI.make(m7, s), ft = f(x, 'ashiyu'); if (!a && ft.dog && ft.towel) a = x; if (!c && !ft.dog && !ft.towel) c = x; }
+      let a = null, c = null; for (let s = 1; s < 500 && !(a && c); s++) { const x = ANNAI.make(m7, s), yk = f(x, 'yukata'), ft = f(x, 'ashiyu'); if (!a && yk.dog && ft.towel) a = x; if (!c && !yk.dog && !ft.towel) c = x; }
       out.found = Boolean(a && c); const said = (sh, q) => right(ANNAI.ask(sh.board, q, m7));
       out.dog = [said(a, 'dog'), said(c, 'dog')]; out.towel = [said(a, 'towelAshi'), said(c, 'towelAshi')]; out.towelPrice = said(a, 'towelAshi').includes(ANNAI.priceMark(f(a, 'ashiyu').towel));
+      out.dogAsk = TOWN.ONSEN.annai.ask.dog[2];
       out.read = [a, c].map((sh) => [said(sh, 'yuTo').includes(ANNAI.timeMark(f(sh, 'yu').hours[1])), said(sh, 'kaFrom').includes(ANNAI.timeMark(f(sh, 'kagetsu').hours[0])),
         said(sh, 'priceYu').includes(ANNAI.priceMark(f(sh, 'yu').price)), said(sh, 'priceYk').includes(ANNAI.priceMark(f(sh, 'yukata').price))]);
       const fixed = [], RANUKI = ['みれます', 'みれません', 'みれる', 'かりれ', 'きれます', 'きれません', 'これます', 'これません', 'たべれ', 'ねれます', 'でれます'];
-      const GODAN = ['はいられ', 'かわれ', 'いかれ', 'あそばれ', 'つかわれ', 'のられ', 'とられ', 'とまられ'], bad = []; let n = 0;
-      for (let s = 1; s <= 80; s++) for (const u of [7, 9, 10, 15]) { const sh = ANNAI.make(u, s); n += sh.tasks.length;
-        const sht = f(sh, 'shateki'), yb = f(sh, 'yubatake'), as = f(sh, 'ashiyu');
-        if (sht.price !== 300 || yb.price !== 0 || yb.hours.join() !== '0,24' || !yb.night || as.price !== 0 || as.hours.join() !== '0,24' || sh.board.length !== 6) fixed.push(s);
-        if (sh.tasks.length !== 10 || sh.tasks.filter((t) => t.fun).length > 1) bad.push(s + ':shift');
+      const GODAN = ['はいられ', 'かわれ', 'いかれ', 'あそばれ', 'つかわれ', 'のられ', 'とられ', 'とまられ'], SHOW = ['みせま', 'みせる'], bad = []; let n = 0;
+      const units = ['m7', 'm9', 'm10', 'm15'].map((u) => TOWNEV.unitIdx(u)); out.units = units;
+      for (let s = 1; s <= 80; s++) for (const u of units) { const sh = ANNAI.make(u, s); n += sh.tasks.length;
+        const sht = f(sh, 'shateki'), yb = f(sh, 'yubatake'), as = f(sh, 'ashiyu'), yk = f(sh, 'yukata');
+        if (sht.price !== 300 || sht.hours.join() !== TOWN.HOURS.shateki.join() || yk.hours.join() !== TOWN.HOURS.yukataya.join() || yb.price !== 0 || yb.hours.join() !== '0,24' || !yb.night
+          || as.price !== 0 || as.hours.join() !== '0,24' || as.dog !== true || sh.board.length !== 6) fixed.push(s);
+        const ids = sh.tasks.map((t) => t.id); if (sh.tasks.length !== 10 || sh.tasks.filter((t) => t.fun).length > 1 || new Set(ids).size !== ids.length) bad.push(`${s}@${u}:shift:${ids.join()}`);
         sh.tasks.forEach((t, k) => { const js = t.opts.map((o) => o[0]);
+          if (k && t.who === sh.tasks[k - 1].who) bad.push(`${s}@${u}.${k}:running:${t.who}`);
           if (t.opts.length !== 3 || new Set(js).size !== 3 || t.opts.filter((o) => o[2]).length !== 1 || t.opts.some((o) => !o[1])) bad.push(`${s}.${k}:${t.kind}:opts`);
           if (!t.who || !t.q || !t.q[0] || !t.q[1] || !CAST_VOICE[t.who]) bad.push(`${s}.${k}:q`);
-          js.forEach((j) => { const kk = kana(j); RANUKI.concat(GODAN).forEach((w) => { if (kk.includes(w)) bad.push(`${s}.${k}:${w}:${j}`); }); }); }); }
+          js.forEach((j) => { const kk = kana(j); RANUKI.concat(GODAN, SHOW).forEach((w) => { if (kk.includes(w)) bad.push(`${s}.${k}:${w}:${j}`); }); }); }); }
       out.fixed = fixed.slice(0, 5); out.scan = [n, bad.slice(0, 8)];
       out.fun = ['book', 'ghost', 'future'].map((k) => { const sh = ANNAI.make(m7, 3, k), t = sh.tasks.find((x) => x.fun === k); return t ? [t.who, right(t), t.opts.length, sh.tasks.filter((x) => x.fun).length] : null; });
+      let books = 0; const misplaced = []; for (let s = 1; s <= 200; s++) { const plain = ANNAI.make(m7, s, null), i = plain.tasks.findIndex((t) => t.id === 'priceYk'); if (i < 0) continue; books++;
+        const bk = ANNAI.make(m7, s, 'book'); if (!bk.tasks[i].fun || bk.tasks.filter((t) => t.id === 'priceYk').length !== 1) misplaced.push(s); }
+      out.book = [books, misplaced.slice(0, 5)];
       return JSON.stringify(out); })()"""))
     assert r['found'], r
-    assert r['dog'][0].startswith('はい') and r['dog'][1].startswith('いいえ'), r   # dogs in on one board, not on the other
+    assert 'ゆかた' in r['dogAsk'] and r['dog'][0].startswith('はい') and r['dog'][1].startswith('いいえ'), r   # ゆかた屋: dogs in on one board, not on the other
     assert r['towel'][0].startswith('はい') and r['towel'][1].startswith('いいえ') and r['towelPrice'], r   # a towel at the 足湯 on one, elsewhere on the other
     assert r['read'] == [[True] * 4, [True] * 4], r   # the hours and the prices said are the board's
     assert r['fixed'] == [], r   # what the town shows: the same on every board
-    assert r['scan'][0] == 3200 and r['scan'][1] == [], r
+    assert r['units'] == [7, 9, 10, 15] and r['scan'][0] == 3200 and r['scan'][1] == [], r
     assert [x and x[0] for x in r['fun']] == ['mike', 'yuta', 'miyoko'] and all(x[2] == 3 and x[3] == 1 for x in r['fun']), r
     assert '{見|み}られるかも' in r['fun'][1][1], r   # the child's ghost: the playful reply is the right one
+    assert r['book'][0] > 20 and r['book'][1] == [], r   # マイク's yukata question in 愛's own place, never as well as hers
 
 # spec §5, §5.1: the first shift — あかり's first word (the answers are on the board), the Chinese under the hero's reply; ten tourists,
 # all right at once: S, 200 + 50 and the ベテラン card's 4%; the onsen's tune is not in yet (Task 8): no music, quietly; the next day's
@@ -676,35 +686,67 @@ def test_new_job_records_survive_an_old_merge(b):
     assert r['theirsNewer'] == both and r['theirsOlder'] == both, r   # nothing dropped, whichever copy was saved later
     assert r['book'] == [[True, False], [True, False], [True, False], [False, True]] and r['xp'] == 15, r   # 1 班 each (フロント's under way), S 5 + A 4 + B 3 + 包包子's B 3
 
-# ruling 10 (spec §5.1): あかり's 〜ようになる line — 「去年から、犬も 足湯に 入れるように なりました。」 — is said on a shift whose board lets
-# dogs into the 足湯, and never on one that does not
-def test_akari_tells_of_the_dogs_only_on_a_board_that_lets_them_in(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; const out = {}, said = []; window.speakAs = (w, l) => { said.push([w, l]); return Promise.resolve(); };
-      const m7 = TOWNEV.unitIdx('m7'), dogs = (s) => ANNAI.make(m7, s).board.find((x) => x.id === 'ashiyu').dog;
-      let yes = 0, no = 0; for (let s = 1; s < 300 && !(yes && no); s++) { if (!yes && dogs(s)) yes = s; if (!no && !dogs(s)) no = s; }
-      state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' };   // not the first shift: no first word
+# ruling 25 (spec §5.1): the 足湯 always takes dogs (the town's own, like its 24 hours and its free entry), so あかり's 〜ようになる line —
+# 「去年から、犬も 足湯に 入れるように なりました。」 — is true on every board: she says it on the job's first shift, then on about one
+# shift in four, as each shift's seed decides — never on every one
+def test_akari_tells_of_the_dogs_on_the_first_shift_and_now_and_then(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; saveState(); const out = {}, said = []; window.speakAs = (w, l) => { said.push([w, l]); return Promise.resolve(); };
+      let yes = 0, no = 0; for (let s = 1; s < 300 && !(yes && no); s++) { if (!yes && ANNAI.tells(s)) yes = s; if (!no && !ANNAI.tells(s)) no = s; }
+      let n = 0; for (let s = 1; s <= 2000; s++) if (ANNAI.tells(s)) n++; out.share = n / 2000;
+      const line = () => said.filter(([w, l]) => w === 'akari' && /ように/.test(l)).map(([, l]) => l);
       const shift = async (seed, d) => { TOWNEV.clock = { h: 10, day: new Date(2026, 10, d) }; state.work.res[dateStr(TOWNEV.today())] = { place: 'annai', done: 0, score: {}, keep: { seed } }; saveState();
-        said.length = 0; await at('onsen'); WORK.start(yard(), 'annai'); await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask', 12000); await wait(200);
-        const line = said.filter(([w, l]) => w === 'akari' && /ように/.test(l)).map(([, l]) => l); CLASS.close(); return [ANNAI_RUN.now().seed, line]; };
-      out.yes = await shift(yes, 10); out.no = await shift(no, 11);
+        said.length = 0; await at('onsen'); WORK.start(yard(), 'annai'); for (let i = 0; i < 40 && !document.querySelector('.wk-annai'); i++) { click('.talk'); await wait(120); }
+        await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && ANNAI_RUN.now().seed === seed, 12000); await wait(200); const l = line(); CLASS.close(); return l; };
+      out.first = await shift(no, 10);   // the first shift: told, whatever its seed
+      state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState();
+      out.yes = await shift(yes, 11); out.no = await shift(no, 12);
       return JSON.stringify(out); })()"""))
-    assert r['yes'][1] and '{犬|いぬ}も' in r['yes'][1][0] and 'ように なりました' in r['yes'][1][0], r
-    assert r['no'][1] == [], r
+    assert r['first'] and '{足湯|あしゆ|足湯}' in r['first'][0] and 'ように なりました' in r['first'][0], r
+    assert r['yes'] and r['no'] == [], r   # after it, as the seed decides
+    assert 0.15 < r['share'] < 0.35, r   # about one shift in four, never every one
 
-# Review Focus 5: each line is said to its end — the hero's reply, the tourist's thanks, あかり's word, the next tourist's question, the
-# card shut at the end — never cut by the next (lines 700 ms each); the shift paid
+# lines that take 700 ms each (speakAs; 400 ms for speak): a line begun while another is still being said, or the voices stopped
+# while one is (a card shut), is cut — __cut names it; __log keeps every line in order; hush() waits for quiet
+SAYS = """window.__cut = []; window.__log = []; window.talking = null;
+  const says = (ms) => (w, l) => { __log.push(w + ':' + l); if (talking) __cut.push(talking + ' ← ' + w + ':' + l); const me = talking = w + ':' + l; return new Promise((ok) => setTimeout(() => { if (talking === me) talking = null; ok(); }, ms)); };
+  window.speakAs = says(700); window.speak = (t) => says(400)('', t); window.voiceFx = () => Promise.resolve(); window.stopSpeaking = () => { if (talking) __cut.push(talking + '（停）'); talking = null; };
+  const hush = async () => { for (let i = 0; i < 100 && talking; i++) await wait(50); };"""
+
+# Review Focus 5, ruling 27: each line said to its end. A fresh first shift: あかり's start and her 足湯 news (ruling 25); a miss as the
+# tourist's patience nears 0.6 — her word to its end, then the miss's cost, then the tourist's 「あの、すみません！」; a right reply
+# picked during her word — the hero's reply after it. Then a shift taken up at a fun tourist near its end: their own after-line, the
+# last tourist, her goodbye, the card shut, paid
 def test_annai_says_each_line_to_its_end(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; window.__cut = []; let talking = null;
-      const says = (ms) => (w, l) => { if (talking) __cut.push(talking); const me = talking = w + ':' + l; return new Promise((ok) => setTimeout(() => { if (talking === me) talking = null; ok(); }, ms)); };
-      window.speakAs = says(700); window.speak = (t) => says(400)('', t); window.stopSpeaking = () => { if (talking) __cut.push(talking + '（停）'); talking = null; };
-      state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; state.work.res['2026-11-10'] = { place: 'annai', done: 8, score: Object.fromEntries(Array.from({ length: 8 }, (_, k) => [k, 0])), keep: { seed: 11 } }; saveState();
-      const R = Math.random; Math.random = () => 0.1;   // あかり's word after each
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + SAYS + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; saveState(); const out = {};
+      const now = () => ANNAI_RUN.now(), asking = (n) => now() && now().phase === 'ask' && now().k === n && document.querySelector('.wk-annai .an-opt') && !talking;
+      const opt = (good) => { const t = now().task, i = t.opts.findIndex((o) => (good ? o[2] : !o[2])); return document.querySelector(`.wk-annai .an-opt[data-o="${i}"]`); };
+      const bar = () => parseFloat(document.querySelector('.wk-annai .wk-pat').style.getPropertyValue('--p'));
+      const A = TOWN.ONSEN.annai.say, X = TOWN.WORK.say.waiter.cust;
       await at('onsen'); WORK.start(yard(), 'annai');
-      for (const n of [8, 9]) { await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && ANNAI_RUN.now().k === n && !talking, 15000); const t = ANNAI_RUN.now().task;
-        document.querySelector(`.wk-annai .an-opt[data-o="${t.opts.findIndex((o) => o[2])}"]`).click(); await wait(200); }
+      for (let i = 0; i < 60 && !document.querySelector('.wk-annai'); i++) { await hush(); click('.talk'); await wait(120); }   // あかり's first word, each line heard
+      await watch(() => asking(0), 15000); out.start = [__log.some((l) => l === 'akari:' + A.start[0]), __log.some((l) => l === 'akari:' + A.dogs[0])];
+      JOBS.pat.scale = 0.1; await watch(() => bar() <= 0.72, 8000);
+      const t0 = now().task, from = __log.length; opt(false).click(); JOBS.pat.scale = 1;
+      await watch(() => __log.slice(from).some((l) => l === t0.who + ':' + X.again[0]), 6000); await hush();
+      out.miss = __log.slice(from, from + 2); opt(true).click();
+      await watch(() => asking(1), 15000); const t1 = now().task, at1 = __log.length; opt(false).click(); await wait(150); opt(true).click();
+      await watch(() => __log.slice(at1).some((l) => l.startsWith('hero:')), 6000); await hush(); out.picked = __log.slice(at1, at1 + 2).map((l) => l.split(':')[0]);
+      await watch(() => asking(2), 15000); CLASS.close();
+      // the next day: picked up at a fun tourist, two from the end
+      const m7 = TOWNEV.unitIdx('m7'); let seed = 0, fi = 0; for (let s = 1; s < 2000 && !seed; s++) { const i = ANNAI.make(m7, s).tasks.findIndex((t) => t.fun); if (i === 8) { seed = s; fi = i; } }
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 11) }; state.work.res['2026-11-11'] = { place: 'annai', done: fi, score: Object.fromEntries(Array.from({ length: fi }, (_, k) => [k, 0])), keep: { seed } }; saveState();
+      const R = Math.random; Math.random = () => 0.1;   // あかり's word after each
+      await at('onsen'); WORK.start(yard(), 'annai'); const fun = ANNAI.make(m7, seed).tasks[fi];
+      for (const n of [fi, fi + 1]) { await watch(() => asking(n), 15000); opt(true).click(); await wait(200); }
       await watch(() => document.querySelector('.wk-result'), 20000); Math.random = R;
-      return JSON.stringify({ cut: __cut, shut: !document.querySelector('.wk-annai'), paid: (state.work.res['2026-11-10'] || {}).yen > 0 }); })()"""))
-    assert r == {'cut': [], 'shut': True, 'paid': True}, r
+      out.fun = [Boolean(seed), __log.includes(fun.who + ':' + fun.after[0])];
+      out.end = [!document.querySelector('.wk-annai'), (state.work.res['2026-11-11'] || {}).yen > 0, __log.some((l) => l === 'akari:' + A.end[0] || l === 'akari:' + A.all[0])];
+      out.cut = __cut; return JSON.stringify(out); })()"""))
+    assert r['start'] == [True, True], r   # the start word and the 足湯 news, each heard (the first shift)
+    assert r['miss'][0].startswith('akari:') and r['miss'][1].split(':')[1] == 'あの、すみません！', r   # her word, then the tourist's
+    assert r['picked'] == ['akari', 'hero'], r   # the reply picked during her word: said after it
+    assert r['fun'] == [True, True] and r['end'] == [True, True, True], r
+    assert r['cut'] == [], r
 
 # ruling 2, spec §3.1: 湯の花駅前's 求人看板 opens the area's board — its four jobs, what each is, where and with whom, the pay; the ones
 # whose runners are not in yet shown with no way in (準備中); shut while the card is short of ベテラン, and says so
@@ -742,6 +784,29 @@ def test_the_annai_card_fits_a_phone(b):
     for x in out:
         assert x['side'] and x['bottom'] and x['facs'] == 6 and x['inside'] and x['parts'] and x['glass'] and x['opts'] == 3, out
         assert x['taps'] == [] and x['small'] == [], out
+    # M-3: at 390×844 the talk line stays on screen (no scroll) after a fun tourist's answer — their after-line, the hero's reply with
+    # its Chinese (a first shift: the most to show) — and after two misses on a fun question (the question shown, あかり's reason); at
+    # 360×640, where the card cannot hold it all, the card scrolls itself just far enough to keep that line in sight, and is back at its
+    # top for the next tourist (fix round 1's screenshots; CALM's reduced motion: the scroll is at once)
+    fits = {}
+    for w, h in ((390, 844), (360, 640)):
+        for kind in ('future', 'ghost', 'book'):
+            for case in ('right', 'miss'):
+                fits[f'{w}.{kind}.{case}'] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7';
+                  const m7 = TOWNEV.unitIdx('m7'); let seed = 0, fi = 0; for (let s = 1; s < 3000 && !seed; s++) { const i = ANNAI.make(m7, s).tasks.findIndex((t) => t.fun === '""" + kind + """'); if (i > 0) { seed = s; fi = i; } }
+                  state.work.res['2026-11-10'] = { place: 'annai', done: fi, score: Object.fromEntries(Array.from({ length: fi }, (_, k) => [k, 0])), keep: { seed } }; saveState();
+                  await at('onsen'); WORK.start(yard(), 'annai'); await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && ANNAI_RUN.now().k === fi && document.querySelector('.wk-annai .an-opt'), 12000);
+                  const t = ANNAI_RUN.now().task, pick = (i) => document.querySelector(`.wk-annai .an-opt[data-o="${i}"]`).click();
+                  if ('""" + case + """' === 'right') { pick(t.opts.findIndex((o) => o[2])); await wait(1100); }
+                  else { const w = t.opts.map((o, i) => (o[2] ? -1 : i)).filter((i) => i >= 0); pick(w[0]); await wait(300); pick(w[1]); await wait(500); }
+                  const c = document.querySelector('.wk-annai .cls-card'), talk = c.querySelector('.an-talk'), shown = talk.querySelector(talk.dataset.who === 'me' ? '.wk-me' : '.wk-say');
+                  const cr = c.getBoundingClientRect(), top = cr.top + c.clientTop, sr = shown.getBoundingClientRect(), tall = innerHeight > 700;
+                  const out = { seed: Boolean(seed), on: sr.top >= top - 1 && sr.bottom <= top + c.clientHeight + 1 && (!tall || (c.scrollTop === 0 && c.scrollHeight <= c.clientHeight + 1)), text: shown.textContent.length > 0,
+                    zh: '""" + case + """' !== 'right' || Boolean(talk.querySelector('.wk-me span')) };
+                  if (!tall && '""" + case + """' === 'right') { out.scrolled = c.scrollTop > 0; await watch(() => ANNAI_RUN.now().k === fi + 1 && ANNAI_RUN.now().phase === 'ask', 12000); await wait(200); out.top = c.scrollTop === 0; }
+                  return JSON.stringify(out); })()""")])[-1])
+    want = {'seed': True, 'on': True, 'text': True, 'zh': True}
+    assert all(v == (dict(want, scrolled=True, top=True) if k.startswith('360') and k.endswith('right') else want) for k, v in fits.items()), fits
 
 # the generator (生成) has the 案内所's lines: each tourist's question in their own voice, the hero's every right reply the boards can
 # make, あかり's words, the work talk of the four keepers, and the fun ones; every tourist one the town already voices (no voice left)
@@ -750,10 +815,67 @@ def test_the_generator_has_the_annai_lines(b):
       for (let s = 1; s <= 40; s++) for (const u of [7, 10]) ANNAI.make(u, s).tasks.forEach((t) => { if (!all.has(t.who + '|' + t.q[0])) miss.push(t.who + '|' + t.q[0]); const ok = t.opts.find((o) => o[2])[0]; if (!all.has('hero|' + ok)) miss.push('hero|' + ok); });
       ['book', 'ghost', 'future'].forEach((k) => { const t = ANNAI.make(m7, 5, k).tasks.find((x) => x.fun === k); if (!all.has(t.who + '|' + t.q[0])) miss.push(t.who + '|' + t.q[0]); });
       const W = TOWN.WORK, A = TOWN.ONSEN.annai || {}, keepers = ['akari', 'chiyo', 'sato', 'makoto'].map((id) => [Boolean((W.hello || {})[id]), Boolean((W.yes || {})[id]), all.has(id + '|' + ((W.hello || {})[id] || [''])[0])]);
-      const akari = [(A.say || {}).end, (A.say || {}).dogs].filter(Boolean).map((l) => all.has('akari|' + l[0]));
-      return JSON.stringify({ miss: [...new Set(miss)].slice(0, 6), keepers, akari, first: ((W.first || {}).annai || []).length, voices: Object.keys(CAST_VOICE).length }); })()"""))
-    assert r['miss'] == [] and r['keepers'] == [[True, True, True]] * 4 and r['akari'] == [True, True] and r['first'] >= 1, r
+      const akari = [(A.say || {}).end, (A.say || {}).dogs].filter(Boolean).map((l) => all.has('akari|' + l[0])), book = A.fun.book;
+      return JSON.stringify({ miss: [...new Set(miss)].slice(0, 6), keepers, akari, first: ((W.first || {}).annai || []).length, voices: Object.keys(CAST_VOICE).length,
+        book: [book.q[0], book.after[0]], yes: (W.yes.akari || [])[1] }); })()"""))
+    assert r['miss'] == [] and r['keepers'] == [[True, True, True]] * 3 + [[False, False, False]] and r['akari'] == [True, True] and r['first'] >= 1, r   # 竹内's never heard (ruling 29)
     assert r['voices'] == 68, r   # no new voice: the tourists are people the town already voices
+    assert 'ワ' in r['book'][0] and 'ハ' not in r['book'][0] and not r['book'][1].startswith('オー'), r   # マイク reads his phrasebook's sounds; no flat 「オー！」
+    assert r['yes'] == '好啊，我很樂意！', r
+
+# rulings 21, 26: 射的 (10–23) and ゆかた屋 (9–18) keep the town's own hours, TOWN.HOURS — the 案内所's boards show the same: outside
+# them they are drawn shut (射的: its prizes covered, a 準備中 plate on its counter, its lanterns out; ゆかた屋: its window dark, its noren
+# in, its lantern out)
+# and a tap says when they open — 射的 takes nothing then (no 円, no day kept); ゆかた屋 says it rents yukata only while open
+def test_shateki_and_the_yukata_shop_keep_their_hours(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
+      const look = async (h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; await at('yudori'); const y = yard();
+        return { sh: [Boolean(y.querySelector('.use-btn[data-use="shateki"]')), Boolean(y.querySelector('.use-btn[data-use="shatekishut"]')), Boolean(y.querySelector('.land [data-shut="shateki"]') && y.querySelector('.land [data-shut="shateki-plate"]'))],
+          yk: Boolean(y.querySelector('.land [data-shut="yukataya"]')) }; };
+      out.hours = [TOWN.HOURS.shateki, TOWN.HOURS.yukataya];
+      for (const h of [8, 9, 10, 17, 18, 22, 23]) out[h] = await look(h);
+      TOWNEV.clock = { h: 23.5, day: new Date(2026, 10, 10) }; await at('yudori'); const bal = yenBalance(); toasts.length = 0;
+      click('.yard .use-btn[data-use="shatekishut"]'); await wait(1400); out.shutSay = toasts.join('|'); out.kept = [bal - yenBalance(), (state.oneADay || {}).shateki || null, Boolean(document.querySelector('.yd-shateki'))];
+      toasts.length = 0; click('.yard .use-btn[data-use="yukataya"]'); await wait(1400); out.ykShut = toasts.join('|');
+      TOWNEV.clock = { h: 8.5, day: new Date(2026, 10, 10) }; await at('yudori'); toasts.length = 0; click('.yard .use-btn[data-use="shatekishut"]'); await wait(1400); out.early = toasts.join('|');
+      TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; await at('yudori'); toasts.length = 0; click('.yard .use-btn[data-use="yukataya"]'); await wait(1400); out.ykOpen = toasts.join('|');
+      return JSON.stringify(out); })()"""))
+    assert r['hours'] == [[10, 23], [9, 18]], r
+    for h, shut in ((9, True), (23, True), (10, False), (22, False)):
+        assert r[str(h)]['sh'] == ([False, True, True] if shut else [True, False, False]), (h, r)   # 射的 shut at 9 and 23, open at 10 and 22
+    for h, shut in ((8, True), (18, True), (9, False), (17, False)):
+        assert r[str(h)]['yk'] == shut, (h, r)   # ゆかた屋 shut at 8 and 18, open at 9 and 17
+    assert '射的' in r['shutSay'] and '明天' in r['shutSay'] and '10:00' in r['shutSay'] and r['kept'] == [0, None, False], r   # nothing taken
+    assert '10:00' in r['early'] and '明天' not in r['early'], r
+    assert 'ゆかた屋' in r['ykShut'] and '9:00' in r['ykShut'] and '可以租' not in r['ykShut'] and '可以租' in r['ykOpen'], r
+
+# M-2 (spec §5): a tourist who gives up waiting goes — the question shown whole in their bubble, their leaving line popping up beside it
+# (as their mood lines do), never over it; the right reply lit; the task lost
+def test_a_tourist_who_leaves_shows_the_question(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7';
+      state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState(); await at('onsen'); WORK.start(yard(), 'annai');
+      await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && document.querySelector('.wk-annai .an-opt'), 12000); const t = ANNAI_RUN.now().task; JOBS.pat.scale = 0.02;
+      await watch(() => ANNAI_RUN.now().phase === 'done', 8000); await wait(120); JOBS.pat.scale = 1;
+      const c = document.querySelector('.wk-annai .wk-cust'), bub = c.querySelector('.wk-bub').textContent, grr = [...c.querySelectorAll('.wk-grr')].map((g) => g.textContent).join('|'), lit = document.querySelector('.wk-annai .an-opt.wk-hint');
+      const out = { q: bub.includes(t.q[1]), over: /いいです/.test(bub), grr: /いいです/.test(grr), lit: Boolean(lit) && Number(lit.dataset.o) === t.opts.findIndex((o) => o[2]), score: WORK.today().score[0] }; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r == {'q': True, 'over': False, 'grr': True, 'lit': True, 'score': 3}, r
+
+# M-9: a time as said, for every hour (Tasks 5–7 use it too): 午前 before noon, 昼の十二時 at noon, 午後 to 16, 夕方 17–18, 夜 from 19,
+# 夜中の十二時 at midnight (0 and 24); its Chinese alike
+def test_time_marks_read_every_hour(b):
+    r = json.loads(ev(b, "JSON.stringify([0, 6, 9, 12, 13, 16, 17, 18, 19, 21, 23, 24].map((h) => [ANNAI.timeMark(h), ANNAI.timeZh(h)]))"))
+    assert [x[0] for x in r] == ['{夜中|よなか|半夜}の {十二時|じゅうにじ}', '{午前|ごぜん}{六時|ろくじ}', '{午前|ごぜん}{九時|くじ}', '{昼|ひる}の {十二時|じゅうにじ}', '{午後|ごご}{一時|いちじ}', '{午後|ごご}{四時|よじ}',
+        '{夕方|ゆうがた}{五時|ごじ}', '{夕方|ゆうがた}{六時|ろくじ}', '{夜|よる}{七時|しちじ}', '{夜|よる}{九時|くじ}', '{夜|よる}{十一時|じゅういちじ}', '{夜中|よなか|半夜}の {十二時|じゅうにじ}'], r
+    assert [x[1] for x in r] == ['半夜 12 點', '上午 6 點', '上午 9 點', '中午 12 點', '下午 1 點', '下午 4 點', '傍晚 5 點', '傍晚 6 點', '晚上 7 點', '晚上 9 點', '晚上 11 點', '半夜 12 點'], r
+
+# M-10 (spec §4): a ride up to 湯の花 with あかり at her window: off the train at 湯の花駅前, she greets once (ようこそ, in her voice; the
+# place kept as arrived); the next ride up, no more
+def test_arriving_by_train_akari_greets_once(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
+      const ride = async () => { RIDE.keep({ from: 'minato', fare: 420, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); await arrive('yunohana', '#/onsen'); await wait(1500); };
+      await ride(); const once = said.filter((x) => x.startsWith('akari:')), first = [location.hash, state.town.arrived, Boolean(document.querySelector('.cls'))];
+      await ride(); return JSON.stringify({ once, first, again: said.filter((x) => x.startsWith('akari:')).length }); })()"""))
+    assert r['first'] == ['#/onsen', {'onsen': 1}, False] and r['once'] == ['akari:ようこそ、{湯の花|ゆのはな}{温泉|おんせん}へ！'] and r['again'] == 1, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

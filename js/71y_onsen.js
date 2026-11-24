@@ -154,9 +154,9 @@ const ONSEN = (() => {
   // ---- 観光案内所: a small gable-fronted house (the roof's far slope going back, its side wall), the green board with its name,
   // the round i sign out on a bracket, the counter window — inside, the racks of leaflets and あかり (9–18; lit while she is there)
   // — its sliding door with a hanging sign; the counter's front and the wall under it before her ----
-  const ANNAI = { x0: 712, x1: 868, win: [724, 816], sill: 217, bars: [742, 776, 796] };   // bars: the window's mullions — あかり's face in the wide pane between the first two (SPOTS.onsen.window)
+  const WIN = { x0: 712, x1: 868, win: [724, 816], sill: 217, bars: [742, 776, 796] };   // the 観光案内所's house and window (not the job: ANNAI, js/71y_annai.js); bars: the window's mullions — あかり's face in the wide pane between the first two (SPOTS.onsen.window)
   function annaiBack(open) {
-    const { x0, x1, win: [w0, w1], sill } = ANNAI, cx = (x0 + x1) / 2;
+    const { x0, x1, win: [w0, w1], sill } = WIN, cx = (x0 + x1) / 2;
     const racks = [180, 192, 204].map((y, r) => Array.from({ length: 11 }, (_, k) => `<rect x="${w0 + 6 + k * 9.6}" y="${y - (k % 3)}" width="7" height="${9 + (k % 3)}" fill="${['#e6a23c', '#3f9a8c', '#d0574b', '#5a78c8', '#f2e8c8', '#8ab86e'][(k + r * 2) % 6]}"/>`).join('')).join('');
     return `<path d="M${x1} 150 L${x1 + 16} 144 V230 L${x1} 236 Z" ${hc('#ddd4c2', '#22244a')}/>
       <rect x="${x0}" y="150" width="${x1 - x0}" height="78" ${hc('#f3ede0', '#2a2c50')}/>${[x0, x1 - 6].map((x) => `<rect x="${x}" y="150" width="6" height="78" ${hc('#5a3e2a', '#1e1830')}/>`).join('')}
@@ -175,11 +175,11 @@ const ONSEN = (() => {
       <g transform="translate(${x0 - 12} 150)"><path d="M10 2 h12" ${hs('#3b3b44', '#1c1d3c')} stroke-width="2"/><circle cx="8" cy="12" r="9" ${hc('#2f8a5a', '#1a4030')}/><circle cx="8" cy="12" r="7.4" fill="none" stroke="#fff" stroke-width="1"/><text x="8" y="16.4" text-anchor="middle" font-size="12" font-weight="800" fill="#fff" font-family="Georgia, serif">i</text><path d="M8 2 v1" stroke="#3b3b44" stroke-width="2"/></g>`;
   }
   // the counter in front of あかり: its ledge, the wooden front under it, a pane of glass over her with its light on it, the mullions
-  // either side of her face (ANNAI.bars), a card on the counter under the right-hand pane
+  // either side of her face (WIN.bars), a card on the counter under the right-hand pane
   function annaiFront() {
-    const { win: [w0, w1], sill } = ANNAI;
+    const { win: [w0, w1], sill } = WIN;
     return `<rect x="${w0}" y="174" width="${w1 - w0}" height="${sill - 174}" fill="#cfe6ec" opacity=".12"/><path d="M${w0 + 8} ${sill - 4} l16 -32 M${w0 + 18} ${sill - 4} l8 -16 M${w1 - 30} ${sill - 4} l14 -28" stroke="#fff" stroke-opacity=".35" stroke-width="2.4"/>
-      <path d="${ANNAI.bars.map((x) => `M${x} 174 V${sill}`).join(' ')}" ${hs('#5a3e2a', '#1e1830')} stroke-width="2"/>
+      <path d="${WIN.bars.map((x) => `M${x} 174 V${sill}`).join(' ')}" ${hs('#5a3e2a', '#1e1830')} stroke-width="2"/>
       <rect x="${w0 - 6}" y="${sill}" width="${w1 - w0 + 12}" height="5" rx="1" ${hc('#a8743f', '#3a2c30')}/><rect x="${w0 - 6}" y="${sill + 4}" width="${w1 - w0 + 12}" height="2" fill="#2b1c12" fill-opacity=".3"/>
       <rect x="${w0 - 3}" y="${sill + 6}" width="${w1 - w0 + 6}" height="${228 - sill - 6}" ${hc('#7a5a3c', '#2a2234')}/><path d="${Array.from({ length: 16 }, (_, i) => `M${w0 + 2 + i * 7} ${sill + 7} V227`).join(' ')}" ${hs('#5a3e2a', '#1e1830')} stroke-width="1"/>
       <rect x="${w0 - 6}" y="228" width="${w1 - w0 + 12}" height="8" ${hc('#a8a296', '#2a2a46')}/><rect x="${w0 + 72}" y="${sill - 10}" width="18" height="10" rx="1" ${hc('#fbf8f0', '#3a3c5a')}/><path d="M${w0 + 75} ${sill - 7} h12 M${w0 + 75} ${sill - 4} h9" stroke="#3f9a8c" stroke-width="1"/>`;
@@ -262,7 +262,7 @@ const ONSEN = (() => {
       ${hills()}${station()}${bathBack()}${annaiBack(open)}${jobBoard()}${mapBoard()}${street()}${square()}
     </svg>
     ${landProp(110, bathFront(), null, [BATH.x0 - 12, 140, BATH.x1 + 24, BATH.water[1] + 14])}
-    ${landProp(130, annaiFront(), null, [ANNAI.win[0] - 8, 170, ANNAI.win[1] + 8, 238])}
+    ${landProp(130, annaiFront(), null, [WIN.win[0] - 8, 170, WIN.win[1] + 8, 238])}
     ${landProp(74, rickBack(), null, [RICK.x - 70, RICK.g - 104, RICK.x + 140, RICK.g + 8])}${landProp(60, rickFront(), null, [RICK.x - 40, RICK.g - 66, RICK.x + 140, RICK.g + 6])}
     ${yHeroHtml()}
     ${TOWNEV.castHtml('onsen')}

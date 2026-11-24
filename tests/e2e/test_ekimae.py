@@ -289,6 +289,35 @@ def test_lost_misses_and_resume(b):
       return JSON.stringify({ score, k }); })()"""))
     assert r['score'] == {'0': 3, '1': 0, '2': 0} and r['k'] == 3, r   # what it is asked when it was said, the wrong wallet, ありません: three misses
 
+# ruling 22: with the test site's 無限次數 a shift begun again at once — an ended one's goodbye, still being said, never acts on the new
+# card of the same job: 原田's window and 小林's lost and found each keep their new card up, their own first customer at the counter
+def test_an_ended_shifts_goodbye_never_touches_the_next_card(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + LOST_HELP + """ state.currentUnit = 'm4'; localStorage.setItem('nq_work_free', '1');
+      window.speakAs = () => new Promise((ok) => setTimeout(ok, 300)); location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      const out = {}, last = (job) => { state.work.res['2026-11-10'] = { place: job, done: 9, score: Object.fromEntries(Array.from({ length: 9 }, (_, k) => [k, 0])) }; saveState(); };
+      last('window'); WORK.start(yard(), 'window'); for (let i = 0; i < 200 && !(MADO_RUN.now() && MADO_RUN.now().phase === 'ask' && MADO_RUN.now().k === 9); i++) await wait(30);
+      const t = MADO_RUN.now().task, w = document.querySelector('.wk-window');
+      if (t.kind === 'buy') { w.querySelector(`.md-st[data-st="${t.to}"]`).click(); await wait(80); } w.querySelector(`.md-opt[data-o="${t.right}"]`).click();
+      for (let i = 0; i < 100 && WORK.today().yen === undefined; i++) await wait(20);
+      await wait(200); CLASS.close(); WORK.start(yard(), 'window'); await wait(4500);   // the old one's goodbye, still being said, ran out meanwhile
+      out.window = [Boolean(document.querySelector('.wk-window')), MADO_RUN.now() && MADO_RUN.now().k, !document.querySelector('.wk-window .wk-cust.bye')];
+      CLASS.close(); document.querySelectorAll('.wk-result').forEach((e) => e.remove());
+      last('lost'); WORK.start(yard(), 'lost'); await solve(9); for (let i = 0; i < 200 && WORK.today().yen === undefined; i++) await wait(30);
+      await wait(200); CLASS.close(); WORK.start(yard(), 'lost'); await wait(4500);
+      out.lost = [Boolean(document.querySelector('.wk-lost')), LOST_RUN.now() && LOST_RUN.now().k, !document.querySelector('.wk-lost .wk-cust.bye')];
+      CLASS.close(); document.querySelectorAll('.wk-result').forEach((e) => e.remove()); localStorage.removeItem('nq_work_free'); return JSON.stringify(out); })()"""))
+    assert r == {'window': [True, 0, True], 'lost': [True, 0, True]}, r
+
+# M-2 (spec §5): a customer at 原田's window who gives up waiting goes — the question shown whole in their bubble, their leaving line
+# popping up beside it (never over it), the right reply lit
+def test_a_window_customer_who_leaves_shows_the_question(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + WIN_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      WORK.start(yard(), 'window'); for (let i = 0; i < 200 && !(MADO_RUN.now() && MADO_RUN.now().phase === 'ask' && card().querySelector('.md-opt')); i++) await wait(30);
+      const t = MADO_RUN.now().task; JOBS.pat.scale = 0.02; for (let i = 0; i < 300 && MADO_RUN.now().phase !== 'done'; i++) await wait(30); await wait(120); JOBS.pat.scale = 1;
+      const c = card().querySelector('.wk-cust'), bub = c.querySelector('.wk-bub').textContent, grr = [...c.querySelectorAll('.wk-grr')].map((g) => g.textContent).join('|'), lit = card().querySelector('.md-opt.wk-hint');
+      const out = { q: bub.includes(t.q[1]), over: /いいです/.test(bub), grr: /いいです/.test(grr), lit: Boolean(lit) && Number(lit.dataset.o) === t.right }; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r == {'q': True, 'over': False, 'grr': True, 'lit': True}, r
+
 # ---- タクシー (spec §8) ----
 # left and right as the taxi faces (going down the map, 右 is the map's left); the shortest way; what a passenger says for it —
 # つぎの角, 二つ目の角 (the first crossing straight on), まっすぐ, あの〜の前で止めて

@@ -11,7 +11,7 @@ const TOWN = {
   // names of people, shops and places: no gloss needed
   NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源', '湯の花', '森下', '花月', 'ゆのはな堂', '湯けむり通り', '湯畑', '花村', '千代', '竹内', '桜の間', '湯の花の湯'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
-  HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21], dori: [10, 19], rairai: [10, 20], yunohanado: [9, 21] },   // ゆのはな堂 (湯けむり通り, 2026-11-23): 竹内's hours too (CAST.makoto, the same: test_onsen pins them)
+  HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21], dori: [10, 19], rairai: [10, 20], yunohanado: [9, 21], shateki: [10, 23], yukataya: [9, 18] },   // ゆのはな堂 (湯けむり通り, 2026-11-23): 竹内's hours too (CAST.makoto, the same: test_onsen pins them); its 射的 and ゆかた屋 (2026-11-24, rulings 21, 26: the 観光案内所's boards say the same)
   // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
   WAKE: [8, 12, 17, 20],
   // where people stand, by place: X along the land (0 the middle), Y up from the front. roam: how far they stroll about it either
@@ -3343,10 +3343,10 @@ const TOWN = {
       huang: ['はやく！ おみせ、てつだって！', '快！來幫忙顧店！'], wang: ['ニーハオ！ ぶたまん、つくる？', '你好！要來包豬肉包嗎？'],
       // 湯の花温泉 (2026-11-24, ruling 2: all four keepers' work talk here; each heard once its job's runner is in — WORK.offer)
       akari: ['こんにちは！ {案内所|あんないじょ|服務台}の しごと、いっしょに しませんか？', '你好！要不要一起做服務台的工作？'], chiyo: ['あら、いらっしゃい。お{部屋|へや}の {用意|ようい|準備}、{手伝|てつだ|幫忙}って くれますか？', '哎呀，歡迎。可以幫忙準備客房嗎？'],
-      sato: ['いらっしゃいませ。…おや、フロントの お{手伝|てつだ|幫忙}いで ございますか。', '歡迎光臨。……哦，是來櫃台幫忙的嗎？'], makoto: ['いらっしゃい！ …お、{店|みせ}を {手伝|てつだ|幫忙}って くれるんですか？', '歡迎！……喔，要來幫忙顧店嗎？'] },
+      sato: ['いらっしゃいませ。…おや、フロントの お{手伝|てつだ|幫忙}いで ございますか。', '歡迎光臨。……哦，是來櫃台幫忙的嗎？'] },   // 竹内: none (ruling 29) — he greets with his shop's hello (MENU.yunohanado) whenever he is there
     // the hero's yes to it, one of the choices under it (2026-11-20, the user: picked as a reply in the talk, not a blue button)
     yes: { suzuki: ['はい、おねがいします！', '是，麻煩您了！'], kobayashi: ['はい、おねがいします！', '是，麻煩您了！'], harada: ['はい、よろしく おねがいします。', '是的，請多指教。'], haru: ['はい、てつだいます！', '好，我來幫忙！'], zhang: ['はい、はたらきます。', '好，我來打工。'], zhou: ['はい、てつだいます。', '好，我來幫忙。'], huang: ['はい、いま いきます！', '好，馬上來！'], wang: ['はい、つくります！', '好，我來包！'],
-      akari: ['はい、ぜひ！', '好，一定要！'], chiyo: ['はい、お{手伝|てつだ|幫忙}いします。', '好的，我來幫忙。'], sato: ['はい、よろしく おねがいします。', '是的，請多指教。'], makoto: ['はい、てつだいます！', '好，我來幫忙！'] },   // 湯の花温泉 (2026-11-24); 竹内's shown only when his shop is not what he greets with
+      akari: ['はい、ぜひ！', '好啊，我很樂意！'], chiyo: ['はい、お{手伝|てつだ|幫忙}いします。', '好的，我來幫忙。'], sato: ['はい、よろしく おねがいします。', '是的，請多指教。'] },   // 湯の花温泉 (2026-11-24); 竹内 none (ruling 29): he sells, so he is asked with ASK
     first: {
       annai: [['akari', 'こたえは ぜんぶ、{上|うえ}の {看板|かんばん|看板}に ありますよ！', '答案全都在上面的看板上喔！'], ['akari', '{看板|かんばん|看板}は {毎日|まいにち} かわるので、よく {見|み}て くださいね。', '看板每天都會換，要仔細看喔。']],   // 観光案内所 (2026-11-24)
       bento: [['haru', 'でんしゃは まって くれないよ！ はやく わたしてね！', '電車可不會等人喔！要快點遞給客人喔！']],   // 駅前 (2026-11-20)
@@ -3534,7 +3534,8 @@ const TOWN = {
     bell: ['はい、ただいま。', '是，馬上來。'],
     // 観光案内所 (2026-11-24, spec §5.1; ANNAI, js/71y_annai.js): あかり's window, seen from inside — ten tourists a shift, each asking one
     // thing; the answers are on the board over the counter, 「湯の花温泉 ごあんない」, whose details change shift by shift (what the town
-    // itself shows never: 射的 300 円 a go, the 湯畑 and the 足湯 free and open all night, the 湯畑 lit up by night — ruling 12)
+    // itself shows never — ruling 12: 射的 300 円 a go and its hours, ゆかた屋's hours (TOWN.HOURS), the 湯畑 and the 足湯 free and open all
+    // night, the 湯畑 lit up by night, the 足湯 open to dogs)
     annai: {
       // the board's six: [the name on its card, as a line says it, 中文, what it is under the name]
       spots: {
@@ -3560,7 +3561,7 @@ const TOWN = {
         priceKa: ['ajimura', 'can', '{花月|かげつ}の お{風呂|ふろ}は、いくらで {入|はい}れますか。', '泡花月的浴池要多少錢？'],
         priceYk: ['ai', 'can', 'ゆかたは、いくらで {借|か}りられますか。', '租浴衣要多少錢？'],
         priceSh: ['sophia', 'can', '{射的|しゃてき|射擊遊戲}は、いくらで できますか。', '射擊遊戲玩一次多少錢？'],
-        dog: ['ken', 'rule', '{犬|いぬ}も いっしょに、{足湯|あしゆ|足湯}に {入|はい}れますか。', '狗狗也可以一起進足湯嗎？'],
+        dog: ['ken', 'rule', '{犬|いぬ}と いっしょに、ゆかた{屋|や|店}に {入|はい}れますか。', '可以帶狗一起進浴衣店嗎？'],   // ゆかた屋's dogs vary by board (ruling 25); the 足湯 takes them always
         kidsKa: ['umeko', 'rule', '{孫|まご}も、{花月|かげつ}の お{風呂|ふろ}に {入|はい}れますか。', '我的孫子也可以進花月的浴池嗎？'],
         kidsSh: ['yoshimoto', 'dekiru', '{子|こ}どもも、{射的|しゃてき|射擊遊戲}を する ことが できますか。', '小孩也可以玩射擊遊戲嗎？'],
         nightAshi: ['mizuno', 'dekiru', '{夜|よる}も、{足湯|あしゆ|足湯}に {入|はい}る ことが できますか。', '晚上也可以泡足湯嗎？'],
@@ -3578,8 +3579,8 @@ const TOWN = {
         buyYes: [['はい、{P}で {買|か}えます。', '可以，{p}買得到。'], ['はい、{P}で {買|か}えれます。', '「買えれます」多了一個「れ」：「買う」的可能形是「買えます」。']],
         buyNo: [['いいえ、{X}では {買|か}えません。{Y}で {買|か}えます。', '不行，{x}買不到。在{y}買得到。'], ['いいえ、{X}では {買|か}えれません。{Y}で {買|か}えれます。', '「買えれます」多了一個「れ」：「買う」的可能形是「買えます」。']],
         inFor: [['{P}で {入|はい}れます。', '{p}就可以進去。'], ['{P}で {入|はい}りたいです。', '「入りたいです」是「我想進去」；「可以進去」要說「入れます」。']],
-        rentFor: [['{一日|いちにち} {P}で {借|か}りられます。', '一天{p}就租得到。'], ['{一日|いちにち} {P}で {借|か}りたいです。', '「借りたいです」是「我想租」；「可以租」要說「借りられます」。']],
-        playFor: [['{一回|いっかい} {P}で できます。', '一次{p}就可以玩。'], ['{一回|いっかい} {P}で したいです。', '「したいです」是「我想玩」；「可以玩」要說「できます」。']],
+        rentFor: [['{一日|いちにち} {P}で {借|か}りられます。', '一天 {p}就租得到。'], ['{一日|いちにち} {P}で {借|か}りたいです。', '「借りたいです」是「我想租」；「可以租」要說「借りられます」。']],
+        playFor: [['{一回|いっかい} {P}で できます。', '一次 {p}就可以玩。'], ['{一回|いっかい} {P}で したいです。', '「したいです」是「我想玩」；「可以玩」要說「できます」。']],
         dogYes: [['はい、{犬|いぬ}も {入|はい}れます。', '可以，狗狗也可以進去。'], ['はい、{犬|いぬ}も {入|はい}りたいです。', '「入りたいです」是「想進去」——是狗狗想進去嗎？「可以進去」要說「入れます」。']],
         dogNo: [['いいえ、{犬|いぬ}は {入|はい}れません。', '不行，狗狗不能進去。'], ['いいえ、{犬|いぬ}は {入|はい}りたく ありません。', '「入りたくありません」是「不想進去」；「不能進去」要說「入れません」。']],
         kidYes: [['はい、{子|こ}どもも {入|はい}れます。', '可以，小孩也可以進去。'], ['はい、{子|こ}どもも {入|はい}りたいです。', '「入りたいです」是「想進去」；「可以進去」要說「入れます」。']],
@@ -3588,7 +3589,7 @@ const TOWN = {
         playNo: [['いいえ、{子|こ}どもは する ことが できません。', '不行，小孩不能玩。'], ['いいえ、{子|こ}どもは した ことが できません。', '「ことが できる」前面要用辭書形：「する ことが できません」。']],
         nightYes: [['はい、{夜|よる}も {入|はい}る ことが できます。', '可以，晚上也可以泡。'], ['はい、{夜|よる}も {入|はい}った ことが できます。', '「ことが できる」前面要用辭書形：「入る ことが できます」。']],
         nightNo: [['いいえ、{夜|よる}は {入|はい}る ことが できません。', '不行，晚上不能泡。']],   // only ever the wrong fact: the 足湯 is open all night
-        seeYes: [['はい、{夜|よる}は ライトアップが {見|み}られます。', '可以，晚上看得到點燈。'], ['はい、{夜|よる}は ライトアップを {見|み}せます。', '「見せます」是「給人看」；「看得到」要說「見られます」。']],
+        seeYes: [['はい、{夜|よる}は ライトアップが {見|み}られます。', '可以，晚上看得到點燈。'], ['はい、{夜|よる}は ライトアップが {見|み}たいです。', '「見たいです」是「我想看」；「看得到」要說「見られます」。']],   // never 見せます (ruling 24): "we put on a light-up" half-answers
         seeNo: [['いいえ、{夜|よる}は {見|み}られません。', '不行，晚上看不到。']]   // only ever the wrong fact: the 湯畑 is lit up by night
       },
       // why a wrong fact is wrong, shown under あかり's word after it: by what the reply got wrong
@@ -3596,17 +3597,18 @@ const TOWN = {
       // the fun ones, one a shift at most (spec §5.1): マイク reading his question out of a phrasebook (the yukata's price: priceYk's
       // replies), ゆうた asking after ghosts (the playful reply is the right one), ミヨコ after her own future — and each one's word after
       fun: {
-        book: { who: 'mike', ask: 'priceYk', q: ['スミマセン。ユカタ…ハ…イクラデ…カリラレマスカ？', '不好意思。浴衣……要多少錢……才租得到？'], after: ['オー！ アリガトウ ゴザイマス！ サムライに なります！', '喔！謝謝！我要變成武士了！'] },
+        book: { who: 'mike', ask: 'priceYk', q: ['スミマセン。ユカタ…ワ…イクラデ…カリラレマスカ？', '不好意思。浴衣……要多少錢……才租得到？'], after: ['アリガトウ ゴザイマス！ サムライに なります！', '謝謝！我要變成武士了！'] },   // read as his phrasebook spells the sounds (ワ)
         ghost: { who: 'yuta', q: ['ねえねえ。ここで、おばけが {見|み}られますか？', '欸欸，這裡看得到鬼嗎？'], right: ['{夜|よる}の {湯畑|ゆばたけ}なら… {見|み}られるかも しれませんよ。', '晚上的湯畑的話……說不定看得到喔。'],
-          wrong: [['{夜|よる}の {湯畑|ゆばたけ}なら… {見|み}せるかも しれませんよ。', '「見せる」是「給人看」：鬼可不會表演給你看。「看得到」要說「見られる」。'], ['はい、おばけは {一回|いっかい} {三百円|さんびゃくえん|300 日圓}です。', '那是射擊遊戲的價錢……鬼不用錢。']],
+          wrong: [['{夜|よる}の {湯畑|ゆばたけ}なら… {見|み}たいかも しれませんよ。', '「見たい」是「想看」；「看得到」要說「見られる」。'], ['はい、おばけは {一回|いっかい} {三百円|さんびゃくえん|300 日圓}です。', '那是射擊遊戲的價錢……鬼不用錢。']],   // never 見せる (ruling 24): 姿を見せる, "they might show themselves"
           after: ['ほんとう！？ こわい…！ でも、{見|み}たい！', '真的！？好可怕……！可是好想看！'] },
         future: { who: 'miyoko', q: ['わたしの {未来|みらい|未來}が {見|み}える {場所|ばしょ}は、ありますか…？', '有沒有……看得見我的未來的地方呢？'],
-          right: ['{未来|みらい|未來}は ちょっと…。でも、{夜|よる}は {湯畑|ゆばたけ}の ライトアップが {見|み}られますよ。', '未來有點難……不過晚上看得到湯畑的點燈喔。'],
-          wrong: [['{未来|みらい|未來}は ちょっと…。でも、{夜|よる}は {湯畑|ゆばたけ}の ライトアップを {見|み}せますよ。', '「見せます」是「給人看」；「看得到」要說「見られます」。'], ['{未来|みらい|未來}は ちょっと…。でも、{朝|あさ}は {湯畑|ゆばたけ}の ライトアップが {見|み}られますよ。', '點燈是在早上嗎？再看一次看板。']],
-          after: ['…{見|み}えました。ゆげの {中|なか}に、あなたの {未来|みらい|未來}が…。とても あかるいです。', '……我看到了。在蒸氣裡，你的未來……非常光明。'] }
+          right: ['{未来|みらい|未來}は ちょっと…。でも、{夜|よる}は ライトアップが {見|み}られますよ。', '未來有點難……不過晚上看得到點燈喔。'],
+          wrong: [['{夜|よる}は ライトアップが {見|み}たいですよ。', '「見たいです」是「我想看」；「看得到」要說「見られます」。'], ['{朝|あさ}は ライトアップが {見|み}られますよ。', '點燈是在早上嗎？再看一次看板。']],
+          after: ['…あなたの {未来|みらい|未來}、あかるいです。', '……你的未來，很光明。'] }
       },
-      // あかり beside the hero: a shift's start, the dogs let into the 足湯 (〜ようになる: only on a board that lets them in, ruling 10),
-      // a right one now and then, a miss (the board misread; a form that answers nothing), the end (all: every tourist right at once)
+      // あかり beside the hero: a shift's start; the dogs let into the 足湯 (〜ようになる: on the job's first shift and about one in four
+      // after it, as its seed says — the 足湯 takes dogs on every board, ruling 25); a right one now and then; a miss (the board misread;
+      // a form that answers nothing); the end (all: every tourist right at once)
       say: { who: 'akari', start: ['さあ、{今日|きょう}も がんばりましょう！', '好，今天也加油吧！'], dogs: ['そうそう、{去年|きょねん}から、{犬|いぬ}も {足湯|あしゆ|足湯}に {入|はい}れるように なりました。', '對了，從去年開始，狗狗也可以進足湯了。'],
         ok: [['ばっちりです！', '完美！'], ['さすがです！', '真厲害！'], ['いい {感|かん}じです！', '感覺很好！']], fact: ['あれ？ {看板|かんばん|看板}を よく {見|み}て。', '咦？仔細看看板。'], form: ['あれ？ その {言|い}い{方|かた}は ちょっと…。', '咦？這個說法有點……'],
         end: ['おつかれさまでした！ みなさん、{喜|よろこ}んで いましたよ。', '辛苦了！大家都很開心喔。'], all: ['すごい！ わたしより くわしいかも！', '好厲害！說不定比我還清楚！'] },

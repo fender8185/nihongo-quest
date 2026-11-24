@@ -544,6 +544,25 @@ def test_the_counter_says_each_line_to_its_end(b):
       return JSON.stringify({ cut: __cut, shut: !document.querySelector('.wk-counter'), paid: state.work.res['2026-11-10'].yen > 0 }); })()"""))
     assert r == {'cut': [], 'shut': True, 'paid': True}, r
 
+# ruling 27 (Review Focus 5): at 周's counter (5 s of patience) a wrong thing handed as the customer's patience nears 0.6 — 周's word to
+# its end, the customer's clock held meanwhile, then the miss's cost and their 「あの、すみません！」 after her word; nothing cut, to the end
+def test_the_counter_keepers_word_after_a_miss_is_said_to_its_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + TALK + """ kana(46); earlier('counter'); talk(700, 400); upTo('counter', 8);
+      const sa = window.speakAs; window.__log = []; window.speakAs = (w, l) => { __log.push(w + ':' + l); return sa(w, l); };
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter');
+      for (let i = 0; i < 60 && !document.querySelector('.wk-cust.on'); i++) await wait(100); await hush();
+      const t = JOBS.counter.now(), bar = () => parseFloat(document.querySelector('.wk-counter .wk-pat').style.getPropertyValue('--p'));
+      for (let i = 0; i < 300 && bar() > 0.72; i++) await wait(20);
+      const from = __log.length; [...document.querySelectorAll('.wk-good')].find((g) => g.dataset.good !== t.good[0]).click(); await wait(350); const during = bar();
+      for (let i = 0; i < 100 && !__log.slice(from).some((l) => l === t.who + ':あの、すみません！'); i++) await wait(50); await hush();
+      const out = { order: __log.slice(from, from + 2), held: during > 0.7 };
+      const g = document.querySelector(`.wk-good[data-good="${t.good[0]}"]`); g.click(); if (t.kind === 'two') { await wait(150); g.click(); }
+      for (let i = 0; i < 60 && !(JOBS.counter.now() !== t && document.querySelector('.wk-cust.on')); i++) await wait(100); await hush(); await serve();
+      for (let i = 0; i < 100 && !document.querySelector('.wk-result'); i++) await wait(100);
+      return JSON.stringify(Object.assign(out, { cut: __cut, shut: !document.querySelector('.wk-counter'), paid: state.work.res['2026-11-10'].yen > 0 })); })()"""))
+    assert r['order'][0].startswith('zhou:') and r['order'][1].endswith(':あの、すみません！') and r['held'], r   # her word, then theirs; the clock held while she spoke
+    assert r['cut'] == [] and r['shut'] and r['paid'], r
+
 def test_the_bun_keepers_last_word_is_said_to_its_end(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + TALK + """ kana(46); talk(1500, 300); upTo('buns', 9); await make();
       for (let i = 0; i < 3; i++) { await hush(); await tap(true); }
