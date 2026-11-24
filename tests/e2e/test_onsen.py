@@ -404,8 +404,8 @@ def test_the_ryokan_and_its_room(b):
 
 # spec §4 (ruling 2): 千代 in the lobby 8–21, 佐藤 at the front desk 7–11 and 14–22, 竹内 by ゆのはな堂's steamers 9–21 — his hours the
 # shop's own (TOWN.HOURS.yunohanado), pinned equal; tapped, each greets and has a word — 千代 her 仲居 too (Task 5: its runner in), 佐藤
-# no work talk yet (Task 7), 竹内 his まんじゅう to order; each has ten things to say or more, from m1 for one who rides up at N5, more
-# by the N4 units
+# no work talk yet (Task 7), 竹内 his まんじゅう to order and his おみやげ屋 (Task 6); each has ten things to say or more, from m1 for one
+# who rides up at N5, more by the N4 units
 def test_keepers_by_their_hours(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {};
       const who = async (place, h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; await at(place); return [...yard().querySelectorAll('.npc')].map((n) => n.dataset.npc).sort(); };
@@ -424,7 +424,7 @@ def test_keepers_by_their_hours(b):
     assert r['street'] == [[], ['makoto'], []] and r['hours'] == [[[9, 21, 'yudori']], [9, 21]], r   # 竹内 by his shop's hours, pinned
     assert r['chiyo'] and r['chiyo']['name'] == '花村 千代' and r['chiyo']['ja'] and r['chiyo']['picks'] == ['work', 'chat'], r   # her 仲居 (Task 5): work, or a word
     assert r['sato'] and r['sato']['name'] == '佐藤 一' and r['sato']['ja'] and r['sato']['picks'] == [], r
-    assert r['makoto'] and r['makoto']['name'] == '竹内 まこと' and r['makoto']['picks'] == ['order', 'chat'] and r['menu'] == ['onsenmanju'], r   # his まんじゅう to order
+    assert r['makoto'] and r['makoto']['name'] == '竹内 まこと' and r['makoto']['picks'] == ['order', 'work', 'chat'] and r['menu'] == ['onsenmanju'], r   # his まんじゅう to order, his おみやげ屋 (Task 6: its runner in)
     assert all(x and x != '……' for x in r['n5']), r   # an N5 visitor (m1) has a word from each
     for k, (n, m1, n5, n4) in r['lines'].items():
         assert n >= 10 and m1 >= 2 and n4 >= 5 and n4 >= n5, (k, r['lines'])   # ten or more, two from m1, more by the N4 units
@@ -1268,6 +1268,312 @@ def test_the_generator_has_the_nakai_lines(b):
       ((TOWN.WORK.first || {}).nakai || []).forEach((l) => need(l[0], l[1]));
       return JSON.stringify({ miss: [...new Set(miss)].slice(0, 6), voices: Object.keys(CAST_VOICE).length }); })()"""))
     assert r['miss'] == [] and r['voices'] == 68, r
+
+# ---- Task 6: おみやげ屋 at ゆのはな堂 with 竹内 (spec §5, §5.3) ----
+# my(): the customer at the counter now (MIYAGE_RUN.now(): { k, c, step, phase, tray, seed, miss, busy, plate }); good(g): a good on the
+# shelves; put(ids): the tray made exactly ids (a good tapped on, one not wanted tapped off — the tray holds one of each); give(): どうぞ;
+# opt(right): the right reply (or a wrong one); serve(): the right thing done for the step now; work(to): served till customer `to`;
+# shiftAt(seed, done, score): today's おみやげ屋 record set to begin there (a shift done before: not the job's first); seedWhere(f): the
+# first seed whose shift is so; at(id): where that customer is in the shift of seed s
+MY = """const my = () => MIYAGE_RUN.now(), m11 = TOWNEV.unitIdx('m11');
+  const good = (g) => document.querySelector(`.wk-miyage .om-good[data-g="${g}"]`);
+  const put = (ids) => { const n = my(); [...new Set([...n.tray, ...ids])].forEach((g) => { if (my().tray.includes(g) !== ids.includes(g)) { const b = good(g); if (b) b.click(); } }); };
+  const give = () => click('.wk-miyage .om-give');
+  const opt = (right) => { const n = my(), i = n.c.opts.findIndex((o) => (right ? o[2] : !o[2])); return document.querySelector(`.wk-miyage .om-opt[data-o="${i}"]`); };
+  const ready = () => { const n = my(); return Boolean(n) && (n.phase === 'pick' || n.phase === 'reply') && !n.busy; };
+  async function serve() { const n = my(); if (!ready()) return false;
+    if (n.phase === 'pick') { put(MIYAGE.answer(n.c)); await wait(60); give(); return true; }
+    const b = opt(true); if (b && !b.disabled) b.click(); return true; }
+  const before = (to) => Boolean(my()) && my().k < to;
+  async function work(to) { let at = -1, since = Date.now(); while (before(to) && Date.now() - since < 25000) { await watch(() => ready() || !before(to), 3000); if (!before(to)) break; if (my().k !== at) { at = my().k; since = Date.now(); } await serve(); await wait(150); } }   // never past `to`
+  const shiftAt = (seed, done = 0, score = {}) => { state.work.res['2026-10-20'] = { place: 'miyage', done: 10, score: {}, yen: 1, grade: 'C' }; state.work.res[dateStr(TOWNEV.today())] = { place: 'miyage', done, score, keep: { seed } }; saveState(); };
+  const seedWhere = (f, from = 1) => { for (let s = from; s < 8000; s++) { if (f(MIYAGE.make(m11, s))) return s; } return 0; };
+  const where = (s, f) => MIYAGE.make(m11, s).findIndex(f);
+  const upTo = (k) => Object.fromEntries(Array.from({ length: k }, (_, i) => [i, 0]));
+  const begin = async (seed, k) => { shiftAt(seed, k, upTo(k)); await at('yudori'); WORK.start(yard(), 'miyage'); await watch(() => my() && my().k === k && ready(), 15000); await wait(150); };"""
+
+# spec §5.3 (rulings 16, 17): a shift is ten customers — the first a plain pick (a box for so many, a thing each for two, what they
+# were given), then one each with a coin to spend, asking a favour (包んで), their hands full, buying for a superior, unable to choose (a
+# taste), the rest plain picks; 金田 now and then in a plain one's place (never first or second); no customer twice, no person twice
+# running; each one someone with a voice, wanting what the shelves hold, with one right tray their words decide (a box for ten: the
+# twelve; the small one: the six; a superior who likes お酒: 地酒, かざる もの: こけし); every reply three, one right, each wrong with its
+# reason — the wrap's wrong ones もらいます／くれます, the bag's もらいましょうか, the gift's くださる／いただく — and none a plain fair one
+def test_miyage_customers_come_as_the_spec_says(b):
+    r = json.loads(ev(b, """(() => { const m11 = TOWNEV.unitIdx('m11'), bad = [], kinds = {}; let kaneda = 0;
+      const ids = MIYAGE.goods().map((g) => g[0]);
+      for (let s = 1; s <= 400; s++) { const sh = MIYAGE.make(m11, s), ks = sh.map((c) => c.kind);
+        if (sh.length !== 10) bad.push(s + ':n'); if (!['count', 'two', 'got'].includes(sh[0].kind)) bad.push(s + ':first:' + sh[0].kind);
+        ['budget', 'reply', 'offer', 'elder', 'taste'].forEach((k) => { if (ks.filter((x) => x === k).length !== 1) bad.push(s + ':' + k); });
+        const n = ks.filter((x) => x === 'all').length; if (n > 1 || ks[0] === 'all' || ks[1] === 'all') bad.push(s + ':all'); kaneda += n;
+        if (new Set(sh.map((c) => c.id)).size !== 10) bad.push(s + ':twice');
+        sh.forEach((c, k) => { if (k && c.who === sh[k - 1].who) bad.push(`${s}.${k}:running:${c.who}`); if (!CAST_VOICE[c.who]) bad.push(c.id + ':voice');
+          if (Array.isArray(c.want) && c.want.some((g) => !ids.includes(g))) bad.push(c.id + ':want');
+          kinds[c.kind] = (kinds[c.kind] || 0) + 1;
+          if (!MIYAGE.judge(c, MIYAGE.answer(c)).ok) bad.push(c.id + ':answer');
+          if (c.opts) { const r = c.opts.filter((o) => o[2]); if (c.opts.length !== 3 || r.length !== 1 || c.opts.some((o) => !o[1]) || new Set(c.opts.map((o) => o[0])).size !== 3) bad.push(c.id + ':opts'); } }); }
+      const C = (id) => MIYAGE.cust(id), right = (c) => c.opts.find((o) => o[2])[0], wrong = (c) => c.opts.filter((o) => !o[2]).map((o) => o[0]);
+      const one = (id) => ids.filter((g) => MIYAGE.judge(C(id), [g]).ok);
+      const all = MIYAGE.ids().map(C), fair = all.filter((c) => c.opts).flatMap(wrong).filter((j) => /どうですか|いかがですか。$/.test(j) && !/くださる|いただく/.test(j));
+      return JSON.stringify({ bad: bad.slice(0, 8), kinds, kaneda, count: [one('count10'), one('count8'), one('count2')], elder: [one('elder1'), one('elder2'), one('elder3')], elderLine: [C('elder1').line[0], C('elder2').line[0]],
+        wrap: [right(C('wrap1')), wrong(C('wrap1'))], bag: [right(C('offer1')), wrong(C('offer1'))], give: [right(C('elder1')), wrong(C('elder1'))], taste: [right(C('taste1')), wrong(C('taste1'))], fair }); })()"""))
+    assert r['bad'] == [], r
+    assert 100 < r['kaneda'] < 240 and r['kinds']['all'] == r['kaneda'], r   # 金田 in about half the shifts, once at most
+    assert r['count'] == [['manju12'], ['manju12'], ['manju6']], r   # ten, eight: the twelve (the six is too few); the small one: the six
+    assert r['elder'] == [['sake'], ['kokeshi'], ['sake']] and 'お{酒|さけ}が お{好|す}き' in r['elderLine'][0] and 'かざる' in r['elderLine'][1], r   # what the superior likes decides
+    assert r['wrap'][0] == 'はい、{包|つつ}みますね。' and any('{包|つつ}んで もらいます' in x for x in r['wrap'][1]) and any('{包|つつ}んで くれます' in x for x in r['wrap'][1]), r
+    assert r['bag'][0] == '{袋|ふくろ}に {入|い}れましょうか。' and any('{入|い}れて もらいましょうか' in x for x in r['bag'][1]), r
+    assert 'さしあげる' in r['give'][0] and 'いかがですか' in r['give'][0] and any('くださる' in x for x in r['give'][1]) and any('いただく' in x for x in r['give'][1]), r
+    assert r['taste'][0] == 'よかったら、{食|た}べて みて ください。' and r['fair'] == [], r
+
+# spec §5.3 (送誰、幾個), §5: a customer's words heard first (…… in the bubble till right, two misses or gone) — 「会社の 人たちに
+# おまんじゅうを あげたいんですが、十人 いるんです。」: the box of six is a miss (their 「ちょっと たりないですね…」), the box of twelve is
+# right, with that one miss
+def test_miyage_ten_people_need_the_box_of_twelve(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
+      const seed = seedWhere((sh) => sh[0].id === 'count10'); await begin(seed, 0);
+      const c = my().c, out = { seed, kind: c.kind, line: c.line[0], dots: Boolean(document.querySelector('.wk-miyage .wk-bub .om-dots')),
+        judge: [MIYAGE.judge(c, ['manju6']).ok, MIYAGE.judge(c, ['manju12']).ok, MIYAGE.judge(c, ['manju6', 'manju12']).ok, MIYAGE.judge(c, ['senbei']).ok, MIYAGE.judge(c, ['manju6']).why] };
+      put(['manju6']); await wait(100); out.tray = my().tray.slice(); said.length = 0; give(); await wait(500);
+      out.few = said.filter((x) => x.startsWith(c.who + ':')); out.k = my().k; out.miss = my().miss; out.still = Boolean(document.querySelector('.wk-miyage .wk-bub .om-dots'));
+      put(['manju12']); await wait(100); give(); await watch(() => (WORK.today().score || {})[0] !== undefined, 6000);
+      out.score = WORK.today().score[0]; out.shown = document.querySelector('.wk-miyage .wk-bub').textContent.includes('十人');
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['seed'] and r['kind'] == 'count' and '{十人|じゅうにん|十個人}' in r['line'] and r['dots'], r   # heard first
+    assert r['judge'] == [False, True, False, False, 'few'], r
+    assert r['tray'] == ['manju6'] and r['few'] == ['ken:ちょっと たりないですね…'] and r['k'] == 0 and r['miss'] == 1 and r['still'], r   # one miss: their words not shown yet
+    assert r['score'] == 1 and r['shown'], r   # right with its one miss; the words shown
+
+# spec §5.3 (兩個人): 「父には お酒を、母には てぬぐいを 買って あげたいです。」 — both on the tray, in either order, is right at once; one
+# of them only (or one more) is not
+def test_miyage_two_people_two_things_any_order(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => sh[0].id === 'two1'); await begin(seed, 0);
+      const c = my().c, j = (ids) => { const x = MIYAGE.judge(c, ids); return x.ok || x.why; };
+      const out = { want: c.want.slice().sort(), judge: [j(['sake', 'tenugui']), j(['tenugui', 'sake']), j(['sake']), j(['sake', 'tenugui', 'jam']), j(['jam'])] };
+      good('tenugui').click(); await wait(80); good('sake').click(); await wait(80); out.tray = my().tray.slice(); give();
+      await watch(() => (WORK.today().score || {})[0] !== undefined, 6000); out.score = WORK.today().score[0]; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['want'] == ['sake', 'tenugui'] and r['judge'] == [True, True, 'more', 'extra', 'other'], r
+    assert r['tray'] == ['tenugui', 'sake'] and r['score'] == 0, r   # the order they were tapped in: right at once
+
+# spec §5.3 (收到過的): 「となりの 人が くれた おせんべいが おいしかったんです。同じのを ください。」 — the one they were given (せんべい),
+# not another: ゆずジャム is a miss (竹内's word, the reason under it), then せんべい right
+def test_miyage_what_they_were_given(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
+      const seed = seedWhere((sh) => sh[0].id === 'got1'); await begin(seed, 0);
+      const c = my().c, out = { line: c.line[0], judge: [MIYAGE.judge(c, ['senbei']).ok, MIYAGE.judge(c, ['jam']).ok] };
+      put(['jam']); said.length = 0; give(); await wait(500); out.word = said.filter((x) => x.startsWith('makoto:'));
+      out.why = (document.querySelector('.wk-miyage .om-talk .wk-say span') || {}).textContent || '';
+      put(['senbei']); give(); await watch(() => (WORK.today().score || {})[0] !== undefined, 6000); out.score = WORK.today().score[0];
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert 'くれた おせんべい' in r['line'] and r['judge'] == [True, False], r
+    assert r['word'] == ['makoto:あれ？ もう {一度|いちど}、よく {聞|き}いて みて！'] and r['why'], r
+    assert r['score'] == 1, r
+
+# spec §5.3 (預算): ゆうた with 500 円 in his hand (a coin shown by him) — 「おばあちゃんに もらった お金で 買います！」: any good of 500 円
+# or less is right, one dearer (or two that come to more) a miss — his 「お金が たりない…」
+def test_miyage_budget_of_500(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
+      const seed = seedWhere((sh) => sh.findIndex((c) => c.kind === 'budget') > 0), k = where(seed, (c) => c.kind === 'budget');
+      await begin(seed, k); const c = my().c;
+      const out = { who: c.who, budget: c.budget, each: MIYAGE.goods().map((g) => MIYAGE.judge(c, [g[0]]).ok === (g[2] <= 500)), two: MIYAGE.judge(c, ['keyring', 'bath']).why,
+        coin: (document.querySelector('.wk-miyage .om-hold') || {}).textContent || '' };
+      put(['sake']); said.length = 0; give(); await wait(500); out.over = said.filter((x) => x.startsWith(c.who + ':'));
+      put(['keyring']); give(); await watch(() => (WORK.today().score || {})[k] !== undefined, 6000); out.score = WORK.today().score[k];
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['who'] == 'yuta' and r['budget'] == 500 and all(r['each']) and r['two'] == 'over' and '500' in r['coin'], r
+    assert len(r['over']) == 1 and 'たりない' in r['over'][0] and r['score'] == 1, r
+
+# spec §5.3 (回話), rulings 2, 7, 23: a customer gets their thing, then asks 「包んで もらえますか。」 (heard first) — 「はい、包みますね。」 is
+# right; 「はい、包んで もらいます。」 and 「はい、包んで くれます。」 are wrong, each with a reason that says whose giving it is (竹内's word
+# with it); the two steps' misses add up to one task. Shut after the pick and taken up again, the customer starts over, nothing counted
+def test_miyage_reply_keeps_the_giving_the_right_way(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
+      const seed = seedWhere((sh) => sh.findIndex((c) => c.id === 'wrap1') > 0), k = where(seed, (c) => c.id === 'wrap1'); await begin(seed, k);
+      const c = my().c, out = { first: [my().phase, my().step] };
+      put(['kokeshi']); give(); await watch(() => my().phase === 'reply' && ready(), 6000); await wait(100);
+      out.then = [said.includes(c.who + ':' + c.then[0]), Boolean(document.querySelector('.wk-miyage .wk-bub .om-dots')), my().step];
+      CLASS.close(); await wait(200); WORK.start(yard(), 'miyage'); await watch(() => my() && my().k === k && ready(), 12000);
+      out.again = [my().k, my().step, my().phase, Object.keys(WORK.today().score).length];
+      put(['jam']); give(); await wait(300); put(['kokeshi']); give(); await watch(() => my().phase === 'reply' && ready(), 6000); await wait(100);
+      out.opts = [...document.querySelectorAll('.wk-miyage .om-opt')].map((x) => x.textContent.replace(/\\s/g, ''));
+      const w = opt(false), wi = Number(w.dataset.o); said.length = 0; w.click(); await wait(400);
+      out.word = said.filter((x) => x.startsWith('makoto:')); out.why = (document.querySelector('.wk-miyage .om-talk .wk-say span') || {}).textContent || ''; out.why0 = my().c.opts[wi][1]; out.dis = w.disabled;
+      opt(true).click(); await watch(() => (WORK.today().score || {})[k] !== undefined, 6000); await wait(300);
+      out.score = WORK.today().score[k]; out.hero = said.includes('hero:はい、{包|つつ}みますね。');
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['first'] == ['pick', 0] and r['then'] == [True, True, 1], r   # the pick first; then their favour, heard first
+    assert r['again'][:3] == [r['again'][0], 0, 'pick'] and r['again'][3] == r['again'][0], r   # shut halfway: the same customer from the start, nothing counted
+    assert len(r['opts']) == 3 and any('つつみますね' in x for x in r['opts']), r
+    assert r['word'] == ['makoto:あれ？ だれが だれに するのか、よく {考|かんが}えて！'] and r['why'] == r['why0'] and r['dis'], r
+    assert any(k in r['why'] for k in ('請別人', '別人幫')), r   # whose giving: the reason says so
+    assert r['score'] == 2 and r['hero'], r   # a wrong pick and a wrong reply: two misses, one task
+
+# spec §5.3 (主動提議, 長輩): their hands full — 「袋に 入れましょうか。」 offered, not 「袋に 入れて もらいましょうか。」; a gift for a
+# superior who likes お酒 — 地酒, presented with 「先生に さしあげるなら、こちらの 地酒は いかがですか。」 (くださる／いただく wrong)
+def test_miyage_a_bag_offered_and_a_gift_for_a_superior(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); }; const out = {};
+      const s1 = seedWhere((sh) => sh.findIndex((c) => c.id === 'offer1') > 0), k1 = where(s1, (c) => c.id === 'offer1'); await begin(s1, k1);
+      out.bags = Boolean(document.querySelector('.wk-miyage .om-hold')); put(['senbei', 'bath']); give(); await watch(() => my().phase === 'reply' && ready(), 6000);
+      out.offer = [said.includes(my().c.who + ':' + my().c.then[0]), my().c.opts.find((o) => o[2])[0]]; opt(true).click();
+      await watch(() => (WORK.today().score || {})[k1] !== undefined, 6000); await wait(600); out.offerSaid = said.filter((x) => x.startsWith('hero:') || x.startsWith('yoshimoto:')).slice(-3);
+      CLASS.close(); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 11) };
+      const s2 = seedWhere((sh) => sh.findIndex((c) => c.id === 'elder1') > 0), k2 = where(s2, (c) => c.id === 'elder1'); said.length = 0; await begin(s2, k2);
+      put(['kokeshi']); give(); await wait(400); out.elderMiss = my().miss; put(['sake']); give(); await watch(() => my().phase === 'reply' && ready(), 6000);
+      out.elder = [my().c.opts.find((o) => o[2])[0], my().step]; opt(true).click(); await watch(() => (WORK.today().score || {})[k2] !== undefined, 6000); await wait(300);
+      out.elderScore = WORK.today().score[k2]; out.elderSaid = said.filter((x) => x.startsWith('hero:')).slice(-1);
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['bags'] and r['offer'] == [True, '{袋|ふくろ}に {入|い}れましょうか。'], r
+    assert 'hero:{袋|ふくろ}に {入|い}れましょうか。' in r['offerSaid'], r
+    assert r['elderMiss'] == 1 and r['elder'][0] == '{先生|せんせい}に さしあげるなら、こちらの {地酒|じざけ|當地的酒}は いかがですか。' and r['elder'][1] == 1, r
+    assert r['elderScore'] == 1 and r['elderSaid'] == ['hero:' + r['elder'][0]], r
+
+# spec §5.3 (試吃): one who cannot choose — 「どれが おいしいですか…」 — the replies first: 「よかったら、食べて みて ください。」; they take a
+# piece off the tasting plate on the counter, 「おいしい！ これに します。…」, and then the box they named
+def test_miyage_a_taste_then_the_box(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
+      const seed = seedWhere((sh) => sh.findIndex((c) => c.id === 'taste1') > 0), k = where(seed, (c) => c.id === 'taste1'); await begin(seed, k);
+      const c = my().c, plate = () => document.querySelectorAll('.wk-miyage .om-plate .om-bit').length, out = { first: [my().phase, my().step, document.querySelectorAll('.wk-miyage .om-opt').length], line: c.line[0], plate0: plate() };
+      opt(true).click(); await watch(() => my().phase === 'pick' && ready(), 8000); await wait(200);
+      out.after = [plate(), said.includes('hero:よかったら、{食|た}べて みて ください。'), said.includes(c.who + ':' + c.then[0]), my().step];
+      put(MIYAGE.answer(my().c)); give(); await watch(() => (WORK.today().score || {})[k] !== undefined, 6000); out.score = WORK.today().score[k]; out.want = c.want;
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['first'] == ['reply', 0, 3] and 'どれが おいしいですか' in r['line'], r   # the replies first
+    assert r['after'][0] == r['plate0'] - 1 and r['after'][1:] == [True, True, 2], r   # a piece off the plate; their word; then the box
+    assert r['want'] == ['manju12'] and r['score'] == 0, r
+
+# spec §5.3 (好玩的), ruling 17: 金田 from the cruise — 「ここの おみやげ、ぜんぶ ください！」 — every one of the eight goods on the tray is
+# right, either まんじゅう box (or both) counting for the まんじゅう; seven is a miss (his 「ぜんぶですよ、ぜんぶ！」); in his own voice
+def test_miyage_kaneda_takes_all_eight(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
+      const seed = seedWhere((sh) => sh.findIndex((c) => c.kind === 'all') > 0), k = where(seed, (c) => c.kind === 'all'); await begin(seed, k);
+      const c = my().c, seven = ['manju12', 'senbei', 'jam', 'tenugui', 'kokeshi', 'bath', 'sake'];
+      const out = { who: c.who, line: c.line[0], voice: Boolean(CAST_VOICE[c.who]), judge: [seven.concat('keyring'), ['manju6'].concat(seven.slice(1), 'keyring'), seven.concat('keyring', 'manju6'), seven].map((ids) => MIYAGE.judge(c, ids).ok) };
+      put(seven); said.length = 0; give(); await wait(500); out.short = said.filter((x) => x.startsWith('kaneda:'));
+      put(seven.concat('keyring')); out.tray = my().tray.length; give(); await watch(() => (WORK.today().score || {})[k] !== undefined, 6000); await watch(() => said.some((x) => x.startsWith('kaneda:') && /あげます/.test(x)), 5000);
+      out.score = WORK.today().score[k]; out.after = said.filter((x) => x.startsWith('kaneda:')).slice(-1);
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['who'] == 'kaneda' and r['voice'] and 'ぜんぶ ください' in r['line'], r
+    assert r['judge'] == [True, True, True, False] and r['short'] == ['kaneda:ぜんぶですよ、ぜんぶ！'], r
+    assert r['tray'] == 8 and r['score'] == 1 and r['after'] and 'あげます' in r['after'][0], r
+
+# spec §5, Review Focus 2: the first shift — 竹内's first word, then the card (no music yet: no onsen tune); the Chinese of the hero's
+# reply under it once said (ruling 23); ten customers all right at once: S, 240 + 50 and ベテラン's 4% (302 円); the next day's shift shut
+# after three customers is taken up at the fourth on the same seed, nothing counted twice
+def test_miyage_shift_and_resume(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11'; state.settings.musicVol = 1; saveState(); const out = {};
+      window.speakAs = () => Promise.resolve(); await at('yudori'); WORK.start(yard(), 'miyage');
+      for (let i = 0; i < 40 && !document.querySelector('.wk-miyage'); i++) { click('.talk'); await wait(150); }   // 竹内's first word, tapped through
+      out.first = Boolean(document.querySelector('.wk-miyage')); out.music = MUSIC.wants(); out.firstWord = ((TOWN.WORK.first || {}).miyage || []).length;
+      let zh = '', kids = 0, seen = 0; const look = setInterval(() => { const m = document.querySelector('.wk-miyage .om-talk .wk-say.om-me span'); if (m && m.textContent) zh = m.textContent;
+        document.querySelectorAll('.wk-miyage .om-opt').forEach((o) => { seen++; kids = Math.max(kids, o.children.length); }); }, 30);   // the replies: their Japanese only (ruling 23)
+      await work(10); await watch(() => WORK.today() && WORK.today().yen !== undefined, 30000); clearInterval(look); const x = WORK.today() || {};
+      out.paid = [x.grade, x.yen, Object.values(x.score || {})]; out.zh = zh; out.opts = [seen > 0, kids];
+      await watch(() => document.querySelector('.wk-result'), 15000); out.result = Boolean(document.querySelector('.wk-result')); document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close();
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 11) }; await at('yudori'); WORK.start(yard(), 'miyage'); await watch(() => my() && my().k === 0 && ready(), 12000);
+      out.talk = Boolean(document.querySelector('.talk-card')); const seed = my().seed;
+      await work(3); await watch(() => (WORK.today() || {}).done >= 3 && my().k === 3, 8000); await wait(300); CLASS.close(); await wait(200);
+      out.score = (WORK.today() || {}).score; WORK.start(yard(), 'miyage'); await watch(() => my() && my().k === 3 && ready(), 12000); out.k = my() && my().k; out.same = Boolean(my()) && my().seed === seed; CLASS.close();
+      return JSON.stringify(out); })()"""))
+    assert r['first'] and r['music'] == '' and r['firstWord'] >= 1, r   # 竹内's first word, then the card; no tune yet
+    assert r['zh'] and r['opts'] == [True, 1], r   # the hero's reply with its Chinese under it (the first shift), never under the buttons
+    assert r['paid'] == ['S', 302, [0] * 10] and r['result'], r   # 240 + S 50, ベテラン's 4%
+    assert not r['talk'] and r['score'] == {'0': 0, '1': 0, '2': 0} and r['k'] == 3 and r['same'], r
+
+# spec §5 (M-2 of Task 4): a customer who gives up waiting goes — what they said shown whole, the right goods lit on the shelves, their
+# leaving word popping up beside it; the task lost
+def test_a_miyage_customer_who_leaves_shows_what_they_wanted(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => sh[0].id === 'two2'); await begin(seed, 0);
+      const c = my().c; JOBS.pat.scale = 0.02; await watch(() => my().phase === 'done', 8000); await wait(120); JOBS.pat.scale = 1;
+      const cu = document.querySelector('.wk-miyage .wk-cust'), bub = cu.querySelector('.wk-bub').textContent, g = cu.querySelector('.wk-grr');
+      const lit = [...document.querySelectorAll('.wk-miyage .om-good.wk-hint')].map((x) => x.dataset.g).sort();
+      const out = { q: bub.includes(c.line[1]), grr: Boolean(g) && /いいです/.test(g.textContent), lit, want: c.want.slice().sort(), score: WORK.today().score[0] }; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['q'] and r['grr'] and r['lit'] == r['want'] and r['score'] == 3, r
+
+# Review Focus 5 (ruling 27): each line said to its end — a wrong tray while the customer is still speaking (their word, or 竹内's, after
+# theirs), a two-step customer's favour after the hero's どうぞ, the next customer's いらっしゃいませ after the thanks; on a shift taken up
+# at its last customer, the thanks and 竹内's goodbye said whole before the results
+def test_miyage_says_each_line_to_its_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + SAYS + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11'; const out = {};
+      const seed = seedWhere((sh) => sh[0].kind !== 'all' && ['reply', 'offer'].includes(sh[1].kind)); shiftAt(seed); await at('yudori'); WORK.start(yard(), 'miyage');
+      await watch(() => my() && my().k === 0 && my().phase === 'pick' && talking, 15000);   // the customer speaking
+      put(MIYAGE.goods().map((g) => g[0]).filter((g) => !MIYAGE.judge(my().c, [g]).ok).slice(0, 1)); give();   // a wrong tray while they speak
+      await work(2); await watch(() => my() && my().k === 2 && ready(), 30000); await hush();
+      out.miss = WORK.today().score[0]; CLASS.close();
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 11) }; shiftAt(seed, 9, upTo(9)); await at('yudori'); WORK.start(yard(), 'miyage'); await work(10);
+      await watch(() => document.querySelector('.wk-result'), 30000); out.end = [__log.slice(-1)[0], talking, Boolean(document.querySelector('.wk-result'))];
+      out.cut = __cut; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); return JSON.stringify(out); })()"""))
+    assert r['cut'] == [] and r['miss'] == 1, r
+    assert r['end'][0].startswith('makoto:') and r['end'][1] is None and r['end'][2], r   # his goodbye the last line, said whole before the results
+
+# N-1 of Task 4: the voice lane is its card's — a wrong tray given while the customer is still speaking queues a word; the card shut at
+# once and the job begun again: the old word is never said nor shown in the new card, and the new shift's first lines are said whole
+def test_a_shut_miyage_card_says_nothing_more(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + LANE + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      const seed = seedWhere((sh) => sh[0].kind === 'got'); shiftAt(seed); await at('yudori'); WORK.start(yard(), 'miyage');
+      const begun = () => { const n = my(); return n && n.phase === 'pick' && log.some(([, w, l]) => w === n.c.who && l === n.c.line[0]); };
+      await watch(begun, 20000); await wait(200); put(MIYAGE.goods().map((g) => g[0]).filter((g) => !MIYAGE.judge(my().c, [g]).ok).slice(0, 1)); give(); await wait(100);
+      const at0 = ms(); CLASS.close(); WORK.start(yard(), 'miyage'); await wait(4500);
+      const S = TOWN.ONSEN.miyage.say, after = log.filter(([m]) => m >= at0), out = { old: after.filter(([, w, l]) => w === 'makoto' && l === S.pick[0]).length,
+        cut: cuts.filter(([m]) => m >= at0).map(([, x]) => x), bad: Boolean(document.querySelector('.wk-miyage .wk-say.bad')), card: Boolean(document.querySelector('.wk-miyage')), said: after.map(([, w]) => w) };
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['old'] == 0 and r['cut'] == [] and not r['bad'] and r['card'], r
+    assert r['said'][:1] == ['makoto'] and 'hero' in r['said'], r   # the new shift's start, then the hero's いらっしゃいませ, each whole
+
+# the card (spec §5.3, §9): ゆのはな堂's two shelves of the eight goods (the まんじゅう in its two boxes) — each a picture, its name with
+# its reading, its price, the まんじゅう's pieces — the tasting plate and the tray on the counter, どうぞ, the customer and their patience;
+# on a 360-px phone and a 390-px one it stays inside the screen, every button 40 px or more, the tags' words 11 px or more; at a reply the
+# replies and the talk row in sight
+def test_the_miyage_card_fits_a_phone(b):
+    out = {}
+    for w, h in ((360, 640), (390, 844)):
+        out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+          window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => sh.findIndex((c) => c.kind === 'offer') > 0), k = where(seed, (c) => c.kind === 'offer');
+          state.work.res[dateStr(TOWNEV.today())] = { place: 'miyage', done: k, score: upTo(k), keep: { seed } }; saveState();   // a first shift: the hero's 中文 shown
+          await at('yudori'); WORK.start(yard(), 'miyage'); for (let i = 0; i < 40 && !document.querySelector('.wk-miyage'); i++) { click('.talk'); await wait(120); }
+          await watch(() => my() && my().k === k && ready(), 12000); await wait(300);
+          const c = document.querySelector('.wk-miyage .cls-card'), q = c.getBoundingClientRect(), R = (e) => e.getBoundingClientRect();
+          const goods = [...c.querySelectorAll('.om-good')], btns = () => [...c.querySelectorAll('button')].filter((x) => x.offsetParent).map((x) => [x.className, Math.round(R(x).width), Math.round(R(x).height)]).filter(([, ww, hh]) => ww < 40 || hh < 40);
+          const small = [...c.querySelectorAll('.om-tag *')].filter((e) => e.childNodes.length && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && e.tagName !== 'RT' && parseFloat(getComputedStyle(e).fontSize) < 11).map((e) => e.className + ':' + e.textContent);
+          const pick = { inside: q.left >= 0 && q.right <= innerWidth + 1 && q.top >= 0 && q.bottom <= innerHeight + 1, goods: goods.length, parts: goods.every((g) => g.querySelector('.om-pic svg') && g.querySelector('.om-tag b') && /円/.test(g.textContent)),
+            manju: goods.filter((g) => /個入/.test(g.textContent)).map((g) => g.dataset.g), plate: Boolean(c.querySelector('.om-counter .om-plate')), tray: Boolean(c.querySelector('.om-counter .om-tray')), give: Boolean(c.querySelector('.om-counter .om-give')),
+            cust: Boolean(c.querySelector('.wk-cust .kr-face') && c.querySelector('.wk-cust .wk-pat')), btns: btns(), small: small.slice(0, 5) };
+          put(MIYAGE.answer(my().c)); await wait(60); give(); await watch(() => my().phase === 'reply' && ready(), 8000); await wait(300);
+          const fit = () => { const qq = R(c), top = qq.top + c.clientTop, bot = top + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;
+            return [[...c.querySelectorAll('.om-opt')].every(inv), inv(c.querySelector('.om-talk')), inv(c.querySelector('.wk-cust .wk-bub'))]; };
+          const ask = fit(), btns2 = btns(); const w = opt(false); w.click(); await wait(500); const wrong = fit(); opt(true).click(); await wait(900); const right = fit();
+          CLASS.close(); return JSON.stringify({ pick, ask, wrong, right, btns2 }); })()""")])[-1])
+    for w, x in out.items():
+        p = x['pick']
+        assert p['inside'] and p['goods'] == 9 and p['parts'] and p['manju'] == ['manju6', 'manju12'] and p['plate'] and p['tray'] and p['give'] and p['cust'], (w, out)
+        assert p['btns'] == [] and x['btns2'] == [] and p['small'] == [], (w, out)
+        assert x['ask'] == [True, True, True] and x['wrong'] == [True, True, True] and x['right'][1], (w, out)
+
+# the generator (生成) has the おみやげ屋's lines: every customer's words (and their favour, their word after, what they say to a wrong
+# tray) in their own voice, the hero's every right reply, 竹内's words and his first; every customer one the town already voices
+def test_the_generator_has_the_miyage_lines(b):
+    r = json.loads(ev(b, """(() => { const all = new Set(talkLines().map(([w, l]) => w + '|' + l)), miss = [], need = (w, l) => { if (l && !all.has(w + '|' + l)) miss.push(w + '|' + l); };
+      MIYAGE.ids().map((id) => MIYAGE.cust(id)).forEach((c) => { need(c.who, c.line[0]); if (c.then) need(c.who, c.then[0]); need(c.who, (c.after || TOWN.ONSEN.miyage.thanks)[0]);
+        Object.values(c.no || {}).forEach((l) => need(c.who, l[0])); if (c.over) need(c.who, c.over[0]); if (c.short) need(c.who, c.short[0]); if (c.opts) need('hero', c.opts.find((o) => o[2])[0]); });
+      const M = TOWN.ONSEN.miyage, S = M.say; Object.entries(S).filter(([k]) => k !== 'who').forEach(([, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x) => need('makoto', x[0])));
+      need('hero', M.hi[0]); need('hero', M.give[0]); ((TOWN.WORK.first || {}).miyage || []).forEach((l) => need(l[0], l[1]));
+      return JSON.stringify({ miss: [...new Set(miss)].slice(0, 6), voices: Object.keys(CAST_VOICE).length, first: ((TOWN.WORK.first || {}).miyage || []).length }); })()"""))
+    assert r['miss'] == [] and r['voices'] == 68 and r['first'] >= 1, r
+
+# the shelves' pictures (spec §5.3, ruling 4): each good drawn — the town's own (PICS_TOWN) for those that are no course word, the まんじゅう's
+# two boxes each its own; each picture a drawing of some detail (a dozen shapes or more), the six and the twelve not the same drawing
+def test_the_miyage_goods_are_drawn(b):
+    r = json.loads(ev(b, """(() => { const pic = (k) => PICS_TOWN[k] || PICS[k] || ''; const gs = MIYAGE.goods();
+      return JSON.stringify({ drawn: gs.map((g) => [g[0], Boolean(pic(g[4])), (pic(g[4]).match(/<(path|ellipse|circle|rect|polygon)/g) || []).length]), town: gs.map((g) => Boolean(PICS_TOWN[g[4]])),
+        boxes: pic(gs[0][4]) !== pic(gs[1][4]) }); })()"""))
+    assert all(x[1] and x[2] >= 12 for x in r['drawn']) and all(r['town']) and r['boxes'], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

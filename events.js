@@ -3350,6 +3350,7 @@ const TOWN = {
       akari: ['はい、ぜひ！', '好啊，我很樂意！'], chiyo: ['はい、お{手伝|てつだ|幫忙}いします。', '好的，我來幫忙。'], sato: ['はい、よろしく おねがいします。', '是的，請多指教。'] },   // 湯の花温泉 (2026-11-24); 竹内 none (ruling 29): he sells, so he is asked with ASK
     first: {
       nakai: [['chiyo', 'お{部屋|へや}は {二階|にかい}です。いっしょに {行|い}きましょう。', '客房在二樓。我們一起去吧。'], ['chiyo', 'わたしの {言|い}う ことを、よく {聞|き}いて くださいね。', '要仔細聽我說的話喔。']],   // 仲居 (2026-11-24): up to 桜の間 with her
+      miyage: [['makoto', 'お{客|きゃく}さんの {話|はなし}を よく {聞|き}いて、{棚|たな}から とって あげて ください。', '仔細聽客人說的話，從架子上拿給他們。'], ['makoto', 'まよって いる {人|ひと}には、{試食|ししょく|試吃}も すすめて くださいね！', '對猶豫不決的客人，也要推薦試吃喔！']],   // おみやげ屋 (2026-11-24)
       annai: [['akari', 'こたえは ぜんぶ、{上|うえ}の {看板|かんばん|看板}に ありますよ！', '答案全都在上面的看板上喔！'], ['akari', '{看板|かんばん|看板}は {毎日|まいにち} かわるので、よく {見|み}て くださいね。', '看板每天都會換，要仔細看喔。']],   // 観光案内所 (2026-11-24)
       bento: [['haru', 'でんしゃは まって くれないよ！ はやく わたしてね！', '電車可不會等人喔！要快點遞給客人喔！']],   // 駅前 (2026-11-20)
       taxi: [['suzuki', 'おれの となりで、{道|みち}を おしえて くれ！', '坐我旁邊，告訴我怎麼走！'], ['suzuki', '{右|みぎ}と {左|ひだり}は、くるまの むきで かんがえろよ！', '左右要照車子的方向想喔！']],
@@ -3707,6 +3708,88 @@ const TOWN = {
         ok: [['はい、ありがとう。', '好，謝謝。'], ['{上手|じょうず}ですね。', '做得真好。']], form: ['その {言|い}い{方|かた}は ちょっと…。', '這個說法有點……'], fact: ['よく {見|み}て くださいね。', '要仔細看喔。'],
         end: ['おつかれさまでした。お{客|きゃく}さまも {喜|よろこ}んで いましたよ。', '辛苦了。客人們也很開心喔。'],
         all: ['まあ、すばらしい！ もう {一人前|いちにんまえ|能獨當一面}の {仲居|なかい|旅館服務員}さんですね。', '哎呀，太棒了！已經是能獨當一面的仲居了呢。'] }
+    },
+    // おみやげ屋 (2026-11-24, spec §5.3; MIYAGE, js/71y_miyage.js): 竹内's ゆのはな堂 — ten customers a shift at its counter, each heard
+    // first: what they want said with あげる・くれる・もらう (whom it is for, how many, what they were given), the hero taking it off the
+    // two shelves behind onto his tray (one of each) and handing it over (どうぞ); some then ask a favour, have their hands full, buy for
+    // a superior (さしあげる) or cannot choose (a taste off the plate on the counter) — the reply picked, whose giving it is the point.
+    // Ruling 16: every pick has one right answer, the customer's own words deciding (what a superior likes names it); ruling 17: 金田's
+    // ぜんぶ is each of the eight, either まんじゅう box counting
+    miyage: {
+      // the shelves, top (five) and bottom (four): [id, the name on its tag, its price (円), pieces a box (0: one thing), its picture
+      // (PICS_TOWN), 中文] — the eight goods of the spec, the まんじゅう in its two boxes (the six and the twelve: their tags say the
+      // pieces, a sign over them its name)
+      goods: [['manju6', '{温泉|おんせん}まんじゅう', 600, 6, 'まんじゅう六個入', '溫泉饅頭（6 個裝）'], ['manju12', '{温泉|おんせん}まんじゅう', 1100, 12, 'まんじゅう十二個入', '溫泉饅頭（12 個裝）'],
+        ['senbei', 'せんべい', 800, 0, '湯の花せんべい', '湯之花仙貝'], ['tenugui', 'てぬぐい', 500, 0, 'てぬぐい', '日式手巾'], ['kokeshi', 'こけし', 1500, 0, 'こけし', '木芥子娃娃'],
+        ['jam', 'ゆずジャム', 700, 0, 'ゆずジャム', '柚子果醬'], ['bath', '{入浴剤|にゅうよくざい|入浴劑}', 400, 0, '入浴剤', '入浴劑「湯之花」'], ['sake', '{地酒|じざけ|當地的酒}', 1800, 0, '地酒', '當地的酒'],
+        ['keyring', 'キーホルダー', 300, 0, '木のキーホルダー', '木製鑰匙圈']],
+      // the customers: id → { who (the town's and the cruise's people, each in their own voice: none whose voice anyone at 湯の花 has),
+      // kind, line: [what they say, heard first, 中文], want: the goods that are right (in any order) }; kind: count (a box for so many),
+      // two (a thing each for two), got (what they were given), budget (what the coin in their hand buys: budget 円), reply (a favour
+      // asked once it is on the tray: then), offer (their hands full: then — the hero offers), elder (a gift for a superior: to, the one
+      // it is for as the hero says it), taste (unable to choose: the replies first, then what they say once they have tasted: then), all
+      // (金田). reply: the replies' set (below); after: their word once served (else thanks); no: what they say to a box that is not it,
+      // over: to a tray dearer than their coin, short: to one short of the eight
+      cust: {
+        count10: { who: 'ken', kind: 'count', line: ['{会社|かいしゃ}の {人|ひと}たちに おまんじゅうを あげたいんですが、{十人|じゅうにん|十個人} いるんです。', '我想送饅頭給公司的同事，他們有十個人。'], want: ['manju12'],
+          no: { manju6: ['ちょっと たりないですね…', '有點不夠呢……'] } },
+        count8: { who: 'rina', kind: 'count', line: ['サークルの {友|とも}だちに おまんじゅうを {買|か}って あげたいんです。{八人|はちにん|八個人} いるんですけど…', '我想買饅頭給社團的朋友，他們有八個人……'], want: ['manju12'],
+          no: { manju6: ['ちょっと たりないですね…', '有點不夠呢……'] } },
+        count2: { who: 'umeko', kind: 'count', line: ['{孫|まご}に おまんじゅうを {買|か}って あげたいんです。{小|ちい}さい ほうで いいですよ。', '我想買饅頭給孫子。小盒的就好喔。'], want: ['manju6'],
+          no: { manju12: ['あら、{小|ちい}さい ほうで いいんですよ。', '哎呀，小盒的就好了。'] } },
+        two1: { who: 'mizuno', kind: 'two', line: ['{父|ちち}には お{酒|さけ}を、{母|はは}には てぬぐいを {買|か}って あげたいです。', '我想買酒給爸爸，買手巾給媽媽。'], want: ['sake', 'tenugui'] },
+        two2: { who: 'ai', kind: 'two', line: ['{兄|あに}には キーホルダーを、{妹|いもうと}には ゆずジャムを {買|か}って あげたいんです。', '我想買鑰匙圈給哥哥，買柚子果醬給妹妹。'], want: ['keyring', 'jam'] },
+        two3: { who: 'hikaru', kind: 'two', line: ['{祖父|そふ}には おせんべいを、{祖母|そぼ}には {入浴剤|にゅうよくざい|入浴劑}を あげたいんです。', '我想送仙貝給爺爺，送入浴劑給奶奶。'], want: ['senbei', 'bath'] },
+        got1: { who: 'sophia', kind: 'got', line: ['となりの {人|ひと}が くれた おせんべいが おいしかったんです。{同|おな}じのを ください。', '鄰居送我的仙貝很好吃。請給我一樣的。'], want: ['senbei'] },
+        got2: { who: 'alex', kind: 'got', line: ['{友|とも}だちに もらった {入浴剤|にゅうよくざい|入浴劑}が よかったんです。{同|おな}じのを ください。', '朋友送我的入浴劑很好用。請給我一樣的。'], want: ['bath'] },
+        got3: { who: 'yoshimoto', kind: 'got', line: ['{会社|かいしゃ}の {人|ひと}に もらった ゆずジャムが うまかったんや。{同|おな}じの ください。', '同事送我的柚子果醬超好吃的。請給我一樣的。'], want: ['jam'] },
+        budget: { who: 'yuta', kind: 'budget', line: ['おばあちゃんに もらった お{金|かね}で {買|か}います！ これで {買|か}える もの、ありますか？', '我要用奶奶給的錢買！用這個買得到的東西，有嗎？'], budget: 500,
+          over: ['あれ？ お{金|かね}が たりない…', '咦？錢不夠……'] },
+        wrap1: { who: 'miyoko', kind: 'reply', line: ['こけしを {一|ひと}つ ください。', '請給我一個木芥子娃娃。'], want: ['kokeshi'], then: ['{友|とも}だちに あげるので、{包|つつ}んで もらえますか。', '要送朋友的，可以幫我包起來嗎？'], reply: 'wrap' },
+        wrap2: { who: 'sophia', kind: 'reply', line: ['ゆずジャムを ください。', '請給我柚子果醬。'], want: ['jam'], then: ['プレゼントなので、{包|つつ}んで もらえますか。', '是要送人的，可以幫我包起來嗎？'], reply: 'wrap' },
+        offer1: { who: 'yoshimoto', kind: 'offer', line: ['おせんべいと {入浴剤|にゅうよくざい|入浴劑}、ください。', '請給我仙貝和入浴劑。'], want: ['senbei', 'bath'], then: ['あっ、{手|て}が いっぱいや…', '啊，手上都拿滿了……'], reply: 'bag',
+          after: ['{助|たす}かるわ。おおきに！', '幫了大忙。謝啦！'] },
+        offer2: { who: 'mike', kind: 'offer', line: ['キーホルダーと、てぬぐいと、こけしを ください！', '請給我鑰匙圈、手巾和木芥子娃娃！'], want: ['keyring', 'tenugui', 'kokeshi'], then: ['あっ… {手|て}が いっぱいです…', '啊……手上拿滿了……'], reply: 'bag',
+          after: ['{助|たす}かります！ ありがとう ございます！', '幫了大忙！謝謝！'] },
+        elder1: { who: 'ai', kind: 'elder', line: ['{先生|せんせい}に さしあげる ものなんですが… お{酒|さけ}が お{好|す}きなんです。', '是要送給老師的……老師喜歡喝酒。'], want: ['sake'], to: ['{先生|せんせい}', '老師'], reply: 'give',
+          after: ['じゃあ、それに します。', '那就決定這個了。'] },
+        elder2: { who: 'rina', kind: 'elder', line: ['ゼミの {先生|せんせい}に さしあげる ものなんですが… お{部屋|へや}に かざる ものが いいんです。', '是要送給研討課老師的……想要可以擺在房間裡的東西。'], want: ['kokeshi'], to: ['{先生|せんせい}', '老師'], reply: 'give',
+          after: ['かわいい！ それに します。', '好可愛！就決定這個了。'] },
+        elder3: { who: 'ken', kind: 'elder', line: ['{部長|ぶちょう}に さしあげる ものなんですが… お{酒|さけ}が お{好|す}きで…', '是要送給部長的……他喜歡喝酒……'], want: ['sake'], to: ['{部長|ぶちょう}さん', '部長'], reply: 'give',
+          after: ['いいですね。それに します。', '不錯呢。就決定這個了。'] },
+        taste1: { who: 'ajimura', kind: 'taste', line: ['ふむ… どれが おいしいですか…', '嗯……哪一個好吃呢……'], reply: 'taste', then: ['おいしい！ これに します。{十二個入|じゅうにこい|12 個裝}りを ください。', '好吃！就決定這個了。請給我 12 個裝的。'], want: ['manju12'] },
+        taste2: { who: 'mizuno', kind: 'taste', line: ['まよいますね… どれが おいしいですか…', '好難選喔……哪一個好吃呢……'], reply: 'taste', then: ['おいしい！ これに します。{六個入|ろっこい|6 個裝}りを ください。', '好吃！就決定這個了。請給我 6 個裝的。'], want: ['manju6'] },
+        all: { who: 'kaneda', kind: 'all', line: ['ここの おみやげ、ぜんぶ ください！', '這裡的伴手禮，全部給我！'], short: ['ぜんぶですよ、ぜんぶ！', '是全部喔，全部！'],
+          after: ['{会社|かいしゃ}の みんなに あげます！ わたしは {社長|しゃちょう|社長}ですから！', '要送給公司的大家！因為我是社長嘛！'] }
+      },
+      // the replies (rulings 2, 7): [the right one, 中文], then the wrong ones [Japanese, why — whose giving it is] — each clearly wrong,
+      // never a second fair answer (a plain 「こちらは どうですか」 is no decoy: it is not wrong). {R} the one a gift is for as the hero says
+      // it, {r} in 中文; {G} the good
+      reply: {
+        wrap: [['はい、{包|つつ}みますね。', '好的，我幫您包起來。'], [['はい、{包|つつ}んで もらいます。', '「包んでもらいます」是「我請別人幫我包」——是你要幫客人包：「包みますね」。'],
+          ['はい、{包|つつ}んで くれます。', '「包んでくれます」是「別人幫我（們）包」——是你要幫客人包：「包みますね」。']]],
+        bag: [['{袋|ふくろ}に {入|い}れましょうか。', '要幫您裝進袋子裡嗎？'], [['{袋|ふくろ}に {入|い}れて もらいましょうか。', '「入れてもらいましょうか」是「我們請別人幫忙裝吧」——是你要主動幫客人裝：「入れましょうか」。'],
+          ['{袋|ふくろ}に {入|い}れて くれませんか。', '「入れてくれませんか」是請客人幫你裝——是你要幫客人裝：「入れましょうか」。']]],
+        give: [['{R}に さしあげるなら、こちらの {G}は いかがですか。', '要送給{r}的話，這個您覺得如何？'], [['{R}に くださるなら、こちらの {G}は いかがですか。', '「くださる」是長輩「給我（們）」——是客人要送給{r}：說「さしあげる」。'],
+          ['{R}に いただくなら、こちらの {G}は いかがですか。', '「いただく」是「從長輩那裡收到」——是客人要送給{r}：說「さしあげる」。']]],
+        taste: [['よかったら、{食|た}べて みて ください。', '不嫌棄的話，請吃吃看。'], [['よかったら、{食|た}べて もらって ください。', '「食べてもらって」是「請別人吃」——是請客人自己吃吃看：「食べてみてください」。'],
+          ['よかったら、わたしが {食|た}べて あげます。', '「わたしが食べてあげます」是「我幫你吃」——試吃是給客人吃的：「食べてみてください」。']]]
+      },
+      // why a tray is not it, under the word said to it (竹内's, or theirs): a box too few, the big one for the small, dearer than the
+      // coin, short of the eight, one more to come, one too many, not what they said
+      why: { few: '6 個裝的不夠分。', small: '客人說小盒的就好。', over: '超過客人手上的錢了：看看價錢。', short: '「ぜんぶ」是全部：八樣都要。', more: '還少一樣客人說的東西。',
+        extra: '多了客人沒說的東西。', other: '不是客人說的東西，再聽一次。' },
+      // 竹内 beside the hero: a shift's start, his sales talk now and then (two of them his own greeting's words), a right one now and
+      // then, a tray not it, a reply not it (whose doing it is), a taste offered, the end (all: every customer right at once)
+      say: { who: 'makoto', start: ['さあ、{今日|きょう}も たくさん {売|う}りましょう！', '好，今天也多賣一點吧！'],
+        sell: [['いらっしゃいませ！ {温泉|おんせん}まんじゅう、できたてですよ！', '歡迎光臨！溫泉饅頭剛蒸好喔！'], ['よかったら、どうぞ！ {一|ひと}つ どうぞ！', '不嫌棄的話，請吃！來一個吧！'],
+          ['こけしは、{職人|しょくにん|工匠}さんが {一|ひと}つずつ {作|つく}って くれるんですよ。', '木芥子娃娃是工匠一個一個幫我們做的喔。'], ['ゆずジャムは、{母|はは}が {作|つく}って くれるんです。', '柚子果醬是我媽媽幫忙做的。'],
+          ['{地酒|じざけ|當地的酒}は、{湯の花|ゆのはな}の お{水|みず}で できて いるんですよ。', '地酒是用湯之花的水釀的喔。']],
+        ok: [['いいですね！', '很好！'], ['{上手|じょうず}ですね！', '真厲害！']], pick: ['あれ？ もう {一度|いちど}、よく {聞|き}いて みて！', '咦？再仔細聽一次！'],
+        form: ['あれ？ だれが だれに するのか、よく {考|かんが}えて！', '咦？想想看是誰為誰做的！'], taste: ['どうぞ、どうぞ！', '請用，請用！'],
+        end: ['おつかれさまでした！ たくさん {売|う}れました！', '辛苦了！賣出好多！'], all: ['すごい！ うちの {父|ちち}より {売|う}るのが {上手|じょうず}かも！', '好厲害！說不定比我爸爸還會賣！'] },
+      // the hero's greeting, his どうぞ (駅弁's words: the clips they have) and the customers' thanks (the 案内所's)
+      hi: ['いらっしゃいませ。', '歡迎光臨。'], give: ['はい、どうぞ！', '來，請拿好！'], thanks: ['ありがとうございます。', '謝謝。']
     }
   },
   YATAI: {

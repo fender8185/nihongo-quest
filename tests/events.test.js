@@ -235,3 +235,21 @@ test('仲居\'s lines (TOWN.ONSEN.nakai) are checked at m8: a bare kanji, an abo
   assert.deepEqual(kinds(check(town([ev()], nk({ do: { a: ['tea', true, 'はい。', ''] } })), D8)), ['onsen']);   // no 中文
   assert.deepEqual(kinds(check(town([ev()], nk({ guest: { tea: ['kenta', ['{花|はな}ですね。', ''], ['はい。', '是的。'], [['いいえ。', '是花。', 'fact']], ['わあ。', '哇。']] } })), D8)), ['onsen']);
 });
+test('おみやげ屋\'s lines (TOWN.ONSEN.miyage) are checked at m11: a bare kanji, an above-level word, a customer no one is, a kind it does not practise, a good wanted that is not on the shelves, a wrong reply with no reason, a two-step customer with no replies, a line with no Chinese, a price that is no number (2026-11-24)', () => {
+  const D11 = Object.assign({}, DATA, { UNITS: DATA.UNITS.concat([{ id: 'm11', lv: 'N4' }]) });
+  const A = { who: 'kenta', kind: 'got', line: ['{花|はな}を ください。', '請給我花。'], want: ['flower'] };
+  const B = { who: 'miku', kind: 'reply', line: ['はこを ください。', '請給我盒子。'], want: ['box'], then: ['つつんで もらえますか。', '可以幫我包嗎？'], reply: 'wrap' };
+  const my = (o, cust = {}) => ({ ONSEN: { miyage: Object.assign({ goods: [['flower', '{花|はな}', 300, 0, '花', '花'], ['box', 'はこ', 600, 6, 'はこ', '盒子']],
+    cust: Object.assign({ a: A, b: B }, cust), reply: { wrap: [['はい、つつみますね。', '好的，我幫您包。'], [['はい、つつんで もらいます。', '是請別人包。']]] },
+    why: { other: '不是這個。' }, say: { who: 'miku', start: ['さあ！', '好！'], pick: ['あれ？', '咦？'] }, hi: ['いらっしゃいませ。', '歡迎光臨。'] }, o) } });
+  assert.deepEqual(check(town([ev()], my({})), D11), []);
+  assert.deepEqual(kinds(check(town([ev()], my({}, { a: Object.assign({}, A, { line: ['花を ください。', '請給我花。'] }) })), D11)), ['bare-kanji']);
+  assert.deepEqual(kinds(check(town([ev()], my({}, { a: Object.assign({}, A, { line: ['{経済|けいざい}を ください。', '經濟。'] }) })), D11)), ['level']);   // N3 at m11: gloss it
+  assert.deepEqual(kinds(check(town([ev()], my({}, { a: Object.assign({}, A, { who: 'nobody' }) })), D11)), ['ref']);
+  assert.deepEqual(kinds(check(town([ev()], my({}, { a: Object.assign({}, A, { kind: 'sing' }) })), D11)), ['onsen']);
+  assert.deepEqual(kinds(check(town([ev()], my({}, { a: Object.assign({}, A, { want: ['moon'] }) })), D11)), ['onsen']);   // not on the shelves
+  assert.deepEqual(kinds(check(town([ev()], my({ reply: { wrap: [['はい、つつみますね。', '好。'], [['はい、つつんで もらいます。', '']]] } })), D11)), ['onsen']);   // a wrong reply's reason
+  assert.deepEqual(kinds(check(town([ev()], my({}, { b: Object.assign({}, B, { reply: undefined }) })), D11)), ['onsen']);   // a favour asked, no replies to it
+  assert.deepEqual(kinds(check(town([ev()], my({}, { b: Object.assign({}, B, { then: ['つつんで もらえますか。', ''] }) })), D11)), ['onsen']);   // no 中文
+  assert.deepEqual(kinds(check(town([ev()], my({ goods: [['flower', '{花|はな}', 'three', 0, '花', '花'], ['box', 'はこ', 600, 6, 'はこ', '盒子']] })), D11)), ['onsen']);
+});

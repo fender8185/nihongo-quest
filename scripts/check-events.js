@@ -309,6 +309,41 @@ function check(T, D, opts = {}) {
       const ks = K.say || {}; person(ks.who, 'nakai say');
       Object.entries(ks).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U8, `nakai say ${k}#${i}`)));
     }
+    // おみやげ屋 (2026-11-24, spec §5.3): ゆのはな堂's shelves and customers at its unit (m11) — each good its tag's name, a price, its pieces
+    // and a picture drawn; each customer someone with a voice, of a kind the job practises, wanting goods on the shelves; one who is asked
+    // a favour, has their hands full, buys for a superior or tastes first has a set of replies, and every wrong reply its reason; every
+    // line its 中文
+    const M = on.miyage, U11 = 'm11', MKINDS = ['count', 'two', 'got', 'budget', 'reply', 'offer', 'elder', 'taste', 'all'], TWO_STEP = ['reply', 'offer', 'elder', 'taste'];
+    if (M) {
+      const ids = (M.goods || []).map((g) => g[0]), sets = M.reply || {};
+      (M.goods || []).forEach(([id, name, price, pack, pic, zh], i) => {
+        const at = `miyage good ${id || i}`; text(String(name || ''), U11, at);
+        if (!id || !name || !zh || !pic) bad('onsen', at, 'a good is [id, its name, price, pieces, its picture, 中文]');
+        if (!(Number.isInteger(price) && price > 0)) bad('onsen', at, `a price is a number of 円: ${price}`);
+        if (!(Number.isInteger(pack) && pack >= 0)) bad('onsen', at, `pieces are a number: ${pack}`);
+        if (opts.pics && pic && !opts.pics.has(pic)) bad('menu', at, `no drawing ${pic}`);
+      });
+      if (new Set(ids).size !== ids.length) bad('onsen', 'miyage goods', 'a good twice');
+      Object.entries(M.cust || {}).forEach(([id, c]) => {
+        const at = `miyage cust ${id}`; person(c.who, at); if (!MKINDS.includes(c.kind)) bad('onsen', at, `no kind ${c.kind}`);
+        pair(c.line, U11, at); ['then', 'after', 'over', 'short', 'to'].forEach((k) => { if (c[k] !== undefined) pair(c[k], U11, `${at} ${k}`); });
+        Object.entries(c.no || {}).forEach(([g, l]) => { if (!ids.includes(g)) bad('onsen', `${at} no`, `no good ${g}`); pair(l, U11, `${at} no ${g}`); });
+        if (!['budget', 'all'].includes(c.kind) && !(Array.isArray(c.want) && c.want.length && c.want.every((g) => ids.includes(g)))) bad('onsen', at, `wants goods on the shelves: ${c.want}`);
+        if (c.kind === 'budget' && !(Number.isInteger(c.budget) && c.budget > 0)) bad('onsen', at, 'a coin to spend: budget');
+        if (TWO_STEP.includes(c.kind) !== Boolean(c.reply)) bad('onsen', at, TWO_STEP.includes(c.kind) ? 'a two-step customer names its replies (reply)' : 'replies for a customer who only picks');
+        if (c.reply && !sets[c.reply]) bad('ref', at, `no replies ${c.reply}`);
+        if (['reply', 'offer', 'taste'].includes(c.kind) && !c.then) bad('onsen', at, 'what they say for the second step (then)');
+        if (c.kind === 'elder' && !c.to) bad('onsen', at, 'the one the gift is for (to)');
+      });
+      Object.entries(sets).forEach(([k, [right, wrong]]) => {
+        const at = `miyage reply ${k}`; pair(right, U11, at);
+        if (!Array.isArray(wrong) || !wrong.length) bad('onsen', at, 'no wrong replies');
+        (wrong || []).forEach(([ja, why], i) => { text(String(ja || ''), U11, `${at} wrong${i}`); if (!why) bad('onsen', `${at} wrong${i}`, 'a wrong reply with no why'); });
+      });
+      const ms = M.say || {}; person(ms.who, 'miyage say');
+      Object.entries(ms).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U11, `miyage say ${k}#${i}`)));
+      ['hi', 'give', 'thanks'].forEach((k) => { if (M[k]) pair(M[k], U11, `miyage ${k}`); });
+    }
   }
   // where someone stands on a shift of their job (CAST shift: [job, place, spot] — 千代 in 桜の間 while her 仲居 card is up): a spot drawn
   Object.entries(cast).forEach(([id, c]) => { if (c.shift !== undefined && (!Array.isArray(c.shift) || !JOB_IDS.has(c.shift[0]) || !places.includes(c.shift[1]) || !spots[c.shift[1]] || !spots[c.shift[1]][c.shift[2]])) bad('host', `cast ${id}`, 'shift is [a job (WORK.PLACES), a place drawn, a spot there]'); });
