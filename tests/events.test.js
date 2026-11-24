@@ -253,3 +253,14 @@ test('おみやげ屋\'s lines (TOWN.ONSEN.miyage) are checked at m11: a bare ka
   assert.deepEqual(kinds(check(town([ev()], my({}, { b: Object.assign({}, B, { then: ['つつんで もらえますか。', ''] }) })), D11)), ['onsen']);   // no 中文
   assert.deepEqual(kinds(check(town([ev()], my({ goods: [['flower', '{花|はな}', 'three', 0, '花', '花'], ['box', 'はこ', 600, 6, 'はこ', '盒子']] })), D11)), ['onsen']);
 });
+test('おみやげ屋 (fix round 1, M-7): with the drawings given (pics) a good with none is caught; a customer who is someone but has no voice (CAST_VOICE, read from js/80_tts.js) is caught', () => {
+  const D11 = Object.assign({}, DATA, { UNITS: DATA.UNITS.concat([{ id: 'm11', lv: 'N4' }]) });
+  const A = { who: 'kenta', kind: 'got', line: ['{花|はな}を ください。', '請給我花。'], want: ['flower'] };
+  const my = (o, cust = {}) => ({ ONSEN: { miyage: Object.assign({ goods: [['flower', '{花|はな}', 300, 0, '花', '花'], ['box', 'はこ', 600, 6, 'はこ', '盒子']],
+    cust: Object.assign({ a: A }, cust), reply: {}, why: { other: '不是這個。' }, say: { who: 'miku', start: ['さあ！', '好！'] } }, o) } });
+  const pics = new Set(['花', 'はこ']);
+  assert.deepEqual(check(town([ev()], my({})), D11, { pics }), []);
+  assert.deepEqual(kinds(check(town([ev()], my({ goods: [['flower', '{花|はな}', 300, 0, '花', '花'], ['box', 'はこ', 600, 6, 'なし', '盒子']] })), D11, { pics })), ['menu']);   // no drawing なし
+  const quiet = Object.assign(my({}, { a: Object.assign({}, A, { who: 'quiet' }) }), { CAST: Object.assign({}, CAST, { quiet: { name: '靜', hours: [] } }) });
+  assert.deepEqual(kinds(check(town([ev()], quiet), D11)), ['onsen']);   // someone (in CAST), no voice
+});

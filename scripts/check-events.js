@@ -29,6 +29,9 @@ const listIn = (src, name) => [...((new RegExp(`const ${name} = \\[([^\\]]*)\\]`
 const NAKAI_KEYS = listIn(NAKAI_SRC, 'KEYS'), NAKAI_SELF = listIn(NAKAI_SRC, 'SELF');
 const NAKAI_SLOTS = Object.fromEntries([...((/const SLOTS = \{([^}]*)\}/.exec(NAKAI_SRC) || ['', ''])[1]).matchAll(/(\w+): (\d+)/g)].map((m) => [m[1], Number(m[2])]));
 const JOB_IDS = new Set([...fs.readFileSync(path.join(ROOT, 'js', '71r_work.js'), 'utf8').matchAll(/^ {4}(\w+): \{ area: '/gm)].map((m) => m[1]));
+// who has a voice (js/80_tts.js, CAST_VOICE — read from there, its comments left out): an おみやげ屋 customer speaks in their own
+// (2026-11-24, fix round 1, M-7: someone in CAST or the cruise with no voice is caught here, not only by the e2e sweep)
+const VOICES = new Set([...((/const CAST_VOICE = \{([\s\S]*?)\n\};/.exec(fs.readFileSync(path.join(ROOT, 'js', '80_tts.js'), 'utf8')) || ['', ''])[1]).replace(/\/\/.*$/gm, '').matchAll(/(\w+): \[/g)].map((m) => m[1]));
 
 // what the hero can wear (古道具屋's wear and clothes): a chat line may be about one (when.look)
 function loadWares(file = path.join(__dirname, '..', 'js', '71d_wares.js')) {
@@ -316,8 +319,10 @@ function check(T, D, opts = {}) {
     const M = on.miyage, U11 = 'm11', MKINDS = ['count', 'two', 'got', 'budget', 'reply', 'offer', 'elder', 'taste', 'all'], TWO_STEP = ['reply', 'offer', 'elder', 'taste'];
     if (M) {
       const ids = (M.goods || []).map((g) => g[0]), sets = M.reply || {};
-      (M.goods || []).forEach(([id, name, price, pack, pic, zh], i) => {
-        const at = `miyage good ${id || i}`; text(String(name || ''), U11, at);
+      if (!VOICES.size) bad('onsen', 'miyage', 'CAST_VOICE not found in js/80_tts.js');
+      const voiced = (who, at) => { if (VOICES.size && (cast[who] || people[who]) && !VOICES.has(who)) bad('onsen', at, `${who} has no voice (CAST_VOICE)`); };   // someone no one is: 'ref' says so
+      (M.goods || []).forEach(([id, name, price, pack, pic, zh, tag], i) => {
+        const at = `miyage good ${id || i}`; text(String(name || ''), U11, at); if (tag !== undefined) text(String(tag), U11, `${at} tag`);
         if (!id || !name || !zh || !pic) bad('onsen', at, 'a good is [id, its name, price, pieces, its picture, 中文]');
         if (!(Number.isInteger(price) && price > 0)) bad('onsen', at, `a price is a number of 円: ${price}`);
         if (!(Number.isInteger(pack) && pack >= 0)) bad('onsen', at, `pieces are a number: ${pack}`);
@@ -325,7 +330,7 @@ function check(T, D, opts = {}) {
       });
       if (new Set(ids).size !== ids.length) bad('onsen', 'miyage goods', 'a good twice');
       Object.entries(M.cust || {}).forEach(([id, c]) => {
-        const at = `miyage cust ${id}`; person(c.who, at); if (!MKINDS.includes(c.kind)) bad('onsen', at, `no kind ${c.kind}`);
+        const at = `miyage cust ${id}`; person(c.who, at); voiced(c.who, at); if (!MKINDS.includes(c.kind)) bad('onsen', at, `no kind ${c.kind}`);
         pair(c.line, U11, at); ['then', 'after', 'over', 'short', 'to'].forEach((k) => { if (c[k] !== undefined) pair(c[k], U11, `${at} ${k}`); });
         Object.entries(c.no || {}).forEach(([g, l]) => { if (!ids.includes(g)) bad('onsen', `${at} no`, `no good ${g}`); pair(l, U11, `${at} no ${g}`); });
         if (!['budget', 'all'].includes(c.kind) && !(Array.isArray(c.want) && c.want.length && c.want.every((g) => ids.includes(g)))) bad('onsen', at, `wants goods on the shelves: ${c.want}`);
@@ -340,7 +345,7 @@ function check(T, D, opts = {}) {
         if (!Array.isArray(wrong) || !wrong.length) bad('onsen', at, 'no wrong replies');
         (wrong || []).forEach(([ja, why], i) => { text(String(ja || ''), U11, `${at} wrong${i}`); if (!why) bad('onsen', `${at} wrong${i}`, 'a wrong reply with no why'); });
       });
-      const ms = M.say || {}; person(ms.who, 'miyage say');
+      const ms = M.say || {}; person(ms.who, 'miyage say'); voiced(ms.who, 'miyage say');
       Object.entries(ms).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U11, `miyage say ${k}#${i}`)));
       ['hi', 'give', 'thanks'].forEach((k) => { if (M[k]) pair(M[k], U11, `miyage ${k}`); });
     }

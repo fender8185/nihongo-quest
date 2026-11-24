@@ -425,5 +425,5 @@ const JOBS = (() => {
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
   WORK.register('till', { run: tillRun, lines: tillLines, left: tillLeft, open: allNums });
-  return { pat: PAT, clock, said, voice, quiet, queue, line, missWord, grr, patience, custHtml, rng, pickR, shuffleR, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
+  return { pat: PAT, clock, said, voice, quiet, queue, line, missWord, grr, patience, custHtml, goodPic, rng, pickR, shuffleR, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
 })();

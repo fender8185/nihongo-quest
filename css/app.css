@@ -925,19 +925,19 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .wk-miyage .cls-x { width: 40px; height: 40px; }
 .wk-miyage .pic { --pic-disc: rgba(255, 250, 236, .5); --pic-shadow: rgba(60, 38, 18, .22); --pic-steam: #b4a891; }
 .om-shop { margin: 4px -6px 0; overflow: hidden; border-radius: 10px; box-shadow: 0 0 0 2px #6e5236; }
-.om-shelves { display: grid; gap: 4px; padding: 5px 4px 7px; background: linear-gradient(90deg, #5a3e2a 0 4px, transparent 4px calc(100% - 4px), #5a3e2a calc(100% - 4px)), linear-gradient(#e2d0ac, #ecdfc2 55%, #e0cda8); }
-.om-shelves { --om-pic: 58px; } @media (max-width: 420px) { .om-shelves { --om-pic: 50px; } }   /* the goods' size: a phone's narrower slots */
-.om-shelf { position: relative; display: flex; justify-content: center; --om-top: 0px; } .om-shelf.om-top { --om-top: 19px; }   /* the まんじゅう's sign over its two boxes */
+.om-shelves { --om-pic: 58px; display: grid; gap: 4px; padding: 5px 4px 7px; background: linear-gradient(90deg, #5a3e2a 0 4px, transparent 4px calc(100% - 4px), #5a3e2a calc(100% - 4px)), linear-gradient(#e2d0ac, #ecdfc2 55%, #e0cda8); }
+@media (max-width: 420px) { .om-shelves { --om-pic: 50px; } }   /* the goods' size: a phone's narrower slots */
+.om-shelf { position: relative; display: flex; justify-content: center; --om-top: 0px; } .om-shelf.om-top { --om-top: 23px; }   /* the まんじゅう's sign over its two boxes */
 .om-shelf::before { content: ''; position: absolute; left: -4px; right: -4px; top: calc(var(--om-top) + var(--om-pic) * .86); height: 9px; background: linear-gradient(#c8925a 0 2px, #946238 2px 7px, #5a3e2a 7px); box-shadow: 0 3px 4px rgba(40, 24, 12, .28); }   /* the shelf, wall to wall, under the goods' feet */
-.om-sign { position: absolute; left: 1%; width: 38%; top: 0; z-index: 2; display: block; height: 17px; padding-top: 5px; text-align: center; border-radius: 3px; background: #fffaf0; box-shadow: 0 1px 2px rgba(40, 24, 12, .3), inset 0 0 0 1px #d8c49a; font-size: 12px; font-weight: 700; line-height: 1; color: #8a3a1c; white-space: nowrap; pointer-events: none; }
-.om-sign rt { font-size: 7px; font-weight: 500; color: #8a6a48; } .om-sign::before { content: ''; position: absolute; left: 6px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #c8322a; }
+.om-sign { position: absolute; left: 1%; width: 42%; top: 0; z-index: 2; display: block; height: 21px; padding-top: 8px; text-align: center; border-radius: 3px; background: #fffaf0; box-shadow: 0 1px 2px rgba(40, 24, 12, .3), inset 0 0 0 1px #d8c49a; font-size: 12px; font-weight: 700; line-height: 1; color: #8a3a1c; white-space: nowrap; pointer-events: none; }
+.om-sign rt { font-size: 9px; font-weight: 500; color: #8a6a48; } .om-sign::before { content: ''; position: absolute; left: 6px; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: #c8322a; }
 .om-good { position: relative; z-index: 1; flex: 0 0 20%; min-width: 0; display: grid; justify-items: center; align-content: start; padding: var(--om-top) 0 2px; border: 0; border-radius: 7px; background: none; color: #2b2b33; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.om-shelf:not(.om-top) .om-good { flex-basis: 25%; }
+.om-shelf:not(.om-top) .om-good { flex-basis: 25%; } .om-good:is([data-g="manju6"], [data-g="manju12"]) { flex-basis: 22%; } .om-shelf.om-top .om-good:not([data-g^="manju"]) { flex-basis: calc(56% / 3); }   /* the boxes' readings (じゅうにこいり) want the room */
 .om-pic { position: relative; display: block; width: var(--om-pic); height: var(--om-pic); } .om-pic .pic { width: 100%; height: 100%; transition: opacity .2s; } .om-pic .pd { display: none; }   /* on the shelf itself: no disc behind */
 .om-tick { position: absolute; right: -5px; top: 3px; display: none; width: 18px; height: 18px; place-items: center; border-radius: 50%; background: #3f9a6a; color: #fff; font-size: 12px; font-style: normal; font-weight: 800; line-height: 1; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); }
 .om-good.om-on .om-pic .pic { opacity: .25; } .om-good.om-on .om-tick { display: grid; }   /* on the tray: its place on the shelf empty */
 .om-tag { display: grid; justify-items: center; width: calc(100% - 4px); margin-top: 8px; padding: 1px 1px 2px; border-top: 3px solid #c8322a; border-radius: 2px; background: #fffdf6; box-shadow: 0 1px 2px rgba(40, 24, 12, .3); line-height: 1.2; }
-.om-tag b { font-size: 12px; font-weight: 700; white-space: nowrap; } .om-tag rt { font-size: 7.5px; font-weight: 500; color: #6e5a48; }
+.om-tag b { font-size: 12px; font-weight: 700; white-space: nowrap; } .om-tag b:has(ruby) { padding-top: 3px; } .om-tag rt { font-size: 9px; font-weight: 500; color: #6e5a48; }   /* readings 9 px, as the other onsen cards' (fix round 1, M-4) */
 .om-good[data-g="keyring"] .om-tag b { font-size: 11.5px; letter-spacing: -.03em; }
 .om-tag i { font-style: normal; font-size: 12.5px; font-weight: 800; color: #b8322a; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .om-good.wk-hint { box-shadow: 0 0 0 3px #f6c94a, 0 0 12px 2px rgba(246, 210, 100, .85); background: rgba(255, 244, 196, .55); }   /* lit: a ring over the good and its tag */
@@ -956,7 +956,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .om-tray.om-full .om-chip { width: 27px; height: 27px; margin-left: -5px; }
 .om-chip.om-in { animation: omIn .28s ease-out; } @keyframes omIn { from { opacity: 0; transform: translateY(-12px) scale(.8); } }
 .om-tray.om-off .om-chip { animation: omOff .5s ease-in forwards; } @keyframes omOff { to { opacity: 0; transform: translateY(26px) scale(.8); } }
-.om-empty { font-size: 12px; line-height: 1.3; color: #f2dccc; }
+.om-empty { font-size: 11.5px; line-height: 1.35; color: #f2dccc; }
 .om-give { flex: none; min-height: 44px; min-width: 74px; padding-inline: 12px; font-size: 17px; } .om-give.wk-bad { animation: shake .3s ease; }
 .om-plate .om-bit { transform-box: fill-box; transform-origin: center; } .om-plate .om-bit.om-eat { animation: omEat .6s ease-in forwards; } @keyframes omEat { 30% { transform: translateY(-5px); } to { opacity: 0; transform: translate(-6px, 10px) scale(.7); } }
 .om-opts { display: grid; gap: 5px; margin-top: 6px; } .om-opts:empty { display: none; }

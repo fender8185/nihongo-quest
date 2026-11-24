@@ -21,10 +21,11 @@ const MIYAGE = (() => {
   const ids = () => Object.keys(T().cust);
   const fill = (tpl, o) => tpl.replace(/\{([RrG])\}/g, (m, k) => (o[k] !== undefined ? o[k] : m));
   // a customer as a shift has them: their data; want, the goods that are right (in any order), or a test of the tray (the coin's, 金田's
-  // eight); lit, the goods lit after two misses or once they go; their replies [Japanese, 中文 or why, right, how] (shuffled by R)
+  // eight); lit, the goods lit after two misses or once they go — a whole right tray: the coin's, one good it buys (fix round 1, M-2: all
+  // three together are over), 金田's, the eight; their replies [Japanese, 中文 or why, right, how] (shuffled by R)
   function cust(id, R) {
     const C = T().cust[id], c = Object.assign({ id }, C);
-    if (C.kind === 'budget') { c.want = (list) => list.length > 0 && price(list) <= C.budget; c.lit = goods().filter((g) => g[2] <= C.budget).map((g) => g[0]); }
+    if (C.kind === 'budget') { c.want = (list) => list.length > 0 && price(list) <= C.budget; c.lit = [goods().filter((g) => g[2] <= C.budget).sort((a, b) => a[2] - b[2])[0][0]]; }
     else if (C.kind === 'all') { c.want = (list) => EIGHT.every((g) => (Array.isArray(g) ? g.some((x) => list.includes(x)) : list.includes(g))); c.lit = EIGHT.map((g) => (Array.isArray(g) ? g[1] : g)); }
     else { c.want = C.want.slice(); c.lit = C.want.slice(); }
     if (C.reply) {
@@ -46,33 +47,40 @@ const MIYAGE = (() => {
     if (t.every((g) => w.includes(g))) return { ok: false, why: 'more' };
     return { ok: false, why: 'other' };
   }
-  // a right tray (the tests', the generator's): what they want; for a coin, its cheapest good; for 金田, the eight
-  const answer = (c) => (Array.isArray(c.want) ? c.want.slice() : c.kind === 'budget' ? [c.lit.slice().sort((a, b) => good(a)[2] - good(b)[2])[0]] : c.lit.slice());
+  // a right tray (the tests', the generator's): what they want; for a coin, its cheapest good; for 金田, the eight — what is lit
+  const answer = (c) => (Array.isArray(c.want) ? c.want.slice() : c.lit.slice());
   // a customer's steps: a pick (the tray, どうぞ), a reply (the replies), a taste (a piece off the plate) — a taste's reply first
   const steps = (c) => (c.kind === 'taste' ? ['reply', 'eat', 'pick'] : c.opts ? ['pick', 'reply'] : ['pick']);
-  // no person twice running (as the 案内所's tourists): each next the first left who is not the one before (金田 never first nor second);
-  // none such left, it goes in further back, between two not its own
+  // the order: the first stays first; 金田 never first nor second (each customer someone else, so no one comes twice running)
   function spread(list) {
-    const C = T().cust, who = (id) => C[id].who, ok = (id, n) => id !== 'all' || n >= 2, out = [list[0]], left = list.slice(1);
-    while (left.length) {
-      const i = left.findIndex((id) => who(id) !== who(out[out.length - 1]) && ok(id, out.length));
-      if (i >= 0) { out.push(left.splice(i, 1)[0]); continue; }
-      const t = left.shift(), j = out.findIndex((x, n) => n > 0 && ok(t, n) && who(x) !== who(t) && who(out[n - 1]) !== who(t));
-      if (j > 0) out.splice(j, 0, t); else out.push(t);
-    }
+    const out = [list[0]], left = list.slice(1), ok = (id, n) => id !== 'all' || n >= 2;
+    while (left.length) { const i = left.findIndex((id) => ok(id, out.length)); out.push(left.splice(i >= 0 ? i : 0, 1)[0]); }
     return out;
   }
-  // a shift: ten customers — the first a plain pick (a box for so many, a thing each for two, what they were given); one each with a
-  // coin, asking a favour, their hands full, buying for a superior, unable to choose; the rest plain picks, each kind at least once; 金田
-  // in about half the shifts in a plain one's place (never first nor second); no customer twice, and no person twice where the customers
-  // allow it (never twice running). u: the unit reached (the job's grammar is m11's at any unit)
+  // a shift: ten customers, no person twice (fix round 1, M-3: fourteen people for ten customers) — the first a plain pick (a box for so
+  // many, a thing each for two, what they were given); one each with a coin, asking a favour, their hands full, buying for a superior,
+  // unable to choose; the rest plain picks, each plain kind once at least and twice at most; 金田 in about half the shifts in the place of a
+  // plain pick whose kind comes twice (so every kind stays), never first nor second. The customers found place by place, fewest choices
+  // first, going back on a clash (a search: every place always has someone). u: the unit reached (the job's grammar is m11's at any unit)
   function make(u = TOWNEV.reachedIdx(), seed = 1 + Math.floor(Math.random() * 2147483646)) {
-    const R = rng(seed), C = T().cust, used = new Set(), people = new Set();
-    const take = (k) => { const pool = shuffleR(ids().filter((id) => C[id].kind === k && !used.has(id)), R), id = pool.find((x) => !people.has(C[x].who)) || pool[0]; used.add(id); people.add(C[id].who); return id; };
-    const plain = shuffleR(PLAIN.concat(PLAIN), R).slice(0, 5);   // five plain picks: each kind once at least, twice at most
-    const first = take(plain[0]), once = ONCE.map(take), fill2 = plain.slice(1).map(take);
-    if (C.all && R() < 0.45) fill2[Math.floor(R() * fill2.length)] = 'all';
-    return spread([first].concat(shuffleR(once.concat(fill2), R))).map((id) => cust(id, R));
+    const R = rng(seed), C = T().cust;
+    const kinds = shuffleR(PLAIN.concat(PLAIN), R).slice(0, 5);   // the five plain picks: each kind once at least, twice at most; the first is kinds[0]
+    if (C.all && R() < 0.45) { const twice = kinds.map((k, i) => i).filter((i) => i > 0 && kinds.filter((x) => x === kinds[i]).length > 1); kinds[pickR(twice, R)] = 'all'; }
+    const places = kinds.concat(ONCE), pool = places.map((k) => shuffleR(ids().filter((id) => C[id].kind === k), R));
+    const order = places.map((k, i) => i).sort((a, b) => pool[a].length - pool[b].length || a - b), got = [], used = new Set(), people = new Set();
+    const fit = (n) => {
+      if (n === order.length) return true;
+      const i = order[n];
+      for (const id of pool[i]) {
+        if (used.has(id) || people.has(C[id].who)) continue;
+        used.add(id); people.add(C[id].who); got[i] = id;
+        if (fit(n + 1)) return true;
+        used.delete(id); people.delete(C[id].who);
+      }
+      return false;
+    };
+    if (!fit(0)) throw new Error(`おみやげ屋: no ten customers of ten people for seed ${seed}`);   // never: a bug, said so
+    return spread([got[0]].concat(shuffleR(got.slice(1), R))).map((id) => cust(id, R));
   }
   return { make, cust, judge, answer, steps, price, good, goods, ids, KINDS, EIGHT };
 })();
@@ -85,8 +93,8 @@ const MIYAGE_RUN = (() => {
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>');
   const S = () => TOWN.ONSEN.miyage;
   let R = null, runs = 0;   // the customer at the counter now (the tests): { k, c, step, phase, tray, seed, miss, busy }
-  const pic = (g) => { const d = (typeof PICS_TOWN === 'object' && PICS_TOWN[g[4]]) || (typeof PICS === 'object' && PICS[g[4]]); return d ? `<svg class="pic" viewBox="0 0 100 100" aria-hidden="true"><circle class="pd" cx="50" cy="50" r="47"/>${d}</svg>` : ''; };
-  // the tasting plate on the counter: まんじゅう cut in quarters (each a piece: .om-bit), toothpicks in them, a tent card 「ご試食」
+  const pic = (g) => JOBS.goodPic(g[4]);   // a good's picture by its key (PICS, then PICS_TOWN), as 站櫃's and 收銀's
+  // the tasting plate on the counter: まんじゅう cut in quarters (each a piece: .om-bit), toothpicks in them, a tent card 「試食」
   const BIT_AT = [[22, 21], [34, 17], [46, 21], [28, 28], [40, 28], [52, 25]];
   const plateSvg = (n) => `<svg viewBox="0 0 74 44" aria-hidden="true"><ellipse cx="37" cy="33" rx="31" ry="8.6" fill="#2b1c12" fill-opacity=".18"/><ellipse cx="37" cy="30" rx="31" ry="9" fill="#e9eef2"/><ellipse cx="37" cy="29" rx="26" ry="6.8" fill="#fbfdff"/><ellipse cx="37" cy="29" rx="26" ry="6.8" fill="none" stroke="#3f62a8" stroke-width="1.2" stroke-dasharray="3 2.4"/>
     ${BIT_AT.slice(0, n).map(([x, y], i) => `<g class="om-bit" data-i="${i}"><path d="M${x - 5} ${y + 4} L${x - 5} ${y - 1} Q${x - 5} ${y - 5} ${x} ${y - 5} L${x} ${y + 4} Z" fill="#b8723a"/><path d="M${x} ${y - 5} L${x} ${y + 4} L${x - 5} ${y + 4}" fill="#e8d2b0"/><path d="M${x - 3.6} ${y + 2.6} L${x - 1.2} ${y - 1}" stroke="#5e3a1c" stroke-width="1.6" stroke-linecap="round"/><path d="M${x - 2} ${y + 1} L${x + 3} ${y - 9}" stroke="#d9b87a" stroke-width="1.1" stroke-linecap="round"/></g>`).join('')}
@@ -138,7 +146,9 @@ const MIYAGE_RUN = (() => {
     function shelves() { all('.om-good').forEach((b) => b.classList.toggle('om-on', Boolean(R) && R.tray.includes(b.dataset.g))); }
     function tray(added) {
       const t = el('.om-tray'); if (!t || !R) return;
-      t.innerHTML = R.tray.length ? R.tray.map((id) => { const g = MIYAGE.good(id); return `<span class="om-chip${id === added ? ' om-in' : ''}" data-t="${id}" role="img" aria-label="${esc(g[5])}">${pic(g)}</span>`; }).join('') : '<span class="om-empty">點架上的東西放上托盤</span>';   // taken off again on the shelf (the tray's things: no buttons of their own)
+      const picking = MIYAGE.steps(R.c)[R.step] === 'pick' && (R.phase === 'hi' || R.phase === 'pick');   // the hint only while a pick is to come (a taste's replies: none; fix round 1)
+      t.innerHTML = R.tray.length ? R.tray.map((id) => { const g = MIYAGE.good(id); return `<span class="om-chip${id === added ? ' om-in' : ''}" data-t="${id}" role="img" aria-label="${esc(g[5])}">${pic(g)}</span>`; }).join('')
+        : picking ? '<span class="om-empty">點架上的東西放上托盤<br>點托盤上的就放回去</span>' : '';   // a good taken back by a tap on the tray (I-2) or on the shelf
       t.classList.toggle('om-full', R.tray.length > 5);
       const d = el('.om-give'); if (d) d.disabled = !(R.phase === 'pick' && !R.busy && R.tray.length);
     }
@@ -166,7 +176,8 @@ const MIYAGE_RUN = (() => {
       const line = i === 0 ? c.line : c.kind === 'elder' ? null : c.then;
       R.line = line || c.line; R.phase = st; R.busy = false;
       if (line) bub(false); else bub(true);
-      opts(st === 'reply'); shelves(); tray(); el('.wk-cust').classList.add('on');
+      opts(st === 'reply'); shelves(); tray();
+      const cu = el('.wk-cust'); cu.classList.add('on'); cu.removeAttribute('data-mood'); const emo = cu.querySelector('.wk-emo'); if (emo) emo.textContent = '';   // calm again: the step before pleased them (fix round 1, M-1)
       P = JOBS.patience('miyage', c.who, st === 'reply' ? SECS.reply : c.kind === 'all' ? SECS.all : SECS.pick, () => mineNow(me0) && R.step === i, gone, box);
       if (!line) { P.go(); return; }
       const q = P; JOBS.line(c.who, line[0], box).then(() => { if (!rep && mineNow(me0) && R.step === i && P === q) q.go(); });
@@ -178,16 +189,26 @@ const MIYAGE_RUN = (() => {
     }
     // どうぞ: the tray against what they said — not it: their own word to it where they have one (a box too few, the big one for the
     // small, dearer than the coin, short of the eight), else 竹内's, the reason under it; said to its end, the clock held meanwhile and the
-    // miss's cost after it (ruling 27); two and their words are shown, the right goods lit
+    // miss's cost after it (ruling 27); two and their words are shown, the right goods lit. One どうぞ, one miss (fix round 1, I-1): busy
+    // while the word is to be said (a second tap, a tap on the tray: nothing), どうぞ off till the tray has changed (tray() turns it on)
     function give() {
       if (!R || R.phase !== 'pick' || R.busy || !R.tray.length) return;
       const c = R.c, j = MIYAGE.judge(c, R.tray);
       if (j.ok) { rightPick(); return; }
-      R.miss++; R.miss2++; missed++; playSfx('bad');
-      const d = el('.om-give'); if (d) { d.classList.remove('wk-bad'); void d.offsetWidth; d.classList.add('wk-bad'); }
+      const me0 = R; R.miss++; R.miss2++; missed++; R.busy = true; playSfx('bad');
+      const d = el('.om-give'); if (d) { d.classList.remove('wk-bad'); void d.offsetWidth; d.classList.add('wk-bad'); d.disabled = true; }
       const own = j.why === 'few' || j.why === 'small' ? c.no[R.tray[0]] : j.why === 'over' ? c.over : j.why === 'short' ? c.short : null, why = s.why[j.why] || s.why.other;
-      JOBS.missWord(P, () => (own ? theirs(c.who, own, why) : word([A.pick[0], why], 'bad')), MISS, box);
+      JOBS.missWord(P, () => (own ? theirs(c.who, own, why) : word([A.pick[0], why], 'bad')), MISS, box).then(() => { if (mineNow(me0) && R.phase === 'pick') R.busy = false; });
       if (R.miss2 >= 2) { bub(true); hint(); }
+    }
+    // a tap on the tray (fix round 1, I-2 — as 駅弁 taught: what is in hand is tapped to put it back): the good the tap is on goes back to
+    // the shelf (the last drawn, on top), else the nearest; the tray is the target (46 px tall), its goods none of their own
+    function offTray(x, y) {
+      if (!R || R.phase !== 'pick' || R.busy) return;
+      const chips = all('.om-tray .om-chip'); if (!chips.length) return;
+      const box2 = (e) => e.getBoundingClientRect(), on = chips.slice().reverse().find((e) => { const r = box2(e); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; });
+      const near = on || chips.map((e) => { const r = box2(e); return [e, Math.hypot(x - (r.left + r.right) / 2, y - (r.top + r.bottom) / 2)]; }).sort((a, b) => a[1] - b[1])[0][0];
+      tap(near.dataset.t);
     }
     // the tray right: their words shown; a last step — handed over; else the next: the hero's どうぞ and their favour (a superior's gift:
     // the replies at once, the good still on the tray)
@@ -266,10 +287,10 @@ const MIYAGE_RUN = (() => {
     // a shelf: each good standing on it, its tag under it — its name with its reading and its price; a box of まんじゅう its pieces and
     // its price, a sign over the two boxes with their name
     const shelf = (list, top) => `<div class="om-shelf${top ? ' om-top' : ''}">${top ? `<span class="om-sign" lang="ja" aria-hidden="true"><span>${ruby(list[0][1])}</span></span>` : ''}${list.map((g) => `<button type="button" class="om-good" data-g="${g[0]}" aria-label="${esc(g[5])}・${g[2]} 日圓"><span class="om-pic">${pic(g)}<i class="om-tick" aria-hidden="true">✓</i></span>
-      <span class="om-tag"><b lang="ja">${g[3] ? `${g[3]}<ruby>個入<rt>こいり</rt></ruby>` : ruby(g[1])}</b><i>${yenStr(g[2])}円</i></span></button>`).join('')}</div>`;
+      <span class="om-tag"><b lang="ja">${ruby(g[3] ? g[6] : g[1])}</b><i>${yenStr(g[2])}円</i></span></button>`).join('')}</div>`;   // a box's pieces read whole: ろっこいり (fix round 1, M-4)
     const G = MIYAGE.goods();
     CLASS.card('wk-miyage', '伴手禮店', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
-      <div class="wk-head"><b lang="ja"><ruby>ゆのはな堂<rt>ゆのはなどう</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span></div>
+      <div class="wk-head"><b lang="ja">ゆのはな<ruby>堂<rt>どう</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span></div>
       <div class="om-shop"><div class="om-shelves">${shelf(G.slice(0, 5), true)}${shelf(G.slice(5))}</div>
         <div class="om-front"><i class="om-noren" aria-hidden="true">${NOREN}</i><div class="om-door"><div class="wk-cust"></div></div>
           <div class="om-counter"><span class="om-plate" aria-hidden="true"></span><div class="om-tray"></div><button type="button" class="btn btn-primary om-give" lang="ja" disabled>どうぞ</button></div></div></div>
@@ -277,6 +298,7 @@ const MIYAGE_RUN = (() => {
       if (!R || !live()) return;
       if (e.target.closest('.om-ear')) { if (R.phase !== 'pick' && R.phase !== 'reply') return; const q = P, r = rep = rep + 1; q.hold(); JOBS.line(R.c.who, R.line[0], box).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }   // heard again (after any line being said): the clock waits till it is said in full (Task 4's N-2)
       const o = e.target.closest('.om-opt'); if (o) { reply(o); return; }
+      if (e.target.closest('.om-tray')) { offTray(e.clientX, e.clientY); return; }
       const g = e.target.closest('.om-good'); if (g) { tap(g.dataset.g); return; }
       if (e.target.closest('.om-give')) give();
     });
