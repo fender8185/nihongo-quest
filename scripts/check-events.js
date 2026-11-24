@@ -274,7 +274,28 @@ function check(T, D, opts = {}) {
       Object.entries(say).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U, `annai say ${k}#${i}`)));
       ['hi', 'thanks'].forEach((k) => { if (A[k]) pair(A[k], U, `annai ${k}`); });
     }
+    // 仲居 (2026-11-24, spec §5.2): 千代's instructions, checks and words and each guest's at its unit (m8); each thing one the room draws
+    // (washitsuArt's keys), a guest someone with a voice, every wrong reply with its reason and how it is wrong
+    const K = on.nakai, U8 = 'm8', THINGS = ['window', 'shoji', 'light', 'ac', 'tv', 'futon', 'zabuton', 'tea', 'yukata', 'flower'];
+    const thing = (key, at) => { if (!THINGS.includes(key)) bad('onsen', at, `no thing ${key} in the room`); };
+    if (K) {
+      Object.entries(K.do || {}).forEach(([id, [key, , ja, zh]]) => { const at = `nakai do ${id}`; thing(key, at); pair([ja, zh], U8, at); });
+      Object.entries(K.check || {}).forEach(([key, c]) => {
+        const at = `nakai check ${key}`; thing(key, at); ['q', 'yes', 'no', 'then'].forEach((x) => pair(c[x], U8, `${at} ${x}`));
+        if (!Array.isArray(c.fact) || c.fact.length !== 2 || !c.fact.every(Boolean)) bad('onsen', at, 'fact is [why when it is so, why when not]');
+        if (c.form) { (c.form[0] || []).forEach((ja) => text(ja, U8, `${at} form`)); if (!c.form[1]) bad('onsen', at, 'a form reply with no why'); }
+      });
+      Object.entries(K.guest || {}).forEach(([key, [who, line, right, wrong, after]]) => {
+        const at = `nakai guest ${key}`; thing(key, at); person(who, at); [line, right, after].forEach((l, i) => pair(l, U8, `${at}#${i}`));
+        (wrong || []).forEach(([ja, why, how], i) => { text(ja, U8, `${at} wrong${i}`); if (!why || !['form', 'fact'].includes(how)) bad('onsen', `${at} wrong${i}`, 'a wrong reply is [Japanese, why, form | fact]'); });
+      });
+      Object.entries(K.self || {}).forEach(([key, l]) => { thing(key, `nakai self ${key}`); pair(l, U8, `nakai self ${key}`); });
+      const ks = K.say || {}; person(ks.who, 'nakai say');
+      Object.entries(ks).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U8, `nakai say ${k}#${i}`)));
+    }
   }
+  // where someone stands on a shift of their job (CAST shift: [job, place, spot] — 千代 in 桜の間 while her 仲居 card is up): a spot drawn
+  Object.entries(cast).forEach(([id, c]) => { if (c.shift !== undefined && (!Array.isArray(c.shift) || !places.includes(c.shift[1]) || !spots[c.shift[1]] || !spots[c.shift[1]][c.shift[2]])) bad('host', `cast ${id}`, 'shift is [a job, a place drawn, a spot there]'); });
   return out;
 }
 

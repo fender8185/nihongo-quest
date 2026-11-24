@@ -868,6 +868,52 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .an-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } .an-talk .kr-face { width: 34px; height: 34px; flex: none; } .an-talk .wk-say { font-size: 14px; }
 .an-talk[data-who="me"] :is(.kr-face, .wk-say), .an-talk:not([data-who="me"]) .wk-me { display: none; } .an-talk .wk-me { flex: 1; margin: 0; }
 @media (prefers-reduced-motion: reduce) { .an-opt.wk-bad { animation: none; } }
+/* 仲居 (2026-11-24, nk-): 桜の間 front-on (washitsuArt) under its room plate and the 「お客様 到着まで」 countdown at the top right (as the
+   駅弁's departure bar: red and blinking for its last 10 s, faint while it waits); every thing in the room there to tap — one changed
+   pops in (a laid one drops in) while the old fades out, one put back its own way, the light dimming or brightening the whole room; the
+   right one lit after two misses; the cat off with ニャ; under the room whoever speaks (千代, a guest coming in), their words heard first
+   (🔊), the replies to a check or a guest, and 千代's word or the hero's. Lit indoors: the card the same by night (its window and shoji
+   onto the night: --rk-out) */
+.cls.wk-nakai { align-items: start; }   /* the room never moves as the replies come and go: a thing is tapped right after one is picked */
+.wk-nakai .cls-card { width: min(470px, 100%); margin-top: clamp(0px, calc(50dvh - 440px), 160px); background: #f4efe4; color: #2b2b33; border-bottom: 10px solid #6e3b2e; padding: 12px 12px 10px; }
+.wk-nakai .cls-x { width: 40px; height: 40px; }
+.nk-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; margin: 3px 0 5px; }
+.nk-room { margin: 0; padding: 1px 10px 2px; border-radius: 4px; background: linear-gradient(#8a6a46, #6e5236); color: #fbf5e6; font-family: 'Hiragino Mincho ProN', 'Noto Serif JP', serif; font-size: 15px; font-weight: 700; letter-spacing: .08em; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25), 0 1px 0 rgba(0, 0, 0, .15); }
+.nk-room rt { font-size: 8px; letter-spacing: 0; color: #e6d6b4; } .nk-room:empty { visibility: hidden; } .nk-room { padding-top: 4px; line-height: 1.5; }
+.nk-dep { display: flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 12px; line-height: 1.25; background: rgba(28, 28, 34, .84); color: #ffae3a; transition: opacity .3s; } .nk-dep rt { font-size: 7.5px; color: #d6c6a6; }
+.nk-dep i { display: block; width: 80px; height: 7px; border-radius: 4px; background: rgba(255, 255, 255, .2); overflow: hidden; } .nk-dep b { display: block; height: 100%; width: calc(var(--p, 1) * 100%); background: #5fd07a; }
+.nk-dep.idle { opacity: .55; } .nk-dep.late { color: #ff6a4a; } .nk-dep.late b { background: #ff6a4a; animation: btBlink .5s steps(2) infinite; }
+.nk-stage { position: relative; margin: 0 -6px; overflow: hidden; border-radius: 10px; background: #cbc58c; box-shadow: 0 0 0 2px #8a6a46; }
+.nk-stage.nk-enter .nk-art { animation: nkEnter .45s ease-out; } @keyframes nkEnter { from { opacity: 0; transform: translateX(14px); } }
+.nk-art svg { display: block; width: 100%; height: auto; }
+.wk-nakai .cls-card.nk-ask .nk-art svg { max-height: max(230px, calc(100dvh - 404px)); }   /* a short phone: the room a little smaller while a reply is picked */
+.nk-art [data-k] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.nk-art :is([data-k="futon"], [data-k="zabuton"]) > rect:only-child { fill: #fffdf0; fill-opacity: .14; stroke: #6e6a3e; stroke-opacity: .4; stroke-width: 1.2; stroke-dasharray: 5 4; }   /* a futon's or a cushion's place, empty: faintly marked, every one (none is given away) */
+.nk-art :is(.nk-in, .nk-drop, .nk-back, .nk-out, .nk-catgo) { transform-box: fill-box; transform-origin: 50% 100%; }
+.nk-art .nk-in { animation: nkIn .32s ease-out; } @keyframes nkIn { from { opacity: .2; transform: scale(.9); } }
+.nk-art .nk-drop { animation: nkDrop .36s cubic-bezier(.3, 1.4, .5, 1); } @keyframes nkDrop { from { opacity: 0; transform: translateY(-12px) scale(.96); } }
+.nk-art .nk-back { animation: nkBack .36s ease-out; } @keyframes nkBack { 0% { opacity: .3; } 40% { transform: translateX(-3px); } 70% { transform: translateX(3px); } }
+.nk-art :is(.nk-out, .nk-gone) { pointer-events: none; animation: nkOut .4s ease-in forwards; } @keyframes nkOut { to { opacity: 0; transform: scale(.96); } }
+.nk-art .nk-gone { transform: none; animation-name: nkGone; } @keyframes nkGone { to { opacity: 0; } }
+.nk-art .nk-fade { animation: nkFade .4s ease-out; } @keyframes nkFade { from { opacity: 0; } }
+.nk-art .nk-glow { fill: #f6e08a; fill-opacity: .42; stroke: #e0a410; stroke-width: 2.4; stroke-opacity: .95; pointer-events: none; animation: nkHint .9s ease-in-out infinite alternate; } @keyframes nkHint { from { fill-opacity: .1; } }   /* the one asked for, after two misses */
+.nk-art .nk-shine { fill: #fff3b0; fill-opacity: 0; pointer-events: none; animation: nkSeen 1.8s ease-out; } @keyframes nkSeen { 25% { fill-opacity: .55; } }   /* the one 千代 found seen to */
+.nk-art .nk-catgo { animation: nkCat .56s ease-in forwards; } @keyframes nkCat { 30% { transform: translateY(-6px); } to { opacity: 0; transform: translate(-70px, -4px); } }
+.nk-nya { position: absolute; left: 8%; top: 42%; z-index: 1; padding: 1px 9px; border-radius: 10px; background: #fffdf6; color: #8a4a2a; font-size: 16px; font-weight: 700; box-shadow: 0 2px 0 rgba(0, 0, 0, .15); pointer-events: none; animation: nkNya 1.5s ease-out forwards; }
+@keyframes nkNya { 0% { opacity: 0; transform: translateY(6px); } 15%, 70% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
+.nk-task { display: flex; align-items: center; gap: 8px; min-height: 48px; margin-top: 7px; } .nk-task .kr-face { flex: none; width: 42px; height: 42px; }
+.nk-task.nk-come { animation: nkCome .35s ease-out; } @keyframes nkCome { from { opacity: 0; transform: translateX(-12px); } }
+.nk-task.nk-bye { opacity: 0; transform: translateX(-24px); transition: opacity .4s, transform .4s; }
+.nk-bub { flex: 1 1 0; min-width: 0; margin: 0; display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; padding: 4px 10px 4px 4px; border-radius: 14px; background: #fff; box-shadow: 0 2px 0 rgba(0, 0, 0, .08); font-size: 16px; line-height: 1.5; }
+.nk-bub .wk-ear { grid-row: span 2; min-height: 40px; min-width: 44px; } .nk-bub > :not(.wk-ear) { grid-column: 2; } .nk-bub span { font-size: 12.5px; opacity: .65; } .nk-bub rt { font-size: 9px; }
+.nk-bub .nk-dots { color: #8a7a6e; letter-spacing: .1em; } .nk-bub:not(:has(.wk-ear)) { padding-left: 12px; }
+.nk-opts { display: grid; gap: 5px; margin-top: 6px; } .nk-opts:empty { display: none; }
+.nk-opt { min-height: 44px; padding-block: 3px; font-size: 15.5px; line-height: 1.45; text-align: left; justify-content: flex-start; white-space: normal; } .nk-opt rt { font-size: 9px; }
+.nk-opt.nk-right { box-shadow: 0 0 0 2px #3f9a6a; } .nk-opt:is(.nk-right, .wk-hint) { opacity: 1; } .nk-opt:disabled:not(.nk-right):not(.wk-hint) { opacity: .5; }
+.nk-opt.wk-bad { animation: shake .3s ease; } .nk-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
+.nk-talk { display: flex; align-items: center; gap: 8px; min-height: 40px; margin-top: 5px; } .nk-talk .nk-mini { flex: none; width: 30px; height: 30px; }
+.nk-talk .wk-say { font-size: 14px; } .nk-talk:has(.wk-say:empty) .nk-mini { visibility: hidden; } .nk-talk .wk-say.nk-me b { color: #2f7a6a; }
+@media (prefers-reduced-motion: reduce) { .nk-art :is(.nk-in, .nk-drop, .nk-back, .nk-fade), .nk-art :is(.nk-glow, .nk-shine), .nk-stage.nk-enter .nk-art, .nk-task.nk-come, .nk-opt.wk-bad, .nk-nya { animation: none; } .nk-art :is(.nk-out, .nk-gone) { display: none; } .nk-art .nk-catgo { animation-duration: .01s; } .nk-art .nk-shine { fill-opacity: .35; } }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */
 :is(.wk-bento, .wk-window, .wk-lost, .wk-taxi) .wk-ear { min-height: 40px; min-width: 44px; }
 .wk-lock { margin: 10px 0 4px; padding: 8px 10px; border-radius: 10px; background: #fde4cf; color: #8a3a1a; font-size: 14px; line-height: 1.5; }

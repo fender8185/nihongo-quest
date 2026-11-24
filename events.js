@@ -9,7 +9,7 @@ const TOWN = {
   // drawn since 2026-11-14 — with t5's stops there, 2026-11-23)
   PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi', 'oku', 'onsen', 'yudori', 'yubatake', 'ryokan', 'washitsu'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源', '湯の花', '森下', '花月', 'ゆのはな堂', '湯けむり通り', '湯畑', '花村', '千代', '竹内', '桜の間', '湯の花の湯'],
+  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源', '湯の花', '森下', '花月', 'ゆのはな堂', '湯けむり通り', '湯畑', '花村', '千代', '竹内', '桜の間', '菊の間', '松の間', '湯の花の湯'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
   HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21], dori: [10, 19], rairai: [10, 20], yunohanado: [9, 21], shateki: [10, 23], yukataya: [9, 18] },   // ゆのはな堂 (湯けむり通り, 2026-11-23): 竹内's hours too (CAST.makoto, the same: test_onsen pins them); its 射的 and ゆかた屋 (2026-11-24, rulings 21, 26: the 観光案内所's boards say the same)
   // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
@@ -41,6 +41,7 @@ const TOWN = {
     onsen: { window: { X: 158, Y: 136, roam: 0 } },   // 湯の花駅前 (2026-11-23): あかり behind the 観光案内所's counter window (ONSEN), her face between its mullions
     yudori: { yunohanado: { X: -66, Y: 126, roam: [8, 3] } },   // 湯けむり通り (2026-11-23): before ゆのはな堂 by its steamers (竹内, 9–21: TOWN.HOURS.yunohanado; YUDORI)
     ryokan: { desk: { u: 6.6, v: 1.35 }, lobby: { u: 8.4, v: 9.2 } },   // 旅館「花月」 (2026-11-24), at 45° as the town's rooms: 佐藤 behind the front desk, 千代 in the lobby (RYOKAN)
+    washitsu: { nakai: { u: 18.4, v: 8.2 } },   // 桜の間 (2026-11-24): 千代 by the 押し入れ while a 仲居 shift's card is up (CAST.chiyo.shift)
     kyoshitsu: { teach: { u: 4.6, v: 3.6 }, desk1: { u: 5.6, v: 5.85, sit: 1, pose: 'turn flip' }, desk2: { u: 13, v: 5.85, sit: 1, pose: 'turn flip' }, desk3: { u: 16.6, v: 5.85, sit: 1, pose: 'turn flip' }, tatami: { u: 19.4, v: 12.4, h: 0.5, kneel: 1, pose: 'turn flip' } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
@@ -175,7 +176,7 @@ const TOWN = {
     // the keigo master with a dry humour; 竹内 out by his steamers on 湯けむり通り, his shop's hours (HOURS.yunohanado), always a taste to offer
     chiyo: { name: '花村 千代', kana: 'はなむら ちよ', role: '旅館「花月」の女将', look: { face: 'oval', skin: '#f8dcc8', cheeks: 'soft', fringe: 'sidepart', sides: 'tucked', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'droopy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'kimono', top: '#3f4660', bottomStyle: 'skirt', bottom: '#3f4660', shoeStyle: 'zori', shoe: '#e9e2d0' },
       bio: ['旅館「花月」的女將，63 歲。總是穿著和服、盤著髮髻，優雅又溫柔，可是對細節非常嚴格。', '這間旅館從她母親那一代傳下來。對客人說敬語，對你是溫和的です・ます。口頭禪是「お客様が 来る 前に、ぜんぶ 用意して おきましょうね」。'],
-      hours: [[8, 21, 'ryokan', 'lobby']] },
+      hours: [[8, 21, 'ryokan', 'lobby']], shift: ['nakai', 'washitsu', 'nakai'] },   // shift: in 桜の間 while her 仲居 card is up (TOWNEV.whereIs; spec §4)
     sato: { name: '佐藤 一', kana: 'さとう はじめ', role: '旅館「花月」の番頭', look: { face: 'round', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'flat', beard: 'mustache', topStyle: 'samue', top: '#6e4f3a', bottomStyle: 'wide', bottom: '#6e4f3a', shoeStyle: 'zori', shoe: '#2b2b33' }, wear: { face: 'glasses' },
       bio: ['旅館「花月」的掌櫃（番頭），72 歲。穿作務衣、戴圓眼鏡，在櫃台站了五十年。', '敬語的達人，一句一句說得很慢、很正式，偶爾冷冷地冒出一句好笑的。口頭禪是「お客様には、敬語で ございます」。'],
       hours: [[7, 11, 'ryokan', 'desk'], [14, 22, 'ryokan', 'desk']] },
@@ -3348,6 +3349,7 @@ const TOWN = {
     yes: { suzuki: ['はい、おねがいします！', '是，麻煩您了！'], kobayashi: ['はい、おねがいします！', '是，麻煩您了！'], harada: ['はい、よろしく おねがいします。', '是的，請多指教。'], haru: ['はい、てつだいます！', '好，我來幫忙！'], zhang: ['はい、はたらきます。', '好，我來打工。'], zhou: ['はい、てつだいます。', '好，我來幫忙。'], huang: ['はい、いま いきます！', '好，馬上來！'], wang: ['はい、つくります！', '好，我來包！'],
       akari: ['はい、ぜひ！', '好啊，我很樂意！'], chiyo: ['はい、お{手伝|てつだ|幫忙}いします。', '好的，我來幫忙。'], sato: ['はい、よろしく おねがいします。', '是的，請多指教。'] },   // 湯の花温泉 (2026-11-24); 竹内 none (ruling 29): he sells, so he is asked with ASK
     first: {
+      nakai: [['chiyo', 'お{部屋|へや}は {二階|にかい}です。いっしょに {行|い}きましょう。', '客房在二樓。我們一起去吧。'], ['chiyo', 'わたしの {言|い}う ことを、よく {聞|き}いて くださいね。', '要仔細聽我說的話喔。']],   // 仲居 (2026-11-24): up to 桜の間 with her
       annai: [['akari', 'こたえは ぜんぶ、{上|うえ}の {看板|かんばん|看板}に ありますよ！', '答案全都在上面的看板上喔！'], ['akari', '{看板|かんばん|看板}は {毎日|まいにち} かわるので、よく {見|み}て くださいね。', '看板每天都會換，要仔細看喔。']],   // 観光案内所 (2026-11-24)
       bento: [['haru', 'でんしゃは まって くれないよ！ はやく わたしてね！', '電車可不會等人喔！要快點遞給客人喔！']],   // 駅前 (2026-11-20)
       taxi: [['suzuki', 'おれの となりで、{道|みち}を おしえて くれ！', '坐我旁邊，告訴我怎麼走！'], ['suzuki', '{右|みぎ}と {左|ひだり}は、くるまの むきで かんがえろよ！', '左右要照車子的方向想喔！']],
@@ -3614,6 +3616,97 @@ const TOWN = {
         end: ['おつかれさまでした！ みなさん、{喜|よろこ}んで いましたよ。', '辛苦了！大家都很開心喔。'], all: ['すごい！ わたしより くわしいかも！', '好厲害！說不定比我還清楚！'] },
       // the hero's greeting to each, each tourist's thanks (the 駅前 window's words: the clips they have)
       hi: ['こんにちは。', '你好。'], thanks: ['ありがとうございます。', '謝謝。']
+    },
+    // 仲居 (2026-11-24, spec §5.2; NAKAI, js/71y_nakai.js): 千代's three rooms — 桜の間, 菊の間, 松の間 — readied before their guests come.
+    // Each room: she asks what it is like now (a check: 他動詞 + てある, 自動詞 + ている — what the room shows), says what to do before
+    // the guests come (heard first: 他動詞 + ておく), and a guest coming in remarks on it (自動詞 + ている, 他動詞 + てある) — the hero
+    // saying what was done beforehand (他動詞 + ておきました). Dispatch ruling 1: no 他動詞 + ている is ever a reply (「用意して います」,
+    // 「つけて います」: natives use it of a state they keep — a second fair answer); a wrong one is the other fact, a 自動詞 + てある／
+    // ておく, or the pair's other way with the wrong fact — two replies where no clean third exists. Ruling 2: 布団 by 組, 座布団 by 枚
+    nakai: {
+      // 千代's instructions: id → [the thing (washitsuArt's key), what it is to be (on, open, set out: true; off, shut: false; a count),
+      // Japanese, 中文] — what a 女将 says to a new helper: 〜を 〜て おいて ください
+      do: {
+        winOpen: ['window', true, '{窓|まど}を {開|あ}けて おいて ください。', '請先把窗戶打開。'],
+        winShut: ['window', false, '{窓|まど}を {閉|し}めて おいて ください。', '請先把窗戶關上。'],
+        shojiOpen: ['shoji', true, '{障子|しょうじ|紙拉門}を {開|あ}けて おいて ください。', '請先把紙拉門拉開。'],
+        shojiShut: ['shoji', false, '{障子|しょうじ|紙拉門}を {閉|し}めて おいて ください。', '請先把紙拉門拉上。'],
+        light: ['light', true, '{電気|でんき}を つけて おいて ください。', '請先把燈打開。'],
+        ac: ['ac', true, 'お{客|きゃく}さまが {来|く}る {前|まえ}に、エアコンを つけて おいて ください。', '客人來之前，請先把冷氣打開。'],
+        tv: ['tv', false, 'あら、テレビが ついて いますね。{消|け}して おいて ください。', '哎呀，電視開著呢。請把它關掉。'],
+        futon2: ['futon', 2, 'お{布団|ふとん}を {二組|ふたくみ|兩套} {敷|し|鋪}いて おいて ください。', '請先鋪好兩套棉被。'],
+        futon3: ['futon', 3, 'お{布団|ふとん}を {三組|さんくみ|三套} {敷|し|鋪}いて おいて ください。', '請先鋪好三套棉被。'],
+        zabuton2: ['zabuton', 2, '{座布団|ざぶとん|坐墊}を {二枚|にまい|兩個} {並|なら}べて おいて ください。', '請先擺好兩個坐墊。'],
+        zabuton3: ['zabuton', 3, '{座布団|ざぶとん|坐墊}を {三枚|さんまい|三個} {並|なら}べて おいて ください。', '請先擺好三個坐墊。'],
+        zabuton4: ['zabuton', 4, '{座布団|ざぶとん|坐墊}を {四枚|よんまい|四個} {並|なら}べて おいて ください。', '請先擺好四個坐墊。'],
+        tea: ['tea', true, 'お{茶|ちゃ}を {用意|ようい}して おいて ください。', '請先把茶準備好。'],
+        yukata: ['yukata', true, '{浴衣|ゆかた|浴衣}を {置|お}いて おいて ください。', '請先把浴衣放好。'],
+        flower: ['flower', true, 'お{花|はな}を {飾|かざ}って おいて ください。', '請先把花擺好。']
+      },
+      // 千代's checks, the room as it is now: the thing → { q: her question, want: what she wants it to be, yes / no: the right reply
+      // when it is so / when not yet, fact: why the other one is wrong [when it is so, when not], form: a 自動詞 + てある — wrong
+      // either way ([when it is so, when not], why), then: her word when it is not so yet — now one of the room's instructions }
+      check: {
+        tea: { want: true, q: ['お{茶|ちゃ}は {用意|ようい}して ありますか。', '茶準備好了嗎？'], yes: ['はい、{用意|ようい}して あります。', '是的，準備好了。'], no: ['いいえ、まだ {用意|ようい}して いません。', '不，還沒準備。'],
+          fact: ['桌上已經擺好茶具了，再看一次。', '桌上還沒有茶具，再看一次。'], then: ['じゃあ、{用意|ようい}して おいて ください。', '那請先準備好。'] },
+        yukata: { want: true, q: ['{浴衣|ゆかた|浴衣}は {置|お}いて ありますか。', '浴衣放好了嗎？'], yes: ['はい、{置|お}いて あります。', '是的，放好了。'], no: ['いいえ、まだ {置|お}いて いません。', '不，還沒放。'],
+          fact: ['托盤裡已經放著浴衣了，再看一次。', '托盤裡還沒有浴衣，再看一次。'], then: ['じゃあ、{置|お}いて おいて ください。', '那請先放好。'] },
+        flower: { want: true, q: ['お{花|はな}は {飾|かざ}って ありますか。', '花擺好了嗎？'], yes: ['はい、{飾|かざ}って あります。', '是的，擺好了。'], no: ['いいえ、まだ {飾|かざ}って いません。', '不，還沒擺。'],
+          fact: ['床之間的花瓶裡已經插著花了，再看一次。', '床之間的花瓶還是空的，再看一次。'], then: ['じゃあ、{飾|かざ}って おいて ください。', '那請先擺好。'] },
+        window: { want: true, q: ['{窓|まど}は {開|あ}けて ありますか。', '窗戶打開了嗎？'], yes: ['はい、{開|あ}けて あります。', '是的，打開了。'], no: ['いいえ、まだ {開|あ}けて いません。', '不，還沒打開。'],
+          fact: ['窗戶已經打開了，再看一次。', '窗戶還關著，再看一次。'], form: [['はい、{開|あ}いて あります。', 'いいえ、まだ {開|あ}いて ありません。'], '「開く」是自動詞（窗戶自己開），不能加「てある」：有人打開的，要說「開けて あります」。'],
+          then: ['じゃあ、{開|あ}けて おいて ください。', '那請先打開。'] },
+        light: { want: true, q: ['{電気|でんき}は ついて いますか。', '燈開著嗎？'], yes: ['はい、ついて います。', '是的，開著。'], no: ['いいえ、ついて いません。', '不，沒開。'],
+          fact: ['燈是亮著的，再看一次。', '燈沒有亮，房間暗暗的，再看一次。'], form: [['はい、ついて あります。', 'いいえ、ついて ありません。'], '「つく」是自動詞（燈自己亮），不能加「てある」：亮著要說「ついて います」。'],
+          then: ['じゃあ、つけて おいて ください。', '那請先打開。'] },
+        ac: { want: true, q: ['エアコンは ついて いますか。', '冷氣開著嗎？'], yes: ['はい、ついて います。', '是的，開著。'], no: ['いいえ、ついて いません。', '不，沒開。'],
+          fact: ['冷氣開著（綠燈亮著、在吹風），再看一次。', '冷氣沒開（燈是灰的），再看一次。'], form: [['はい、ついて あります。', 'いいえ、ついて ありません。'], '「つく」是自動詞（冷氣自己運轉），不能加「てある」：開著要說「ついて います」。'],
+          then: ['じゃあ、つけて おいて ください。', '那請先打開。'] },
+        tv: { want: false, q: ['テレビは {消|き}えて いますか。', '電視關掉了嗎？'], yes: ['はい、{消|き}えて います。', '是的，關著。'], no: ['いいえ、ついて います。', '不，開著。'],
+          fact: ['電視是關著的，再看一次。', '電視開著，正在播東西，再看一次。'], form: [['はい、{消|き}えて あります。', 'いいえ、ついて あります。'], '「消える」「つく」是自動詞，不能加「てある」：關著要說「消えて います」，開著要說「ついて います」。'],
+          then: ['じゃあ、{消|け}して おいて ください。', '那請先關掉。'] },
+        shoji: { want: true, q: ['{障子|しょうじ|紙拉門}は {開|あ}いて いますか。', '紙拉門開著嗎？'], yes: ['はい、{開|あ}いて います。', '是的，開著。'], no: ['いいえ、{閉|し}まって います。', '不，關著。'],
+          fact: ['紙拉門是開著的，再看一次。', '紙拉門是關著的，再看一次。'], form: [['はい、{開|あ}いて あります。', 'いいえ、{閉|し}まって あります。'], '「開く」「閉まる」是自動詞，不能加「てある」：開著要說「開いて います」，關著要說「閉まって います」。'],
+          then: ['じゃあ、{開|あ}けて おいて ください。', '那請先拉開。'] }
+      },
+      // a guest coming in, what they remark on being so: the thing → [who (the town's and the cruise's people, each in their own voice:
+      // none with a voice anyone at 湯の花 has), their remark, the right reply, the wrong ones [Japanese, why, how: 'form' | 'fact'],
+      // their word after it]
+      guest: {
+        window: ['ai', ['あれ、{窓|まど}が {開|あ}いて いますね。', '咦，窗戶開著呢。'], ['はい、{開|あ}けて おきました。{閉|し}めましょうか。', '是的，我先打開了。要幫您關上嗎？'],
+          [['はい、{開|あ}いて おきました。{閉|し}めましょうか。', '「開く」是自動詞（窗戶自己開），不能加「ておく」：事先打開的，要說「開けて おきました」。', 'form'], ['はい、{閉|し}めて おきました。{開|あ}けましょうか。', '窗戶是開著的，不是關上了。', 'fact']],
+          ['いえ、このままで いいです。{風|かぜ}が {気持|きも}ちいいですね。', '不用，這樣就好。風很舒服呢。']],
+        shoji: ['miyoko', ['…{障子|しょうじ|紙拉門}が {開|あ}いて いますね。', '……紙拉門開著呢。'], ['はい、{開|あ}けて おきました。{閉|し}めましょうか。', '是的，我先拉開了。要幫您拉上嗎？'],
+          [['はい、{開|あ}いて おきました。{閉|し}めましょうか。', '「開く」是自動詞（紙拉門自己開），不能加「ておく」：事先拉開的，要說「開けて おきました」。', 'form'], ['はい、{閉|し}めて おきました。{開|あ}けましょうか。', '紙拉門是開著的，不是關上了。', 'fact']],
+          ['いいえ、このままで…。{庭|にわ}が よく {見|み}えます。', '不，就這樣……庭院看得很清楚。']],
+        ac: ['yoshimoto', ['おっ、エアコンが ついて いますね。', '喔，冷氣開著呢。'], ['はい、つけて おきました。{消|け}しましょうか。', '是的，我先打開了。要幫您關掉嗎？'],
+          [['はい、ついて おきました。{消|け}しましょうか。', '「つく」是自動詞（冷氣自己運轉），不能加「ておく」：事先打開的，要說「つけて おきました」。', 'form'], ['はい、{消|け}して おきました。つけましょうか。', '冷氣是開著的，不是關掉了。', 'fact']],
+          ['いや、このままで ええよ。おおきに！', '不用，這樣就好。謝啦！']],
+        light: ['ajimura', ['おや、もう {電気|でんき}が ついて いますね。', '哦，燈已經開著了呢。'], ['はい、つけて おきました。{消|け}しましょうか。', '是的，我先打開了。要幫您關掉嗎？'],
+          [['はい、ついて おきました。{消|け}しましょうか。', '「つく」是自動詞（燈自己亮），不能加「ておく」：事先打開的，要說「つけて おきました」。', 'form'], ['はい、{消|け}して おきました。つけましょうか。', '燈是亮著的，不是關掉了。', 'fact']],
+          ['いえ、{明|あか}るい ほうが いいです。', '不，亮一點比較好。']],
+        tea: ['umeko', ['まあ、お{茶|ちゃ}が {用意|ようい}して ありますね。', '哎呀，茶已經準備好了呢。'], ['はい、{用意|ようい}して おきました。どうぞ。', '是的，我先準備好了。請用。'],
+          [['いいえ、まだ {用意|ようい}して いません。', '茶具已經擺在桌上了，客人也看到了。', 'fact']], ['ありがとう。いただきます。', '謝謝。那我就不客氣了。']],
+        flower: ['sophia', ['きれいな お{花|はな}が {飾|かざ}って ありますね。', '擺著好漂亮的花呢。'], ['はい、{飾|かざ}って おきました。', '是的，我先擺好了。'],
+          [['いいえ、まだ {飾|かざ}って いません。', '花已經插在床之間的花瓶裡了。', 'fact']], ['{日本|にほん}の お{花|はな}は すてきですね。', '日本的花真美。']],
+        yukata: ['rina', ['あ、{浴衣|ゆかた|浴衣}が {置|お}いて ありますね！', '啊，放著浴衣耶！'], ['はい、{置|お}いて おきました。どうぞ。', '是的，我先放好了。請用。'],
+          [['いいえ、まだ {置|お}いて いません。', '浴衣已經放在托盤裡了。', 'fact']], ['かわいい！ あとで {着|き}て みます！', '好可愛！等一下來穿穿看！']],
+        futon: ['yuta', ['わあ、もう お{布団|ふとん}が {敷|し|鋪}いて ある！', '哇，棉被已經鋪好了！'], ['はい、{敷|し|鋪}いて おきましたよ。', '是啊，我先鋪好了喔。'],
+          [['いいえ、まだ {敷|し|鋪}いて いません。', '棉被已經鋪好了，小朋友也看到了。', 'fact']], ['やった！ ゴロゴロ しよう！', '太好了！來滾來滾去！']]
+      },
+      // 千代 now and then finding a thing seen to already (one room in about half the shifts, after its first instruction): the thing → her word
+      self: { window: ['あら、{窓|まど}は もう {開|あ}けて ありますね。', '哎呀，窗戶已經打開了呢。'], tea: ['あら、お{茶|ちゃ}は もう {用意|ようい}して ありますね。', '哎呀，茶已經準備好了呢。'],
+        flower: ['あら、お{花|はな}は もう {飾|かざ}って ありますね。', '哎呀，花已經擺好了呢。'], yukata: ['あら、{浴衣|ゆかた|浴衣}は もう {置|お}いて ありますね。', '哎呀，浴衣已經放好了呢。'] },
+      // 千代 beside the hero: a shift's start (her own saying), each room, the cat, a thing tapped that is not it, the countdown's last
+      // 10 s, the guests come (in time; with things not done), a thing done now and then, a reply picked that is not it (its form;
+      // the room misread), the end (all: everything right at once)
+      say: { who: 'chiyo', start: ['お{客|きゃく}さまが {来|く}る {前|まえ}に、ぜんぶ {用意|ようい}して おきましょうね。', '客人來之前，全部都先準備好吧。'],
+        rooms: [['まずは {桜の間|さくらのま}からです。', '先從櫻之間開始。'], ['つぎは {菊の間|きくのま}です。', '接下來是菊之間。'], ['さいごは {松の間|まつのま}です。', '最後是松之間。']],
+        cat: ['あら、また ねこちゃんが {寝|ね}て いますね。', '哎呀，貓咪又在那裡睡覺了。'], miss: ['それは ちがいますよ。', '不是那個喔。'], hurry: ['いそいで！', '快一點！'],
+        arrive: ['お{客|きゃく}さまが いらっしゃいました。', '客人到了。'], late: ['あっ、もう お{客|きゃく}さまが いらっしゃいました！', '啊，客人已經到了！'],
+        ok: [['はい、ありがとう。', '好，謝謝。'], ['{上手|じょうず}ですね。', '做得真好。']], form: ['その {言|い}い{方|かた}は ちょっと…。', '這個說法有點……'], fact: ['よく {見|み}て くださいね。', '要仔細看喔。'],
+        end: ['おつかれさまでした。お{客|きゃく}さまも {喜|よろこ}んで いましたよ。', '辛苦了。客人們也很開心喔。'],
+        all: ['まあ、すばらしい！ もう {一人前|いちにんまえ|能獨當一面}の {仲居|なかい|旅館服務員}さんですね。', '哎呀，太棒了！已經是能獨當一面的仲居了呢。'] }
     }
   },
   YATAI: {

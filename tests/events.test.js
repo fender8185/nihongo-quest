@@ -202,3 +202,21 @@ test('湯の花温泉\'s lines (TOWN.ONSEN) are checked: the 観光案内所\'s 
   assert.deepEqual(kinds(check(town([ev()], annai({ fun: { f: { who: 'miku', ask: 'q9', q: ['ねえ。', '欸。'], after: ['わあ！', '哇！'] } } })), DATA)), ['ref']);
   assert.deepEqual(kinds(check(town([ev()], { ONSEN: { welcome: ['{経済|けいざい}へ！', '歡迎！'] } }), DATA)), ['level']);   // the welcome: from the first unit
 });
+test('仲居\'s lines (TOWN.ONSEN.nakai) are checked at m8: a bare kanji, an above-level word, a thing the room does not draw, a guest no one is, a wrong reply with no reason, a check with no why; a shift spot is one drawn (2026-11-24)', () => {
+  const D8 = Object.assign({}, DATA, { UNITS: DATA.UNITS.concat([{ id: 'm8', lv: 'N4' }]) });
+  const nk = (o) => ({ ONSEN: { nakai: Object.assign({ do: { a: ['tea', true, '{花|はな}を {食|た}べて おいて ください。', '先把花吃了。'] },
+    check: { tea: { want: true, q: ['{花|はな}は ありますか。', '有花嗎？'], yes: ['はい、あります。', '有。'], no: ['いいえ、ありません。', '沒有。'], fact: ['有花。', '沒有花。'], then: ['じゃあ、おねがいします。', '那就拜託了。'],
+      form: [['はい、ある。', 'いいえ、ない。'], '要說「あります」。'] } },
+    guest: { tea: ['kenta', ['{花|はな}ですね。', '是花呢。'], ['はい。', '是的。'], [['いいえ。', '是花。', 'fact']], ['わあ。', '哇。']] },
+    self: { tea: ['あら、もう ありますね。', '哎呀，已經有了。'] }, say: { who: 'miku', miss: ['ちがいます。', '不對。'], ok: [['はい。', '好。']] } }, o) } });
+  assert.deepEqual(check(town([ev()], nk({})), D8), []);
+  assert.deepEqual(kinds(check(town([ev()], nk({ do: { a: ['tea', true, '花を {食|た}べて おいて ください。', '先把花吃了。'] } })), D8)), ['bare-kanji']);
+  assert.deepEqual(kinds(check(town([ev()], nk({ self: { tea: ['{経済|けいざい}ですね。', '經濟呢。'] } })), D8)), ['level']);   // N3 at m8: gloss it
+  assert.deepEqual(kinds(check(town([ev()], nk({ do: { a: ['moon', true, 'はい。', '好。'] } })), D8)), ['onsen']);
+  assert.deepEqual(kinds(check(town([ev()], nk({ guest: { tea: ['nobody', ['はい。', '是。'], ['はい。', '是。'], [], ['わあ。', '哇。']] } })), D8)), ['ref']);
+  assert.deepEqual(kinds(check(town([ev()], nk({ guest: { tea: ['kenta', ['はい。', '是。'], ['はい。', '是。'], [['いいえ。', '', 'fact']], ['わあ。', '哇。']] } })), D8)), ['onsen']);
+  assert.deepEqual(kinds(check(town([ev()], nk({ check: { tea: { want: true, q: ['はい？', '是？'], yes: ['はい。', '是。'], no: ['いいえ。', '不。'], then: ['じゃあ。', '那。'] } } })), D8)), ['onsen']);
+  const shifted = (spot) => Object.assign(nk({}), { CAST: Object.assign({}, CAST, { miku: Object.assign({}, CAST.miku, { shift: ['nakai', 'town', spot] }) }) });
+  assert.deepEqual(check(town([ev()], shifted('bakery')), D8), []);
+  assert.deepEqual(kinds(check(town([ev()], shifted('moon')), D8)), ['host']);
+});

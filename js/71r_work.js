@@ -29,7 +29,7 @@ const WORK = (() => {
     // job by its unit, its keeper there. All four on the board from the start (ruling 2); a job is offered and started only once its
     // runner is in (観光案内所 here, 仲居・おみやげ屋・フロント in their own tasks). tune: the onsen's own (none yet: no music, quietly)
     annai: { area: 'onsen', pay: 200, place: 'onsen', shop: 'annai', who: 'akari', course: 'm7', present: true, name: '觀光服務台', at: '観光案内所', tune: 'onsen', shut: '森あかり 9 點到 18 點在観光案内所的窗口。' },
-    nakai: { area: 'onsen', pay: 220, place: 'ryokan', shop: 'kagetsu', who: 'chiyo', course: 'm8', present: true, name: '仲居（準備客房）', at: '旅館「花月」', tune: 'onsen', shut: '女將花村千代 8 點到 21 點在旅館花月的大廳。' },
+    nakai: { area: 'onsen', pay: 220, place: 'ryokan', shop: 'kagetsu', who: 'chiyo', course: 'm8', present: true, name: '仲居（準備客房）', at: '旅館「花月」', n: 16, tune: 'onsen', shut: '女將花村千代 8 點到 21 點在旅館花月的大廳。' },   // 16: three rooms, ten things to do in them, a check and a guest each (2026-11-24)
     miyage: { area: 'onsen', pay: 240, place: 'yudori', shop: 'yunohanado', who: 'makoto', course: 'm11', present: true, name: '伴手禮店', at: 'ゆのはな堂', tune: 'onsen', shut: '竹内まこと 9 點到 21 點在ゆのはな堂。' },
     front: { area: 'onsen', pay: 260, place: 'ryokan', shop: 'kagetsu', who: 'sato', course: 'm15', present: true, name: '旅館櫃台', at: '花月のフロント', tune: 'onsen', shut: '番頭佐藤一 7–11 點、14–22 點在旅館花月的櫃台。' } };
   // a workplace no more (外送, cut 2026-11-15; 整理貨架, 2026-11-19): its old records still read
@@ -163,7 +163,13 @@ const WORK = (() => {
       '答案都在頭上的「湯の花温泉 ごあんない」看板：六個地方的時間、價錢和規則（狗、小孩能不能進去，哪裡買得到毛巾）。看板每天都會換，要讀看板，背不起來。',
       '從下面三句選你要回答的那句：要跟看板上寫的一樣，說法也要對——「入れます」「買えます」「借りられます」「できます」「見られます」這些「可以…」的說法。',
       '看板上是 24 小時制：21:00 要說「夜九時（よる くじ）」，17:00 是「夕方五時」，10:00 是「午前十時」。', '遊客說完話開始算耐心（25 秒），按錯也會少一截；按喇叭重聽時耐心會暫停。'],
-      uses: ['可能形（入れる・買える・借りられる・できる）', 'ことが できる', '見られる', '讀時間和價錢'], n: '一班 10 位遊客' } };
+      uses: ['可能形（入れる・買える・借りられる・できる）', 'ことが できる', '見られる', '讀時間和價錢'], n: '一班 10 位遊客' },
+    nakai: { how: ['跟女將千代一起準備三間客房：桜の間、菊の間、松の間。每間一開始，千代會先問房間現在的樣子（「お茶は 用意して ありますか」「電気は ついて いますか」）：看圖，從下面選你要回的那句。',
+      '接著她會交代客人來之前要先做好的事（先用聽的，按喇叭可以再聽一次；做對或錯兩次才出現字）：「エアコンを つけて おいて ください」就點冷氣，「お布団を 二組 敷いて おいて ください」就在兩個地方鋪棉被。點錯東西算一次失誤，那樣東西會回到原樣。',
+      '上面「お客様 到着まで」是客人到達前的倒數，千代說話、按喇叭重聽時會暫停；時間到了還沒做好的事算失敗。最後 10 秒會變紅。',
+      '客人進房會說一句話（「あれ、窓が 開いて いますね」），選你要回的那句：事先做好的是「開けて おきました」——自動詞（開く、つく）不能加「ておく」。',
+      '睡在要鋪棉被的地方的貓，點牠就會走開，不算失誤。'],
+      uses: ['自動詞・他動詞（開く／開ける、つく／つける…）', '〜て ある・〜て いる', '〜て おく', '數棉被「組」、坐墊「枚」'], n: '一班 3 間房：10 件要準備的事、3 次確認、3 位客人' } };
   function intro(yard, job) {
     const c = can(job); if (!c.ok) { toast(c.why, 3600); return false; }
     const P = PLACES[job], R = RULES[job] || { how: [DOES[job] || ''], uses: [], n: `一班 ${nOf(job)} 件` }, t = today(), back = t && t.place === job && !fin(t) ? t.done : 0, p = pay(job, 'E');   // a job without its card yet: what the board says of it
@@ -191,7 +197,7 @@ const WORK = (() => {
     waiter: '帶位、點菜、端菜、結帳：聽客人說的話，選一句回他。', till: '用字卡拼出價格和全部加起來的念法，念給客人聽。',
     bento: '電車停靠時，聽車窗裡的乘客要什麼、要幾個，在發車前遞給他。', window: '看運賃表和發車標，回答票價、下一班幾點、在幾號月台，也賣票。',
     lost: '問來找東西的人忘了什麼、忘在哪裡、長什麼樣子，從拿出來的東西裡找出對的那樣。', taxi: '坐在鈴木的副駕駛座，照乘客說的（右轉、直走、停在哪裡前面）在地圖上帶路。',
-    annai: '看頭上的「ごあんない」看板，回答遊客：幾點開、多少錢、能不能帶狗、哪裡買得到毛巾。', nakai: '客人來之前把客房準備好：開冷氣、鋪棉被、泡茶，回答女將的確認。',
+    annai: '看頭上的「ごあんない」看板，回答遊客：幾點開、多少錢、能不能帶狗、哪裡買得到毛巾。', nakai: '聽女將交代，在客人來之前把客房準備好（開窗、開冷氣、鋪棉被、泡茶…），回答她的確認和進房客人的話。',
     miyage: '聽客人要送誰、送幾個，從貨架上拿對的伴手禮，回答客人的請求。', front: '在旅館櫃台接待客人：入住、行李、晚餐時間，用對的敬語回答。' };
   const WHERE = { buns: '牌樓外・王老闆', counter: '大通り・周美蘭', waiter: '大通り盡頭・黄', till: '大通り・張偉', bento: 'ホーム・浜田ハル', window: '駅・原田', lost: '交番・小林巡查', taxi: 'タクシー乗り場・鈴木',
     annai: '湯の花駅前・森あかり', nakai: '旅館花月・花村千代', miyage: '湯けむり通り・竹内まこと', front: '旅館花月・佐藤一' };

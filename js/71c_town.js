@@ -135,6 +135,7 @@ const TOWNEV = (() => {
   const isOpen = (shop, h = sceneHour()) => !T().HOURS[shop] || inside(h, T().HOURS[shop]);
   function whereIs(id, h = sceneHour(), day = sceneDate()) {
     const c = T().CAST[id]; if (!c || (c.art === 'npc' && !met(id))) return null;   // 小春, ムギ: once they have come by
+    if (c.shift && document.querySelector('.cls.wk-' + c.shift[0])) return { place: c.shift[1], spot: c.shift[2] };   // on a shift of their job, while its card is up (千代 in 桜の間, spec §4: back in the lobby once it is shut — taken up again there)
     const we = day.getDay() === 0 || day.getDay() === 6;
     const at = c.hours.find(([from, to, , , days]) => (!days || (days === 'we') === we) && inside(h, [from, to]));
     return at ? { place: at[2], spot: at[3] } : null;

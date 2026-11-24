@@ -491,7 +491,8 @@ const RYOKAN = (() => {
     y.dataset.sig = TOWNEV.sig('washitsu');
   }
   // ===== washitsuArt(state): 桜の間 front-on for the 仲居 card (spec §5.2), the room a 仲居 readies: state { window, shoji, light, ac,
-  // tv: on/open or not; futon 0–3 laid; zabuton 0–4 set out; tea, yukata, flower: set out or not; room: 'sakura' | 'kiku' | 'matsu' (its
+  // tv: on/open or not; futon 0–3 laid; zabuton 0–4 set out (or either as its places, [laid?, …]: the 仲居 lays one where it is tapped);
+  // tea, yukata, flower: set out or not; room: 'sakura' | 'kiku' | 'matsu' (its
   // scroll and its flowers); cat: the inn's cat asleep on the first futon (or where it is to be laid) }. Each thing its own group
   // data-k="<key>" (a futon's and a cushion's place each its own, data-i), its tap area (an unseen rect) 40 or more on the card's 360
   // across, laid out so that nothing lies over another but the cat. A string of SVG; by night the view in the window and the shoji
@@ -556,7 +557,9 @@ const RYOKAN = (() => {
   }
   function art(st0 = {}) {
     const st = Object.assign({ window: false, shoji: false, light: false, ac: false, tv: false, futon: 0, zabuton: 0, tea: false, yukata: false, flower: false, room: 'sakura', cat: false }, st0);
-    const room = ROOMS[st.room] ? st.room : 'sakura', uid = `rkA${++artN}`, nF = Math.max(0, Math.min(3, Number(st.futon) || 0)), nZ = Math.max(0, Math.min(4, Number(st.zabuton) || 0));
+    const room = ROOMS[st.room] ? st.room : 'sakura', uid = `rkA${++artN}`;
+    const laid = (v, n) => (Array.isArray(v) ? (i) => Boolean(v[i]) : (i) => i < Math.max(0, Math.min(n, Number(v) || 0)));   // a count (the first ones) or its places
+    const fOn = laid(st.futon, 3), zOn = laid(st.zabuton, 4);
     // the room's shell: the ceiling's boards, the side walls going back, the back wall of sand plaster, its 長押 and posts, the tatami
     const shell = `<rect width="${ART.W}" height="${ART.H}" fill="#cbc58c"/><path d="M0 0 H360 V10 H0 Z" fill="#8a6a4a"/><path d="M0 4 H360" stroke="#6e5236" stroke-width=".8"/>
       <path d="M0 0 L16 10 V158 L0 174 Z" fill="#ddcfae"/><path d="M360 0 L344 10 V158 L360 174 Z" fill="#ddcfae"/><rect x="16" y="10" width="328" height="148" fill="#eadcc0"/>
@@ -582,13 +585,13 @@ const RYOKAN = (() => {
     const sash = (x, glass) => `<rect x="${x}" y="24" width="36" height="132" fill="${glass ? '#fff' : 'none'}" fill-opacity=".1" stroke="#6e4e32" stroke-width="3"/><path d="M${x} 90 H${x + 36}" stroke="#6e4e32" stroke-width="2"/>${glass ? `<path d="M${x + 8} 30 l12 40 M${x + 22} 96 l8 28" stroke="#fff" stroke-opacity=".45" stroke-width="3" stroke-linecap="round"/>` : ''}`;
     const win = grp('window', ART.window, `<rect x="278" y="22" width="76" height="136" fill="#6e4e32"/>${artView(280, 24, 352, 156, true)}${st.window ? `${sash(280, true)}${sash(284, true)}<path d="M330 60 q6 -4 12 0 M326 76 q6 -4 12 0" stroke="#fff" stroke-opacity=".8" stroke-width="1.4" fill="none" stroke-linecap="round"/><circle cx="338" cy="104" r="2.4" fill="${(ROOMS[room].bloom || [])[0]}"/>` : `${sash(280, true)}${sash(316, true)}`}<rect x="276" y="154" width="80" height="5" fill="#5a3e28"/>`);
     // the futons' three places along the floor, the cat on the first
-    const futon = ART.futon.map((b, i) => grp('futon', b, i < nF ? artFuton(b, i) : '', i)).join('');
+    const futon = ART.futon.map((b, i) => grp('futon', b, fOn(i) ? artFuton(b, i) : '', i)).join('');
     const cat = st.cat ? grp('cat', ART.cat, artCat()) : '';
     // the 座卓 (dark lacquer), the tea things on it when ready, its four cushions' places round it, the yukata's tray
     const table = `<path d="M124 240 H236 L244 264 H116 Z" fill="#3e2216"/><path d="M130 244 L152 244 L144 260 H122 Z" fill="#fff" fill-opacity=".07"/><rect x="116" y="264" width="128" height="7" fill="#2e1a10"/><rect x="122" y="271" width="6" height="10" fill="#2b1c12"/><rect x="232" y="271" width="6" height="10" fill="#2b1c12"/>`;
     const tea = grp('tea', ART.tea, st.tea ? `<path d="M150 248 H210 L214 260 H146 Z" fill="#2b1c12"/><ellipse cx="166" cy="250" rx="9" ry="7" fill="#4a4a55"/><ellipse cx="166" cy="244" rx="5" ry="1.8" fill="#3a3a44"/><path d="M175 248 l6 -3" stroke="#4a4a55" stroke-width="2.4" stroke-linecap="round"/><path d="M158 244 q-4 -6 2 -9" stroke="#4a4a55" stroke-width="1.6" fill="none"/>
       <path d="M184 250 h9 l-1 7 h-7 Z" fill="#f2ece0"/><path d="M196 252 h9 l-1 7 h-7 Z" fill="#f2ece0"/><rect x="200" y="238" width="9" height="13" rx="2" fill="#7a8a5a"/><rect x="200" y="238" width="9" height="3" fill="#5a6a3a"/>` : '');
-    const zabuton = ART.zabuton.map((b, i) => grp('zabuton', b, i < nZ ? artZabuton(b) : '', i)).join('');
+    const zabuton = ART.zabuton.map((b, i) => grp('zabuton', b, zOn(i) ? artZabuton(b) : '', i)).join('');
     const yukata = grp('yukata', ART.yukata, `<g transform="translate(2 6)"><path d="M304 252 H346 L350 268 H300 Z" fill="#1c1c22"/><path d="M307 254 H343 L346 265 H304 Z" fill="#a8241c"/><path d="M300 268 H350 V272 H300 Z" fill="#2b2b33"/>
       ${st.yukata ? '<path d="M308 250 H342 L345 262 H305 Z" fill="#f4f2ec"/><path d="M309 253 q5 2 10 0 q5 -2 10 0 q5 2 10 0 M308 258 q5 2 10 0 q5 -2 10 0 q5 2 10 0" stroke="#2f4a7a" stroke-width="1" fill="none"/><path d="M306 255.5 H344 L344.6 258 H305.4 Z" fill="#2f3a5e"/><rect x="334" y="246" width="9" height="6" fill="#fbf8f0" stroke="#d9d2c2" stroke-width=".5"/>' : ''}</g>`);
     // the light: lit — a warm glow from the lamp; off — the room dimmer (more so by night)
