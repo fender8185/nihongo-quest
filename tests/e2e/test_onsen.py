@@ -458,10 +458,40 @@ def test_welcome_manju_once_a_day_and_free_tea(b):
     assert r['later'] == [False, True, False, True] and r['kept'] == '2026-11-10' and r['how'], r
     assert r['next'] == [True, False, True, False], r   # the next day: a new one
 
+# fix round 1 (Minor 6): the welcome まんじゅう already had today elsewhere (another device's sync, the room drawn before it came): a tap
+# on its plate never does nothing — the plate turns to its wrapper there and then, and he says so; nothing given twice
+def test_welcome_manju_already_had_elsewhere(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {};
+      await at('washitsu'); const btn = (id) => Boolean(yard().querySelector(`.use-btn[data-use="${id}"]`));
+      out.before = [btn('manju'), Boolean(yard().querySelector('.rk-plate .rk-manju'))];
+      state.purse.gifts = { kangei: dateStr(TOWNEV.today()) }; const book = Object.keys(state.purse.book).length;   // synced in from another device, the room as it was
+      click('.yard .use-btn[data-use="manju"]'); await wait(1800);
+      out.after = [btn('manju'), btn('wrapper'), Boolean(yard().querySelector('.rk-plate .rk-wrap')), Boolean(document.querySelector('.eat-scene')), Object.keys(state.purse.book).length - book];
+      out.pops = [...yard().querySelectorAll('.ypop')].map((e) => e.textContent).join('|');
+      return JSON.stringify(out); })()"""))
+    assert r['before'] == [True, True], r
+    assert r['after'] == [False, True, True, False, 0] and 'また あした' in r['pops'], r   # its wrapper at once, a word; nothing had twice
+
+# fix round 1 (Minor 5, Minor 8): the 鹿威し turns slowly (15–20 s a turn, its コーン at each by its own animation); with motion reduced
+# it stands still, so the lobby hears a faint コーン now and then instead; the bell rung while 佐藤 is away names his hours as CAST has them
+def test_the_shishi_odoshi_and_the_bell(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
+      await at('ryokan'); const sh = yard().querySelector('.rk-shishi'); out.cycle = sh ? parseFloat(getComputedStyle(sh).animationDuration) : 0;
+      out.moving = SND.later('ryokan').filter(([n]) => n === 'kon').length;
+      const mm = window.matchMedia; window.matchMedia = (q) => (/reduced-motion/.test(q) ? { matches: true } : mm.call(window, q));
+      out.still = SND.later('ryokan').filter(([n]) => n === 'kon').map((x) => x[3]); window.matchMedia = mm;
+      TOWN.CAST.sato.hours = [[6, 10, 'ryokan', 'desk'], [15, 21, 'ryokan', 'desk']]; TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; await at('ryokan');
+      RYOKAN.bell(yard()); out.away = toasts.splice(0).join('|');
+      return JSON.stringify(out); })()"""))
+    assert 15 <= r['cycle'] <= 20 and r['moving'] == 0, r   # a slow turn; while it moves, its own animation sounds it
+    assert len(r['still']) == 1 and r['still'][0] <= 0.3, r   # motion reduced: a faint コーン now and then
+    assert '6:00〜10:00' in r['away'] and '15:00〜21:00' in r['away'], r   # the bell's "not here" from 佐藤's own hours
+
 # ruling 3: 桜の間 front-on for the 仲居 card — washitsuArt(state) draws the room from { window, shoji, light, ac, tv, futon 0–3, zabuton 0–4,
 # tea, yukata, flower } (and room: sakura | kiku | matsu — the scroll and the flower; cat: the inn's cat asleep on a futon): every key
-# changes the drawing; each thing its own group carrying data-k, 40 px or more to tap at 360 px wide; with everything out nothing lies
-# over another but the cat, asleep on a futon
+# changes the drawing; each thing its own group carrying data-k — the futons' three places and the cushions' four each their own,
+# data-i 0..n−1 — 40 px or more to tap where a card on a 360-px phone really draws it (fix round 1: about 296 px across, inside the
+# card's gutters and padding); with everything out nothing lies over another but the cat, asleep on a futon
 def test_washitsu_art_draws_every_state(b):
     r = json.loads(ev(b, """(() => { const none = { window: false, shoji: false, light: false, ac: false, tv: false, futon: 0, zabuton: 0, tea: false, yukata: false, flower: false, room: 'sakura', cat: false };
       const all = { window: true, shoji: true, light: true, ac: true, tv: true, futon: 3, zabuton: 4, tea: true, yukata: true, flower: true, room: 'sakura', cat: true };
@@ -469,19 +499,20 @@ def test_washitsu_art_draws_every_state(b):
       const same = keys.filter((k) => art({ [k]: all[k] }) === art({}));
       const counts = [[0, 1, 2, 3].map((n) => art({ futon: n })), [0, 1, 2, 3, 4].map((n) => art({ zabuton: n }))].map((xs) => new Set(xs).size);
       const rooms = new Set(['sakura', 'kiku', 'matsu'].map((room) => art({ room, flower: true }))).size, bare = new Set(['sakura', 'kiku', 'matsu'].map((room) => art({ room }))).size;
-      const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:0;top:0;width:360px;z-index:9999'; document.body.appendChild(host);
-      const box = (o) => { host.innerHTML = art(o); const svg = host.querySelector('svg'); svg.style.width = '360px'; svg.style.height = 'auto';
-        return Object.fromEntries(keys.map((k) => [k, [...host.querySelectorAll(`[data-k="${k}"]`)].map((e) => { const q = e.getBoundingClientRect(); return [q.left, q.top, q.right, q.bottom].map(Math.round); })])); };
-      const on = box(all), off = box({}), lone = box({ cat: true });
-      const small = keys.flatMap((k) => on[k].concat(off[k]).filter(([l, t, rr, bb]) => rr - l < 40 || bb - t < 40).map(() => k));
+      const W = 296, host = document.createElement('div'); host.style.cssText = `position:fixed;left:0;top:0;width:${W}px;z-index:9999`; document.body.appendChild(host);
+      const box = (o) => { host.innerHTML = art(o); const svg = host.querySelector('svg'); svg.style.width = W + 'px'; svg.style.height = 'auto';
+        return Object.fromEntries(keys.map((k) => [k, [...host.querySelectorAll(`[data-k="${k}"]`)].map((e) => { const q = e.getBoundingClientRect(); return [q.left, q.top, q.right, q.bottom].map((n) => Math.round(n * 10) / 10); })])); };
+      const on = box(all), slots = ['futon', 'zabuton'].map((k) => [...host.querySelectorAll(`[data-k="${k}"]`)].map((e) => e.dataset.i)), off = box({}), lone = box({ cat: true });
+      const small = keys.flatMap((k) => on[k].concat(off[k]).filter(([l, t, rr, bb]) => rr - l < 40 || bb - t < 40).map((q) => k + ':' + Math.min(q[2] - q[0], q[3] - q[1])));
       const missing = keys.filter((k) => !on[k].length || (k !== 'cat' && !off[k].length));
       const meet = (a, c) => a[0] < c[2] - 1 && c[0] < a[2] - 1 && a[1] < c[3] - 1 && c[1] < a[3] - 1, over = [], items = keys.filter((k) => k !== 'cat');
       items.forEach((a, i) => items.slice(i + 1).forEach((c) => { if (on[a].some((p) => on[c].some((q) => meet(p, q)))) over.push(a + '/' + c); }));
       const catOn = [on, lone].map((s) => s.cat.length > 0 && s.cat.every((p) => s.futon.some((q) => meet(p, q))));
-      host.remove(); return JSON.stringify({ same, counts, rooms, bare, small, missing, over, catOn, svg: /^<svg[^>]*viewBox/.test(art({}).trim()) }); })()"""))
+      host.remove(); return JSON.stringify({ same, counts, rooms, bare, small, missing, over, catOn, slots, svg: /^<svg[^>]*viewBox/.test(art({}).trim()) }); })()"""))
     assert r['svg'] and r['same'] == [] and r['counts'] == [4, 5], r   # every key changes the drawing, each count its own
     assert r['rooms'] == 3 and r['bare'] == 3, r   # each room its own scroll (and flower)
-    assert r['missing'] == [] and r['small'] == [], r   # every thing its own group, 40 px or more to tap at 360 px
+    assert r['slots'] == [['0', '1', '2'], ['0', '1', '2', '3']], r   # the futons' three places, the cushions' four, each its own
+    assert r['missing'] == [] and r['small'] == [], r   # every thing its own group, 40 px or more to tap at a 360-px phone's card
     assert r['over'] == [] and r['catOn'] == [True, True], r   # nothing over another; the cat asleep on a futon (laid or still to lay)
 
 # ruling 2 (as 湯畑's review found): each room's floor walked round its things — the lobby's front desk (never behind it), its 土間 (in and

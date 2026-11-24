@@ -89,7 +89,7 @@ const TOWN = {
     kobayashi: { name: '小林 翔太', kana: 'こばやし しょうた', role: '巡査', look: { face: 'round', skin: '#f8dcc8', cheeks: 'shy', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'worried', mouth: 'o', beard: 'none', topStyle: 'jacket', top: '#3f4660', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'boots', shoe: '#2b2b33' }, wear: { head: 'cap', cap: '#2b3350', neck: 'necktie', tie: '#2b2b33' },
       bio: ['駅前交番的巡查，28 歲。認真、過度客氣、敬語滿分，可是有點冒失。'],
       hours: [[0, 24, 'station', 'koban']] },
-    matsu: { name: '松', kana: 'まつ', role: '月の湯の番台', look: { face: 'chubby', skin: '#f3d1b5', cheeks: 'soft', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'sleepy', eyeColor: '#2a2730', brows: 'raised', mouth: 'flat', beard: 'none', topStyle: 'sweater', top: '#6b4d8a', bottomStyle: 'skirt', bottom: '#4a4a55', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { face: 'glasses', body: 'apron', apron: '#6e4f3a' },
+    matsu: { name: '松', kana: 'まつ', role: '月の湯の番台', look: { face: 'chubby', skin: '#f3d1b5', cheeks: 'soft', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'sleepy', eyeColor: '#2a2730', brows: 'raised', mouth: 'flat', beard: 'none', topStyle: 'sweater', top: '#3f4660', bottomStyle: 'skirt', bottom: '#4a4a55', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { face: 'glasses', body: 'apron', apron: '#6e4f3a' },
       bio: ['大眾澡堂「月の湯」坐番台的老奶奶，83 歲。毒舌，鎮上誰的秘密她都知道。', '最堅持澡堂的規矩：毛巾不能放進浴池、不能游泳、不能拍照。說話是老派的常體。'],
       hours: [[15, 23, 'sento', 'door']] },
     genzo: { name: '源三', kana: 'げんぞう', role: '月の湯の常連', look: { face: 'pointed', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'sharp', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'goatee', topStyle: 'jinbei', top: '#6b7a45', bottomStyle: 'wide', bottom: '#6b7a45', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { neck: 'towel' },
@@ -98,7 +98,7 @@ const TOWN = {
     misaki: { name: '佐藤 美咲', kana: 'さとう みさき', role: '看護師', look: { face: 'chubby', skin: '#f8dcc8', cheeks: 'soft', fringe: 'swept', sides: 'tucked', hairBack: 'short', hairTop: 'ponytail', hairColor: '#3b2f2a', eyes: 'droopy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'tee', top: '#3f9a8c', bottomStyle: 'pants', bottom: '#3f9a8c', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { neck: 'lanyard', strap: '#e58fa8' },
       bio: ['駅前診所的護理師，29 歲。上完夜班會來食堂吃早午餐，看起來很睏，可是一看到誰不舒服馬上就醒了。', '說話是客氣的敬體，熟了以後會用常體唸你。'],
       hours: [[11, 14, 'shokudo', 'table1']] },
-    nakamura: { name: '中村 誠', kana: 'なかむら まこと', role: '会社員', look: { face: 'round', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#4a4a55', eyes: 'sleepy', eyeColor: '#2a2730', brows: 'worried', mouth: 'flat', beard: 'none', topStyle: 'jacket', top: '#4a4a55', bottomStyle: 'pants', bottom: '#4a4a55', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { neck: 'necktie', tie: '#4f6f9e' },
+    nakamura: { name: '中村 誠', kana: 'なかむら まこと', role: '会社員', look: { face: 'round', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'sleepy', eyeColor: '#2a2730', brows: 'worried', mouth: 'flat', beard: 'none', topStyle: 'jacket', top: '#4a4a55', bottomStyle: 'pants', bottom: '#4a4a55', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { neck: 'necktie', tie: '#4f6f9e' },
       bio: ['每天搭電車到城裡上班的課長，48 歲。總是被上司罵、被叫加班，下班就到居酒屋抱怨。', '其實很顧家，只是不太會跟上高中的女兒說話。'],
       hours: [[7, 9, 'station', 'plaza'], [19, 24, 'izakaya', 'seat2']] },
     kenji: { name: '林 健二', kana: 'はやし けんじ', role: '漁師', look: { face: 'pointed', skin: '#a9714d', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'sharp', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'stubble', topStyle: 'tee', top: '#4f6f9e', bottomStyle: 'wide', bottom: '#6b7a45', shoeStyle: 'boots', shoe: '#2b2b33' }, wear: { head: 'nejiri', body: 'apron', apron: '#4f7a4a' },
@@ -113,7 +113,7 @@ const TOWN = {
     chihaya: { name: '千早', kana: 'ちはや', role: '神社の巫女', look: { face: 'mochi', skin: '#f8dcc8', cheeks: 'soft', fringe: 'blunt', sides: 'hime', hairBack: 'short', hairTop: 'lowtail', hairColor: '#2a2524', eyes: 'sleepy', eyeColor: '#5a3a9a', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hakui', top: '#ecebe6', bottomStyle: 'hakama', bottom: '#d0574b', shoeStyle: 'zori', shoe: '#e9e2d0' }, wear: { head: 'mikoribbon' },
       bio: ['稲荷神社宮司的孫女，20 歲的大學生，平常在神社當巫女。神秘、說話慢慢的，最愛講傳說和占卜。', '晚上緣日的時候也穿著巫女的白衣緋袴，在社務所旁邊幫人抽籤。'],
       hours: [[9, 17, 'shrine', 'haiden'], [18, 23, 'shrine', 'ennichi']] },
-    tatsu: { name: 'タツ', kana: 'たつ', role: '金魚すくいの屋台', look: { face: 'round', skin: '#d39f78', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#3f7ac8', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' },
+    tatsu: { name: 'タツ', kana: 'たつ', role: '金魚すくいの屋台', look: { face: 'round', skin: '#d39f78', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#5a68d8', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' },
       bio: ['緣日裡金魚撈攤位的老闆，60 多歲。嗓門大、愛熱鬧，每個晚上都在神社擺攤。', '撈不到的人，他最後都會偷偷多送一隻。'],
       hours: [[18, 23, 'shrine', 'stall']] },
     takahashi: { name: '高橋', kana: 'たかはし', role: 'ボランティアガイド', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'sidepart', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'none', topStyle: 'happi', top: '#4f7a4a', bottomStyle: 'pants', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses', neck: 'lanyard', strap: '#4f7a4a' },
@@ -136,14 +136,14 @@ const TOWN = {
     chen: { name: '陳 宇翔', kana: 'チェン ユーシャン', role: '打工度假的台灣人', look: { face: 'mochi', skin: '#e8bd98', cheeks: 'none', fringe: 'spiky', sides: 'above', hairBack: 'short', hairTop: 'ahoge', hairColor: '#2a2524', eyes: 'big', eyeColor: '#2a2730', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'tee', top: '#d0574b', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' },
       bio: ['陳宇翔，24 歲，從台南來打工度假。大嗓門、超有自信，日文錯誤百出也不在乎。', '日文的「陳」念「チン」，跟微波爐熱好「叮」的那一聲一樣，所以他堅持大家叫他「チェン」。'],
       hours: [[11, 15, 'chinatown', 'stand2'], [9, 21, 'kyoshitsu', 'desk1']] },   // lunch at 王's stand in 中華街
-    maria: { name: 'マリア・サントス', kana: 'マリア・サントス', role: '巴西來的媽媽', look: { face: 'round', skin: '#c98d64', cheeks: 'blush', fringe: 'swept', sides: 'wave', hairBack: 'wavy', hairTop: 'none', hairColor: '#3b2418', eyes: 'happy', eyeColor: '#5a3a28', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'shirt', top: '#f2c94c', bottomStyle: 'skirt', bottom: '#3f9a8c', shoeStyle: 'sneaker', shoe: '#d0574b' },
+    maria: { name: 'マリア・サントス', kana: 'マリア・サントス', role: '巴西來的媽媽', look: { face: 'round', skin: '#d39f78', cheeks: 'blush', fringe: 'swept', sides: 'wave', hairBack: 'wavy', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'happy', eyeColor: '#5a3a28', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'shirt', top: '#d9a43a', bottomStyle: 'skirt', bottom: '#3f9a8c', shoeStyle: 'sneaker', shoe: '#d0574b' },
       bio: ['瑪莉亞，35 歲，從巴西來的媽媽，兒子盧卡斯在念小學。', '熱情又大聲，最愛唱歌跳舞，一激動就冒出葡萄牙文。'],
       hours: [[10, 15, 'kyoshitsu', 'desk2'], [19, 21, 'kyoshitsu', 'desk2']] },
-    hori: { name: '堀 文蔵', kana: 'ほり ぶんぞう', role: '書法老師（志工）', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#d8d8dc', eyes: 'sleepy', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'goatee', topStyle: 'samue', top: '#4a4a55', bottomStyle: 'wide', bottom: '#4a4a55', shoeStyle: 'zori', shoe: '#2b2b33' }, wear: { face: 'glasses' },
+    hori: { name: '堀 文蔵', kana: 'ほり ぶんぞう', role: '書法老師（志工）', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'sleepy', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'goatee', topStyle: 'samue', top: '#4a4a55', bottomStyle: 'wide', bottom: '#4a4a55', shoeStyle: 'zori', shoe: '#2b2b33' }, wear: { face: 'glasses' },
       bio: ['堀文蔵，72 歲，退休的書法老師，在日本語教室當志工。', '對筆順和「とめ・はね・はらい」非常講究，上課講到一半常常睡著。'],
       hours: [[9, 12, 'kyoshitsu', 'tatami'], [19, 21, 'kyoshitsu', 'desk3']] },
     // 中華街 (2026-11-14): 王, who keeps 福明 — his grandfather's 豚まん; born here, three words of Chinese, all of them loud
-    wang: { name: '王 福明', kana: 'ワン フーミン', role: '豬肉包店「福明」的老闆', look: { face: 'round', skin: '#e8bd98', cheeks: 'soft', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b3a3a', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'mustache', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { body: 'apron', apron: '#c8453a', mark: '福' },
+    wang: { name: '王 福明', kana: 'ワン フーミン', role: '豬肉包店「福明」的老闆', look: { face: 'round', skin: '#e8bd98', cheeks: 'soft', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'mustache', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { body: 'apron', apron: '#c8453a', mark: '福' },
       bio: ['中華街豬肉包店「福明」的老闆，58 歲，華僑第三代。在日本出生長大，中文只會「你好、謝謝、好吃」三句，但每次都講得超大聲。', '店裡的豬肉包是爺爺傳下來的配方。陳中午在他店裡打工。'],
       hours: [[10, 20, 'chinatown', 'stand']] },
     // 中華街大通り (2026-11-14): the keepers who take on a beginner for a shift (WORK) — 周 at らんらん, 張 at ふく, 黄 at らいらいけん
@@ -157,7 +157,7 @@ const TOWN = {
       bio: ['黄大龍，50 歲，「らいらいけん」的老闆兼主廚，出菜一道都不能慢。', '永遠在趕時間，口頭禪是「はやく！はやく！」，自己的拉麵卻總是放到冷掉才吃。'],
       hours: [[10, 20, 'rairai', 'pass']] },   // 2026-11-15: in his kitchen, at the pass (らいらいけん walked into)
     // 駅前の打工 (2026-11-20): the bento seller on みなと駅's platform (駅弁の立ち売り)
-    haru: { name: '浜田 ハル', kana: 'はまだ はる', role: '駅弁屋「みなと弁当」', look: { face: 'round', skin: '#f0cdb0', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#3a2a20', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#2f5a8a', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'hachimaki' },
+    haru: { name: '浜田 ハル', kana: 'はまだ はる', role: '駅弁屋「みなと弁当」', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#2a2730', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#4f6f9e', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'hachimaki' },
       bio: ['みなと駅月台上便當攤「みなと弁当」的老闆娘，74 歲。在這個月台賣了五十年便當，嗓門大、手腳快、很疼人。', '口頭禪是「でんしゃは まって くれないよ！」。說話是老奶奶的常體。'],
       hours: [[7, 19, 'platform', 'stand']] },
     // みなと寿司 (2026-11-23, docs/superpowers/specs/2026-11-23-cruise-t3-t6-design.md §1.5): the 大将 on the harbour beside the 漁協 —
@@ -167,7 +167,7 @@ const TOWN = {
       hours: [[10, 14, 'sushi', 'counter'], [17, 21, 'sushi', 'counter']] },
     // 湯の花温泉 (2026-11-23, docs/superpowers/specs/2026-11-23-onsen-work-design.md §4): the 観光案内所's あかり — bright です・ます,
     // the town's own 法被 (♨ on its back), at her window by day
-    akari: { name: '森 あかり', kana: 'もり あかり', role: '観光案内所', look: { face: 'oval', skin: '#f6d8c0', cheeks: 'blush', fringe: 'airy', sides: 'wisps', hairBack: 'short', hairTop: 'ponytail', hairColor: '#5a3a26', eyes: 'big', eyeColor: '#3a2a20', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'yuhappi', top: '#2f4f7a', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' },
+    akari: { name: '森 あかり', kana: 'もり あかり', role: '観光案内所', look: { face: 'oval', skin: '#f8dcc8', cheeks: 'blush', fringe: 'airy', sides: 'wisps', hairBack: 'short', hairTop: 'ponytail', hairColor: '#3b2f2a', eyes: 'big', eyeColor: '#5a3a28', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'yuhappi', top: '#3f4660', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#ecebe6' },
       bio: ['湯の花溫泉觀光案內所的人，26 歲。綁著馬尾，穿著背後印著「♨」的法被，每天都很有精神。', '在湯の花長大，去東京工作了幾年又回到家鄉；最喜歡跟搭電車來的人介紹這個小鎮。說話是有精神的です・ます。'],
       hours: [[9, 18, 'onsen', 'window']] },
     // 旅館「花月」 and ゆのはな堂 (2026-11-24, spec §4): the inn's 女将 千代 — honorific to guests, a gentle です・ます to the hero — in the
@@ -235,7 +235,7 @@ const TOWN = {
       ['m9', '{来年|らいねん}の {春|はる}は、{庭|にわ}に {桜|さくら}を {植|う}えようと {思|おも}って います。', '明年春天，我打算在院子裡種櫻花。'],
       ['m10', '{寒|さむ}かったら、{言|い}って くださいね。{羽織|はおり|和式短外套}が ありますから。', '會冷的話要說喔。我們有羽織。'],
       ['m11', 'この {着物|きもの}は、{母|はは}に もらった ものなんです。', '這件和服是我母親給我的。'],
-      ['m12', '{今夜|こんや}は {冷|ひ|變冷}えるそうですよ。{温|あたた}かく して {寝|ね}て くださいね。', '聽說今晚會變冷喔。睡覺要穿暖和一點喔。'],
+      ['m12', '{今夜|こんや}は {冷|ひ|變冷}えるそうですよ。{暖|あたた}かく して {寝|ね}て くださいね。', '聽說今晚會變冷喔。睡覺要穿暖和一點喔。'],
       ['m13', '{去年|きょねん}、この {旅館|りょかん|旅館}が {雑誌|ざっし}に {紹介|しょうかい|介紹}されたんですよ。', '去年，這間旅館被雜誌介紹過喔。'],
       ['m14', '{若|わか}い ころは、{毎朝|まいあさ} {母|はは}に {玄関|げんかん}を {掃除|そうじ|打掃}させられました。', '年輕的時候，每天早上都被母親叫去打掃玄關。'],
       ['m15', '{佐藤|さとう}さんは、わたくしの {敬語|けいご}の {先生|せんせい}でも あるんですよ。', '佐藤先生也是我的敬語老師喔。'],
@@ -247,16 +247,16 @@ const TOWN = {
     // 佐藤 — 番頭, a word at a time and every one formal (ございます even to the hero), now and then a dry joke
     sato: [
       ['m1', 'いらっしゃいませ。フロントで ございます。', '歡迎光臨。這裡是櫃台。'],
-      ['m1', 'おや、お{客|きゃく}さまでは ありませんね。…では、お{茶|ちゃ}だけでも どうぞ。', '哦，您不是客人呢。……那麼，至少喝杯茶吧。'],
-      ['m1', 'おはようございます。{朝|あさ}ごはんは {七時|しちじ|七點}からで ございます。', '早安。早餐從七點開始。', { h: 'am' }],
-      ['m1', 'こんばんは。{夕|ゆう}ごはんは いかがでしたか。', '晚安。晚餐還合口味嗎？', { h: 'night' }],
+      ['m1', 'おや、ご{宿泊|しゅくはく|住宿}の お{客|きゃく}さまでは ございませんね。…では、お{茶|ちゃ}だけでも どうぞ。', '哦，您不是來住宿的客人呢。……那麼，至少喝杯茶吧。'],
+      ['m1', 'おはようございます。{朝|あさ}の {庭|にわ}も、どうぞ ご{覧|らん|欣賞}ください。', '早安。早晨的庭院也請慢慢欣賞。', { h: 'am' }],
+      ['m1', 'こんばんは。{夜|よる}の {温泉|おんせん}{町|まち}も、きれいで ございますよ。', '晚安。夜晚的溫泉街也很美喔。', { h: 'night' }],
       ['m2', 'この {仕事|しごと}も、もう {五十年|ごじゅうねん|五十年}に なります。', '這份工作，也已經做了五十年了。'],
       ['m2', '{鍵|かぎ}は {五|いつ}つ。{桜|さくら}、{菊|きく|菊花}、{松|まつ}、{梅|うめ}、{竹|たけ|竹子}で ございます。', '鑰匙有五把：櫻、菊、松、梅、竹。'],
       ['m3', '{毎朝|まいあさ} {六時|ろくじ|六點}に {来|き|來}て、{玄関|げんかん}を {開|あ}けて、{新聞|しんぶん}を {読|よ}みます。', '每天早上六點來，打開玄關，然後看報紙。'],
       ['m4', 'ご{用|よう|事情}の ときは、ベルを {鳴|な|按（鈴）}らして ください。', '有事的時候，請按鈴。'],
       ['m5', 'お{客|きゃく}さまの お{名前|なまえ}は、{忘|わす}れては いけません。わたくしの {名前|なまえ}は、ときどき {忘|わす}れますが。', '客人的名字絕對不能忘。我自己的名字嘛，倒是偶爾會忘。'],
       ['m6', '{十一時|じゅういちじ|十一點}から {二時|にじ|兩點}までは、{休|やす}みを いただいて おります。', '十一點到兩點，我休息。'],
-      ['m7', '{若|わか}い ころは、{敬語|けいご}が うまく {話|はな}せませんでした。', '年輕的時候，敬語說不好。'],
+      ['m7', '{若|わか}い ころは、{敬語|けいご}が うまく {使|つか}えませんでした。', '年輕的時候，敬語用不好。'],
       ['m8', 'お{部屋|へや}の {鍵|かぎ}は、すべて ここに かけて ございます。', '房間的鑰匙，全都掛在這裡。'],
       ['m9', 'そろそろ やめようと {思|おも}って、もう {十|じゅう}{年|ねん}に なります。', '想著差不多該退休了，這樣想著也過了十年。'],
       ['m10', 'わからない ことが あれば、なんでも お{聞|き}きください。', '有什麼不懂的，請儘管問。'],
@@ -265,19 +265,19 @@ const TOWN = {
       ['m13', 'お{客|きゃく}さまに よく「{社長|しゃちょう}さんですか」と {聞|き}かれます。ただの {番頭|ばんとう|掌櫃}で ございます。', '常常被客人問「您是老闆嗎？」我只是個掌櫃而已。'],
       ['m14', '{若|わか}い ころ、{先代|せんだい|上一代老闆}に {毎日|まいにち} {敬語|けいご}を {練習|れんしゅう|練習}させられました。', '年輕的時候，每天被上一代老闆叫去練習敬語。'],
       ['m15', 'お{客|きゃく}さまには、{敬語|けいご}で ございます。', '對客人，要用敬語。'],
-      ['m15', '「お{待|ま}ちして おります」は わたくしの {言葉|ことば}。「お{待|ま}ちに なります」は、お{客|きゃく}さまの {言葉|ことば}で ございます。', '「お待ちしております」是說我自己；「お待ちになります」是說客人。'],
+      ['m15', '「お{待|ま}ちして おります」は、わたくしが {待|ま}つ とき。「お{待|ま}ちに なります」は、お{客|きゃく}さまが {待|ま}つ ときで ございます。', '「お待ちしております」是我在等的時候；「お待ちになります」是客人在等的時候。'],
       ['m15', '{敬語|けいご}とは、{相手|あいて}を {大切|たいせつ}に する {気持|きも}ちで ございます。', '所謂敬語，就是珍惜對方的心意。'],
-      ['m16', 'たしかに {敬語|けいご}は むずかしい。ですが、{慣|な|習慣}れれば {簡単|かんたん}で ございますよ。', '敬語確實很難。不過，習慣了就簡單了。']
+      ['m16', 'たしかに、{敬語|けいご}は むずかしゅう ございます。ですが、{慣|な|習慣}れれば {簡単|かんたん}で ございますよ。', '敬語確實很難。不過，習慣了就簡單了。']
     ],
     // 竹内 — ゆのはな堂's second owner: warm です・ます, never without a taste to offer (よかったら、どうぞ！)
     makoto: [
       ['m1', 'いらっしゃいませ！ {温泉|おんせん}まんじゅう、できたてですよ！', '歡迎光臨！溫泉饅頭剛蒸好喔！'],
       ['m1', 'よかったら、どうぞ！ {一|ひと}つ どうぞ！', '不嫌棄的話，請吃！來一個吧！'],
       ['m1', 'おはようございます！ {朝|あさ}の まんじゅうは、とくべつに おいしいですよ！', '早安！早上的饅頭特別好吃喔！', { h: 'am' }],
-      ['m1', 'こんばんは！ {今日|きょう}の まんじゅうは、もう すこしです！', '晚安！今天的饅頭只剩一點點了！', { h: 'night' }],
-      ['m2', 'かわは くろざとうの {色|いろ}です。あまくて、いい においでしょう？', '外皮是黑糖的顏色。甜甜的，很香吧？'],
+      ['m1', 'こんばんは！ {今日|きょう}の まんじゅうは、のこり すこしです！', '晚安！今天的饅頭只剩一點點了！', { h: 'night' }],
       ['m2', 'この {店|みせ}は {父|ちち}の {店|みせ}でした。いまは わたしが {二代目|にだいめ|第二代}です。', '這家店本來是我爸爸的。現在我是第二代老闆。'],
       ['m3', '{毎朝|まいあさ} {四時|よじ|四點}に {起|お}きて、あんこを {作|つく}って います。', '我每天早上四點起床做紅豆餡。'],
+      ['m4', 'かわに くろざとうが {入|はい}って いるんです。あまくて、いい においでしょう？', '外皮裡加了黑糖。甜甜的，很香吧？'],
       ['m4', 'よかったら、{食|た}べて ください！ {熱|あつ}いですよ！', '不嫌棄的話請吃！很燙喔！'],
       ['m5', '{湯の花|ゆのはな}は はじめてですか。{温泉|おんせん}まんじゅう、{食|た}べた ことが ありますか。', '第一次來湯之花嗎？吃過溫泉饅頭嗎？'],
       ['m6', '{蒸|む|蒸}したてなので、{熱|あつ}いですよ。{気|き|小心}を つけて くださいね。', '因為剛蒸好，很燙喔。請小心。'],

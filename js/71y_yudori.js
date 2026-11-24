@@ -448,7 +448,7 @@ PLACE_USE.yudori = (() => {
     thing('junbi', 'yunohanado', { name: 'ゆのはな堂（準備中）', when: () => !YUDORI.open(), pick: () => ['しまってる…', YUDORI.shutSay()] }),
     thing('shateki', 'shateki', { name: '射的', open: (y) => YUDORI.shateki(y), say: 'わくわく…！' }),
     thing('sakaya', 'sakaya', { name: '酒屋', say: 'おさけの におい…', toast: '酒屋（賣酒的店）：屋簷下掛著用杉樹葉做的「杉玉」，表示今年的新酒釀好了。' }),
-    thing('kagetsu', 'kagetsu', { name: '旅館「花月」', pick: () => [''], open: (y) => yGo(y.querySelector('.use-btn[data-use="kagetsu"]') || y, 'ryokan') }),   // in through its gate (2026-11-24: RYOKAN)
+    thing('kagetsu', 'kagetsu', { name: '旅館「花月」', open: (y) => yGo(y.querySelector('.use-btn[data-use="kagetsu"]') || y, 'ryokan') }),   // in through its gate (2026-11-24: RYOKAN)
     thing('yukataya', 'yukataya', { name: 'ゆかた屋', say: 'きれい…！', toast: 'ゆかた屋：櫥窗裡掛著各種顏色的浴衣，可以租來穿著逛街。' }),
     thing('kanmi', 'kanmi', { name: '甘味処', say: 'あまい におい…', toast: '甘味処（日式甜點店）：紅色大傘下的長椅，坐著吃糰子、喝茶。' }),
     { id: 'neko', name: '貓', box: [Math.round(cx - 30 * k), Math.round(cy - 22 * k), Math.round(cx + 30 * k), Math.round(cy + 10 * k)], over: 1, kind: 'do', go: [Math.round(YUDORI.half(YUDORI.H - p) - 14), Math.round(YUDORI.H - p)], back: 1, pose: 'crouch', say: 'ニャ…', fx: 'neko', fxc: 'stir', ms: 2200 }];

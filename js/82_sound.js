@@ -225,7 +225,10 @@ const SND = (() => {
   // more while something stands there (2026-11-23): the 朝市 at the harbour — people about it, gulls after the fish (ICHIBA)
   const MARKET = () => typeof ICHIBA === 'object' && ICHIBA.now();
   const AMB_MORE = { harbor: () => (MARKET() ? [['town', 0.4, 0.3], ['gulls', 0.35, 0.15]] : []) };
-  const NOW_MORE = { harbor: () => (MARKET() ? [['gull', 10, 26, 0.3, '']] : []) };
+  // 旅館「花月」's 鹿威し sounds as its own animation turns (RYOKAN.mount); with motion reduced it stands still, so a faint コーン now and then
+  const STILL = () => Boolean(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const NOW_MORE = { harbor: () => (MARKET() ? [['gull', 10, 26, 0.3, '']] : []), ryokan: () => (STILL() ? [['kon', 16, 30, 0.22, '']] : []) };
+  const later = (place) => (NOW_AND_THEN[place] || []).concat(NOW_MORE[place] ? NOW_MORE[place]() : []);   // what a place sounds now and then
   const live = {};   // a layer playing → { g, s }
   let scene = '', tick = 0, nextAt = {};
   function sceneNow() {
@@ -271,7 +274,7 @@ const SND = (() => {
     const c = ctx(); if (!c || !scene) return;
     const now = Date.now(), day = daylight();
     if (now - tuned > 60000) { tuned = now; tune(); return; }
-    (NOW_AND_THEN[scene] || []).concat(NOW_MORE[scene] ? NOW_MORE[scene]() : []).forEach(([name, lo, hi, v, when], k) => {
+    later(scene).forEach(([name, lo, hi, v, when], k) => {
       if ((when === 'day' && day < 0.5) || (when === 'night' && day >= 0.5)) return;
       const key = scene + k;
       if (!nextAt[key]) { nextAt[key] = now + (lo + Math.random() * (hi - lo)) * 500; return; }   // the first one sooner
@@ -309,7 +312,7 @@ const SND = (() => {
     if (bus && C) { if (C.state === 'running') bus.gain.setTargetAtTime(v, C.currentTime, 0.05); else { bus.gain.cancelScheduledValues(0); bus.gain.value = v; } }   // asleep (iOS before a tap): set as it is
     sync();
   }
-  return { play, use, step, groundOf, sync, duck, volume, SYNTH, scene: () => scene, layers: () => Object.keys(live).sort(), ducked: () => ducks, level: () => (bus ? bus.gain.value : null) };
+  return { play, use, step, groundOf, sync, duck, volume, SYNTH, later, scene: () => scene, layers: () => Object.keys(live).sort(), ducked: () => ducks, level: () => (bus ? bus.gain.value : null) };
 })();
 // what a thing in a place sounds like as it is used, by place.id (a number at the id's end left off: the diner's tables): one
 // sound, or two (the second as the words after pop up); else by what it is (a bench, a ride), else nothing

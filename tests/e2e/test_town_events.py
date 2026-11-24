@@ -647,6 +647,12 @@ def test_people_wear_what_their_work_calls_for(b):
     assert r['tops'] == {'chihaya': 'hakui', 'teppei': 'samue', 'go': 'chef', 'tome': 'kappogi', 'harada': 'jacket', 'kobayashi': 'jacket', 'tatsu': 'happi', 'nagisa': 'vest', 'sano': 'jacket'}, r
     assert r['miko'] and r['festival'] == 'hakui' and r['taisho'] and r['sold'] is False, r   # the miko works the festival in her white and red; none of it in the wardrobe
 
+# every one of the town's people is drawn as written (2026-11-24, fix round 1): a colour or part outside the hero's palettes is quietly
+# swapped for the hero's own by HERO.norm (あかり's navy happi came out red, マリア wore the hero's skin) — each look survives it unchanged
+def test_every_townsfolks_look_is_drawn_as_written(b):
+    r = json.loads(ev(b, """JSON.stringify(Object.entries(TOWN.CAST).filter(([, c]) => c.look).map(([id, c]) => { const n = HERO.norm(c.look); return [id, Object.keys(n).filter((k) => n[k] !== c.look[k]).map((k) => k + '=' + c.look[k])]; }).filter(([, bad]) => bad.length))"""))
+    assert r == [], r
+
 def test_a_new_hero_and_the_young_people_have_round_soft_faces(b):
     r = json.loads(ev(b, """(() => { const n = HERO.norm(undefined), young = ['miku', 'hina', 'taro', 'kobayashi', 'misaki', 'alex', 'chihaya', 'sophia', 'nishimura', 'lin', 'go', 'kenta', 'nakamura', 'chen', 'maria'];
       return JSON.stringify({ hero: ['face', 'cheeks', 'fringe', 'sides', 'hairBack', 'hairTop', 'hairColor', 'topStyle', 'top', 'bottomStyle', 'bottom', 'shoeStyle', 'shoe'].map((k) => n[k]),

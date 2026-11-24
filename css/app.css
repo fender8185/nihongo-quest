@@ -814,10 +814,11 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .sky .land .rk-hc { fill: color-mix(in srgb, var(--c) calc(var(--rk-md, 1) * 100%), var(--n)); transition: fill 3s; }
 .sky .land .rk-hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--rk-md, 1) * 100%), var(--n)); stroke-linecap: round; transition: stroke 3s; }
 .sky .land .rk-glow { opacity: calc((1 - var(--rk-out, 1)) * .85); transition: opacity 3s; } .sky .land .rk-night { opacity: calc(1 - var(--rk-out, 1)); transition: opacity 3s; } .sky .land .rk-day { opacity: var(--rk-out, 1); transition: opacity 3s; }
-/* the 鹿威し: it fills slowly, tips, pours into its basin, swings back onto its stone — each turn's end its コーン (RYOKAN.mount) */
-.sky .land .rk-shishi { transform-box: fill-box; transform-origin: 50% 50%; animation: rkShishi 9s ease-in-out infinite; }
-@keyframes rkShishi { 0% { transform: rotate(-20deg); } 2% { transform: rotate(-16deg); } 5% { transform: rotate(-20deg); } 80% { transform: rotate(-13deg); } 85% { transform: rotate(24deg); } 92% { transform: rotate(24deg); } 99% { transform: rotate(-21deg); } 100% { transform: rotate(-20deg); } }
-.sky .land .rk-pour { opacity: 0; animation: rkPour 9s linear infinite; } @keyframes rkPour { 0%, 84% { opacity: 0; } 86%, 92% { opacity: .9; } 96%, 100% { opacity: 0; } }
+/* the 鹿威し: it fills slowly, tips, pours into its basin, swings back onto its stone — a turn every 17 s, each turn's end its コーン
+   (RYOKAN.mount; motion reduced: it stands, and the lobby hears a faint one now and then instead, SND's NOW_MORE) */
+.sky .land .rk-shishi { transform-box: fill-box; transform-origin: 50% 50%; animation: rkShishi 17s ease-in-out infinite; }
+@keyframes rkShishi { 0% { transform: rotate(-20deg); } 1% { transform: rotate(-16deg); } 2.6% { transform: rotate(-20deg); } 89% { transform: rotate(-13deg); } 91.6% { transform: rotate(24deg); } 95.1% { transform: rotate(24deg); } 99% { transform: rotate(-21deg); } 100% { transform: rotate(-20deg); } }
+.sky .land .rk-pour { opacity: 0; animation: rkPour 17s linear infinite; } @keyframes rkPour { 0%, 91% { opacity: 0; } 92%, 95% { opacity: .9; } 97.5%, 100% { opacity: 0; } }
 .sky .land [data-fx="furin"].ring .fx-sway { animation-duration: .24s !important; }   /* the wind chime rung as the garden is looked at */
 .sky .land .rk-bellcap { transform-box: fill-box; transform-origin: 50% 100%; } .sky .land [data-fx="rkbell"].ding .rk-bellcap { animation: rkBell .14s ease-out 4 alternate; } @keyframes rkBell { to { transform: scale(1.08, .86); } }
 @media (prefers-reduced-motion: reduce) { .sky .land :is(.rk-shishi, .rk-pour), .sky .land [data-fx="rkbell"].ding .rk-bellcap { animation: none; } }

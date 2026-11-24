@@ -89,6 +89,17 @@ def test_every_food_and_drink_is_had_its_own_way_through_a_whole_meal(b):
     assert 'onsenmanju' in w['bite'] and 'onsentamago' in w['spoon'], w   # the まんじゅう bitten, the egg out of its cup by spoon (2026-11-23)
     assert set(w['kushi']) == {'yakitori', 'gyukushi', 'ichigoame', 'budouame'} and {'melonpan', 'onigiri', 'ringoame', 'suika', 'wataame'} <= set(w['bite']), w
 
+# a backdrop's night glow keeps its own strength (2026-11-24, fix round 1): NIGHT is an inline style (opacity by the hour), and an
+# opacity attribute on the same element lost to it — by night the glow covered its part of the scene at full strength (the street's
+# machine since 1.17.0, 桜の間's shoji): every one of them a group round its glow, no element with both
+def test_night_glows_keep_their_own_opacity(b):
+    r = json.loads(ev(b, "(async () => { " + fresh(5000) + """
+      const it = TOWN.MENU.vend.items[0], host = document.createElement('div'); host.className = 'es-face'; host.innerHTML = '<svg class="es-stage" viewBox="0 0 360 420"></svg>'; document.body.appendChild(host);
+      const bad = []; EATSCENE.BG.forEach((k) => { const svg = host.querySelector('svg'), sc = EATSCENE.mount(svg, it, YEN.pic(it), true, k);
+        svg.querySelectorAll('[style][opacity]').forEach((e) => { if (/opacity/.test(e.getAttribute('style'))) bad.push(k + ':' + e.tagName); }); sc.stop(); });
+      host.remove(); return JSON.stringify({ bad, n: EATSCENE.BG.length }); })()"""))
+    assert r['bad'] == [] and r['n'] >= 15, r
+
 def test_the_tea_house_at_the_oku_sells_inari_kitsune_udon_and_amazake_by_day(b):
     # 2026-11-14: 稲荷山の茶屋 at the top of the 千本鳥居, 9–17; had before the hills under its red parasol
     r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ state.town.stops = { shrine: 1 }; saveState(); await go('oku');
