@@ -130,7 +130,16 @@ const YUDORI = (() => {
     return `<path d="M${f(600 + sd * L * k)} ${f(y0 + 4 * k)} H${f(x0)}" stroke="#2b1c12" stroke-width="${f(2 * k)}"/><g class="yd-sign" data-sign="${b.id}">`
       + `<rect x="${f(xl + sd * 2.2 * k)}" y="${f(y0 + 2.2 * k)}" width="${f(bw)}" height="${f(bh)}" rx="${f(1.6 * k)}" fill="#1e140c" fill-opacity=".55"/>`
       + `<rect x="${f(xl)}" y="${f(y0)}" width="${f(bw)}" height="${f(bh)}" rx="${f(1.6 * k)}" ${hc('#4a3424', '#241a26')} stroke="#a8804e" stroke-width="${f(1.2 * k)}"/>`
-      + `<path d="M${f(xl + 2 * k)} ${f(y0 + 3 * k)} V${f(y0 + bh - 3 * k)}" stroke="#fff" stroke-opacity=".12" stroke-width="${f(1 * k)}"/>${txt}</g>`;
+      + `<path d="M${f(xl + 2 * k)} ${f(y0 + 3 * k)} V${f(y0 + bh - 3 * k)}" stroke="#fff" stroke-opacity=".12" stroke-width="${f(1 * k)}"/>${txt}</g>`
+      + (b.id === 'shateki' && !isOpen('shateki') ? shutCard(xl, y0, bw, bh, k) : '');
+  }
+  // 射的 shut (ruling 21; 2026-11-24, fix round 2: plain from the street at a glance, by day and by night — its stall is under its eave):
+  // a paper card hung under its sign on two strings, 準備中 down it in red
+  function shutCard(xl, y0, bw, bh, k) {
+    const fc = Math.round(17 * k * 100) / 100, cw = fc + 8 * k, ch = fc * 3 + 7 * k, cx = xl + bw / 2, cy = y0 + bh + 5 * k;
+    return `<g data-shut="shateki-card"><path d="M${f(cx - cw * 0.3)} ${f(y0 + bh)} V${f(cy)} M${f(cx + cw * 0.3)} ${f(y0 + bh)} V${f(cy)}" stroke="#2b1c12" stroke-width="${f(0.8 * k)}"/>`
+      + `<rect x="${f(cx - cw / 2)}" y="${f(cy)}" width="${f(cw)}" height="${f(ch)}" rx="${f(1.2 * k)}" ${hc('#f6eedb', '#d8caa8')} stroke="#9a3a2c" stroke-width="${f(1.1 * k)}"/>`
+      + `${vText(f(cx), cy + 2.4 * k, '準備中', fc, `font-weight="800" ${hc('#a8281e', '#7a2418')} ${SERIF}`)}</g>`;
   }
   // ---- the shops' fronts, the ground floor (V 0–112, under the pent roof): FRONT, on the wall; FORE, what stands out on the pavement
   // before it (drawn over the pent roof and the wall's light and shade) ----
@@ -465,7 +474,8 @@ PLACE_USE.yudori = (() => {
     thing('shatekishut', 'shateki', { name: '射的（準備中）', when: () => !YUDORI.isOpen('shateki'), pick: () => ['しまってる…', YUDORI.shutSay('shateki')] }),   // its hours (ruling 21)
     thing('sakaya', 'sakaya', { name: '酒屋', say: 'おさけの におい…', toast: '酒屋（賣酒的店）：屋簷下掛著用杉樹葉做的「杉玉」，表示今年的新酒釀好了。' }),
     thing('kagetsu', 'kagetsu', { name: '旅館「花月」', open: (y) => yGo(y.querySelector('.use-btn[data-use="kagetsu"]') || y, 'ryokan') }),   // in through its gate (2026-11-24: RYOKAN)
-    thing('yukataya', 'yukataya', { name: 'ゆかた屋', pick: () => (YUDORI.isOpen('yukataya') ? ['きれい…！', `ゆかた屋：櫥窗裡掛著各種顏色的浴衣，可以租來穿著逛街（營業時間 ${YUDORI.hoursSay('yukataya')}）。`] : ['しまってる…', YUDORI.shutSay('yukataya')]) }),   // its hours (ruling 26)
+    thing('yukataya', 'yukataya', { name: 'ゆかた屋', when: () => YUDORI.isOpen('yukataya'), pick: () => ['きれい…！', `ゆかた屋：櫥窗裡掛著各種顏色的浴衣，可以租來穿著逛街（營業時間 ${YUDORI.hoursSay('yukataya')}）。`] }),   // its hours (ruling 26)
+    thing('yukatayashut', 'yukataya', { name: 'ゆかた屋（準備中）', when: () => !YUDORI.isOpen('yukataya'), pick: () => ['しまってる…', YUDORI.shutSay('yukataya')] }),   // shut: when it opens, and a knock (fix round 2)
     thing('kanmi', 'kanmi', { name: '甘味処', say: 'あまい におい…', toast: '甘味処（日式甜點店）：紅色大傘下的長椅，坐著吃糰子、喝茶。' }),
     { id: 'neko', name: '貓', box: [Math.round(cx - 30 * k), Math.round(cy - 22 * k), Math.round(cx + 30 * k), Math.round(cy + 10 * k)], over: 1, kind: 'do', go: [Math.round(YUDORI.half(YUDORI.H - p) - 14), Math.round(YUDORI.H - p)], back: 1, pose: 'crouch', say: 'ニャ…', fx: 'neko', fxc: 'stir', ms: 2200 }];
 })();

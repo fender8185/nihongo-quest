@@ -309,14 +309,18 @@ def test_an_ended_shifts_goodbye_never_touches_the_next_card(b):
     assert r == {'window': [True, 0, True], 'lost': [True, 0, True]}, r
 
 # M-2 (spec §5): a customer at 原田's window who gives up waiting goes — the question shown whole in their bubble, their leaving line
-# popping up beside it (never over it), the right reply lit
+# popping up beside it, never over it (N-4, fix round 2: at 390×844 and 360×640), the right reply lit
 def test_a_window_customer_who_leaves_shows_the_question(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + WIN_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
-      WORK.start(yard(), 'window'); for (let i = 0; i < 200 && !(MADO_RUN.now() && MADO_RUN.now().phase === 'ask' && card().querySelector('.md-opt')); i++) await wait(30);
-      const t = MADO_RUN.now().task; JOBS.pat.scale = 0.02; for (let i = 0; i < 300 && MADO_RUN.now().phase !== 'done'; i++) await wait(30); await wait(120); JOBS.pat.scale = 1;
-      const c = card().querySelector('.wk-cust'), bub = c.querySelector('.wk-bub').textContent, grr = [...c.querySelectorAll('.wk-grr')].map((g) => g.textContent).join('|'), lit = card().querySelector('.md-opt.wk-hint');
-      const out = { q: bub.includes(t.q[1]), over: /いいです/.test(bub), grr: /いいです/.test(grr), lit: Boolean(lit) && Number(lit.dataset.o) === t.right }; CLASS.close(); return JSON.stringify(out); })()"""))
-    assert r == {'q': True, 'over': False, 'grr': True, 'lit': True}, r
+    out = {}
+    for w, h in ((390, 844), (360, 640)):
+        out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + WIN_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+          WORK.start(yard(), 'window'); for (let i = 0; i < 200 && !(MADO_RUN.now() && MADO_RUN.now().phase === 'ask' && card().querySelector('.md-opt')); i++) await wait(30);
+          const t = MADO_RUN.now().task; JOBS.pat.scale = 0.02; for (let i = 0; i < 300 && MADO_RUN.now().phase !== 'done'; i++) await wait(30); await wait(120); JOBS.pat.scale = 1;
+          const c = card().querySelector('.wk-cust'), bub = c.querySelector('.wk-bub').textContent, g = c.querySelector('.wk-grr'), lit = card().querySelector('.md-opt.wk-hint');
+          const Q = c.querySelector('.wk-bub b').getBoundingClientRect(), G = g ? g.getBoundingClientRect() : null;
+          const r = { q: bub.includes(t.q[1]), over: /いいです/.test(bub), grr: Boolean(g) && /いいです/.test(g.textContent), lit: Boolean(lit) && Number(lit.dataset.o) === t.right,
+            clear: Boolean(G) && (G.right <= Q.left + 1 || G.left >= Q.right - 1 || G.bottom <= Q.top + 1 || G.top >= Q.bottom - 1) }; CLASS.close(); return JSON.stringify(r); })()""")])[-1])
+    assert all(r == {'q': True, 'over': False, 'grr': True, 'lit': True, 'clear': True} for r in out.values()), out
 
 # ---- タクシー (spec §8) ----
 # left and right as the taxi faces (going down the map, 右 is the map's left); the shortest way; what a passenger says for it —

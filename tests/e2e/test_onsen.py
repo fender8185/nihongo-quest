@@ -597,7 +597,7 @@ def test_an_n5_visitor_gets_the_reason_not_a_card(b):
 # spec §5.1 (rulings 6, 7, 8, 21, 24, 25, 26): every answer is read off the board — two shifts whose ゆかた屋 differs on dogs and whose
 # 足湯 differs on a towel to buy flip the right reply; the hours and prices said are the board's; what the town itself shows is the same
 # on every board (射的 300 円 a go and its hours, ゆかた屋's hours — both TOWN.HOURS —, the 湯畑 free, open all night and lit up by
-# night, the 足湯 free, open all night and open to dogs); a shift is ten tourists, at most one a fun one, no question twice, no tourist
+# night, the 足湯 free, open all night and open to dogs); a shift is ten tourists, the first asking a time, at most one a fun one, no question twice, no tourist
 # twice running; every tourist's three replies all differ, one right, none a ら抜き form, a 五段 verb + れる／られる (heard as honorific:
 # 入られます, 買われます) nor 見せる; the fun ones — マイク's phrasebook (the yukata's price: at 愛's own place when the shift has it),
 # ゆうた's ghost (the playful reply right), ミヨコ's future. Swept at m7, m9, m10 and m15 (TOWNEV.unitIdx: index 7 is m7)
@@ -618,6 +618,7 @@ def test_annai_answers_come_from_the_board(b):
         if (sht.price !== 300 || sht.hours.join() !== TOWN.HOURS.shateki.join() || yk.hours.join() !== TOWN.HOURS.yukataya.join() || yb.price !== 0 || yb.hours.join() !== '0,24' || !yb.night
           || as.price !== 0 || as.hours.join() !== '0,24' || as.dog !== true || sh.board.length !== 6) fixed.push(s);
         const ids = sh.tasks.map((t) => t.id); if (sh.tasks.length !== 10 || sh.tasks.filter((t) => t.fun).length > 1 || new Set(ids).size !== ids.length) bad.push(`${s}@${u}:shift:${ids.join()}`);
+        if (sh.tasks[0].kind !== 'time' || sh.tasks[0].fun) bad.push(`${s}@${u}:first:${sh.tasks[0].id}`);   // the first tourist asks a time (fix round 2: M-1's gap)
         sh.tasks.forEach((t, k) => { const js = t.opts.map((o) => o[0]);
           if (k && t.who === sh.tasks[k - 1].who) bad.push(`${s}@${u}.${k}:running:${t.who}`);
           if (t.opts.length !== 3 || new Set(js).size !== 3 || t.opts.filter((o) => o[2]).length !== 1 || t.opts.some((o) => !o[1])) bad.push(`${s}.${k}:${t.kind}:opts`);
@@ -716,6 +717,41 @@ SAYS = """window.__cut = []; window.__log = []; window.talking = null;
 # tourist's patience nears 0.6 — her word to its end, then the miss's cost, then the tourist's 「あの、すみません！」; a right reply
 # picked during her word — the hero's reply after it. Then a shift taken up at a fun tourist near its end: their own after-line, the
 # last tourist, her goodbye, the card shut, paid
+# lines that take 1.5 s each, timed from the start (log: [ms, who, line]); a line begun while another is still being said is cut (cuts:
+# [ms, 'the one cut ← the new one']); stopSpeaking (a card shut) stops the one being said — the re-review's probe (rereview4_probe.py)
+LANE = """const t0 = Date.now(), log = [], cuts = []; let talking = null; const ms = () => Date.now() - t0;
+  window.speakAs = (w, l) => { if (talking) cuts.push([ms(), talking + ' ← ' + w + ':' + l]); log.push([ms(), w, l]); const me = talking = w + ':' + l; return new Promise((ok) => setTimeout(() => { if (talking === me) talking = null; ok(); }, 1500)); };
+  window.speak = (t) => window.speakAs('', t); window.stopSpeaking = () => { talking = null; };"""
+
+# N-1 (fix round 2): the voice lane is its card's — a wrong reply picked while the tourist's question is still being said queues あかり's
+# word; the card shut at once and the job begun again: the old word is never said, nor shown in the new card, and the new shift's first
+# lines (あかり's start, the hero's こんにちは) are each said whole
+def test_a_shut_annai_card_says_nothing_more(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + LANE + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7';
+      state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState(); await at('onsen'); WORK.start(yard(), 'annai');
+      const begun = () => { const n = ANNAI_RUN.now(); return n && n.phase === 'ask' && document.querySelector('.wk-annai .an-opt') && log.some(([, w, l]) => w === n.task.who && l === n.task.q[0]); };
+      await watch(begun, 20000); const t = ANNAI_RUN.now().task, A = TOWN.ONSEN.annai.say; await wait(200);
+      document.querySelector(`.wk-annai .an-opt[data-o="${t.opts.findIndex((o) => !o[2])}"]`).click(); await wait(100);
+      const at0 = ms(); CLASS.close(); WORK.start(yard(), 'annai'); await wait(4500);
+      const after = log.filter(([m]) => m >= at0), out = { old: after.filter(([, w, l]) => w === A.who && (l === A.fact[0] || l === A.form[0])).length,
+        cut: cuts.filter(([m]) => m >= at0).map(([, x]) => x), bad: Boolean(document.querySelector('.wk-annai .wk-say.bad')), card: Boolean(document.querySelector('.wk-annai')), said: after.map(([, w]) => w) };
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['old'] == 0 and r['cut'] == [] and not r['bad'] and r['card'], r
+    assert r['said'][:1] == ['akari'] and 'hero' in r['said'], r   # the new shift's start, then the hero's こんにちは, each whole
+
+# N-2 (fix round 2): a replay holds the tourist's clock till the question has been said again in full, counted from the replay's own
+# start — here it waits behind あかり's word after a miss (lines of 3 s: her word, then the question again, 6 s in all)
+def test_a_replay_holds_the_clock_till_it_is_said_again(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7';
+      state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState();
+      window.speakAs = () => new Promise((ok) => setTimeout(ok, 3000)); window.speak = () => Promise.resolve(); await at('onsen'); WORK.start(yard(), 'annai');
+      const bar = () => parseFloat(document.querySelector('.wk-annai .wk-pat').style.getPropertyValue('--p'));
+      await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && document.querySelector('.wk-annai .an-ear') && bar() < 0.995, 20000);
+      const t = ANNAI_RUN.now().task; document.querySelector(`.wk-annai .an-opt[data-o="${t.opts.findIndex((o) => !o[2])}"]`).click(); document.querySelector('.wk-annai .an-ear').click();
+      const b0 = bar(); await wait(3500); const b1 = bar(); await wait(2100); const b2 = bar(); await wait(1500); const b3 = bar(); CLASS.close();
+      return JSON.stringify({ cost: b0 - b1 > 0.12, held: b2 === b1, on: b3 < b2, bars: [b0, b1, b2, b3] }); })()"""))
+    assert [r['cost'], r['held'], r['on']] == [True, True, True], r   # the miss's cost after her word; held through the question again; then on
+
 def test_annai_says_each_line_to_its_end(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + SAYS + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; saveState(); const out = {};
       const now = () => ANNAI_RUN.now(), asking = (n) => now() && now().phase === 'ask' && now().k === n && document.querySelector('.wk-annai .an-opt') && !talking;
@@ -776,13 +812,15 @@ def test_the_annai_card_fits_a_phone(b):
           const c = document.querySelector('.wk-annai .cls-card'), q = c.getBoundingClientRect(), R = (e) => e.getBoundingClientRect();
           const facs = [...c.querySelectorAll('.an-fac')], taps = [...c.querySelectorAll('button')].filter((x) => x.offsetParent).map((x) => [x.className, Math.round(R(x).width), Math.round(R(x).height)]);
           const small = [...c.querySelectorAll('.an-fac *')].filter((e) => !e.closest('svg') && e.childNodes.length && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && e.tagName !== 'RT' && parseFloat(getComputedStyle(e).fontSize) < 12).map((e) => e.className + ':' + e.textContent);
-          return JSON.stringify({ side: q.left >= 0 && q.right <= innerWidth + 1, bottom: q.bottom <= innerHeight + 1, facs: facs.length, inside: facs.every((e) => R(e).left >= q.left && R(e).right <= q.right + 0.5),
+          const lit = c.querySelector('.an-lit'), tn = [lit, ...lit.querySelectorAll('*')].flatMap((e) => [...e.childNodes]).find((n) => n.nodeType === 3 && n.textContent.includes('ライトアップ')), rg = document.createRange(), at0 = tn.textContent.indexOf('ライトアップ');
+          rg.setStart(tn, at0); rg.setEnd(tn, at0 + 6); const whole = new Set([...rg.getClientRects()].filter((x) => x.width > 0).map((x) => Math.round(x.top))).size === 1;   // the 湯畑's ライトアップ never broken (fix round 2)
+          return JSON.stringify({ side: q.left >= 0 && q.right <= innerWidth + 1, bottom: q.bottom <= innerHeight + 1, facs: facs.length, inside: facs.every((e) => R(e).left >= q.left && R(e).right <= q.right + 0.5), whole,
             parts: facs.every((e) => e.querySelector('svg') && e.querySelector('ruby') && e.querySelector('.an-hr') && e.querySelector('.an-pr') && e.querySelector('.an-rules')),
             glass: Boolean(c.querySelector('.an-glass .wk-cust .kr-face') && c.querySelector('.an-glass .wk-pat') && c.querySelector('.an-board')), opts: c.querySelectorAll('.an-opt').length,
             taps: taps.filter(([, ww, hh]) => ww < 40 || hh < 40), small: small.slice(0, 5) }); })()""")])[-1])
         out.append(r)
     for x in out:
-        assert x['side'] and x['bottom'] and x['facs'] == 6 and x['inside'] and x['parts'] and x['glass'] and x['opts'] == 3, out
+        assert x['side'] and x['bottom'] and x['facs'] == 6 and x['inside'] and x['parts'] and x['glass'] and x['opts'] == 3 and x['whole'], out
         assert x['taps'] == [] and x['small'] == [], out
     # M-3: at 390×844 the talk line stays on screen (no scroll) after a fun tourist's answer — their after-line, the hero's reply with
     # its Chinese (a first shift: the most to show) — and after two misses on a fun question (the question shown, あかり's reason); at
@@ -797,15 +835,17 @@ def test_the_annai_card_fits_a_phone(b):
                   state.work.res['2026-11-10'] = { place: 'annai', done: fi, score: Object.fromEntries(Array.from({ length: fi }, (_, k) => [k, 0])), keep: { seed } }; saveState();
                   await at('onsen'); WORK.start(yard(), 'annai'); await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && ANNAI_RUN.now().k === fi && document.querySelector('.wk-annai .an-opt'), 12000);
                   const t = ANNAI_RUN.now().task, pick = (i) => document.querySelector(`.wk-annai .an-opt[data-o="${i}"]`).click();
+                  const hs = [...document.querySelectorAll('.wk-annai .an-opt')].map((o) => o.getBoundingClientRect().height), even = Math.max(...hs) - Math.min(...hs) < 3;   // no reply stands out by its lines (N-3)
                   if ('""" + case + """' === 'right') { pick(t.opts.findIndex((o) => o[2])); await wait(1100); }
                   else { const w = t.opts.map((o, i) => (o[2] ? -1 : i)).filter((i) => i >= 0); pick(w[0]); await wait(300); pick(w[1]); await wait(500); }
                   const c = document.querySelector('.wk-annai .cls-card'), talk = c.querySelector('.an-talk'), shown = talk.querySelector(talk.dataset.who === 'me' ? '.wk-me' : '.wk-say');
                   const cr = c.getBoundingClientRect(), top = cr.top + c.clientTop, sr = shown.getBoundingClientRect(), tall = innerHeight > 700;
-                  const out = { seed: Boolean(seed), on: sr.top >= top - 1 && sr.bottom <= top + c.clientHeight + 1 && (!tall || (c.scrollTop === 0 && c.scrollHeight <= c.clientHeight + 1)), text: shown.textContent.length > 0,
+                  const out = { seed: Boolean(seed), even, on: sr.top >= top - 1 && sr.bottom <= top + c.clientHeight + 1 && (!tall || (c.scrollTop === 0 && c.scrollHeight <= c.clientHeight + 1)), text: shown.textContent.length > 0,
                     zh: '""" + case + """' !== 'right' || Boolean(talk.querySelector('.wk-me span')) };
-                  if (!tall && '""" + case + """' === 'right') { out.scrolled = c.scrollTop > 0; await watch(() => ANNAI_RUN.now().k === fi + 1 && ANNAI_RUN.now().phase === 'ask', 12000); await wait(200); out.top = c.scrollTop === 0; }
+                  if (!tall && '""" + case + """' === 'right') { out.scrolled = c.scrollTop > 0 || c.scrollHeight <= c.clientHeight + 1;   // scrolled, if it had to
+                     await watch(() => ANNAI_RUN.now().k === fi + 1 && ANNAI_RUN.now().phase === 'ask', 12000); await wait(200); out.top = c.scrollTop === 0; }
                   return JSON.stringify(out); })()""")])[-1])
-    want = {'seed': True, 'on': True, 'text': True, 'zh': True}
+    want = {'seed': True, 'even': True, 'on': True, 'text': True, 'zh': True}
     assert all(v == (dict(want, scrolled=True, top=True) if k.startswith('360') and k.endswith('right') else want) for k, v in fits.items()), fits
 
 # the generator (生成) has the 案内所's lines: each tourist's question in their own voice, the hero's every right reply the boards can
@@ -830,35 +870,47 @@ def test_the_generator_has_the_annai_lines(b):
 def test_shateki_and_the_yukata_shop_keep_their_hours(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
       const look = async (h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; await at('yudori'); const y = yard();
+        const card = y.querySelector('[data-shut="shateki-card"]'), sg = y.querySelector('.yd-sign[data-sign="shateki"]');
         return { sh: [Boolean(y.querySelector('.use-btn[data-use="shateki"]')), Boolean(y.querySelector('.use-btn[data-use="shatekishut"]')), Boolean(y.querySelector('.land [data-shut="shateki"]') && y.querySelector('.land [data-shut="shateki-plate"]'))],
-          yk: Boolean(y.querySelector('.land [data-shut="yukataya"]')) }; };
+          card: card ? [Math.round(card.getBoundingClientRect().height), card.getBoundingClientRect().top >= sg.getBoundingClientRect().bottom - 1, card.textContent] : null,
+          yk: [Boolean(y.querySelector('.land [data-shut="yukataya"]')), Boolean(y.querySelector('.use-btn[data-use="yukataya"]')), Boolean(y.querySelector('.use-btn[data-use="yukatayashut"]'))] }; };
       out.hours = [TOWN.HOURS.shateki, TOWN.HOURS.yukataya];
       for (const h of [8, 9, 10, 17, 18, 22, 23]) out[h] = await look(h);
       TOWNEV.clock = { h: 23.5, day: new Date(2026, 10, 10) }; await at('yudori'); const bal = yenBalance(); toasts.length = 0;
       click('.yard .use-btn[data-use="shatekishut"]'); await wait(1400); out.shutSay = toasts.join('|'); out.kept = [bal - yenBalance(), (state.oneADay || {}).shateki || null, Boolean(document.querySelector('.yd-shateki'))];
-      toasts.length = 0; click('.yard .use-btn[data-use="yukataya"]'); await wait(1400); out.ykShut = toasts.join('|');
+      toasts.length = 0; click('.yard .use-btn[data-use="yukatayashut"]'); await wait(1400); out.ykShut = toasts.join('|');
+      const th = (id) => PLACE_USE.yudori.find((x) => x.id === id); out.snd = ['shatekishut', 'yukatayashut', 'yukataya', 'junbi'].map((id) => useSound('yudori', th(id)).join());   // shut, a knock (fix round 2)
       TOWNEV.clock = { h: 8.5, day: new Date(2026, 10, 10) }; await at('yudori'); toasts.length = 0; click('.yard .use-btn[data-use="shatekishut"]'); await wait(1400); out.early = toasts.join('|');
       TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; await at('yudori'); toasts.length = 0; click('.yard .use-btn[data-use="yukataya"]'); await wait(1400); out.ykOpen = toasts.join('|');
       return JSON.stringify(out); })()"""))
     assert r['hours'] == [[10, 23], [9, 18]], r
     for h, shut in ((9, True), (23, True), (10, False), (22, False)):
         assert r[str(h)]['sh'] == ([False, True, True] if shut else [True, False, False]), (h, r)   # 射的 shut at 9 and 23, open at 10 and 22
+        assert (r[str(h)]['card'] is not None) == shut, (h, r)   # and its 準備中 card hung under its sign while shut (fix round 2)
+        if shut:
+            assert r[str(h)]['card'][0] >= 20 and r[str(h)]['card'][1] and r[str(h)]['card'][2] == '準備中', (h, r)
     for h, shut in ((8, True), (18, True), (9, False), (17, False)):
-        assert r[str(h)]['yk'] == shut, (h, r)   # ゆかた屋 shut at 8 and 18, open at 9 and 17
+        assert r[str(h)]['yk'] == [shut, not shut, shut], (h, r)   # ゆかた屋 shut at 8 and 18, open at 9 and 17: drawn so, and its tap
+    assert r['snd'] == ['knock', 'knock', 'cloth', 'knock'], r   # a shut shop knocks, as ゆのはな堂 does
     assert '射的' in r['shutSay'] and '明天' in r['shutSay'] and '10:00' in r['shutSay'] and r['kept'] == [0, None, False], r   # nothing taken
     assert '10:00' in r['early'] and '明天' not in r['early'], r
     assert 'ゆかた屋' in r['ykShut'] and '9:00' in r['ykShut'] and '可以租' not in r['ykShut'] and '可以租' in r['ykOpen'], r
 
 # M-2 (spec §5): a tourist who gives up waiting goes — the question shown whole in their bubble, their leaving line popping up beside it
-# (as their mood lines do), never over it; the right reply lit; the task lost
+# (as their mood lines do), never over it (N-4, fix round 2: over the face while the bubble is open; at 390×844 and 360×640); the right
+# reply lit; the task lost
 def test_a_tourist_who_leaves_shows_the_question(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7';
-      state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState(); await at('onsen'); WORK.start(yard(), 'annai');
-      await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && document.querySelector('.wk-annai .an-opt'), 12000); const t = ANNAI_RUN.now().task; JOBS.pat.scale = 0.02;
-      await watch(() => ANNAI_RUN.now().phase === 'done', 8000); await wait(120); JOBS.pat.scale = 1;
-      const c = document.querySelector('.wk-annai .wk-cust'), bub = c.querySelector('.wk-bub').textContent, grr = [...c.querySelectorAll('.wk-grr')].map((g) => g.textContent).join('|'), lit = document.querySelector('.wk-annai .an-opt.wk-hint');
-      const out = { q: bub.includes(t.q[1]), over: /いいです/.test(bub), grr: /いいです/.test(grr), lit: Boolean(lit) && Number(lit.dataset.o) === t.opts.findIndex((o) => o[2]), score: WORK.today().score[0] }; CLASS.close(); return JSON.stringify(out); })()"""))
-    assert r == {'q': True, 'over': False, 'grr': True, 'lit': True, 'score': 3}, r
+    out = {}
+    for w, h in ((390, 844), (360, 640)):
+        out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7';
+          state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState(); await at('onsen'); WORK.start(yard(), 'annai');
+          await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && document.querySelector('.wk-annai .an-opt'), 12000); const t = ANNAI_RUN.now().task; JOBS.pat.scale = 0.02;
+          await watch(() => ANNAI_RUN.now().phase === 'done', 8000); await wait(120); JOBS.pat.scale = 1;
+          const c = document.querySelector('.wk-annai .wk-cust'), bub = c.querySelector('.wk-bub').textContent, g = c.querySelector('.wk-grr'), lit = document.querySelector('.wk-annai .an-opt.wk-hint');
+          const Q = c.querySelector('.wk-bub b').getBoundingClientRect(), G = g ? g.getBoundingClientRect() : null;
+          const r = { q: bub.includes(t.q[1]), over: /いいです/.test(bub), grr: Boolean(g) && /いいです/.test(g.textContent), lit: Boolean(lit) && Number(lit.dataset.o) === t.opts.findIndex((o) => o[2]), score: WORK.today().score[0],
+            clear: Boolean(G) && (G.right <= Q.left + 1 || G.left >= Q.right - 1 || G.bottom <= Q.top + 1 || G.top >= Q.bottom - 1) }; CLASS.close(); return JSON.stringify(r); })()""")])[-1])
+    assert all(r == {'q': True, 'over': False, 'grr': True, 'lit': True, 'score': 3, 'clear': True} for r in out.values()), out
 
 # M-9: a time as said, for every hour (Tasks 5–7 use it too): 午前 before noon, 昼の十二時 at noon, 午後 to 16, 夕方 17–18, 夜 from 19,
 # 夜中の十二時 at midnight (0 and 24); its Chinese alike

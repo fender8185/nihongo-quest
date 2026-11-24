@@ -87,6 +87,7 @@ const MADO_RUN = (() => {
     function bub(open) {
       const t = R.task, b = el('.wk-bub'); if (!b) return;
       b.innerHTML = `<button type="button" class="wk-ear md-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(t.q[0])}</b><span>${esc(t.q[1])}</span>` : '<b class="bt-dots">……</b>'}`;
+      b.classList.toggle('wk-open', Boolean(open));   // open: a pop-up goes under it, never over the question (N-4)
     }
     function opts(on) {
       const o = el('.md-opts'); if (!o) return; const t = R.task;
@@ -97,10 +98,10 @@ const MADO_RUN = (() => {
       el('.wk-n').textContent = `${k + 1}／${MADO.N}`;
       el('.md-wall').innerHTML = `${chart(t, t.kind === 'buy', first)}<div class="md-row">${board(t)}</div>`;
       const c = el('.wk-cust'); c.className = 'wk-cust'; c.removeAttribute('data-mood'); c.innerHTML = JOBS.custHtml(t.who); el('.md-ticket').innerHTML = ''; opts(false);
-      const me0 = R; P = JOBS.patience('window', t.who, MADO.SECS, () => Boolean(el('.wk-cust')) && R === me0 && ctx.on(), gone);
+      const me0 = R; P = JOBS.patience('window', t.who, MADO.SECS, () => Boolean(el('.wk-cust')) && R === me0 && ctx.on(), gone, box);
       said(me(s.me.hi), 700).then(() => {
         if (!live() || R !== me0) return; R.phase = 'ask'; bub(false); el('.wk-cust').classList.add('on'); opts(R.printed);
-        said(JOBS.voice(speakAs(t.who, t.q[0]))).then(() => { if (!rep && R === me0) P.go(); });
+        said(JOBS.voice(speakAs(t.who, t.q[0]), box)).then(() => { if (!rep && R === me0) P.go(); });
       });
     }
     function next(lines) {
@@ -112,17 +113,17 @@ const MADO_RUN = (() => {
     function right() {
       R.phase = 'done'; P.stop(); ctx.right(k, miss); playSfx('good'); const t = R.task; bub(true); el('.wk-cust').classList.remove('on');
       el('.md-opts').querySelectorAll('.md-opt').forEach((b) => { b.disabled = true; b.classList.toggle('md-right', Number(b.dataset.o) === t.right); });
-      next(async (live2) => { await JOBS.quiet(); if (!live2()) return; await said(me(t.opts[t.right]), 900); if (!live2()) return; await said(speakAs(t.who, s.cust.thanks[0]), 600); if (!live2()) return;   // the reply after any line still being said (ruling 27)
+      next(async (live2) => { await JOBS.quiet(box); if (!live2()) return; await said(me(t.opts[t.right]), 900); if (!live2()) return; await said(speakAs(t.who, s.cust.thanks[0]), 600); if (!live2()) return;   // the reply after any line still being said (ruling 27)
         el('.wk-cust').classList.add('bye'); if (!miss && Math.random() < 0.3) await said(word(s.ok[Math.floor(Math.random() * s.ok.length)], 'ok')); });
     }
     function wrong(b) {
-      miss++; missed++; playSfx('bad'); if (b) { b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); } JOBS.missWord(P, () => word(s.miss, 'bad'), MADO.MISS);   // his word to its end, then its cost (ruling 27)
+      miss++; missed++; playSfx('bad'); if (b) { b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); } JOBS.missWord(P, () => word(s.miss, 'bad'), MADO.MISS, box);   // his word to its end, then its cost (ruling 27)
       if (miss >= 2) { bub(true); el('.md-opts').querySelectorAll('.md-opt').forEach((x) => x.classList.toggle('wk-hint', Number(x.dataset.o) === R.task.right)); if (!R.printed) el(`.md-st[data-st="${R.task.to}"]`).classList.add('wk-hint'); }
     }
     function gone(line) {   // patience out: off they go, the question shown whole (their leaving word popping up beside it: M-2) and the right reply lit; the task lost
       R.phase = 'done'; ctx.right(k, 3); lost++; playSfx('bad'); bub(true); const t = R.task; JOBS.grr(el('.wk-cust'), line[0]);
       el('.md-opts').querySelectorAll('.md-opt').forEach((x) => { x.disabled = true; x.classList.toggle('wk-hint', Number(x.dataset.o) === t.right); });
-      next(async (live2) => { await said(JOBS.line(t.who, line[0]), 1200); if (live2()) { el('.wk-cust').classList.add('bye'); await sleep(450); } });
+      next(async (live2) => { await Promise.all([JOBS.line(t.who, line[0], box), sleep(1200)]); if (live2()) { el('.wk-cust').classList.add('bye'); await sleep(450); } });   // said in full, from its own start (N-2)
     }
     // the tickets: the station tapped prints them (大人 1, 子ども 1), then the sum to say
     function print(to) {
@@ -136,7 +137,7 @@ const MADO_RUN = (() => {
       <div class="md-glass"><i class="md-hole" aria-hidden="true"></i><div class="wk-cust"></div><div class="md-ticket"></div></div>
       <div class="md-opts"></div><div class="md-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => {
       if (!R || R.phase !== 'ask' || !live()) return;
-      if (e.target.closest('.md-ear')) { const q = P, r = rep = rep + 1; q.hold(); said(JOBS.line(R.task.who, R.task.q[0])).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }
+      if (e.target.closest('.md-ear')) { const q = P, r = rep = rep + 1; q.hold(); JOBS.line(R.task.who, R.task.q[0], box).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }
       const st = e.target.closest('.md-st[data-st]'); if (st && !R.printed) { if (st.dataset.st === R.task.to) print(R.task.to); else wrong(st); return; }
       const o = e.target.closest('.md-opt'); if (!o || o.disabled) return;
       if (Number(o.dataset.o) === R.task.right) right(); else wrong(o);

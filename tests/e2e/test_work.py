@@ -563,6 +563,41 @@ def test_the_counter_keepers_word_after_a_miss_is_said_to_its_end(b):
     assert r['order'][0].startswith('zhou:') and r['order'][1].endswith(':あの、すみません！') and r['held'], r   # her word, then theirs; the clock held while she spoke
     assert r['cut'] == [] and r['shut'] and r['paid'], r
 
+# N-1 (fix round 2): the voice lane is its card's — a wrong thing handed while the customer is still asking queues 周's word; the card
+# shut at once and 站櫃 begun again: her old word is never said, nor printed in the new card, and the new shift's いらっしゃいませ and the
+# next customer's asking are each said whole (the re-review's probe, rereview4_probe.py)
+def test_a_shut_counter_card_says_nothing_more(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + TALK + """ kana(46); earlier('counter'); talk(1500, 400);
+      const sa = window.speakAs; window.__log = []; window.speakAs = (w, l) => { __log.push(w + ':' + l); return sa(w, l); };
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter');
+      for (let i = 0; i < 200 && !(document.querySelector('.wk-cust.on') && JOBS.counter.now() && __log.some((l) => l.startsWith(JOBS.counter.now().who + ':'))); i++) await wait(30);
+      const t = JOBS.counter.now(), Z = TOWN.WORK.say.counter, miss = Z.miss[0]; await wait(150);
+      [...document.querySelectorAll('.wk-counter .wk-good')].find((g) => g.dataset.good !== t.good[0]).click(); await wait(100);
+      CLASS.close(); const from = __log.length, c0 = __cut.length; WORK.start(yard(), 'counter'); await wait(4000);
+      const s = document.querySelector('.wk-counter .wk-say'), out = { old: __log.slice(from).filter((l) => l === Z.who + ':' + miss).length, cut: __cut.slice(c0),
+        say: s ? [s.textContent.includes(miss), s.classList.contains('bad')] : null, card: Boolean(document.querySelector('.wk-counter')), said: __log.slice(from) };
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['old'] == 0 and r['cut'] == [] and r['say'] == [False, False] and r['card'], r
+    assert r['said'][:1] == ['hero:いらっしゃいませ！'], r
+
+# ruling 30 (fix round 2): with the test site's 無限次數 a shift begun again at once — an ended one's goodbye, still being said, never acts
+# on the new card of the same job: 周's 站櫃 and ふく's 收銀 each keep their new card up, their own first customer at the counter (as
+# test_ekimae's for 駅前)
+def test_an_ended_counter_or_till_shifts_goodbye_never_touches_the_next_card(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + TILL + """ kana(46); vocab('いくら'); nums(); earlier('counter'); localStorage.setItem('nq_work_free', '1');
+      window.speakAs = () => new Promise((ok) => setTimeout(ok, 300)); window.speak = () => Promise.resolve(); location.hash = '#/chinadori'; route(); await wait(300);
+      const out = {}, last = (job) => { state.work.res['2026-11-10'] = { place: job, done: 9, score: Object.fromEntries(Array.from({ length: 9 }, (_, k) => [k, 0])) }; saveState(); };
+      const look = (job) => [Boolean(document.querySelector('.wk-' + job)), (document.querySelector(`.wk-${job} .wk-n`) || {}).textContent || null, !document.querySelector(`.wk-${job} .wk-cust.bye`)];
+      last('counter'); WORK.start(yard(), 'counter'); for (let i = 0; i < 60 && !document.querySelector('.wk-counter .wk-cust.on'); i++) await wait(100); await serve();
+      for (let i = 0; i < 100 && WORK.today().yen === undefined; i++) await wait(20);
+      await wait(200); CLASS.close(); WORK.start(yard(), 'counter'); await wait(4500);   // the old one's goodbye, still being said, ran out meanwhile
+      out.counter = look('counter'); CLASS.close(); document.querySelectorAll('.wk-result').forEach((e) => e.remove());
+      earlier('till'); last('till'); WORK.start(yard(), 'till'); await ready(); await pay();
+      for (let i = 0; i < 100 && WORK.today().yen === undefined; i++) await wait(20);
+      await wait(200); CLASS.close(); WORK.start(yard(), 'till'); await wait(4500);
+      out.till = look('till'); CLASS.close(); document.querySelectorAll('.wk-result').forEach((e) => e.remove()); localStorage.removeItem('nq_work_free'); return JSON.stringify(out); })()"""))
+    assert r == {'counter': [True, '1／10', True], 'till': [True, '1／10', True]}, r
+
 def test_the_bun_keepers_last_word_is_said_to_its_end(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + TALK + """ kana(46); talk(1500, 300); upTo('buns', 9); await make();
       for (let i = 0; i < 3; i++) { await hush(); await tap(true); }

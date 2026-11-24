@@ -847,7 +847,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .an-rules { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 2px 3px; }
 .an-r { display: inline-flex; align-items: center; gap: 1px; height: 18px; padding: 0 4px; border-radius: 10px; background: #e7f1e3; color: #2f5a3a; font-size: 12px; line-height: 1; white-space: nowrap; }
 .an-r svg { width: 13px; height: 12px; } .an-r b { font-size: 12px; font-weight: 800; } .an-r.an-ok b { color: #23864a; } .an-r.an-ng { background: #f7e5e0; color: #8a463a; } .an-r.an-ng b { color: #c8322a; }
-.an-nm .an-lit { color: #3a4170; font-weight: 700; }
+.an-nm .an-lit { color: #3a4170; font-weight: 700; } .an-nb { white-space: nowrap; }   /* a word kept whole (ライトアップ): a line may break only before it */
 .an-glass { display: flex; align-items: stretch; margin: 0 -6px; overflow: hidden; border: 3px solid #8a6a46; border-bottom: 9px solid #a8743f; border-radius: 10px 10px 4px 4px; }
 .an-rack { flex: none; display: block; width: 22px; } @media (max-width: 400px) { .an-rack { width: 16px; } } .an-rack svg { display: block; width: 100%; height: 100%; }
 .an-pane { position: relative; flex: 1; min-width: 0; padding: 8px 8px 7px; background: linear-gradient(color-mix(in srgb, #cfe6f2 calc(var(--day, 1) * 100%), #1d2650), color-mix(in srgb, #eef5f2 calc(var(--day, 1) * 100%), #2e3560)); }
@@ -856,6 +856,9 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .an-pane .wk-cust { margin: 0; min-height: 0; gap: 4px 8px; } .wk-annai .wk-cust .kr-face { width: 40px; height: 40px; }
 .wk-annai .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; padding: 4px 8px; font-size: 16px; line-height: 1.45; } .wk-annai .wk-bub span { font-size: 12.5px; } .wk-annai .wk-bub .wk-ear { grid-row: span 2; } .wk-annai .wk-bub > :not(.wk-ear) { grid-column: 2; }
 .wk-annai .wk-ear { min-height: 40px; min-width: 44px; } .wk-annai .wk-grr { top: -2px; left: 44px; }   /* inside the glass (it clips) */
+/* the question shown (an open bubble, at 案内所 and 原田's window): a customer's word pops up below it, on the spent patience bar under
+   their face — never over the question (2026-11-24, fix round 2, N-4) */
+:is(.wk-annai, .wk-window) .wk-bub.wk-open ~ .wk-grr { top: auto; bottom: -7px; left: 0; padding: 1px 7px; font-size: 13px; line-height: 20px; }
 .wk-annai .wk-cust:is([data-fun="book"], [data-fun="ghost"], [data-fun="future"])::before { position: absolute; left: 26px; top: 24px; z-index: 1; font-size: 19px; line-height: 1; pointer-events: none; }   /* the face clips (.kr-face): the mark hangs on the row */
 .wk-annai .wk-cust[data-fun="book"]::before { content: '📖'; } .wk-annai .wk-cust[data-fun="ghost"]::before { content: '👻'; } .wk-annai .wk-cust[data-fun="future"]::before { content: '🔮'; }
 .an-opts { display: grid; gap: 5px; margin-top: 6px; }

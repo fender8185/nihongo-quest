@@ -6,9 +6,11 @@
 const JOBS = (() => {
   const N = 10, pick = (a) => a[Math.floor(Math.random() * a.length)];
   const say = (job) => TOWN.WORK.say[job];
-  // the keeper's word at the top of the card, said in their voice (ends as it is said)
-  function word(job, [ja, zh], cls = '') {
-    const p = document.querySelector('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); }
+  // the keeper's word at the top of the card, said in their voice (ends as it is said) — on the run's own card (box; else the job's
+  // open one), never another's: a card gone, nothing shown or said (2026-11-24, fix round 2, N-1)
+  function word(job, [ja, zh], cls = '', box) {
+    if (box && !box.isConnected) return Promise.resolve();
+    const p = box ? box.querySelector('.wk-say') : document.querySelector(`.wk-${job} .wk-say`); if (p) { p.innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); }
     return speakAs(say(job).who, ja);
   }
   // a line said to its end, then on (2026-11-18, the user: in the jobs out on the street the next customer cut the voices off —
@@ -68,19 +70,29 @@ const JOBS = (() => {
     return { go: () => { held = false; last = Date.now(); }, hold: () => { held = true; }, pause: () => { paused++; }, resume: () => { paused = Math.max(0, paused - 1); last = Date.now(); },
       hit: (d) => set(p - d), stop, p: () => p, live: () => !over && alive() };
   }
-  // the lines a shift's customers and keeper say, each to its end (2026-11-24, ruling 27; the user, 2026-11-18: no voice cut): one is
-  // begun through voice() (or line(), which waits for the one before it); quiet() once every one of them is over — the hero's reply to
-  // a pick waits for it. A keeper's word after a miss (missWord): said once the line before it is over, the customer's clock held
-  // meanwhile, the miss's cost after it — so their 「あの、すみません！」, 「ちょっと！」 or 「もう いいです！」 comes after her word, never
-  // over it; the clock runs on only if nothing else holds it (the asking not over yet, a replay), never once stopped (served, gone)
-  let speaking = Promise.resolve();
-  const voice = (p) => { speaking = Promise.all([speaking, said(p, 0, 12000)]); return p; };
-  const quiet = () => speaking;
-  const line = (who, ja) => voice(quiet().then(() => speakAs(who, ja)));
-  function missWord(P, say, cost) {
+  // the lines a shift's customers and keeper say, each to its end (2026-11-24, ruling 27; the user, 2026-11-18: no voice cut) — the lane
+  // of one card, the one open now (box: the run's own; else whichever is open), and of it only (fix round 2, N-1): a line begun at once
+  // enters it (voice: the asking, the answers); one queued (queue, line, missWord) is begun once the line before it is over, and only
+  // if its card is still the open one then — a card shut drops what it had still to say, unsaid, and a new card starts a fresh lane,
+  // never waiting on the old one's. Each is capped (a clip that never ends) from its own start (N-2), and resolves once said or dropped.
+  // quiet(): once every line in the lane is over — the hero's reply to a pick waits for it. A keeper's word after a miss (missWord): the
+  // customer's clock held meanwhile, the miss's cost after it — so their 「あの、すみません！」, 「ちょっと！」 or 「もう いいです！」 comes
+  // after her word, never over it; the clock runs on only if nothing else holds it (the asking not over yet, a replay), never once
+  // stopped (served, gone)
+  let speaking = Promise.resolve(), owner = null;
+  const lane = (box) => { const c = box || document.querySelector('.cls'); if (c && c.isConnected && c !== owner) { owner = c; speaking = Promise.resolve(); } return c; };
+  const ours = (c) => Boolean(c) && c === owner && c.isConnected;
+  const voice = (p, box) => { if (ours(lane(box))) speaking = Promise.all([speaking, said(p, 0, 12000)]); return p; };
+  const quiet = (box) => { lane(box); return speaking; };
+  function queue(start, box, cap = 12000) {
+    const c = lane(box); if (!ours(c)) return Promise.resolve(null);
+    const p = speaking.then(() => (ours(c) ? said(start(), 0, cap) : null)).catch(() => null);
+    speaking = p; return p;
+  }
+  const line = (who, ja, box) => queue(() => speakAs(who, ja), box);
+  function missWord(P, say, cost, box) {
     if (P) P.pause();
-    const p = voice(quiet().then(() => say()));
-    return said(p, 0, 12000).then(() => { if (!P) return; if (P.live()) P.hit(cost); P.resume(); });
+    return queue(say, box).then(() => { if (!P) return; if (P.live()) P.hit(cost); P.resume(); });
   }
   // a customer's word popping up over them (called again, cross, gone), gone of itself
   function grr(e, ja) {
@@ -88,13 +100,13 @@ const JOBS = (() => {
     const g = document.createElement('b'); g.className = 'wk-grr'; g.lang = 'ja'; g.textContent = ja; e.appendChild(g); setTimeout(() => g.remove(), 2300);
   }
   const CROSS = () => TOWN.WORK.say.waiter.cust;   // 外場's customers' words, already in these nine voices
-  function patience(job, who, secs, alive, out) {
-    const c = () => document.querySelector(`.wk-${job} .wk-cust`); let mood = 'ok';
+  function patience(job, who, secs, alive, out, box) {   // box: the run's own card (else the job's open one)
+    const c = () => (box ? (box.isConnected ? box.querySelector('.wk-cust') : null) : document.querySelector(`.wk-${job} .wk-cust`)); let mood = 'ok';
     return clock(secs, alive, (p, m) => {
       const e = c(); if (!e) return; const bar = e.querySelector('.wk-pat'); if (bar) bar.style.setProperty('--p', p.toFixed(3));
       if (m === mood) return; mood = m; e.dataset.mood = m; const s = e.querySelector('.wk-emo'); if (s) s.textContent = EMO[m];
       if (m === 'ok' || !p) return;
-      const l = m === 'mad' ? CROSS().hey : CROSS().again; line(who, l[0]); grr(e, l[0]);   // called again, then cross — after any line being said
+      const l = m === 'mad' ? CROSS().hey : CROSS().again; line(who, l[0], box); grr(e, l[0]);   // called again, then cross — after any line being said
     }, () => out(learned('もう') ? CROSS().out : CROSS().out0));
   }
   const custHtml = (who) => `<span class="kr-face">${TOWNEV.face(who)}</span><i class="wk-emo"></i><p class="wk-bub"></p><span class="wk-pat"><i></i></span>`;
@@ -105,7 +117,8 @@ const JOBS = (() => {
   const goodPic =(key) => { const d = (typeof PICS === 'object' && PICS[key]) || (typeof PICS_TOWN === 'object' && PICS_TOWN[key]); return d ? `<svg class="pic" viewBox="0 0 100 100" aria-hidden="true"><circle class="pd" cx="50" cy="50" r="47"/>${d}</svg>` : ''; };
   function counterRun(ctx) {
     const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, busy = true, P = null, rep = 0;   // P: the customer's patience; rep: a replay by the speaker under way (its number)
-    const el = (s) => document.querySelector('.wk-counter ' + s);
+    // this run's own card (box, once drawn; 2026-11-24, ruling 30, as ruling 22 for 駅前): an ended shift's goodbye never touches the next
+    let box = null; const el = (s) => (box && box.isConnected ? box.querySelector(s) : null), all = (s) => (box && box.isConnected ? [...box.querySelectorAll(s)] : []);
     const bub = (open) => { const [ja, zh] = ask(C), w = C.good[0], line = open ? esc(ja) : `<button type="button" class="wk-ear" aria-label="再聽一次">${icon('speaker')}</button>${esc(ja.slice(w.length))}`;   // the word heard, not read, till handed over
       el('.wk-bub').innerHTML = `<b lang="ja">${line}</b><span>${esc(zh)}</span>${C.kind === 'two' ? `<i class="wk-cnt">${got}／2</i>` : ''}`; };
     const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; return speakAs('hero', l[0]); };
@@ -114,15 +127,15 @@ const JOBS = (() => {
       el('.wk-n').textContent = `${k + 1}／${N}`;
       el('.wk-goods').innerHTML = C.goods.map((g) => `<button type="button" class="wk-good" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b></button>`).join('');
       el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').removeAttribute('data-mood'); el('.wk-cust').innerHTML = custHtml(C.who);
-      const t = C; P = patience('counter', t.who, COUNTER_SECS, () => Boolean(el('.wk-cust')) && C === t && ctx.on(), gone);
+      const t = C; P = patience('counter', t.who, COUNTER_SECS, () => Boolean(el('.wk-cust')) && C === t && ctx.on(), gone, box);
       said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said; their patience once they have said it (5 s: none of it lost to the asking)
         if (!el('.wk-cust') || C !== tasks[k] || !ctx.on()) return;
-        bub(false); el('.wk-cust').classList.add('on'); busy = false; const q = P; said(voice(speakAs(C.who, ask(C)[0]))).then(() => { if (!rep) q.go(); });
+        bub(false); el('.wk-cust').classList.add('on'); busy = false; const q = P; said(voice(speakAs(C.who, ask(C)[0]), box)).then(() => { if (!rep) q.go(); });
       });
     }
     function wrong(b) {
-      miss++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); missWord(P, () => word('counter', say('counter').miss, 'bad'), MISS_COST.counter);   // her word to its end, then its cost (ruling 27)
-      if (miss >= 2) { document.querySelectorAll('.wk-good').forEach((x) => x.classList.toggle('wk-hint', x.dataset.good === C.good[0])); bub(true); }
+      miss++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); missWord(P, () => word('counter', say('counter').miss, 'bad', box), MISS_COST.counter, box);   // her word to its end, then its cost (ruling 27)
+      if (miss >= 2) { all('.wk-good').forEach((x) => x.classList.toggle('wk-hint', x.dataset.good === C.good[0])); bub(true); }
     }
     // the customer gone (to the next one, or 周's thanks and the card shut once every line is said)
     function next(lines, praise) {
@@ -130,32 +143,33 @@ const JOBS = (() => {
       k++;
       const bye = (async () => {
         await lines(live); if (!live()) return;
-        if (praise) await said(word('counter', pick(say('counter').ok)));
+        if (praise) await said(word('counter', pick(say('counter').ok), '', box));
         if (!live()) return;
         if (k < N) { show(); return; }
-        await said(word('counter', say('counter').end, 'ok'), 700); if (el('.wk-cust')) CLASS.close();
+        await said(word('counter', say('counter').end, 'ok', box), 700); if (el('.wk-cust')) CLASS.close();
       })();
       if (k >= N) ctx.finish({}, bye);   // paid now, the results after the goodbye
     }
     function right() {
       busy = true; P.stop(); ctx.right(k, miss); playSfx('good'); bub(true); el('.wk-cust').classList.remove('on');
       // each line to its end before the next: ありがとうございました, now and then 周's word
-      next(async (live) => { await quiet(); if (!live()) return; el('.wk-cust').classList.add('bye'); await said(me(ME.bye), 900); }, !miss && Math.random() < 0.25);   // after any line still being said (ruling 27)
+      next(async (live) => { await quiet(box); if (!live()) return; el('.wk-cust').classList.add('bye'); await said(me(ME.bye), 900); }, !miss && Math.random() < 0.25);   // after any line still being said (ruling 27)
     }
     function gone(leave) {   // patience out: もう いいです！ and off they go, the thing they wanted lit; the task lost
       busy = true; ctx.right(k, 3); playSfx('bad'); const t = C;
       el('.wk-bub').innerHTML = `<b lang="ja">${esc(leave[0])}</b><span>${esc(leave[1])}</span>`;
-      document.querySelectorAll('.wk-good').forEach((x) => x.classList.toggle('wk-hint', x.dataset.good === t.good[0]));
-      next(async (live) => { await said(line(t.who, leave[0]), 1200); if (live()) { el('.wk-cust').classList.add('bye'); await sleep(450); } }, false);
+      all('.wk-good').forEach((x) => x.classList.toggle('wk-hint', x.dataset.good === t.good[0]));
+      next(async (live) => { await Promise.all([line(t.who, leave[0], box), sleep(1200)]); if (live()) { el('.wk-cust').classList.add('bye'); await sleep(450); } }, false);   // said in full, from its own start (N-2)
     }
     CLASS.card('wk-counter', '站櫃', `${head('counter', 'らんらん', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !C) return;
-      if (e.target.closest('.wk-ear')) { const q = P, r = rep = rep + 1; q.hold(); said(line(C.who, ask(C)[0])).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }   // said again: the clock waits for it (the review, 2026-11-20)
+      if (e.target.closest('.wk-ear')) { const q = P, r = rep = rep + 1; q.hold(); line(C.who, ask(C)[0], box).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }   // said again: the clock waits till it is said in full (the review, 2026-11-20; N-2)
       const g = e.target.closest('.wk-good'); if (!g) return;
       if (g.dataset.good !== C.good[0]) { wrong(g); return; }
       if (C.kind === 'two' && ++got < 2) { const c = el('.wk-cnt'); if (c) c.textContent = `${got}／2`; SND.play('place', { vol: 0.5 }); return; }
       right();
     });
+    box = document.querySelector('.cls.wk-counter');
     show();
   }
   function counterLines(add) {
@@ -207,24 +221,25 @@ const JOBS = (() => {
   let T = null;   // the customer at the till now (its task)
   function tillRun(ctx) {
     const tasks = tillMake(), first = !Object.values(state.work.res).some((r) => r.place === 'till' && r.yen !== undefined); let k = ctx.done, miss = 0, at = 0, busy = true, P = null;   // at: the pieces tapped so far; P: the customer's patience
-    const el = (s) => document.querySelector('.wk-till ' + s);
+    // this run's own card (box, once drawn; ruling 30): an ended shift's goodbye never touches the next
+    let box = null; const el = (s) => (box && box.isConnected ? box.querySelector(s) : null), all = (s) => (box && box.isConnected ? [...box.querySelectorAll(s)] : []);
     const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; return speakAs('hero', l[0]); };
     function show() {
       T = tasks[k]; miss = 0; at = 0; busy = true; if (!el('.wk-goods')) return;
       el('.wk-n').textContent = `${k + 1}／${N}`; el('.wk-goods').className = `wk-goods n${T.things.length}`;
       el('.wk-goods').innerHTML = T.things.map((g) => `<span class="wk-good">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b><small>${g[2]}円</small></span>`).join('');
       el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').removeAttribute('data-mood'); el('.wk-cust').innerHTML = custHtml(T.who);
-      const t = T; P = patience('till', t.who, TILL_SECS[t.things.length], () => Boolean(el('.wk-cust')) && T === t && ctx.on(), gone);
+      const t = T; P = patience('till', t.who, TILL_SECS[t.things.length], () => Boolean(el('.wk-cust')) && T === t && ctx.on(), gone, box);
       said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said; then the pieces, and their patience
         if (!el('.wk-cust') || T !== tasks[k] || !ctx.on()) return;
-        const [ja, zh] = tillAsk(T); el('.wk-bub').innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`; el('.wk-cust').classList.add('on'); voice(speakAs(T.who, ja)); busy = false; P.go();
+        const [ja, zh] = tillAsk(T); el('.wk-bub').innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`; el('.wk-cust').classList.add('on'); voice(speakAs(T.who, ja), box); busy = false; P.go();
         el('.wk-opts').innerHTML = `<p class="wk-spell" lang="ja"></p>${T.tiles.map((p) => `<button type="button" class="btn btn-sm wk-opt wk-tile" data-p="${esc(p)}" lang="ja">${esc(p)}</button>`).join('')}`; built();
       });
     }
     // the sum as tapped so far, a blank for each piece to come; after two misses the next piece lights
     function built() {
       const p = el('.wk-spell'); if (!p) return; p.innerHTML = T.parts.map((x, i) => (i < at ? `<b>${esc(x)}</b>` : '<i></i>')).join('');
-      if (miss >= 2) document.querySelectorAll('.wk-till .wk-tile').forEach((x) => x.classList.toggle('wk-hint', at < T.parts.length && !x.disabled && x.dataset.p === T.parts[at]));
+      if (miss >= 2) all('.wk-tile').forEach((x) => x.classList.toggle('wk-hint', at < T.parts.length && !x.disabled && x.dataset.p === T.parts[at]));
     }
     // the customer gone (to the next one, or 張's おつかれさま and the card shut once every line is said)
     function next(lines, praise) {
@@ -232,32 +247,33 @@ const JOBS = (() => {
       k++;
       const bye = (async () => {
         await lines(live); if (!live()) return;
-        if (praise) await said(word('till', pick(say('till').ok)));
+        if (praise) await said(word('till', pick(say('till').ok), '', box));
         if (!live()) return;
         if (k < N) { show(); return; }
-        await said(word('till', say('till').end, 'ok'), 700); if (el('.wk-cust')) CLASS.close();
+        await said(word('till', say('till').end, 'ok', box), 700); if (el('.wk-cust')) CLASS.close();
       })();
       if (k >= N) ctx.finish({}, bye);   // paid now, the results after the goodbye
     }
     function right() {
       busy = true; P.stop(); ctx.right(k, miss); playSfx('good'); el('.wk-cust').classList.remove('on'); const t = T;
       // each line to its end before the next: the sum, ありがとうございました, now and then 張's word
-      next(async (live) => { await quiet(); if (!live()) return; await said(me(tillSay(t)), 900); if (!live()) return; el('.wk-cust').classList.add('bye'); await said(me(ME.bye), 900); }, !miss && Math.random() < 0.3);   // after any line still being said (ruling 27)
+      next(async (live) => { await quiet(box); if (!live()) return; await said(me(tillSay(t)), 900); if (!live()) return; el('.wk-cust').classList.add('bye'); await said(me(ME.bye), 900); }, !miss && Math.random() < 0.3);   // after any line still being said (ruling 27)
     }
     function gone(leave) {   // patience out: もう いいです！ and off they go, the sum shown whole; the task lost
       busy = true; ctx.right(k, 3); playSfx('bad'); const t = T; at = t.parts.length; built();
-      document.querySelectorAll('.wk-till .wk-tile').forEach((x) => { x.disabled = true; x.classList.remove('wk-hint'); });
+      all('.wk-tile').forEach((x) => { x.disabled = true; x.classList.remove('wk-hint'); });
       el('.wk-bub').innerHTML = `<b lang="ja">${esc(leave[0])}</b><span>${esc(leave[1])}</span>`;
-      next(async (live) => { await said(line(t.who, leave[0]), 1400); if (live()) { el('.wk-cust').classList.add('bye'); await sleep(450); } }, false);
+      next(async (live) => { await Promise.all([line(t.who, leave[0], box), sleep(1400)]); if (live()) { el('.wk-cust').classList.add('bye'); await sleep(450); } }, false);   // said in full, from its own start (N-2)
     }
     CLASS.card('wk-till', '收銀', `${head('till', 'ふくの レジ', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !T) return;
       const o = e.target.closest('.wk-tile'); if (!o || o.disabled) return;
       if (o.dataset.p !== T.parts[at]) {   // not the next piece: a miss
-        miss++; playSfx('bad'); o.classList.remove('wk-bad'); void o.offsetWidth; o.classList.add('wk-bad'); missWord(P, () => word('till', say('till').miss, 'bad'), MISS_COST.till); if (miss >= 2) built(); return;   // his word to its end, then its cost (ruling 27)
+        miss++; playSfx('bad'); o.classList.remove('wk-bad'); void o.offsetWidth; o.classList.add('wk-bad'); missWord(P, () => word('till', say('till').miss, 'bad', box), MISS_COST.till, box); if (miss >= 2) built(); return;   // his word to its end, then its cost (ruling 27)
       }
       at++; o.disabled = true; built(); if (at < T.parts.length) SND.play('place', { vol: 0.5 }); else right();
     });
+    box = document.querySelector('.cls.wk-till');
     show();
   }
   function tillLines(add) {
@@ -401,5 +417,5 @@ const JOBS = (() => {
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
   WORK.register('till', { run: tillRun, lines: tillLines, left: tillLeft, open: allNums });
-  return { pat: PAT, clock, said, voice, quiet, line, missWord, grr, patience, custHtml, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
+  return { pat: PAT, clock, said, voice, quiet, queue, line, missWord, grr, patience, custHtml, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
 })();
