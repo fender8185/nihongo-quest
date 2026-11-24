@@ -249,6 +249,32 @@ function check(T, D, opts = {}) {
     const first = c.art === 'npc' ? 0 : ev ? unitIdx(ev.u) : Infinity, plain = ls.filter((l) => !l[3] && unitIdx(l[0]) <= first).length;
     if (ls.length < opts.chatMin || plain < 2) bad('chat-min', `chat ${id}`, `${ls.length} lines, ${plain} with no condition by their first unit: at least ${opts.chatMin} and 2`);
   });
+  // 湯の花温泉's lines (TOWN.ONSEN, 2026-11-24): each [Japanese, 中文] — every kanji marked, a word above the level glossed: あかり's welcome
+  // and 佐藤's bell from the first unit (anyone may ride up), the 観光案内所's at its unit (m7; a later wording at its own); who speaks is
+  // someone with a voice in the town or on the cruise; a question asks one of the kinds the job practises
+  const on = T.ONSEN;
+  if (on) {
+    const people = (T.CRUISE || {}).PEOPLE || {}, person = (id, at) => { if (!cast[id] && !people[id]) bad('ref', at, `no one called ${id}`); };
+    const pair = (l, u, at) => { if (!Array.isArray(l) || typeof l[0] !== 'string') { bad('onsen', at, 'a line is [Japanese, 中文]'); return; } text(l[0], u, at); if (!l[1]) bad('onsen', at, 'no Chinese'); };
+    if (on.welcome) pair(on.welcome, 'm1', 'onsen welcome');
+    if (on.bell) pair(on.bell, 'm1', 'onsen bell');
+    const A = on.annai, U = 'm7', KINDS = ['can', 'time', 'rule', 'dekiru', 'mieru'];
+    if (A) {
+      Object.entries(A.spots || {}).forEach(([id, s]) => { const at = `annai spot ${id}`; [s[0], s[1], s[3] || ''].forEach((ja) => text(ja, U, at)); if (!s[2]) bad('onsen', at, 'no Chinese'); });
+      Object.entries(A.ask || {}).forEach(([id, [who, kind, ja, zh, later]]) => {
+        const at = `annai ask ${id}`; person(who, at); if (!KINDS.includes(kind)) bad('onsen', at, `no kind ${kind}`); pair([ja, zh], U, at);
+        if (later) { if (unitIdx(later[0]) < 0) bad('ref', at, `no unit ${later[0]}`); else pair(later.slice(1), later[0], `${at} later`); }
+      });
+      Object.entries(A.reply || {}).forEach(([id, rs]) => rs.forEach((l, i) => pair(l, U, `annai reply ${id}#${i}`)));
+      Object.entries(A.fun || {}).forEach(([id, f]) => {
+        const at = `annai fun ${id}`; person(f.who, at); ['q', 'right', 'after'].forEach((k) => { if (f[k]) pair(f[k], U, `${at} ${k}`); });
+        (f.wrong || []).forEach((l, i) => pair(l, U, `${at} wrong${i}`)); if (f.ask && !(A.ask || {})[f.ask]) bad('ref', at, `no question ${f.ask}`);
+      });
+      const say = A.say || {}; person(say.who, 'annai say');
+      Object.entries(say).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U, `annai say ${k}#${i}`)));
+      ['hi', 'thanks'].forEach((k) => { if (A[k]) pair(A[k], U, `annai ${k}`); });
+    }
+  }
   return out;
 }
 

@@ -542,6 +542,219 @@ def test_the_inn_keeps_him_on_its_floor(b):
     assert r['round'] == [True, True, True], r   # round the things, never through
     assert r['keptLobby'] == [[0, True], [0, True]] and r['keptRoom'] == [[0, True], [0, True]], r   # a spot kept in a thing or off the floor: back beside it
 
+# ---- Task 4: the onsen work area and its 観光案内所 (spec §1, §5, §5.1, §8) ----
+# the four jobs; card(grades): the 打工證's 經驗 from shifts done in the other areas (S 5, A 4 …, one a job); stub(job): a stand-in
+# runner for a job whose own comes in Tasks 5–7 (never one already in, as test_ekimae's reg()); open(): which of the four may start now
+WORK4 = """const ONSEN4 = ['annai', 'nakai', 'miyage', 'front'], OTHER = ['buns', 'counter', 'waiter', 'till', 'bento', 'window', 'lost', 'taxi'];
+  ['nq_work_onsen', 'nq_work_free', 'nq_work_eki'].forEach((k) => localStorage.removeItem(k));
+  const card = (gs) => { state.work.res = {}; gs.forEach((g, k) => { state.work.res['2026-10-' + String(k + 1).padStart(2, '0')] = { place: OTHER[k], done: 10, score: {}, yen: 1, grade: g }; }); saveState(); };
+  const stub = (job) => { if (!WORK.has(job)) WORK.register(job, { run: (ctx) => { window.__ctx = ctx; }, lines: () => {} }); };
+  const stubs = () => ['nakai', 'miyage', 'front'].forEach(stub);
+  const open = () => ONSEN4.filter((j) => WORK.can(j).ok).join(',');"""
+
+# spec §1 (ruling 2): 湯の花温泉's four jobs — 観光案内所 (あかり, m7, 200 円), 仲居 (千代, m8, 220), おみやげ屋 (竹内, m11, 240), フロント
+# (佐藤, m15, 260) — open once the 打工證 is ベテラン (經驗 20), each by its unit: 經驗 19 opens none and says ベテラン; the test site's
+# switch (nq_work_onsen) opens all four whatever the card and the unit — and only them (駅前 keeps its own switch)
+def test_onsen_work_opens_at_veteran_and_by_unit(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + WORK4 + """ stubs(); const out = {};
+      out.places = ONSEN4.map((j) => { const P = WORK.PLACES[j] || {}; return [P.area, P.pay, P.course, P.who, P.place, P.tune]; }); out.area = [(WORK.AREAS.onsen || {}).name, (WORK.AREAS.onsen || {}).need];
+      state.currentUnit = 'm7'; card(['S', 'S', 'S', 'A']); out.xp19 = [WORK.xp(), WORK.title(), open(), WORK.can('annai').why];
+      card(['S', 'S', 'S', 'S']); out.xp20 = [WORK.xp(), WORK.title()];
+      for (const u of ['m7', 'm8', 'm11', 'm15']) { state.currentUnit = u; out[u] = open(); }
+      card([]); state.currentUnit = 'm1'; out.none = [open(), WORK.can('bento').ok];
+      out.on = WORK.onsenTool(); out.free = [open(), WORK.can('bento').ok]; out.off = WORK.onsenTool(); out.after = open();
+      return JSON.stringify(out); })()"""))
+    assert r['places'] == [['onsen', 200, 'm7', 'akari', 'onsen', 'onsen'], ['onsen', 220, 'm8', 'chiyo', 'ryokan', 'onsen'], ['onsen', 240, 'm11', 'makoto', 'yudori', 'onsen'], ['onsen', 260, 'm15', 'sato', 'ryokan', 'onsen']], r
+    assert r['area'] == ['湯の花温泉', 2], r
+    assert r['xp19'][:3] == [19, '一人前', ''] and 'ベテラン' in r['xp19'][3], r
+    assert r['xp20'] == [20, 'ベテラン'], r
+    assert (r['m7'], r['m8'], r['m11'], r['m15']) == ('annai', 'annai,nakai', 'annai,nakai,miyage', 'annai,nakai,miyage,front'), r
+    assert r['none'] == ['', False], r
+    assert r['free'] == ['annai,nakai,miyage,front', False] and '湯の花' in r['on'] and r['after'] == '', r   # its own area only
+
+# Review Focus 1 (ruling 4): one in N5 (m3) with no ベテラン rides up — each of the four keepers, asked for work, says in the reply why
+# not: the 打工證 step it needs and the job's unit; no job card opens. A job whose runner is not in yet (Tasks 5–7 bring them) is never
+# offered (ruling 2): its keeper only chats — once a runner is in, the same reason
+def test_an_n5_visitor_gets_the_reason_not_a_card(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ state.currentUnit = 'm3'; saveState(); const out = { pre: {} }, toasts = []; window.toast = (m) => toasts.push(m);
+      const tap = async (place, h, id) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; await at(place); TALK.close(); toasts.length = 0;
+        click(`.yard .npc-${id}`); await watch(() => document.querySelector('.talk-card'), 5000); await wait(150);
+        const c = document.querySelector('.talk-card'), picks = c ? [...c.querySelectorAll('[data-go]')].map((x) => x.dataset.go) : [];
+        if (picks.includes('work')) { click('.talk-card [data-go="work"]'); await wait(200); click('.talk'); await watch(() => toasts.length, 3000); await wait(400); }
+        const opened = Boolean(document.querySelector('.cls')); TALK.close(); return { picks, said: toasts.join('|'), card: opened }; };
+      out.akari = await tap('onsen', 10, 'akari');
+      for (const [job, place, h, id] of [['nakai', 'ryokan', 12, 'chiyo'], ['front', 'ryokan', 9, 'sato'], ['miyage', 'yudori', 10, 'makoto']]) {
+        if (!WORK.has(job)) { out.pre[id] = (await tap(place, h, id)).picks; stub(job); }
+        out[id] = await tap(place, h, id); }
+      return JSON.stringify(out); })()"""))
+    for id, unit in {'akari': '可能形', 'chiyo': '自他動詞', 'sato': '敬語', 'makoto': '授受'}.items():
+        x = r[id]
+        assert 'work' in x['picks'] and 'ベテラン' in x['said'] and unit in x['said'] and not x['card'], (id, r)
+    for id, picks in r['pre'].items():
+        assert 'work' not in picks, (id, r)   # no runner yet: a chat (竹内: his まんじゅう too), no work talk
+
+# spec §5.1 (rulings 6, 7, 8): every answer is read off the board — two shifts whose 足湯 differ (dogs in or not, a towel to buy or
+# not) flip the right reply; the hours and prices said are the board's; what the town itself shows is the same on every board (射的
+# 300 円 a go, the 湯畑 free, open all night and lit up by night, the 足湯 free and open all night); a shift is ten tourists, at most
+# one of them a fun one; every tourist's three replies all differ, one right, none a ら抜き form nor a 五段 verb + れる／られる (heard
+# as honorific: 入られます, 買われます); the fun ones — the phrasebook (マイク), the child's ghost (ゆうた: the playful reply right),
+# ミヨコ's future
+def test_annai_answers_come_from_the_board(b):
+    r = json.loads(ev(b, """(() => { const MARK = /\\{([^|}]+)\\|([^|}]+)(?:\\|[^}]+)?\\}/g, kana = (s) => s.replace(MARK, '$2').replace(/\\s/g, '');
+      const m7 = TOWNEV.unitIdx('m7'), f = (sh, id) => sh.board.find((x) => x.id === id), right = (t) => t.opts.find((o) => o[2])[0], out = {};
+      let a = null, c = null; for (let s = 1; s < 500 && !(a && c); s++) { const x = ANNAI.make(m7, s), ft = f(x, 'ashiyu'); if (!a && ft.dog && ft.towel) a = x; if (!c && !ft.dog && !ft.towel) c = x; }
+      out.found = Boolean(a && c); const said = (sh, q) => right(ANNAI.ask(sh.board, q, m7));
+      out.dog = [said(a, 'dog'), said(c, 'dog')]; out.towel = [said(a, 'towelAshi'), said(c, 'towelAshi')]; out.towelPrice = said(a, 'towelAshi').includes(ANNAI.priceMark(f(a, 'ashiyu').towel));
+      out.read = [a, c].map((sh) => [said(sh, 'yuTo').includes(ANNAI.timeMark(f(sh, 'yu').hours[1])), said(sh, 'kaFrom').includes(ANNAI.timeMark(f(sh, 'kagetsu').hours[0])),
+        said(sh, 'priceYu').includes(ANNAI.priceMark(f(sh, 'yu').price)), said(sh, 'priceYk').includes(ANNAI.priceMark(f(sh, 'yukata').price))]);
+      const fixed = [], RANUKI = ['みれます', 'みれません', 'みれる', 'かりれ', 'きれます', 'きれません', 'これます', 'これません', 'たべれ', 'ねれます', 'でれます'];
+      const GODAN = ['はいられ', 'かわれ', 'いかれ', 'あそばれ', 'つかわれ', 'のられ', 'とられ', 'とまられ'], bad = []; let n = 0;
+      for (let s = 1; s <= 80; s++) for (const u of [7, 9, 10, 15]) { const sh = ANNAI.make(u, s); n += sh.tasks.length;
+        const sht = f(sh, 'shateki'), yb = f(sh, 'yubatake'), as = f(sh, 'ashiyu');
+        if (sht.price !== 300 || yb.price !== 0 || yb.hours.join() !== '0,24' || !yb.night || as.price !== 0 || as.hours.join() !== '0,24' || sh.board.length !== 6) fixed.push(s);
+        if (sh.tasks.length !== 10 || sh.tasks.filter((t) => t.fun).length > 1) bad.push(s + ':shift');
+        sh.tasks.forEach((t, k) => { const js = t.opts.map((o) => o[0]);
+          if (t.opts.length !== 3 || new Set(js).size !== 3 || t.opts.filter((o) => o[2]).length !== 1 || t.opts.some((o) => !o[1])) bad.push(`${s}.${k}:${t.kind}:opts`);
+          if (!t.who || !t.q || !t.q[0] || !t.q[1] || !CAST_VOICE[t.who]) bad.push(`${s}.${k}:q`);
+          js.forEach((j) => { const kk = kana(j); RANUKI.concat(GODAN).forEach((w) => { if (kk.includes(w)) bad.push(`${s}.${k}:${w}:${j}`); }); }); }); }
+      out.fixed = fixed.slice(0, 5); out.scan = [n, bad.slice(0, 8)];
+      out.fun = ['book', 'ghost', 'future'].map((k) => { const sh = ANNAI.make(m7, 3, k), t = sh.tasks.find((x) => x.fun === k); return t ? [t.who, right(t), t.opts.length, sh.tasks.filter((x) => x.fun).length] : null; });
+      return JSON.stringify(out); })()"""))
+    assert r['found'], r
+    assert r['dog'][0].startswith('はい') and r['dog'][1].startswith('いいえ'), r   # dogs in on one board, not on the other
+    assert r['towel'][0].startswith('はい') and r['towel'][1].startswith('いいえ') and r['towelPrice'], r   # a towel at the 足湯 on one, elsewhere on the other
+    assert r['read'] == [[True] * 4, [True] * 4], r   # the hours and the prices said are the board's
+    assert r['fixed'] == [], r   # what the town shows: the same on every board
+    assert r['scan'][0] == 3200 and r['scan'][1] == [], r
+    assert [x and x[0] for x in r['fun']] == ['mike', 'yuta', 'miyoko'] and all(x[2] == 3 and x[3] == 1 for x in r['fun']), r
+    assert '{見|み}られるかも' in r['fun'][1][1], r   # the child's ghost: the playful reply is the right one
+
+# spec §5, §5.1: the first shift — あかり's first word (the answers are on the board), the Chinese under the hero's reply; ten tourists,
+# all right at once: S, 200 + 50 and the ベテラン card's 4%; the onsen's tune is not in yet (Task 8): no music, quietly; the next day's
+# shift shut after three tourists picks up at the fourth, on the same board
+def test_annai_shift_grade_pay_and_resume(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; state.settings.musicVol = 1; saveState(); const out = {};
+      const now = () => ANNAI_RUN.now(), asking = (n) => now() && now().phase === 'ask' && now().k === n && document.querySelector('.wk-annai .an-opt');
+      const pick = () => { const t = now().task; click(`.wk-annai .an-opt[data-o="${t.opts.findIndex((o) => o[2])}"]`); };
+      await at('onsen'); WORK.start(yard(), 'annai');
+      for (let i = 0; i < 40 && !document.querySelector('.wk-annai'); i++) { click('.talk'); await wait(150); }   // あかり's first word, tapped through
+      out.first = Boolean(document.querySelector('.wk-annai')); out.music = MUSIC.wants();
+      for (let n = 0; n < 10; n++) { await watch(() => asking(n), 12000); pick(); if (!n) { await watch(() => document.querySelector('.wk-annai .wk-me span'), 5000); out.zh = (document.querySelector('.wk-annai .wk-me span') || {}).textContent || ''; } }
+      await watch(() => WORK.today() && WORK.today().yen !== undefined, 20000); const x = WORK.today() || {};
+      out.paid = [x.grade, x.yen, Object.values(x.score || {})]; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close();
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 11) }; await at('onsen'); WORK.start(yard(), 'annai'); await watch(() => asking(0), 12000);
+      out.talk = Boolean(document.querySelector('.talk-card')); const seed = now().seed;
+      for (let n = 0; n < 3; n++) { await watch(() => asking(n), 12000); pick(); } await watch(() => (WORK.today() || {}).done >= 3, 6000); await wait(300); CLASS.close(); await wait(200);
+      out.score = (WORK.today() || {}).score; WORK.start(yard(), 'annai'); await watch(() => now() && now().phase === 'ask', 12000); out.k = now() && now().k; out.same = Boolean(now()) && now().seed === seed; CLASS.close();
+      return JSON.stringify(out); })()"""))
+    assert r['first'] and r['music'] == '' and r['zh'], r   # her first word, then the card; no tune yet; the Chinese under the reply (first shift)
+    assert r['paid'] == ['S', 260, [0] * 10], r   # 200 + S 50, ベテラン's 4%
+    assert not r['talk'] and r['score'] == {'0': 0, '1': 0, '2': 0} and r['k'] == 3 and r['same'], r
+
+# Review Focus 4 (ruling 5): records of the four new jobs (done, and one under way with what it keeps) and the once-a-day days (射的:
+# oneADay.shateki; the welcome まんじゅう: purse.gifts.kangei) survive this build's load and a merge with a copy that has none of them
+# (a 1.21.0 device's), whichever was saved later — and 町の手帳's 打工證 shows them. (1.21.0's own merge: tests/sync-core.test.js)
+def test_new_job_records_survive_an_old_merge(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + WORK4 + """ const base = JSON.parse(JSON.stringify(state));
+      const res = { '2026-11-01': { place: 'annai', done: 10, score: { 0: 0, 1: 1 }, yen: 260, grade: 'S', tip: 0 }, '2026-11-02': { place: 'nakai', done: 10, score: { 0: 0 }, yen: 240, grade: 'A', tip: 0 },
+        '2026-11-03': { place: 'miyage', done: 10, score: { 0: 2 }, yen: 270, grade: 'B', tip: 5 }, '2026-11-04': { place: 'front', done: 3, score: { 0: 0, 1: 0, 2: 1 }, keep: { seed: 77 } } };
+      const mine = Object.assign({}, base, { work: { res }, oneADay: { shateki: '2026-11-04' }, purse: { spent: {}, book: {}, gifts: { kangei: '2026-11-04' } } });
+      const theirs = Object.assign({}, base, { work: { res: { '2026-10-01': { place: 'buns', done: 10, score: {}, yen: 80, grade: 'B', tip: 0 } } }, purse: { spent: {}, book: {} } }); delete theirs.oneADay;
+      const stamp = (s, t) => Object.assign(JSON.parse(JSON.stringify(s)), { updatedAt: t });
+      const keep = (s) => ({ places: Object.values(s.work.res).map((x) => x.place).sort(), done: ['2026-11-01', '2026-11-02', '2026-11-03'].map((d) => [(s.work.res[d] || {}).yen, (s.work.res[d] || {}).grade]),
+        front: s.work.res['2026-11-04'] ? [s.work.res['2026-11-04'].done, s.work.res['2026-11-04'].keep] : null, shateki: (s.oneADay || {}).shateki, kangei: ((s.purse || {}).gifts || {}).kangei });
+      const loaded = normalizeState(stamp(mine, '2026-11-23T10:00:00.000Z')), out = { loaded: keep(loaded) };
+      const newer = normalizeState(SyncCore.mergeStates(loaded, normalizeState(stamp(theirs, '2026-11-23T11:00:00.000Z')))), older = normalizeState(SyncCore.mergeStates(normalizeState(stamp(theirs, '2026-11-23T09:00:00.000Z')), loaded));
+      out.theirsNewer = keep(newer); out.theirsOlder = keep(older);
+      state.work = newer.work; const box = document.createElement('div'); box.innerHTML = WORK.book();
+      const rows = [...box.querySelectorAll('tr')].map((tr) => tr.textContent);
+      out.book = ONSEN4.map((j) => { const row = rows.find((t) => WORK.PLACES[j] && t.includes(WORK.PLACES[j].name)) || ''; return [row.includes('1 班'), row.includes('0 班')]; }); out.xp = WORK.xp();
+      return JSON.stringify(out); })()"""))
+    mine = {'places': ['annai', 'front', 'miyage', 'nakai'], 'done': [[260, 'S'], [240, 'A'], [270, 'B']], 'front': [3, {'seed': 77}], 'shateki': '2026-11-04', 'kangei': '2026-11-04'}
+    assert r['loaded'] == mine, r
+    both = dict(mine, places=['annai', 'buns', 'front', 'miyage', 'nakai'])
+    assert r['theirsNewer'] == both and r['theirsOlder'] == both, r   # nothing dropped, whichever copy was saved later
+    assert r['book'] == [[True, False], [True, False], [True, False], [False, True]] and r['xp'] == 15, r   # 1 班 each (フロント's under way), S 5 + A 4 + B 3 + 包包子's B 3
+
+# ruling 10 (spec §5.1): あかり's 〜ようになる line — 「去年から、犬も 足湯に 入れるように なりました。」 — is said on a shift whose board lets
+# dogs into the 足湯, and never on one that does not
+def test_akari_tells_of_the_dogs_only_on_a_board_that_lets_them_in(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; const out = {}, said = []; window.speakAs = (w, l) => { said.push([w, l]); return Promise.resolve(); };
+      const m7 = TOWNEV.unitIdx('m7'), dogs = (s) => ANNAI.make(m7, s).board.find((x) => x.id === 'ashiyu').dog;
+      let yes = 0, no = 0; for (let s = 1; s < 300 && !(yes && no); s++) { if (!yes && dogs(s)) yes = s; if (!no && !dogs(s)) no = s; }
+      state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' };   // not the first shift: no first word
+      const shift = async (seed, d) => { TOWNEV.clock = { h: 10, day: new Date(2026, 10, d) }; state.work.res[dateStr(TOWNEV.today())] = { place: 'annai', done: 0, score: {}, keep: { seed } }; saveState();
+        said.length = 0; await at('onsen'); WORK.start(yard(), 'annai'); await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask', 12000); await wait(200);
+        const line = said.filter(([w, l]) => w === 'akari' && /ように/.test(l)).map(([, l]) => l); CLASS.close(); return [ANNAI_RUN.now().seed, line]; };
+      out.yes = await shift(yes, 10); out.no = await shift(no, 11);
+      return JSON.stringify(out); })()"""))
+    assert r['yes'][1] and '{犬|いぬ}も' in r['yes'][1][0] and 'ように なりました' in r['yes'][1][0], r
+    assert r['no'][1] == [], r
+
+# Review Focus 5: each line is said to its end — the hero's reply, the tourist's thanks, あかり's word, the next tourist's question, the
+# card shut at the end — never cut by the next (lines 700 ms each); the shift paid
+def test_annai_says_each_line_to_its_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; window.__cut = []; let talking = null;
+      const says = (ms) => (w, l) => { if (talking) __cut.push(talking); const me = talking = w + ':' + l; return new Promise((ok) => setTimeout(() => { if (talking === me) talking = null; ok(); }, ms)); };
+      window.speakAs = says(700); window.speak = (t) => says(400)('', t); window.stopSpeaking = () => { if (talking) __cut.push(talking + '（停）'); talking = null; };
+      state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; state.work.res['2026-11-10'] = { place: 'annai', done: 8, score: Object.fromEntries(Array.from({ length: 8 }, (_, k) => [k, 0])), keep: { seed: 11 } }; saveState();
+      const R = Math.random; Math.random = () => 0.1;   // あかり's word after each
+      await at('onsen'); WORK.start(yard(), 'annai');
+      for (const n of [8, 9]) { await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && ANNAI_RUN.now().k === n && !talking, 15000); const t = ANNAI_RUN.now().task;
+        document.querySelector(`.wk-annai .an-opt[data-o="${t.opts.findIndex((o) => o[2])}"]`).click(); await wait(200); }
+      await watch(() => document.querySelector('.wk-result'), 20000); Math.random = R;
+      return JSON.stringify({ cut: __cut, shut: !document.querySelector('.wk-annai'), paid: (state.work.res['2026-11-10'] || {}).yen > 0 }); })()"""))
+    assert r == {'cut': [], 'shut': True, 'paid': True}, r
+
+# ruling 2, spec §3.1: 湯の花駅前's 求人看板 opens the area's board — its four jobs, what each is, where and with whom, the pay; the ones
+# whose runners are not in yet shown with no way in (準備中); shut while the card is short of ベテラン, and says so
+def test_the_onsen_board_lists_its_four_jobs(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ const out = {};
+      await at('onsen'); click('.yard .use-btn[data-use="jobs"]'); await watch(() => document.querySelector('.wk-board'), 8000);
+      const rows = () => [...document.querySelectorAll('.wk-board .wk-job')].map((x) => [x.dataset.job, x.querySelector('.wk-need').textContent, x.textContent.includes('円')]);
+      out.shut = rows(); out.lock = (document.querySelector('.wk-board .wk-lock') || {}).textContent || ''; out.head = document.querySelector('.wk-board').textContent; CLASS.close();
+      card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; WORK.board('onsen'); out.open = rows(); out.lock2 = Boolean(document.querySelector('.wk-board .wk-lock')); CLASS.close();
+      out.has = ['nakai', 'miyage', 'front'].map((j) => WORK.has(j)); stubs(); WORK.board('onsen'); out.built = rows(); CLASS.close();
+      return JSON.stringify(out); })()"""))
+    assert [x[0] for x in r['shut']] == ['annai', 'nakai', 'miyage', 'front'] and all(x[2] for x in r['shut']), r
+    assert 'ベテラン' in r['lock'] and '湯の花温泉' in r['head'], r
+    assert r['open'][0][1] == '✓ 可以做' and not r['lock2'], r
+    assert all(x[1] == '準備中' for x, has in zip(r['open'][1:], r['has']) if not has), r   # no runner yet (Tasks 5–7 bring them): no way in
+    assert '準備中' not in [x[1] for x in r['built']] and r['built'][1][1] != '✓ 可以做', r   # in: 仲居 waits for m8
+
+# the card (spec §5.1, ruling 9): seen from inside the counter — the 「湯の花温泉 ごあんない」 board with its six places (a picture, the
+# name with its reading, the hours, the price, the rules), the glass with the tourist outside and their patience, the three replies;
+# it fits a 360-px phone and a 390-px one, its board's words 12 px or more, every button to tap 40 px or more
+def test_the_annai_card_fits_a_phone(b):
+    out = []
+    for w, h in ((360, 640), (390, 844)):
+        r = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7';
+          state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState(); await at('onsen'); WORK.start(yard(), 'annai');
+          await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && document.querySelector('.wk-annai .an-opt'), 12000); await wait(300);
+          const c = document.querySelector('.wk-annai .cls-card'), q = c.getBoundingClientRect(), R = (e) => e.getBoundingClientRect();
+          const facs = [...c.querySelectorAll('.an-fac')], taps = [...c.querySelectorAll('button')].filter((x) => x.offsetParent).map((x) => [x.className, Math.round(R(x).width), Math.round(R(x).height)]);
+          const small = [...c.querySelectorAll('.an-fac *')].filter((e) => !e.closest('svg') && e.childNodes.length && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && e.tagName !== 'RT' && parseFloat(getComputedStyle(e).fontSize) < 12).map((e) => e.className + ':' + e.textContent);
+          return JSON.stringify({ side: q.left >= 0 && q.right <= innerWidth + 1, bottom: q.bottom <= innerHeight + 1, facs: facs.length, inside: facs.every((e) => R(e).left >= q.left && R(e).right <= q.right + 0.5),
+            parts: facs.every((e) => e.querySelector('svg') && e.querySelector('ruby') && e.querySelector('.an-hr') && e.querySelector('.an-pr') && e.querySelector('.an-rules')),
+            glass: Boolean(c.querySelector('.an-glass .wk-cust .kr-face') && c.querySelector('.an-glass .wk-pat') && c.querySelector('.an-board')), opts: c.querySelectorAll('.an-opt').length,
+            taps: taps.filter(([, ww, hh]) => ww < 40 || hh < 40), small: small.slice(0, 5) }); })()""")])[-1])
+        out.append(r)
+    for x in out:
+        assert x['side'] and x['bottom'] and x['facs'] == 6 and x['inside'] and x['parts'] and x['glass'] and x['opts'] == 3, out
+        assert x['taps'] == [] and x['small'] == [], out
+
+# the generator (生成) has the 案内所's lines: each tourist's question in their own voice, the hero's every right reply the boards can
+# make, あかり's words, the work talk of the four keepers, and the fun ones; every tourist one the town already voices (no voice left)
+def test_the_generator_has_the_annai_lines(b):
+    r = json.loads(ev(b, """(() => { const all = new Set(talkLines().map(([w, l]) => w + '|' + l)), m7 = TOWNEV.unitIdx('m7'), miss = [];
+      for (let s = 1; s <= 40; s++) for (const u of [7, 10]) ANNAI.make(u, s).tasks.forEach((t) => { if (!all.has(t.who + '|' + t.q[0])) miss.push(t.who + '|' + t.q[0]); const ok = t.opts.find((o) => o[2])[0]; if (!all.has('hero|' + ok)) miss.push('hero|' + ok); });
+      ['book', 'ghost', 'future'].forEach((k) => { const t = ANNAI.make(m7, 5, k).tasks.find((x) => x.fun === k); if (!all.has(t.who + '|' + t.q[0])) miss.push(t.who + '|' + t.q[0]); });
+      const W = TOWN.WORK, A = TOWN.ONSEN.annai || {}, keepers = ['akari', 'chiyo', 'sato', 'makoto'].map((id) => [Boolean((W.hello || {})[id]), Boolean((W.yes || {})[id]), all.has(id + '|' + ((W.hello || {})[id] || [''])[0])]);
+      const akari = [(A.say || {}).end, (A.say || {}).dogs].filter(Boolean).map((l) => all.has('akari|' + l[0]));
+      return JSON.stringify({ miss: [...new Set(miss)].slice(0, 6), keepers, akari, first: ((W.first || {}).annai || []).length, voices: Object.keys(CAST_VOICE).length }); })()"""))
+    assert r['miss'] == [] and r['keepers'] == [[True, True, True]] * 4 and r['akari'] == [True, True] and r['first'] >= 1, r
+    assert r['voices'] == 68, r   # no new voice: the tourists are people the town already voices
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":

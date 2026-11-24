@@ -187,3 +187,18 @@ test('away after an event that exists; helps at a shop someone keeps', () => {
   assert.deepEqual(kinds(check(town([ev()], cast({ away: 'zz' })), DATA)), ['ref']);
   assert.deepEqual(kinds(check(town([ev()], cast({ helps: 'moon' })), DATA)), ['ref']);
 });
+test('湯の花温泉\'s lines (TOWN.ONSEN) are checked: the 観光案内所\'s at m7 — a bare kanji, an above-level word, a tourist no one is, a line with no Chinese, a kind it does not practise (2026-11-24)', () => {
+  const annai = (o) => ({ ONSEN: { welcome: ['ようこそ！', '歡迎！'], bell: ['はい。', '是。'], annai: Object.assign({ spots: { a: ['{花|はな}', '{花|はな}', '花', ''] },
+    ask: { q1: ['kenta', 'time', '{花|はな}は {食|た}べられますか。', '花可以吃嗎？'] }, reply: { r: [['はい、{食|た}べられます。', '可以。'], ['はい、{食|た}べたいです。', '「想吃」不是「可以吃」。']] },
+    fun: { f: { who: 'miku', q: ['ねえ。', '欸。'], right: ['はい。', '是。'], wrong: [['いいえ。', '不對。']], after: ['わあ！', '哇！'] } },
+    say: { who: 'miku', ok: [['いいね！', '不錯！']], end: ['おつかれ！', '辛苦了！'] }, hi: ['こんにちは。', '你好。'] }, o) } });
+  assert.deepEqual(check(town([ev()], annai({})), DATA), []);
+  assert.deepEqual(kinds(check(town([ev()], annai({ ask: { q1: ['kenta', 'time', '花は {食|た}べられますか。', '花可以吃嗎？'] } })), DATA)), ['bare-kanji']);
+  assert.deepEqual(kinds(check(town([ev()], annai({ reply: { r: [['{経済|けいざい}です。', '經濟。']] } })), DATA)), ['level']);   // N3 in a reply at m7: gloss it
+  assert.deepEqual(check(town([ev()], annai({ reply: { r: [['{経済|けいざい|經濟}です。', '經濟。']] } })), DATA), []);
+  assert.deepEqual(kinds(check(town([ev()], annai({ ask: { q1: ['nobody', 'time', 'はい。', '是。'] } })), DATA)), ['ref']);
+  assert.deepEqual(kinds(check(town([ev()], annai({ say: { who: 'miku', end: ['おつかれ！', ''] } })), DATA)), ['onsen']);
+  assert.deepEqual(kinds(check(town([ev()], annai({ ask: { q1: ['kenta', 'sing', 'はい。', '是。'] } })), DATA)), ['onsen']);
+  assert.deepEqual(kinds(check(town([ev()], annai({ fun: { f: { who: 'miku', ask: 'q9', q: ['ねえ。', '欸。'], after: ['わあ！', '哇！'] } } })), DATA)), ['ref']);
+  assert.deepEqual(kinds(check(town([ev()], { ONSEN: { welcome: ['{経済|けいざい}へ！', '歡迎！'] } }), DATA)), ['level']);   // the welcome: from the first unit
+});

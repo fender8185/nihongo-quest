@@ -185,7 +185,7 @@ const ONSEN = (() => {
       <rect x="${w0 - 6}" y="228" width="${w1 - w0 + 12}" height="8" ${hc('#a8a296', '#2a2a46')}/><rect x="${w0 + 72}" y="${sill - 10}" width="18" height="10" rx="1" ${hc('#fbf8f0', '#3a3c5a')}/><path d="M${w0 + 75} ${sill - 7} h12 M${w0 + 75} ${sill - 4} h9" stroke="#3f9a8c" stroke-width="1"/>`;
   }
   // ---- 求人看板 (湯の花温泉's): a cork board on two posts under a little shingled roof, アルバイト募集 on its red band and four
-  // flyers — the info desk's i, a futon, a gift box, a key on its wooden tag (the town's jobs: Task 4 puts them up) ----
+  // flyers — the info desk's i, a futon, a gift box, a key on its wooden tag (the town's four jobs: tapped, WORK.board('onsen')) ----
   function jobBoard() {
     const x = 902, pin = (px, py) => `<circle cx="${px}" cy="${py}" r="1.4" fill="#d0453c"/>`;
     const flyer = (fx, fy, r, paper, art) => `<g transform="rotate(${r} ${fx + 9} ${fy})"><rect x="${fx + 0.8}" y="${fy + 1}" width="18" height="22" fill="#2b1c12" fill-opacity=".18"/><rect x="${fx}" y="${fy}" width="18" height="22" ${hc(paper, '#8a86a8')}/>${art}${pin(fx + 9, fy + 2)}<path d="M${fx + 3} ${fy + 17} h12 M${fx + 3} ${fy + 19.6} h9" stroke="#2b1c12" stroke-opacity=".3" stroke-width=".8"/></g>`;
@@ -286,7 +286,7 @@ const ONSEN = (() => {
     if (arrived()) return;
     setTimeout(() => {
       const a = y.querySelector('.npc-akari'), w = W().welcome;
-      if (!y.isConnected || arrived() || !a || !w || !akariHere()) return;
+      if (!y.isConnected || arrived() || !a || !w || !akariHere() || document.querySelector('.cls') || TALK.on()) return;   // a card or a talk up (a job's lines said): not now — the next time here
       state.town.arrived = Object.assign({}, state.town.arrived, { onsen: 1 }); saveState();
       const [X, Y] = npcXY(a), k = yScale(Y) * ((TOWN.CAST.akari || {}).size || 1);
       yBubble(y, X + 600, 370 - Y - 200 * k, ruby(w[0]), 3600); speakAs('akari', w[0]); toast(w[2] || w[1], 6000);
@@ -327,7 +327,7 @@ PLACE_USE.onsen = [
   // the 足湯: sat on its back bench over the water (walked up to its front first), his feet in it; up again, his shoes back on
   { id: 'ashiyu', name: '足湯', box: [488, 196, 680, 262], kind: 'sit', seats: [-80, -40, 0, 40, 72], top: 144, dep: 138, front: 102, z: 160, say: 'あったか〜い', sat: (y, X) => ONSEN.soak(y, X, true), up: (y) => ONSEN.soak(y, 0, false) },
   { id: 'annai', name: '観光案内所', box: [722, 150, 818, 212], kind: 'do', go: [196, 126], back: 1, pose: 'look', open: (y) => ONSEN.window(y) },   // beside the window, not before her face
-  { id: 'jobs', name: '求人看板', box: [898, 156, 966, 212], kind: 'do', go: [332, 126], back: 1, pose: 'look', say: 'アルバイト…？', toast: '湯の花温泉的打工：要打工證「ベテラン」，還要學到 N4（第 7 單元起）。' },
+  { id: 'jobs', name: '求人看板', box: [898, 156, 966, 212], kind: 'do', go: [332, 126], back: 1, pose: 'look', say: 'アルバイト…？', open: () => WORK.board('onsen') },   // the area's board (2026-11-24): its four jobs, what each takes
   { id: 'map', name: '觀光地圖', box: [978, 108, 1088, 200], kind: 'do', go: [434, 126], back: 1, pose: 'look', toast: '湯の花温泉 觀光地圖：從車站往右是「湯けむり通り」，伴手禮店和旅館「花月」都在路邊；一直走到底，冒著白煙的是「湯畑」。' },
   { id: 'rick', name: '人力車', box: [984, 206, 1090, 306], kind: 'sit', seats: [432], top: 132, dep: 66, z: 234, say: 'はい、チーズ！', sat: (y) => ONSEN.photo(y) }
 ];

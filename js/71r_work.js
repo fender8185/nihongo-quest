@@ -24,7 +24,14 @@ const WORK = (() => {
     bento: { area: 'ekimae', pay: 120, place: 'platform', shop: 'bento', who: 'haru', course: 'm1', present: true, name: '賣便當', at: 'みなと弁当', tune: 'ekimae', shut: '浜田ハル 7 點到 19 點在月台的便當攤。' },
     window: { area: 'ekimae', pay: 140, place: 'station', shop: 'window', who: 'harada', course: 'm2', hours: [7, 21], name: '售票窗口', at: 'きっぷうりば', tune: 'ekimae', shut: '售票窗口 7 點到 21 點。' },
     lost: { area: 'ekimae', pay: 160, place: 'station', shop: 'koban', who: 'kobayashi', course: 'm3', hours: [8, 22], name: '失物招領', at: '駅前交番', tune: 'ekimae', shut: '交番的失物招領 8 點到 22 點。' },
-    taxi: { area: 'ekimae', pay: 180, place: 'station', shop: 'taxi', who: 'suzuki', course: 'm4', present: true, name: '計程車導航', at: '鈴木タクシー', n: 5, credit: [1, 0.6, 0.3, 0], unit: '順利載到的客人', tune: 'ekimae', shut: '鈴木 8–12 點、15–19 點在計程車招呼站（中午在食堂吃飯）。' } };
+    taxi: { area: 'ekimae', pay: 180, place: 'station', shop: 'taxi', who: 'suzuki', course: 'm4', present: true, name: '計程車導航', at: '鈴木タクシー', n: 5, credit: [1, 0.6, 0.3, 0], unit: '順利載到的客人', tune: 'ekimae', shut: '鈴木 8–12 點、15–19 點在計程車招呼站（中午在食堂吃飯）。' },
+    // 湯の花温泉 (2026-11-23, docs/superpowers/specs/2026-11-23-onsen-work-design.md §1): the N4 area, open once the card is ベテラン; each
+    // job by its unit, its keeper there. All four on the board from the start (ruling 2); a job is offered and started only once its
+    // runner is in (観光案内所 here, 仲居・おみやげ屋・フロント in their own tasks). tune: the onsen's own (none yet: no music, quietly)
+    annai: { area: 'onsen', pay: 200, place: 'onsen', shop: 'annai', who: 'akari', course: 'm7', present: true, name: '觀光服務台', at: '観光案内所', tune: 'onsen', shut: '森あかり 9 點到 18 點在観光案内所的窗口。' },
+    nakai: { area: 'onsen', pay: 220, place: 'ryokan', shop: 'kagetsu', who: 'chiyo', course: 'm8', present: true, name: '仲居（準備客房）', at: '旅館「花月」', tune: 'onsen', shut: '女將花村千代 8 點到 21 點在旅館花月的大廳。' },
+    miyage: { area: 'onsen', pay: 240, place: 'yudori', shop: 'yunohanado', who: 'makoto', course: 'm11', present: true, name: '伴手禮店', at: 'ゆのはな堂', tune: 'onsen', shut: '竹内まこと 9 點到 21 點在ゆのはな堂。' },
+    front: { area: 'onsen', pay: 260, place: 'ryokan', shop: 'kagetsu', who: 'sato', course: 'm15', present: true, name: '旅館櫃台', at: '花月のフロント', tune: 'onsen', shut: '番頭佐藤一 7–11 點、14–22 點在旅館花月的櫃台。' } };
   // a workplace no more (外送, cut 2026-11-15; 整理貨架, 2026-11-19): its old records still read
   const GONE = { deliver: { name: '外送', at: 'らいらいけん' }, shelf: { name: '整理貨架', at: 'ふく' } };
   const named = (job) => PLACES[job] || GONE[job] || { name: job, at: '' };
@@ -35,7 +42,8 @@ const WORK = (() => {
   const POINTS = { S: 5, A: 4, B: 3, C: 2, D: 1, E: 0 };
   const RANKS = [['新人', 0], ['一人前', 10], ['ベテラン', 20], ['バイトリーダー', 30], ['達人', 40]];
   const AREAS = { chinatown: { name: '中華街', need: 0, hours: '大通り的店 10 點到 19 點；らいらいけん 10 點到 20 點；福明要王老闆在。' },
-    ekimae: { name: '駅前', need: 1, hours: '便當攤 7–19 點（月台）；售票窗口 7–21 點；交番 8–22 點；計程車 8–12、15–19 點。' } };
+    ekimae: { name: '駅前', need: 1, hours: '便當攤 7–19 點（月台）；售票窗口 7–21 點；交番 8–22 點；計程車 8–12、15–19 點。' },
+    onsen: { name: '湯の花温泉', need: 2, hours: '観光案内所 9–18 點（あかり）；旅館花月 8–21 點（千代）、櫃台 7–11、14–22 點（佐藤）；ゆのはな堂 9–21 點（竹内）。' } };
   const RAISE = 0.02;
   const BONUS = { S: 50, A: 30, B: 20, C: 10, D: 0, E: 0 };
   const GRADES = [['S', 0.95], ['A', 0.85], ['B', 0.7], ['C', 0.5], ['D', 0.3], ['E', 0]];
@@ -67,12 +75,18 @@ const WORK = (() => {
   // its kana seen — or the job's own switch on the test site says never mind (收銀's, 2026-11-20: on a device still in 入門 張 never
   // offered it, the switch skipping only the numbers)
   // 駅前's (2026-11-20): the area open (the card before it at its top) and the course at the job's unit — or the test site's switch
-  const EKI = 'nq_work_eki', ekiFree = () => { try { return onTestSite() && localStorage.getItem(EKI) === '1'; } catch (e) { return false; } };
-  function ekiTool() { const on = !ekiFree(); try { localStorage.setItem(EKI, on ? '1' : ''); } catch (e) { /* no storage */ } return on ? '駅前打工：不看條件（這台裝置），打工證還沒一人前、單元還沒到也能做' : '駅前打工：恢復要先拿到打工證「一人前」、學到那個單元'; }
-  const areaOpen = (area) => rank() >= (AREAS[area].need || 0) || ekiFree();
-  const unitOk = (u) => ekiFree() || TOWNEV.reachedIdx() >= TOWNEV.unitIdx(u);
+  // — each area its own (2026-11-24: 湯の花温泉's, nq_work_onsen, skips ベテラン and the units there only)
+  const FREE_AREA = { ekimae: 'nq_work_eki', onsen: 'nq_work_onsen' };
+  const areaFree = (area) => { const k = FREE_AREA[area]; try { return Boolean(k) && onTestSite() && localStorage.getItem(k) === '1'; } catch (e) { return false; } };
+  const freeTool = (area, on, off) => { const k = FREE_AREA[area], now = !areaFree(area); try { localStorage.setItem(k, now ? '1' : ''); } catch (e) { /* no storage */ } return now ? on : off; };
+  const ekiFree = () => areaFree('ekimae'), onsenFree = () => areaFree('onsen');
+  const ekiTool = () => freeTool('ekimae', '駅前打工：不看條件（這台裝置），打工證還沒一人前、單元還沒到也能做', '駅前打工：恢復要先拿到打工證「一人前」、學到那個單元');
+  const onsenTool = () => freeTool('onsen', '湯の花温泉打工：不看條件（這台裝置），打工證還沒ベテラン、單元還沒到也能做', '湯の花温泉打工：恢復要先拿到打工證「ベテラン」、學到那個單元');
+  const areaOpen = (area) => rank() >= (AREAS[area].need || 0) || areaFree(area);
+  const unitOk = (u, area) => areaFree(area) || TOWNEV.reachedIdx() >= TOWNEV.unitIdx(u);
   const unitName = (u) => { const x = DATA.UNITS.find((y) => y.id === u); return x ? x.short : u; };
-  const opened = (job) => { const P = PLACES[job]; if (P.course) return areaOpen(P.area) && unitOk(P.course);
+  const unitLv = (u) => { const x = DATA.UNITS.find((y) => y.id === u); return x && x.lv ? `${x.lv}` : ''; };
+  const opened = (job) => { const P = PLACES[job]; if (P.course) return areaOpen(P.area) && unitOk(P.course, P.area);
     return kanaOk(P.kana) || Boolean(JOBS[job] && JOBS[job].open && JOBS[job].open()); };
   // the kana the jobs may use: those seen — or all of them for one who knew kana already or is past 入門 (2026-11-15, the final
   // review: they had no kana seen, and three jobs drew from nothing)
@@ -88,11 +102,15 @@ const WORK = (() => {
   // may this job be started (or picked up again) now: its kana seen, today's workplace (if any) this one and not done, open
   function can(job) {
     const P = PLACES[job]; if (!P) return { ok: false, why: '' };
-    if (!areaOpen(P.area)) return { ok: false, why: shutWhy(P.area) };
-    if (P.course && !unitOk(P.course)) return { ok: false, why: `學到「${unitName(P.course)}」單元就能來${P.name}。` };
+    const unitShort = P.course && !unitOk(P.course, P.area);
+    // the area shut and the unit not reached either: both said (2026-11-24, Review Focus 1 — one in N5 asking at 湯の花 hears the
+    // step the card needs and the job's unit)
+    if (!areaOpen(P.area)) return { ok: false, why: shutWhy(P.area) + (unitShort ? `${P.name}還要學到 ${unitLv(P.course)}「${unitName(P.course)}」單元。` : '') };
+    if (unitShort) return { ok: false, why: `學到「${unitName(P.course)}」單元就能來${P.name}。` };
     if (!opened(job)) return { ok: false, why: `再學 ${P.kana - seen()} 個假名就能來${P.name}。` };
     const left = wordsLeft(job); if (left.length) return { ok: false, why: `先學會入門的${left.map((w) => `「${w}」`).join('')}，就能來${P.name}。` };
     const more = needs(job); if (more.length) return { ok: false, why: `先學會${more.map((w) => `「${w}」`).join('')}，就能來${P.name}。` };
+    if (!JOBS[job]) return { ok: false, why: `${P.name}還在準備中。` };   // its runner not in yet (2026-11-24, ruling 2): never started
     const t = today();
     if (t && t.place !== job && !free()) return { ok: false, why: `今天已經在「${named(t.place).name}」打過工了。一天只能在一個地方打工，明天再來吧。` };
     if (fin(t) && !free()) return { ok: false, why: '今天的班打完了，明天再來吧。' };
@@ -139,10 +157,16 @@ const WORK = (() => {
       '小林會從後面拿出四個同種類的東西，只有兩個特徵都對的才是。點它拿起來，按「これですか」交給客人。', '錢包和包包可能有兩個長得一樣：小林會說「同じのが 二つ…」，這時要問「中に 何が ありますか」，聽客人說裡面有什麼（中に カードと 写真が あります），點起來看裡面。四個都不是就按「すみません、ありません」。', '客人說完特徵才開始算耐心（25 秒），按錯會少一截。'], uses: ['何・どこ・どんな', '形容詞（顏色、大小、新舊…）', 'くて・で 連接', '〜が あります／入って います'], n: '一班 10 位客人' },
     window: { how: ['客人在窗口問一個問題：到哪一站多少錢、下一班往哪裡的車幾點、在幾號月台、快速車停不停某一站，或是要買票（先用聽的，答對或錯兩次才出現字）。', '答案都在窗口上面：路線圖上每一站的票價（上面大人、下面小孩，● 是快速車會停的站）、時鐘、發車標。看好了，從下面三句選你要回答的那句。',
       '買票：先在路線圖點客人要去的站，車票印出來，再說價錢：一張就說「…円です」，大人加小孩兩張就說「ぜんぶで …円です」。', '答案用假名寫，要自己把板子上的數字念出來：10:25 是「じゅうじ にじゅうごふん」，10 分、40 分是「じゅっぷん、よんじゅっぷん」，4 點「よじ」、7 點「しちじ」、9 點「くじ」、14 點「じゅうよじ」。', '客人說完話開始算耐心（20 秒），按錯也會少一截；按喇叭重聽時耐心會暫停。'], uses: ['讀站名（漢字）', '時間和票價的念法', 'まで・に・は', 'ます・ません'], n: '一班 10 位客人' },
-    till: { how: ['客人把要買的東西放上櫃台，每樣都有價格牌。只有一樣就問「これ、いくらですか。」，用字卡依序拼出價格的念法，例如 198円 → ひゃく｜きゅう｜じゅう｜はち｜えん。', '兩樣（或同一樣要「ふたつ」）就問「ぜんぶで いくらですか。」：自己加起來，拼出全部的錢，例如 248＋150 → さん｜びゃく｜きゅう｜じゅう｜はち｜えん。', '前 4 位買一樣，後 6 位買兩樣，不會更多。按錯一塊算一次失誤，錯兩次下一塊會亮。', '客人底下那條是耐心：買一樣 30 秒、兩樣 45 秒，按錯也會少一截；沒了客人就走人，這位算失敗。'], uses: ['數字的念法', 'ひゃく・せん 的音變', '兩個價錢相加'], n: '一班 10 位客人' } };
+    till: { how: ['客人把要買的東西放上櫃台，每樣都有價格牌。只有一樣就問「これ、いくらですか。」，用字卡依序拼出價格的念法，例如 198円 → ひゃく｜きゅう｜じゅう｜はち｜えん。', '兩樣（或同一樣要「ふたつ」）就問「ぜんぶで いくらですか。」：自己加起來，拼出全部的錢，例如 248＋150 → さん｜びゃく｜きゅう｜じゅう｜はち｜えん。', '前 4 位買一樣，後 6 位買兩樣，不會更多。按錯一塊算一次失誤，錯兩次下一塊會亮。', '客人底下那條是耐心：買一樣 30 秒、兩樣 45 秒，按錯也會少一截；沒了客人就走人，這位算失敗。'], uses: ['數字的念法', 'ひゃく・せん 的音變', '兩個價錢相加'], n: '一班 10 位客人' },
+    // 湯の花温泉 (2026-11-24)
+    annai: { how: ['遊客在窗口外問問題（先用聽的，答對或錯兩次才出現字；喇叭可以再聽）：幾點到幾點、多少錢、可不可以帶狗、小孩能不能玩、哪裡買得到毛巾、晚上看不看得到……',
+      '答案都在頭上的「湯の花温泉 ごあんない」看板：六個地方的時間、價錢和規則（狗、小孩能不能進去，哪裡買得到毛巾）。看板每天都會換，要讀看板，背不起來。',
+      '從下面三句選你要回答的那句：要跟看板上寫的一樣，說法也要對——「入れます」「買えます」「借りられます」「できます」「見られます」這些「可以…」的說法。',
+      '看板上是 24 小時制：21:00 要說「夜九時（よる くじ）」，17:00 是「夕方五時」，10:00 是「午前十時」。', '遊客說完話開始算耐心（25 秒），按錯也會少一截；按喇叭重聽時耐心會暫停。'],
+      uses: ['可能形（入れる・買える・借りられる・できる）', 'ことが できる', '見られる', '讀時間和價錢'], n: '一班 10 位遊客' } };
   function intro(yard, job) {
     const c = can(job); if (!c.ok) { toast(c.why, 3600); return false; }
-    const P = PLACES[job], R = RULES[job], t = today(), back = t && t.place === job && !fin(t) ? t.done : 0, p = pay(job, 'E');
+    const P = PLACES[job], R = RULES[job] || { how: [DOES[job] || ''], uses: [], n: `一班 ${nOf(job)} 件` }, t = today(), back = t && t.place === job && !fin(t) ? t.done : 0, p = pay(job, 'E');   // a job without its card yet: what the board says of it
     CLASS.card('wk-rules', P.name, `<div class="wk-rhead"><span class="kr-face">${TOWNEV.face(P.who)}</span><p><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span></p></div>
       <h4>玩法</h4><ul class="wk-how">${R.how.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
       <h4>需要的能力</h4><p class="wk-uses">${R.uses.map((u) => `<span lang="ja">${esc(u)}</span>`).join('')}</p>
@@ -166,8 +190,11 @@ const WORK = (() => {
   const DOES = { buns: '聽王老闆念的假名，在假名板上按對的字，一步步把包子包好。', counter: '客人用日文說要什麼，從櫃台上找出來拿給他。',
     waiter: '帶位、點菜、端菜、結帳：聽客人說的話，選一句回他。', till: '用字卡拼出價格和全部加起來的念法，念給客人聽。',
     bento: '電車停靠時，聽車窗裡的乘客要什麼、要幾個，在發車前遞給他。', window: '看運賃表和發車標，回答票價、下一班幾點、在幾號月台，也賣票。',
-    lost: '問來找東西的人忘了什麼、忘在哪裡、長什麼樣子，從拿出來的東西裡找出對的那樣。', taxi: '坐在鈴木的副駕駛座，照乘客說的（右轉、直走、停在哪裡前面）在地圖上帶路。' };
-  const WHERE = { buns: '牌樓外・王老闆', counter: '大通り・周美蘭', waiter: '大通り盡頭・黄', till: '大通り・張偉', bento: 'ホーム・浜田ハル', window: '駅・原田', lost: '交番・小林巡查', taxi: 'タクシー乗り場・鈴木' };
+    lost: '問來找東西的人忘了什麼、忘在哪裡、長什麼樣子，從拿出來的東西裡找出對的那樣。', taxi: '坐在鈴木的副駕駛座，照乘客說的（右轉、直走、停在哪裡前面）在地圖上帶路。',
+    annai: '看頭上的「ごあんない」看板，回答遊客：幾點開、多少錢、能不能帶狗、哪裡買得到毛巾。', nakai: '客人來之前把客房準備好：開冷氣、鋪棉被、泡茶，回答女將的確認。',
+    miyage: '聽客人要送誰、送幾個，從貨架上拿對的伴手禮，回答客人的請求。', front: '在旅館櫃台接待客人：入住、行李、晚餐時間，用對的敬語回答。' };
+  const WHERE = { buns: '牌樓外・王老闆', counter: '大通り・周美蘭', waiter: '大通り盡頭・黄', till: '大通り・張偉', bento: 'ホーム・浜田ハル', window: '駅・原田', lost: '交番・小林巡查', taxi: 'タクシー乗り場・鈴木',
+    annai: '湯の花駅前・森あかり', nakai: '旅館花月・花村千代', miyage: '湯けむり通り・竹内まこと', front: '旅館花月・佐藤一' };
   // an area's 求人看板 (中華街's by its gate; 駅前's on the square, 2026-11-20): each of its jobs, what it takes; the card and today's
   function board(area) {
     if (!AREAS[area]) area = 'chinatown';   // called bare (or with the scene, as it was before areas)
@@ -257,5 +284,5 @@ const WORK = (() => {
   const tune = () => { const job = Object.keys(PLACES).find((j) => document.querySelector('.cls.wk-' + j)) || (typeof HALL === 'object' && HALL.on() ? 'waiter' : '');
     return job ? PLACES[job].tune : ''; };
   const lines = (add) => { Object.entries(TOWN.WORK.hello || {}).forEach(([id, l]) => add(id, l[0])); Object.values(TOWN.WORK.yes || {}).concat([ASK]).forEach((l) => add('hero', l[0])); Object.values(TOWN.WORK.first || {}).forEach((ls) => ls.forEach((l) => add(l[0], l[1]))); Object.values(JOBS).forEach((j) => j.lines && j.lines(add)); };
-  return { N, nOf, PLACES, AREAS, kana, knows, free, tool, ekiTool, ekiOn: ekiFree, areaOpen, can, start, intro, register, has: (job) => Boolean(JOBS[job]), pay, xp, rank, RANKS, POINTS, title, ups, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, ask, board, tune };
+  return { N, nOf, PLACES, AREAS, kana, knows, free, tool, ekiTool, ekiOn: ekiFree, onsenTool, onsenOn: onsenFree, areaOpen, can, start, intro, register, has: (job) => Boolean(JOBS[job]), pay, xp, rank, RANKS, POINTS, title, ups, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, ask, board, tune };
 })();

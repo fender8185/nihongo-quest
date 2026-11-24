@@ -832,6 +832,39 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .rk-art { display: block; width: 100%; height: auto; }
 .rk-art .rk-hc { fill: color-mix(in srgb, var(--c) calc(var(--rk-md, 1) * 100%), var(--n)); } .rk-art .rk-night { opacity: calc(1 - var(--rk-out, 1)); }
 .rk-art .rk-dim { opacity: calc(.12 + .4 * (1 - var(--rk-out, 1))); }
+/* 観光案内所 (2026-11-24, an-): seen from inside the counter — the board 「湯の花温泉 ごあんない」 over it (lit indoors: the same by night),
+   six cards two across on a phone, three on a wider screen; the glass with the racks of leaflets either side and the acrylic speaking
+   board in it, the tourist outside against the day or the night (--day); the replies; あかり or the hero under them */
+.wk-annai .cls-card { background: #f3efe6; color: #2b2b33; border-bottom: 10px solid #2f5a3a; padding: 12px 12px 10px; }
+.wk-annai .cls-x { width: 40px; height: 40px; }
+.an-board { max-height: max(200px, calc(100dvh - 470px)); overflow-y: auto; overscroll-behavior: contain; margin: 4px -6px 6px; padding: 0 4px 4px; border-radius: 10px; background: #6e5236; box-shadow: inset 0 0 0 2px #8a6a46, 0 2px 0 rgba(0, 0, 0, .15); }
+.an-btitle { position: sticky; top: 0; z-index: 1; margin: 0 -4px 4px; padding: 3px 8px 2px; box-shadow: 0 2px 0 #6e5236; border-radius: 6px; background: #2f5a3a; color: #fbf8f0; font-size: 16px; font-weight: 700; letter-spacing: .06em; text-align: center; } .an-btitle rt { font-size: 9px; letter-spacing: 0; color: #d6e6cf; }
+.an-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; } @media (min-width: 600px) { .an-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.an-fac { display: flex; flex-wrap: wrap; align-items: center; align-content: start; gap: 1px 5px; padding: 3px 5px 4px; border-radius: 6px; background: #fbf8f0; box-shadow: 0 1px 0 rgba(0, 0, 0, .2); }
+.an-ic { flex: none; display: block; width: 24px; height: 24px; } .an-ic svg { display: block; width: 100%; height: 100%; }
+.an-nm { flex: 1 1 calc(100% - 29px); min-width: 0; margin: 0; display: grid; line-height: 1.2; } .an-nm b { font-size: 14px; font-weight: 700; } .an-nm small { display: flex; align-items: center; gap: 2px; font-size: 12px; color: #6e5a48; } .an-nm small svg { width: 12px; height: 12px; } .an-nm rt { font-size: 8px; font-weight: 500; color: #6e5a48; }
+.an-hr { font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; } .an-pr { margin-left: auto; font-size: 13px; font-weight: 700; white-space: nowrap; color: #a8322a; } .an-pr.an-free { color: #2f7a4a; }
+.an-rules { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 2px 3px; }
+.an-r { display: inline-flex; align-items: center; gap: 1px; height: 18px; padding: 0 4px; border-radius: 10px; background: #e7f1e3; color: #2f5a3a; font-size: 12px; line-height: 1; white-space: nowrap; }
+.an-r svg { width: 13px; height: 12px; } .an-r b { font-size: 12px; font-weight: 800; } .an-r.an-ok b { color: #23864a; } .an-r.an-ng { background: #f7e5e0; color: #8a463a; } .an-r.an-ng b { color: #c8322a; }
+.an-nm .an-lit { color: #3a4170; font-weight: 700; }
+.an-glass { display: flex; align-items: stretch; margin: 0 -6px; overflow: hidden; border: 3px solid #8a6a46; border-bottom: 9px solid #a8743f; border-radius: 10px 10px 4px 4px; }
+.an-rack { flex: none; display: block; width: 22px; } @media (max-width: 400px) { .an-rack { width: 16px; } } .an-rack svg { display: block; width: 100%; height: 100%; }
+.an-pane { position: relative; flex: 1; min-width: 0; padding: 8px 8px 7px; background: linear-gradient(color-mix(in srgb, #cfe6f2 calc(var(--day, 1) * 100%), #1d2650), color-mix(in srgb, #eef5f2 calc(var(--day, 1) * 100%), #2e3560)); }
+.an-acryl { position: absolute; inset: 4px 6px 0; border: 2px solid rgba(255, 255, 255, .75); border-bottom: 0; border-radius: 12px 12px 0 0; background: linear-gradient(115deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, 0) 34%, rgba(255, 255, 255, .12) 60%, rgba(255, 255, 255, 0)); pointer-events: none; }
+.an-acryl::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 34%; height: 9px; transform: translateX(-50%); border-radius: 10px 10px 0 0; background: rgba(40, 52, 66, .3); }
+.an-pane .wk-cust { margin: 0; min-height: 0; gap: 4px 8px; } .wk-annai .wk-cust .kr-face { width: 40px; height: 40px; }
+.wk-annai .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; padding: 4px 8px; font-size: 16px; line-height: 1.45; } .wk-annai .wk-bub span { font-size: 12.5px; } .wk-annai .wk-bub .wk-ear { grid-row: span 2; } .wk-annai .wk-bub > :not(.wk-ear) { grid-column: 2; }
+.wk-annai .wk-ear { min-height: 40px; min-width: 44px; } .wk-annai .wk-grr { top: -2px; left: 44px; }   /* inside the glass (it clips) */
+.wk-annai .wk-cust:is([data-fun="book"], [data-fun="ghost"], [data-fun="future"])::before { position: absolute; left: 26px; top: 24px; z-index: 1; font-size: 19px; line-height: 1; pointer-events: none; }   /* the face clips (.kr-face): the mark hangs on the row */
+.wk-annai .wk-cust[data-fun="book"]::before { content: '📖'; } .wk-annai .wk-cust[data-fun="ghost"]::before { content: '👻'; } .wk-annai .wk-cust[data-fun="future"]::before { content: '🔮'; }
+.an-opts { display: grid; gap: 5px; margin-top: 6px; }
+.an-opt { min-height: 44px; padding-block: 3px; font-size: 15.5px; line-height: 1.45; text-align: left; justify-content: flex-start; flex-direction: column; align-items: flex-start; white-space: normal; } .an-opt rt { font-size: 9px; }
+.an-opt.an-right { box-shadow: 0 0 0 2px #3f9a6a; } .an-opt:disabled:not(.an-right):not(.wk-hint) { opacity: .5; }
+.an-opt.wk-bad { animation: shake .3s ease; } .an-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
+.an-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } .an-talk .kr-face { width: 34px; height: 34px; flex: none; } .an-talk .wk-say { font-size: 14px; }
+.an-talk[data-who="me"] :is(.kr-face, .wk-say), .an-talk:not([data-who="me"]) .wk-me { display: none; } .an-talk .wk-me { flex: 1; margin: 0; }
+@media (prefers-reduced-motion: reduce) { .an-opt.wk-bad { animation: none; } }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */
 :is(.wk-bento, .wk-window, .wk-lost, .wk-taxi) .wk-ear { min-height: 40px; min-width: 44px; }
 .wk-lock { margin: 10px 0 4px; padding: 8px 10px; border-radius: 10px; background: #fde4cf; color: #8a3a1a; font-size: 14px; line-height: 1.5; }
