@@ -146,10 +146,10 @@ const NAKAI_RUN = (() => {
     const word = ([ja, zh], cls = '') => { if (!el('.nk-talk')) return Promise.resolve(); talk('chiyo', `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`, cls); return speakAs('chiyo', ja); };
     const sayWord = (l, cls) => JOBS.queue(() => word(l, cls), box);   // after any line being said (ruling 27)
     const me = ([ja, zh]) => { if (!el('.nk-talk')) return Promise.resolve(); talk('hero', `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`, 'nk-me'); return speakAs('hero', ja); };
-    const optsHtml = (task) => task.opts.map(([ja], i) => `<button type="button" class="btn nk-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('');
-    function opts(on) {
+    const optsHtml = (task, off) => task.opts.map(([ja], i) => `<button type="button" class="btn nk-opt" data-o="${i}" lang="ja"${off ? ' disabled' : ''}><span>${ruby(ja)}</span></button>`).join('');
+    function opts(on, off) {
       const o = el('.nk-opts'); if (!o) return;
-      o.innerHTML = on ? optsHtml(t) : '';
+      o.innerHTML = on ? optsHtml(t, off) : '';
     }
     // a task begun (fix round 2, ruling 8): its replies and the talk row held for the whole task, as tall as the most they will show —
     // 千代's word to each wrong reply with its why, or to a wrong tap, her 「いそいで！」 and her 「ありがとう」s; the hero's right reply (its 中文
@@ -159,8 +159,9 @@ const NAKAI_RUN = (() => {
       const S0 = S(), line = ([ja, zh], hero) => `<b lang="ja">${ruby(ja)}</b>${hero && !first ? '' : `<span>${esc(zh)}</span>`}`;
       const row = (id, html, hero) => [`<span class="kr-face nk-mini">${face(id)}</span><p class="wk-say${hero ? ' nk-me' : ''}">${html}</p>`, { 'data-who': id }];
       JOBS.hold(el('.nk-opts'), t.opts ? [optsHtml(t)] : []);
+      const before = t.kind === 'check' ? [k === 0 && !ctx.done ? S0.start : null, S0.rooms[ri], st && st.cat ? S0.cat : null].filter(Boolean) : [];   // a check laid out before 千代 says the room (lay): her words till she asks too
       JOBS.hold(el('.nk-talk'), () => (t.opts ? t.opts.filter((o) => !o[2]).map((o) => row('chiyo', line([(o[3] === 'form' ? S0.form : S0.fact)[0], o[1]]))).concat(t.opts.filter((o) => o[2]).map((o) => row('hero', line(o, true), true)))
-        : [S0.miss, S0.hurry].concat(S0.ok).map((l) => row('chiyo', line(l)))));
+        : [S0.miss, S0.hurry].concat(S0.ok).map((l) => row('chiyo', line(l)))).concat(before.map((l) => row('chiyo', line(l))), k >= N - 1 ? [S0.end, S0.all].map((l) => row('chiyo', line(l))) : []));   // the last task: 千代's closing word too (fix round 3)
       JOBS.bring(el('.cls-card'), t.opts ? el('.nk-talk') : null, el('.nk-stage'));   // the room kept in sight first on the smallest phones (bring)
     }
     // the room drawn (washitsuArt); a thing just changed comes in with a little pop (laid ones dropping in) while the old fades out,
@@ -283,8 +284,13 @@ const NAKAI_RUN = (() => {
       draw(); const s = el('.nk-stage'); if (s) { s.classList.remove('nk-enter'); void s.offsetWidth; s.classList.add('nk-enter'); }
     }
     const guestOff = () => { const c = el('.cls-card'); if (c) c.classList.remove('nk-guest'); };
+    // a room's check laid out as the room comes, before 千代 says which room it is (fix round 3: laid out only after it, the room grew by
+    // up to 67 px under her word at 390×664 as the last guest's taller replies gave way to hers) — its replies not yet to be tapped
+    let laid = null;
+    function lay(task) { t = task; miss = 0; hint = false; guestOff(); who('chiyo'); bub(false); opts(true, true); holdTask(); laid = task; }
     async function check(task) {
-      t = task; miss = 0; hint = false; guestOff(); who('chiyo'); bub(false); opts(true); holdTask(); phase = 'ask';
+      const was = laid === task; laid = null;
+      t = task; miss = 0; hint = false; guestOff(); who('chiyo'); bub(false); opts(true); if (!was) holdTask(); phase = 'ask';
       const p = until(); await JOBS.line('chiyo', task.line[0], box); return p;
     }
     async function instruct(task, firstDo) {
@@ -327,7 +333,7 @@ const NAKAI_RUN = (() => {
         t = tasks[k]; setN();
         if (t.room !== ri) {
           enter(t.room);
-          if (t.kind === 'check') { await sayWord(S().rooms[ri]); if (!live()) return; if (st.cat) { await sayWord(S().cat); if (!live()) return; } }
+          if (t.kind === 'check') { lay(t); await sayWord(S().rooms[ri]); if (!live()) return; if (st.cat) { await sayWord(S().cat); if (!live()) return; } }
         }
         const rm = shift.rooms[ri];
         if (t.kind === 'check') { await check(t); if (!live()) return; k++; }

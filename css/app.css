@@ -719,7 +719,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .kb-fares { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .kb-fare { display: grid; justify-items: center; min-height: 48px; padding: 4px; border: 0; border-radius: 8px; background: #fbf7ec; font-size: 19px; font-weight: 700; color: #2b2b33; box-shadow: 0 3px 0 #b8b2a4; cursor: pointer; } .kb-fare small { font-size: 10px; font-weight: 400; color: #8a7a6e; } .kb-fare.on { box-shadow: 0 0 0 3px #f2c94c, 0 3px 0 #b8b2a4; }
 .kb-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .kb-wallet { display: flex; align-items: center; gap: 4px; padding: 4px 10px; white-space: nowrap; border-radius: 999px; background: #fbf7ec; font-weight: 700; } .kb-pay { min-height: 44px; }
 .kb-slot { display: grid; gap: 6px; justify-items: center; } .kb-ticket { display: grid; justify-items: center; padding: 6px 14px; border-radius: 4px; background: #f6e7c0; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); animation: mdPrint .7s ease-out; } .kb-ticket b { font-size: 18px; } .kb-ticket small { color: #8a7a6e; font-size: 11px; }
-.kb-tip { margin: 0; font-size: 13px; color: #fff; } .kb-tip .kb-nw { white-space: nowrap; }   /* 「払いもどし」 whole on its line (fix round 2: 「払い／もどし」 at 360) */ .kb-ride { min-height: 44px; }
+.kb-tip { margin: 0; font-size: 13px; color: #fff; } :is(.kb-tip, .kb-screen) .kb-nw { white-space: nowrap; }   /* 「払いもどし」 whole on its line, in the tip and the screen's 中文 (fix rounds 2–3: 「払い／もどし」 at 360, 「払いもど／し」 at 390) */ .kb-ride { min-height: 44px; }
 /* 2026-11-25 (the user: tickets only where walking cannot take you; one at a time): a button each ticket the machine sells, its station
    named under its fare (the town's three: one, wide; 湯の花's: two); off while a ticket is held; why the town's sell only the one (a note
    under the chart); 払いもどし beside the ride; 跳過 in the car's top right corner, every ride (the user's pick: 「車上右上角」) */
@@ -1035,7 +1035,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .fr-tip { margin: 2px 0; padding: 6px 10px; border-radius: 8px; background: #fbeee0; color: #6a3a1c; font-size: 13.5px; line-height: 1.5; }
 .fr-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; }   /* as tall as the tallest line each guest may bring: JOBS.hold (fix round 2, ruling 8) */
 @media (max-height: 699px) {   /* a short phone (fix round 1): the フロント a little closer set — the book's rows, the lobby (its room over the face for the mood mark kept: M-3), the replies and the talk row each a few px tighter, more room for the book and keys (fix round 2's column); nothing smaller to read or to tap (the replies 42 px) */
-  .wk-front .wk-head { padding-top: 8px; } .wk-front .fr-row { padding-block: 1px; } .wk-front .fr-lobby { margin-top: 4px; padding-bottom: 5px; }
+  .wk-front .fr-row { padding-block: 1px; } .wk-front .fr-lobby { margin-top: 4px; padding-bottom: 5px; }
   .wk-front .fr-opts { gap: 4px; margin-top: 4px; } .wk-front .fr-opt { min-height: 42px; } .wk-front .fr-talk { margin-top: 3px; }
 } .fr-talk .kr-face { width: 34px; height: 34px; flex: none; } .fr-talk .wk-say { font-size: 14px; }
 .fr-talk[data-who="me"] :is(.kr-face, .wk-say), .fr-talk:not([data-who="me"]) .wk-me { display: none; } .fr-talk .wk-me { flex: 1; margin: 0; }
@@ -1046,7 +1046,8 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
    inside itself (its foot fading while there is more below: wk-more, as iOS hides scrollbars), down to its floor; on a tall screen it
    shows whole. Floors: the book's title, its head and two rows with the keys' first two rows (120); the board's title and one facility
    card whole (140: they run 95–109 px); the room drawn at 140 px tall at the least (a guest's three two-line replies fit a 360×640 phone
-   so; at a do task, where the replies' place is empty, it is taller and its things 40 px or more to tap); the shelves' top row whole (110) */
+   so; at a do task, where the replies' place is empty, it is taller and its things 40 px or more to tap); the shelves' top row whole, its
+   price tags included (136; fix round 3) */
 :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card { --wk-top: clamp(0px, calc(50dvh - 420px), 160px); margin-top: var(--wk-top); padding-top: 0; display: flex; flex-direction: column;
   max-height: calc(100dvh - max(16px, env(safe-area-inset-top, 0px)) - max(16px, env(safe-area-inset-bottom, 0px)) - var(--wk-top)); }
 :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card > * { flex-shrink: 0; }
@@ -1056,7 +1057,21 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .wk-front .cls-card > .fr-desk { flex: 1 1 auto; min-height: 120px; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(6px + var(--wk-under, 0px)); }
 .wk-annai .cls-card > .an-board { flex: 1 1 auto; min-height: 140px; padding-top: var(--wk-under, 0px); } .wk-annai .an-btitle { top: var(--wk-under, 0px); }
 .wk-nakai .cls-card > .nk-stage { flex: 1 1 auto; min-height: 140px; display: flex; } .wk-nakai .nk-art { flex: 1 1 auto; min-height: 0; display: flex; } .wk-nakai .nk-art svg { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; }
-.wk-miyage .cls-card > .om-shop { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; } .wk-miyage .om-shelves { flex: 1 1 auto; min-height: 110px; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(5px + var(--wk-under, 0px)); } .wk-miyage .om-front { flex: none; }
+/* the おみやげ屋 (fix round 3, ruling 11): its shop no box of its own — the shelves alone shrink and scroll (their floor: the top row whole,
+   its price tags included: 136), the front (the customer, their bubble, the tray and どうぞ) a fixed part of the column, never cut; the
+   replies' place never blank: the buttons on show for the whole customer, their words not yet shown before the reply step (……) */
+.wk-miyage .cls-card > .om-shop { display: contents; }
+.wk-miyage .om-shelves { flex: 1 1 auto; min-height: 136px; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(5px + var(--wk-under, 0px)); margin: 4px -6px 0; border-radius: 10px 10px 0 0; box-shadow: 0 0 0 2px #6e5236; }
+.wk-miyage .om-front { flex: none; margin: 0 -6px; overflow: hidden; border-radius: 0 0 10px 10px; box-shadow: 0 0 0 2px #6e5236; }
+.om-opt.om-later { position: relative; } .om-opt.om-later > span { visibility: hidden; } .om-opt.om-later::after { content: '……'; position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #8a7a6e; letter-spacing: .1em; }
+@media (max-height: 699px) {   /* every iPhone in Safari (fix round 3): the four cards nearer the screen's edges (8 px), their headers 8 px from the top (fix round 1's 8 px for the フロント, which lost to the shared rule: now it wins, for all four), the おみやげ屋's front a little closer set — more room for the reading blocks and the talk rows */
+  .cls:is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) { padding-top: max(8px, env(safe-area-inset-top, 0px)); padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+  :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card { max-height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)) - max(8px, env(safe-area-inset-bottom, 0px)) - var(--wk-top)); }
+  :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .wk-head { padding-top: 8px; } :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .wk-head b { font-size: 18px; }
+  :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card { padding-bottom: 6px; border-bottom-width: 6px; } .wk-miyage .om-shelves { margin-top: 2px; }
+  .om-noren { height: 14px; padding-top: 3px; } .om-noren svg { height: 9px; } .om-door { padding-block: 2px 4px; } .om-counter { padding-block: 4px 5px; }
+  .wk-miyage .om-opts { gap: 4px; margin-top: 4px; } .wk-miyage .om-talk { margin-top: 3px; }
+}
 @media (prefers-reduced-motion: reduce) { :is(.fr-opt, .fr-key).wk-bad, .fr-bell.fr-ding .fr-cap, .fr-dn.fr-new { animation: none; } }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */
 :is(.wk-bento, .wk-window, .wk-lost, .wk-taxi) .wk-ear { min-height: 40px; min-width: 44px; }

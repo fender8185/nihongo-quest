@@ -64,7 +64,7 @@ const RIDE = (() => {
       ${yamaRow(here)}<p class="md-key"><span>大人（円）</span><span lang="ja">${ruby(st(here))}から</span></p></div>`;
     const note = NEAR[here] ? `<p class="kb-note">${NEAR[here]}走路或坐公車就到了（免費），這裡只賣去湯の花的票。</p>` : '';   // the town's three: why only the one
     const q = (s) => document.querySelector('.kb-card ' + s);
-    const screen = (l, cls = '') => { const e = q('.kb-screen'); if (e) { e.innerHTML = `<b lang="ja">${ruby(l[0])}</b><span>${esc(l[1])}</span>`; e.className = 'kb-screen' + (cls ? ' ' + cls : ''); } };
+    const screen = (l, cls = '') => { const e = q('.kb-screen'); if (e) { e.innerHTML = `<b lang="ja">${ruby(l[0])}</b><span>${esc(l[1]).replace(/払いもどし/g, '<span class="kb-nw" lang="ja">払いもどし</span>')}</span>`; e.className = 'kb-screen' + (cls ? ' ' + cls : ''); } };
     // short of money: refused, the wallet untouched; the app's own way home (書房 — on a phone its button is not on the screen in a
     // place, so the card has it); 円 come from the cruise and the jobs
     const homeHint = () => { const sl = q('.kb-slot'); if (sl && !sl.querySelector('.os-home')) sl.insertAdjacentHTML('beforeend', `<p class="kb-tip">錢不夠搭車：先回書房吧。帶郵輪的客人、打工都能賺円。</p><button type="button" class="btn os-home">‹ 書房</button>`); };

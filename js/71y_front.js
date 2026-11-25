@@ -180,7 +180,7 @@ const FRONT_RUN = (() => {
     // to a wrong key, his 「結構で ございます」s, his word as 道山 goes; the hero's greetings, each reply, the room as the key is handed
     // over, dinner's 「かしこまりました」
     const talkLines = (t) => ({
-      drv: t.opts.filter((o) => !o[2] && A[o[3]]).map((o) => [A[o[3]][0], o[1]]).concat(t.steps ? [[A.key[0], F.keyWhy]] : [], t.fun === 'michiyama' ? [A.lost] : [], A.ok),
+      drv: t.opts.filter((o) => !o[2] && A[o[3]]).map((o) => [A[o[3]][0], o[1]]).concat(t.steps ? [[A.key[0], F.keyWhy]] : [], t.fun === 'michiyama' ? [A.lost] : [], A.ok, D && D.now() && D.now().k >= N - 1 ? [A.end, A.all] : []),   // the last guest: 佐藤's closing word too (fix round 3)
       me: [F.hi.in, F.hi.am, F.hi.pm].concat(t.opts.map((o) => [o[0], o[1]]), t.steps && t.room ? [FRONT.roomLine(t.who, t.room)] : [], t.kind === 'dinner' ? [F.ok] : []) });
     // a guest comes up: the bell rung, the book and the board unlit, the card from its top (the book first); their luggage in hand
     function draw(t) {

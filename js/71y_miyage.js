@@ -150,10 +150,17 @@ const MIYAGE_RUN = (() => {
     const trayKey = () => R.tray.slice().sort().join();   // the tray as it stands (a tray handed over and not it: どうぞ off till this changes)
     const hint = () => all('.om-good').forEach((b) => b.classList.toggle('wk-hint', R.c.lit.includes(b.dataset.g)));
     const unhint = () => all('.om-good.wk-hint').forEach((b) => b.classList.remove('wk-hint'));
-    const optsHtml = (c) => c.opts.map(([ja], i) => `<button type="button" class="btn om-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('');
+    const optsHtml = (c, later) => c.opts.map(([ja], i) => `<button type="button" class="btn om-opt${later ? ' om-later' : ''}" data-o="${i}" lang="ja"${later ? ' disabled' : ''}><span>${ruby(ja)}</span></button>`).join('');
+    // the replies, on show for the whole customer who has any (fix round 3, ruling 11: no blank where they will be or were) — to pick at
+    // the reply step; before it (a taste's too, as the hero greets them), each in its place, its words not yet shown (om-later: ……);
+    // after it, as they were left (the right one marked, the rest disabled), through a taste and the pick after it — never the customer
+    // before's (at 360×640 a taste's greeting showed the last customer's replies, and its own then came in taller)
     function opts(on) {
-      const o = el('.om-opts'); if (!o) return;
-      o.innerHTML = on ? optsHtml(R.c) : '';
+      const o = el('.om-opts'); if (!o || !R) return; const c = R.c;
+      if (!c.opts) { o.innerHTML = ''; delete o.dataset.k; return; }
+      if (on) { o.innerHTML = optsHtml(c); o.dataset.k = R.k; return; }
+      if (R.phase === 'hi' || R.step < MIYAGE.steps(c).indexOf('reply') || o.dataset.k !== String(R.k) || !o.querySelector('.om-opt:not(.om-later)')) { o.innerHTML = optsHtml(c, true); o.dataset.k = R.k; return; }
+      o.querySelectorAll('.om-opt').forEach((b) => { b.disabled = true; });
     }
     // what may come to the talk row at a customer (fix round 2, ruling 8: the row held as tall as the tallest) — 竹内's word to a tray
     // that is not it (each reason) or to a wrong reply with its why, to a taste, his 「ありがとうございました」s; the customer's own word to a
@@ -164,7 +171,7 @@ const MIYAGE_RUN = (() => {
       const line = (ja, zh) => `<b lang="ja">${ruby(ja)}</b>${zh ? `<span>${esc(zh)}</span>` : ''}`;
       const row = (id, html, cls = '') => [`<span class="kr-face om-mini">${TOWNEV.face(id)}</span><p class="wk-say${cls ? ' ' + cls : ''}">${html}</p>`, { 'data-who': id }];
       JOBS.hold(el('.om-talk'), () => [...whys.map((w) => row(A.who, line(A.pick[0], w))), ...(c.opts || []).filter((o) => !o[2]).map((o) => row(A.who, line(A.form[0], o[1]))),
-        ...[A.taste, ...A.ok, ...A.sell].filter(Boolean).map((l) => row(A.who, line(l[0], l[1]))), ...own.map(([l, w]) => row(c.who, line(l[0], w || s.why.other))),
+        ...[A.taste, ...A.ok, ...A.sell, ...(k >= N - 1 ? [A.end, A.all] : [])].filter(Boolean).map((l) => row(A.who, line(l[0], l[1]))), ...own.map(([l, w]) => row(c.who, line(l[0], w || s.why.other))),   // the last customer: 竹内's closing word too (fix round 3)
         ...[s.hi, s.give, ...(c.opts || []).filter((o) => o[2])].map((l) => row('hero', line(l[0], first ? l[1] : ''), 'om-me'))]);
     }
     function plate() { const p = el('.om-plate'); if (p) p.innerHTML = plateSvg(bits); }

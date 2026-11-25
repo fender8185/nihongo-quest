@@ -199,7 +199,7 @@ const ANNAI_RUN = (() => {
     }
     // what あかり and the hero may say at a tourist (the talk row held as tall as the tallest: TL.keep) — her word to each wrong reply (the
     // board misread, or a form that answers nothing) with its why, her 「ばっちり」s; the hero's greeting and the right reply
-    const talkLines = (t) => ({ drv: t.opts.filter((o) => !o[2]).map((o) => [(o[3] === 'form' ? A.form : A.fact)[0], o[1]]).concat(A.ok), me: [s.hi].concat(t.opts.filter((o) => o[2])) });
+    const talkLines = (t) => ({ drv: t.opts.filter((o) => !o[2]).map((o) => [(o[3] === 'form' ? A.form : A.fact)[0], o[1]]).concat(A.ok, D && D.now() && D.now().k >= N - 1 ? [A.end, A.all] : []), me: [s.hi].concat(t.opts.filter((o) => o[2])) });   // the last tourist: あかり's closing word too (fix round 3)
     // the desk's flow (ruling 28: JOBS.desk): the tourist's question heard first, three replies — the right one said, their thanks (a fun
     // tourist their own word, in the bubble), now and then あかり's word; a wrong one: あかり says what kind of miss it is (the board misread,
     // or a form that answers nothing) with why under it, and it cannot be picked again; the question shown, the tourist still there to
