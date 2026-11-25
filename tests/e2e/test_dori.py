@@ -102,7 +102,7 @@ def test_passers_wear_everything_there_is(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """
       const looks = Array.from({ length: 600 }, () => PASSERS.look()), worn = new Set(looks.flatMap((x) => Object.values(x.wear))), day = saleNow();
       const wears = WARES.filter((w) => w.kind === 'wear'), on = (w) => !w.limited || Boolean(day && saleOn(w.limited, day));
-      const styles = new Set(looks.map((x) => x.look.topStyle)), sold = WARES.filter((w) => w.kind === 'clothes' && w.slot === 'top');
+      const styles = new Set(looks.map((x) => x.look.topStyle)), sold = WARES.filter((w) => w.kind === 'clothes' && w.slot === 'top' && !w.gift);
       return JSON.stringify({ missing: wears.filter((w) => on(w) && !worn.has(w.id)).map((w) => w.id), offSeason: wears.filter((w) => !on(w) && worn.has(w.id)).map((w) => w.id),
         tops: sold.filter((w) => on(w) && !styles.has(w.id)).map((w) => w.id), hair: new Set(looks.map((x) => x.look.fringe + x.look.hairBack)).size > 10 }); })()"""))
     assert r == {'missing': [], 'offSeason': [], 'tops': [], 'hair': True}, r

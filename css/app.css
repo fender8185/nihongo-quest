@@ -974,7 +974,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
    34 px while they fit, then smaller as more come, down to 24 px, then each further over the one before (the last put always whole on
    top); sized from the tray's own width (--om-n: how many, set by the run), so a turn of the phone sizes them again */
 .om-chip { --om-s: clamp(24px, (100cqw - 1px) / (var(--om-n, 1) * .88), 34px); display: block; flex: none; width: var(--om-s); height: var(--om-s); margin-left: calc(min(var(--om-s) * .88, (100cqw - 1px) / var(--om-n, 1)) - var(--om-s)); pointer-events: none; }
-@supports not (width: 1cqw) { .om-chip { --om-s: 24px; } }   /* no container units (Safari before 16): one size, the row never wrapping */
+@supports not (width: 1cqw) { .om-chip { --om-s: 24px; margin-left: calc(min(21px, 100% / var(--om-n, 1)) - 24px); } }   /* no container units (Safari before 16): one size, the row never wrapping, each over the one before by the tray's own width (a margin's % is its width) so 金田's last goods stay off どうぞ (task 2 review, Minor 2) */
 .om-chip .pic { width: 100%; height: 100%; --pic-disc: rgba(255, 246, 226, .85); }   /* on the tray: taken off again by a tap on the tray (the tray takes it: the chip under the tap, else the nearest) or on its place on the shelf */
 .om-tray:has(.om-chip) { cursor: pointer; } @media (hover: hover) { .om-tray:has(.om-chip):hover { box-shadow: inset 0 0 0 2px #e8845e, inset 0 3px 7px rgba(0, 0, 0, .4), 0 2px 0 rgba(40, 20, 10, .35); } }   /* a tray with goods on it is tapped too: a desk's cue (2026-11-25, parked from Task 6) */
 .om-chip.om-in { animation: omIn .28s ease-out; } @keyframes omIn { from { opacity: 0; transform: translateY(-12px) scale(.8); } }

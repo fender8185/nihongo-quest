@@ -154,7 +154,7 @@ const JOBS = (() => {
     if (!e || !e.isConnected) return () => {};
     reads.forEach((_, x) => { if (!x.isConnected) reads.delete(x); });   // blocks gone from the page let go (as hold's)
     let f = reads.get(e);
-    if (!f) { f = () => e.classList.toggle('wk-more', e.scrollHeight - e.clientHeight - e.scrollTop > 2); reads.set(e, f); e.addEventListener('scroll', f, { passive: true }); if (typeof ResizeObserver === 'function') new ResizeObserver(f).observe(e); }
+    if (!f) { f = () => e.classList.toggle('wk-more', e.scrollHeight - e.clientHeight - e.scrollTop > 2 + (parseFloat(getComputedStyle(e).paddingBottom) || 0)); reads.set(e, f); e.addEventListener('scroll', f, { passive: true }); if (typeof ResizeObserver === 'function') new ResizeObserver(f).observe(e); }   // its own foot padding is not "more" (task 2 review, Minor 1)
     return () => { e.scrollTop = 0; f(); };
   }
   // what is lit in a reading block (a book's row, a key) brought into sight inside the block itself — never the card's own scroll: into
