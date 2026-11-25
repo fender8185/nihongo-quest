@@ -124,16 +124,19 @@ const JOBS = (() => {
   const custHtml = (who) => `<span class="kr-face">${TOWNEV.face(who)}</span><i class="wk-emo"></i><p class="wk-bub"></p><span class="wk-pat"><i></i></span>`;
   // a bubble kept, for one customer (or task), as tall as the most it will show (2026-11-25, the user: 「新的打工回答會跑版，版面會因為回覆
   // 導致版面向上擠壓」): their words shown on a reply, a miss or as they go, a word after — never growing it, so nothing under it moves and a
-  // short phone's card never scrolls itself for it mid-customer. htmls: what it may hold — or a function giving it, asked each time it is
-  // measured (the screen's height read then, not once); each measured in a hidden copy of it the same width; its min-height the tallest
-  // (none: let go). The onsen's four jobs call it as each customer (each task) comes. Measured again, the customer's own, on a resize or
-  // a turn of the phone, and once the web fonts (Noto Sans JP/TC, display=swap) are in (fix round 1, the review's Minor 3)
+  // short phone's card never scrolls itself for it mid-customer. htmls: what it may hold — each an html, or [html, attrs] (the copy's
+  // attributes for it: a talk row's data-who) — or a function giving them, asked each time it is measured; each measured in a hidden copy
+  // of it the same width; its min-height the tallest (none: let go). The onsen's four jobs call it as each customer (each task) comes —
+  // for the bubble, the replies and the talk row (fix round 2, ruling 8). Measured again, the customer's own, on a resize or a turn of
+  // the phone, and once the web fonts (Noto Sans JP/TC, display=swap) are in (fix round 1, the review's Minor 3)
   const held = new Map();   // each element held → what it may hold (its customer's, the latest)
   function measure(b, src) {
-    b.style.minHeight = ''; const list = typeof src === 'function' ? src() : src, w = b.getBoundingClientRect().width; if (!w || !list || !list.length) return;
+    const list = typeof src === 'function' ? src() : src, w = b.getBoundingClientRect().width; if (!w || !list || !list.length) { b.style.minHeight = ''; return; }
+    // all measured in the copy, what it shows now too: the element itself never let go meanwhile (a card scrolled to it would be pulled
+    // back to its top as the browser clamps its scroll to a content gone shorter for a moment — fix round 2)
     const c = b.cloneNode(false); c.style.cssText = `position:absolute;left:0;top:0;width:${w}px;min-height:0;visibility:hidden;pointer-events:none`;
-    b.parentNode.appendChild(c); let h = b.getBoundingClientRect().height;
-    list.forEach((x) => { c.innerHTML = x; h = Math.max(h, c.getBoundingClientRect().height); });
+    b.parentNode.appendChild(c); c.innerHTML = b.innerHTML; let h = c.getBoundingClientRect().height;
+    list.forEach((x) => { const [html, attrs] = Array.isArray(x) ? x : [x, null]; c.innerHTML = html; if (attrs) Object.entries(attrs).forEach(([k, v]) => c.setAttribute(k, v)); h = Math.max(h, c.getBoundingClientRect().height); });
     c.remove(); b.style.minHeight = `${Math.ceil(h)}px`;
   }
   function hold(b, htmls) {
@@ -142,7 +145,25 @@ const JOBS = (() => {
     if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(rehold);
   }
   let reholdT = 0;
-  function rehold() { clearTimeout(reholdT); reholdT = setTimeout(() => held.forEach((src, b) => { if (b.isConnected) measure(b, src); else held.delete(b); }), 120); }
+  function rehold() { clearTimeout(reholdT); reholdT = setTimeout(() => { held.forEach((src, b) => { if (b.isConnected) measure(b, src); else held.delete(b); }); reads.forEach((f, e) => { if (e.isConnected) f(); else reads.delete(e); }); }, 120); }
+  // a card's reading block (fix round 2, ruling 8: the フロント's book and keys, the 案内所's board, the おみやげ屋's shelves) takes what the
+  // card has left and scrolls inside itself: while there is more below what shows, its foot fades (wk-more; iOS hides scrollbars). once:
+  // its listeners, top(): back at its top as a customer starts
+  const reads = new Map();
+  function reading(e) {
+    if (!e || !e.isConnected) return () => {};
+    let f = reads.get(e);
+    if (!f) { f = () => e.classList.toggle('wk-more', e.scrollHeight - e.clientHeight - e.scrollTop > 2); reads.set(e, f); e.addEventListener('scroll', f, { passive: true }); if (typeof ResizeObserver === 'function') new ResizeObserver(f).observe(e); }
+    return () => { e.scrollTop = 0; f(); };
+  }
+  // what is lit in a reading block (a book's row, a key) brought into sight inside the block itself — never the card's own scroll: into
+  // the part of the block the card shows, under its header should that be stuck at the top
+  function inSight(block, e) {
+    if (!block || !e || !block.isConnected) return;
+    const card = block.closest('.cls-card'), head = card && card.querySelector('.wk-head'), b = block.getBoundingClientRect(), r = e.getBoundingClientRect();
+    const ct = card ? card.getBoundingClientRect().top + card.clientTop : b.top, top = Math.max(b.top, ct, head ? head.getBoundingClientRect().bottom : -Infinity), bot = Math.min(b.bottom, card ? ct + card.clientHeight : b.bottom);
+    if (r.top < top) block.scrollTop -= top - r.top + 4; else if (r.bottom > bot) block.scrollTop += Math.min(r.bottom - bot + 4, r.top - top);
+  }
   window.addEventListener('resize', rehold); window.addEventListener('orientationchange', rehold);
   if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', rehold);   // a later subset of a font in (a glyph not seen before)
   // ---- a desk (2026-11-24, ruling 28): the flow 原田's window, the 観光案内所 and the フロント share — one customer after another: the
@@ -226,25 +247,43 @@ const JOBS = (() => {
     }
     return { start: show, click, now: () => R, right: () => right(), miss: (b, l) => wrong(b, l), live, el, all };
   }
-  // ---- a card's talk line (2026-11-25, Task 7's fix round, M-10 — ruling 28's way: the 観光案内所's and the フロント's, the おみやげ屋's
-  // self-scroll): the line under the replies the keeper and the hero share, whoever spoke last — the keeper's word with its 中文 (or a
-  // miss's why under it), the hero's line with its 中文 on the job's first shift only (ruling 23: under the reply once said, never under
-  // the buttons). On a short phone the card scrolls itself just far enough to show the line — never past the top of keep() (what must
-  // stay in sight: the おみやげ屋's shop front, the フロント's book while it is wanted) — and is back at its top for each customer
-  // (toTop). Each line awaited to its end within the lane's cap (said: I-1). o: box() the run's own card, sel the talk line, who the
-  // keeper, first (the job's first shift), keep()
+  // ---- a card's talk line (2026-11-25, Task 7's fix round, M-10 — ruling 28's way: the 観光案内所's and the フロント's, the おみやげ屋's):
+  // the line under the replies the keeper and the hero share, whoever spoke last — the keeper's word with its 中文 (or a miss's why under
+  // it), the hero's line with its 中文 on the job's first shift only (ruling 23: under the reply once said, never under the buttons).
+  // Fix round 2 (ruling 8): the card never scrolls itself on a line — keep(lines) holds the row as tall as the tallest this customer may
+  // bring, and start() puts the card at its top as each customer comes, then, where it is taller than the screen (its header sticky),
+  // scrolls it once to bring the replies and the talk row into sight. Each line awaited to its end within the lane's cap (said: I-1).
+  // o: box() the run's own card, sel the talk line, who the keeper, first (the job's first shift)
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, markRuby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>');
+  // once as a customer starts (its holds laid): the card at its top — and, taller than the screen, scrolled so far that `to` (the talk
+  // row: under it the card's foot) is in sight, its header (✕) stuck at the top meanwhile. The reading block (block: at its floor then)
+  // keeps what the stuck header covers of it as room at its own top (--wk-under): its title and every row still reached by its own scroll.
+  // On the smallest phones (an SE: under 560 px of card) the reading block keeps its floor in sight first — the book for a 備註 question,
+  // the board — the talk row then partly under the fold (the player scrolls to it)
+  function bring(card, to, block) {
+    if (!card) return; card.scrollTop = 0; if (block) block.style.removeProperty('--wk-under');
+    if (!to || card.scrollHeight - card.clientHeight < 1) return;
+    const top = card.getBoundingClientRect().top + card.clientTop, head0 = card.querySelector('.wk-head');
+    let d = to.getBoundingClientRect().bottom - (top + card.clientHeight) + 6;
+    if (block && head0 && card.clientHeight < 560) d = Math.min(d, block.getBoundingClientRect().bottom - head0.getBoundingClientRect().bottom - Math.min(block.getBoundingClientRect().height, parseFloat(getComputedStyle(block).minHeight) || 0));
+    if (d > 0) card.scrollTop = Math.min(d, card.scrollHeight - card.clientHeight);
+    const head = card.querySelector('.wk-head'), u = block && head && card.scrollTop > 0 ? head.getBoundingClientRect().bottom - block.getBoundingClientRect().top : 0;
+    if (u > 0) block.style.setProperty('--wk-under', `${Math.ceil(u)}px`);
+  }
   function talkLine(o) {
     const el = (q) => { const b = o.box(); return b && b.isConnected ? b.querySelector(q) : null; }, card = () => el('.cls-card');
     const glide = () => (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
-    const seeTalk = () => requestAnimationFrame(() => { const c = card(), t = el(o.sel); if (!c || !t) return;
-      const top = c.getBoundingClientRect().top + c.clientTop, d = t.getBoundingClientRect().bottom - (top + c.clientHeight) + 6, k = o.keep ? o.keep() : null, room = k ? k.getBoundingClientRect().top - top - 2 : Infinity;
-      if (d > 0 && room > 0) c.scrollBy({ top: Math.min(d, room), behavior: glide() }); });
     const toTop = () => { const c = card(); if (c) c.scrollTop = 0; };
-    const talk = (who) => { const t = el(o.sel); if (t) t.dataset.who = who; seeTalk(); };
-    const word = ([ja, zh], cls = '') => { talk('drv'); const p = el(`${o.sel} .wk-say`); if (p) { p.innerHTML = `<b lang="ja">${markRuby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(o.who, ja); };
-    const me = ([ja, zh]) => { talk('me'); const p = el(`${o.sel} .wk-me`); if (p) p.innerHTML = `<b lang="ja">${markRuby(ja)}</b>${o.first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
-    return { card, glide, seeTalk, toTop, talk, word, me, said: whole };
+    const start = (block) => bring(card(), el(o.sel), block);
+    const talk = (who) => { const t = el(o.sel); if (t) t.dataset.who = who; };
+    const wordHtml = (ja, zh) => `<b lang="ja">${markRuby(ja)}</b><span>${esc(zh)}</span>`, mine = (ja, zh) => `<b lang="ja">${markRuby(ja)}</b>${o.first ? `<span>${esc(zh)}</span>` : ''}`;
+    const word = ([ja, zh], cls = '') => { talk('drv'); const p = el(`${o.sel} .wk-say`); if (p) { p.innerHTML = wordHtml(ja, zh); p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(o.who, ja); };
+    const me = ([ja, zh]) => { talk('me'); const p = el(`${o.sel} .wk-me`); if (p) p.innerHTML = mine(ja, zh); return speakAs('hero', ja); };
+    // lines(): { drv: the keeper's [ja, zh]s, me: the hero's } this customer may bring — each laid out as word() and me() lay it
+    const keep = (lines) => hold(el(o.sel), () => { const t = el(o.sel), L = lines(); if (!t || !L) return [];
+      const face = t.querySelector('.kr-face') ? t.querySelector('.kr-face').outerHTML : '', row = (who, html) => [`${face}<p class="wk-say">${who === 'drv' ? html : ''}</p><p class="wk-me">${who === 'me' ? html : ''}</p>`, { 'data-who': who }];
+      return [...(L.drv || []).filter(Boolean).map(([ja, zh]) => row('drv', wordHtml(ja, zh))), ...(L.me || []).filter(Boolean).map(([ja, zh]) => row('me', mine(ja, zh)))]; });
+    return { card, glide, toTop, start, talk, word, me, keep, said: whole };
   }
   const COUNTER_SECS = 5, TILL_SECS = [0, 30, 45];   // a customer's patience (s): 站櫃's one (5, 2026-11-20: 20 was too long), from the end of their asking; 收銀's by the things bought
   const MISS_COST = { counter: 0.2, till: 0.1 };   // of a whole patience: the wrong thing handed, a wrong piece said
@@ -553,5 +592,5 @@ const JOBS = (() => {
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
   WORK.register('till', { run: tillRun, lines: tillLines, left: tillLeft, open: allNums });
-  return { pat: PAT, clock, said, whole, LINE_CAP, voice, quiet, queue, line, missWord, grr, patience, custHtml, hold, desk, talkLine, goodPic, rng, pickR, shuffleR, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
+  return { pat: PAT, clock, said, whole, LINE_CAP, voice, quiet, queue, line, missWord, grr, patience, custHtml, hold, reading, inSight, bring, desk, talkLine, goodPic, rng, pickR, shuffleR, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
 })();

@@ -79,7 +79,7 @@ const RIDE = (() => {
       const w = q('.kb-wallet'); if (w) w.innerHTML = `${yenIcon()}${yenStr(yenBalance())} 円`;
       if (!t) { s.innerHTML = ''; return; }
       const mine = t.from === here && t.to;
-      const tip = !mine ? `<p class="kb-tip">${t.from === here ? '這張是以前的票，現在已經沒有車可以搭了' : `這張是${esc(EKI.name(t.from))}出發的票，在這裡不能搭`}：按「払いもどし」退票，錢全部退回錢包，就能再買。</p>`
+      const tip = !mine ? `<p class="kb-tip">${t.from === here ? '這張是以前的票，現在已經沒有車可以搭了' : `這張是${esc(EKI.name(t.from))}出發的票，在這裡不能搭`}：按「<span class="kb-nw" lang="ja">払いもどし</span>」退票，錢全部退回錢包，就能再買。</p>`
         : here === 'minato' ? '<p class="kb-tip">從剪票口上月台：1番線（往白鷺）的電車已經停著等你，上車就好，到白鷺換やまなみ線。</p>' : '';
       s.innerHTML = `<div class="kb-ticket" data-from="${t.from}" data-to="${t.to}">${faceOf(t)}</div>${tip}<div class="os-rides">${mine && here !== 'minato' ? rideBtn : ''}${backBtn()}</div>`;
     }

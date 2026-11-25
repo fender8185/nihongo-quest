@@ -146,10 +146,22 @@ const NAKAI_RUN = (() => {
     const word = ([ja, zh], cls = '') => { if (!el('.nk-talk')) return Promise.resolve(); talk('chiyo', `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`, cls); return speakAs('chiyo', ja); };
     const sayWord = (l, cls) => JOBS.queue(() => word(l, cls), box);   // after any line being said (ruling 27)
     const me = ([ja, zh]) => { if (!el('.nk-talk')) return Promise.resolve(); talk('hero', `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`, 'nk-me'); return speakAs('hero', ja); };
+    const optsHtml = (task) => task.opts.map(([ja], i) => `<button type="button" class="btn nk-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('');
     function opts(on) {
-      const o = el('.nk-opts'), c = el('.cls-card'); if (!o) return;
-      o.innerHTML = on ? t.opts.map(([ja], i) => `<button type="button" class="btn nk-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('') : '';
-      if (c) c.classList.toggle('nk-ask', Boolean(on));   // a short phone: the room drawn a little smaller while a reply is picked
+      const o = el('.nk-opts'); if (!o) return;
+      o.innerHTML = on ? optsHtml(t) : '';
+    }
+    // a task begun (fix round 2, ruling 8): its replies and the talk row held for the whole task, as tall as the most they will show —
+    // 千代's word to each wrong reply with its why, or to a wrong tap, her 「いそいで！」 and her 「ありがとう」s; the hero's right reply (its 中文
+    // on the job's first shift); the room takes what is left; the card from its top — at a reply, taller than the screen, scrolled once
+    // to the replies and the talk row (its header with ✕ stuck at the top)
+    function holdTask() {
+      const S0 = S(), line = ([ja, zh], hero) => `<b lang="ja">${ruby(ja)}</b>${hero && !first ? '' : `<span>${esc(zh)}</span>`}`;
+      const row = (id, html, hero) => [`<span class="kr-face nk-mini">${face(id)}</span><p class="wk-say${hero ? ' nk-me' : ''}">${html}</p>`, { 'data-who': id }];
+      JOBS.hold(el('.nk-opts'), t.opts ? [optsHtml(t)] : []);
+      JOBS.hold(el('.nk-talk'), () => (t.opts ? t.opts.filter((o) => !o[2]).map((o) => row('chiyo', line([(o[3] === 'form' ? S0.form : S0.fact)[0], o[1]]))).concat(t.opts.filter((o) => o[2]).map((o) => row('hero', line(o, true), true)))
+        : [S0.miss, S0.hurry].concat(S0.ok).map((l) => row('chiyo', line(l)))));
+      JOBS.bring(el('.cls-card'), t.opts ? el('.nk-talk') : null, el('.nk-stage'));   // the room kept in sight first on the smallest phones (bring)
     }
     // the room drawn (washitsuArt); a thing just changed comes in with a little pop (laid ones dropping in) while the old fades out,
     // a thing put back its own way — the light: the whole room dims or brightens
@@ -272,11 +284,11 @@ const NAKAI_RUN = (() => {
     }
     const guestOff = () => { const c = el('.cls-card'); if (c) c.classList.remove('nk-guest'); };
     async function check(task) {
-      t = task; miss = 0; hint = false; guestOff(); who('chiyo'); bub(false); opts(true); phase = 'ask';
+      t = task; miss = 0; hint = false; guestOff(); who('chiyo'); bub(false); opts(true); holdTask(); phase = 'ask';
       const p = until(); await JOBS.line('chiyo', task.line[0], box); return p;
     }
     async function instruct(task, firstDo) {
-      t = task; miss = 0; hint = false; guestOff(); who('chiyo'); bub(false); opts(false); phase = 'do';
+      t = task; miss = 0; hint = false; guestOff(); who('chiyo'); bub(false); opts(false); holdTask(); phase = 'do';
       const p = until(); await JOBS.line('chiyo', task.line[0], box);   // heard first, the countdown held while she says it
       if (live() && P) { if (firstDo) P.go(); else P.resume(); }
       return p;
@@ -292,11 +304,10 @@ const NAKAI_RUN = (() => {
       const g = NAKAI.guest(st, plan.plan, guests, NAKAI.rng((seed + 7919 * (k + 1)) >>> 0), wants);
       if (!g) { console.error(`仲居: nothing in room ${rm.id} (seed ${seed}) for a guest to remark on`); ctx.right(k, 0); if (k >= N - 1) { closeShift(Promise.resolve()); return new Promise(() => {}); } return 'none'; }
       guests.push(g.key); t = Object.assign({}, g, { k, room: ri }); miss = 0; hint = false;
-      SND.play('fusuma', { vol: 0.5 }); who(g.who); bub(false); opts(true); phase = 'ask'; const c = el('.cls-card'); if (c) c.classList.add('nk-guest');
+      SND.play('fusuma', { vol: 0.5 }); who(g.who); bub(false); opts(true); phase = 'ask'; const c = el('.cls-card'); if (c) c.classList.add('nk-guest'); holdTask();
       const p = until(); await JOBS.line(g.who, g.line[0], box); return p;
     }
-    CLASS.card('wk-nakai', '仲居', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
-      <div class="wk-head"><b lang="ja"><ruby>仲居<rt>なかい</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span></div>
+    CLASS.card('wk-nakai', '仲居', `<div class="wk-head"><b lang="ja"><ruby>仲居<rt>なかい</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
       <div class="nk-top"><p class="nk-room" lang="ja"></p><div class="nk-dep idle" role="timer" aria-label="客人到達前的倒數"><span lang="ja">お<ruby>客<rt>きゃく</rt></ruby><ruby>様<rt>さま</rt></ruby> <ruby>到着<rt>とうちゃく</rt></ruby>まで</span><i><b></b></i></div></div>
       <div class="nk-stage"><div class="nk-art"></div></div>
       <div class="nk-task"><span class="kr-face nk-face"></span><p class="nk-bub"></p></div>

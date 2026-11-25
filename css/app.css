@@ -719,7 +719,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .kb-fares { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .kb-fare { display: grid; justify-items: center; min-height: 48px; padding: 4px; border: 0; border-radius: 8px; background: #fbf7ec; font-size: 19px; font-weight: 700; color: #2b2b33; box-shadow: 0 3px 0 #b8b2a4; cursor: pointer; } .kb-fare small { font-size: 10px; font-weight: 400; color: #8a7a6e; } .kb-fare.on { box-shadow: 0 0 0 3px #f2c94c, 0 3px 0 #b8b2a4; }
 .kb-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .kb-wallet { display: flex; align-items: center; gap: 4px; padding: 4px 10px; white-space: nowrap; border-radius: 999px; background: #fbf7ec; font-weight: 700; } .kb-pay { min-height: 44px; }
 .kb-slot { display: grid; gap: 6px; justify-items: center; } .kb-ticket { display: grid; justify-items: center; padding: 6px 14px; border-radius: 4px; background: #f6e7c0; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); animation: mdPrint .7s ease-out; } .kb-ticket b { font-size: 18px; } .kb-ticket small { color: #8a7a6e; font-size: 11px; }
-.kb-tip { margin: 0; font-size: 13px; color: #fff; } .kb-ride { min-height: 44px; }
+.kb-tip { margin: 0; font-size: 13px; color: #fff; } .kb-tip .kb-nw { white-space: nowrap; }   /* 「払いもどし」 whole on its line (fix round 2: 「払い／もどし」 at 360) */ .kb-ride { min-height: 44px; }
 /* 2026-11-25 (the user: tickets only where walking cannot take you; one at a time): a button each ticket the machine sells, its station
    named under its fare (the town's three: one, wide; 湯の花's: two); off while a ticket is held; why the town's sell only the one (a note
    under the chart); 払いもどし beside the ride; 跳過 in the car's top right corner, every ride (the user's pick: 「車上右上角」) */
@@ -854,11 +854,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
    from the start, the tourist's bubble as tall as their words (JOBS.hold): a reply moves nothing */
 .cls.wk-annai { align-items: start; }
 .wk-annai .cls-x { width: 40px; height: 40px; }
-/* fix round 1 (the review's Minor 5): the board two rows of facilities (200 px) again wherever the card has the room — on a short phone
-   the part that gives: the card a column whose board alone shrinks (to 100 px, its title and a row), so the card never runs past the
-   screen with a tall tourist's words held (it did by up to 34 px at 360×640, and a reply then scrolled it); the rest never shrinks */
-.wk-annai .cls-card { display: flex; flex-direction: column; } .wk-annai .cls-card > * { flex-shrink: 0; } .wk-annai .cls-card > .an-board { flex-shrink: 1; min-height: 100px; }
-.an-board { max-height: 200px; overflow-y: auto; overscroll-behavior: contain; margin: 4px -6px 6px; padding: 0 4px 4px; border-radius: 10px; background: #6e5236; box-shadow: inset 0 0 0 2px #8a6a46, 0 2px 0 rgba(0, 0, 0, .15); }
+.an-board { overflow-y: auto; overscroll-behavior: contain; margin: 4px -6px 6px; padding: 0 4px 4px; border-radius: 10px; background: #6e5236; box-shadow: inset 0 0 0 2px #8a6a46, 0 2px 0 rgba(0, 0, 0, .15); }
 .an-btitle { position: sticky; top: 0; z-index: 1; margin: 0 -4px 4px; padding: 3px 8px 2px; box-shadow: 0 2px 0 #6e5236; border-radius: 6px; background: #2f5a3a; color: #fbf8f0; font-size: 16px; font-weight: 700; letter-spacing: .06em; text-align: center; } .an-btitle rt { font-size: 9px; letter-spacing: 0; color: #d6e6cf; }
 .an-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; } @media (min-width: 600px) { .an-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .an-fac { display: flex; flex-wrap: wrap; align-items: center; align-content: start; gap: 1px 5px; padding: 3px 5px 4px; border-radius: 6px; background: #fbf8f0; box-shadow: 0 1px 0 rgba(0, 0, 0, .2); }
@@ -886,7 +882,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .an-opt { min-height: 44px; padding-block: 3px; font-size: 15.5px; line-height: 1.45; text-align: left; justify-content: flex-start; flex-direction: column; align-items: flex-start; white-space: normal; } .an-opt rt { font-size: 9px; }
 .an-opt.an-right { box-shadow: 0 0 0 2px #3f9a6a; } .an-opt:disabled:not(.an-right):not(.wk-hint) { opacity: .5; }
 .an-opt.wk-bad { animation: shake .3s ease; } .an-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
-.an-talk { display: flex; align-items: center; gap: 8px; min-height: 70px; margin-top: 2px; } .an-talk .kr-face { width: 34px; height: 34px; flex: none; } .an-talk .wk-say { font-size: 14px; }
+.an-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 2px; }   /* held per tourist (fix round 2, ruling 8) */ .an-talk .kr-face { width: 34px; height: 34px; flex: none; } .an-talk .wk-say { font-size: 14px; }
 .an-talk[data-who="me"] :is(.kr-face, .wk-say), .an-talk:not([data-who="me"]) .wk-me { display: none; } .an-talk .wk-me { flex: 1; margin: 0; }
 @media (prefers-reduced-motion: reduce) { .an-opt.wk-bad { animation: none; } }
 /* 仲居 (2026-11-24, nk-): 桜の間 front-on (washitsuArt) under its room plate and the 「お客様 到着まで」 countdown at the top right (as the
@@ -907,8 +903,6 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .nk-stage { position: relative; margin: 0 -6px; overflow: hidden; border-radius: 10px; background: #cbc58c; box-shadow: 0 0 0 2px #8a6a46; }
 .nk-stage.nk-enter .nk-art { animation: nkEnter .45s ease-out; } @keyframes nkEnter { from { opacity: 0; transform: translateX(14px); } }
 .nk-art svg { display: block; width: 100%; height: auto; }
-.wk-nakai .cls-card.nk-ask .nk-art svg { max-height: max(230px, calc(100dvh - 404px)); }   /* a short phone: the room a little smaller while a reply is picked */
-@media (max-width: 440px) { .wk-nakai .cls-card.nk-ask.nk-guest .nk-art svg { max-height: max(126px, calc(100dvh - 512px)); } }   /* a phone with a guest in: their three replies run to two lines and the talk row has the hero's reply and its 中文 — the room smaller still (not needed to answer a guest; fix round 1, M-2); a wider card's replies are single lines and its room keeps its size (fix round 2) */
 .nk-art [data-k] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nk-art :is([data-k="futon"], [data-k="zabuton"]) > rect:only-child { fill: #fffdf0; fill-opacity: .14; stroke: #6e6a3e; stroke-opacity: .4; stroke-width: 1.2; stroke-dasharray: 5 4; }   /* a futon's or a cushion's place, empty: faintly marked, every one (none is given away) */
 .nk-art :is(.nk-in, .nk-drop, .nk-back, .nk-out, .nk-catgo) { transform-box: fill-box; transform-origin: 50% 100%; }
@@ -929,17 +923,14 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .nk-bub { flex: 1 1 0; min-width: 0; margin: 0; display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; padding: 4px 10px 4px 4px; border-radius: 14px; background: #fff; box-shadow: 0 2px 0 rgba(0, 0, 0, .08); font-size: 16px; line-height: 1.5; }
 .nk-bub .wk-ear { grid-row: span 2; min-height: 40px; min-width: 44px; } .nk-bub > :not(.wk-ear) { grid-column: 2; } .nk-bub span { font-size: 12.5px; opacity: .65; } .nk-bub rt { font-size: 9px; }
 .nk-bub .nk-dots { color: #8a7a6e; letter-spacing: .1em; } .nk-bub:not(:has(.wk-ear)) { padding-left: 12px; }
-.nk-opts { display: grid; gap: 5px; margin-top: 6px; } .nk-opts:empty { display: none; }
+.nk-opts { display: grid; gap: 5px; margin-top: 6px; align-content: start; }
 /* a screen tall enough (2026-11-25, the user: 「回答會跑版」): the replies' place kept as a task with none comes, and the room one size the
    whole shift — so the talk row never jumps up into where the replies were; a short phone (640) still draws the room bigger for a task
    done by tapping it (its things big enough to tap: Task 5's review) */
-@media (min-height: 700px) { .nk-opts { min-height: 142px; align-content: start; } .nk-opts:empty { display: grid; } .wk-nakai .cls-card .nk-art svg { max-height: max(230px, calc(100dvh - 404px)); } }
-@media (min-height: 700px) and (max-width: 440px) { .wk-nakai .cls-card .nk-art svg { max-height: max(126px, calc(100dvh - 512px)); } }
-@media (max-height: 699px) { .wk-nakai .cls-card.nk-ask:not(.nk-guest) .nk-art svg { max-height: max(196px, calc(100dvh - 444px)); } }   /* a 640-tall phone: the room a little smaller again while a reply is picked, for the bubble and the talk row held at their tallest (2026-11-25) — the whole card in sight, as before */
 .nk-opt { min-height: 44px; padding-block: 3px; font-size: 15.5px; line-height: 1.45; text-align: left; justify-content: flex-start; white-space: normal; } .nk-opt rt { font-size: 9px; }
 .nk-opt.nk-right { box-shadow: 0 0 0 2px #3f9a6a; } .nk-opt:is(.nk-right, .wk-hint) { opacity: 1; } .nk-opt:disabled:not(.nk-right):not(.wk-hint) { opacity: .5; }
 .nk-opt.wk-bad { animation: shake .3s ease; } .nk-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
-.nk-talk { display: flex; align-items: center; gap: 8px; min-height: 52px; margin-top: 5px; }   /* as tall as its tallest line from the start (2026-11-25) */ .nk-talk .nk-mini { flex: none; width: 30px; height: 30px; }
+.nk-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 5px; }   /* as tall as the tallest line each task may bring: JOBS.hold (fix round 2, ruling 8) */ .nk-talk .nk-mini { flex: none; width: 30px; height: 30px; }
 .nk-talk .wk-say { font-size: 14px; } .nk-talk:has(.wk-say:empty) .nk-mini { visibility: hidden; } .nk-talk .wk-say.nk-me b { color: #2f7a6a; }
 @media (prefers-reduced-motion: reduce) { .nk-art :is(.nk-in, .nk-drop, .nk-back, .nk-fade), .nk-art :is(.nk-glow, .nk-shine), .nk-stage.nk-enter .nk-art, .nk-task.nk-come, .nk-opt.wk-bad, .nk-nya { animation: none; } .nk-art :is(.nk-out, .nk-gone) { display: none; } .nk-art .nk-catgo { animation-duration: .01s; } .nk-art .nk-shine { fill-opacity: .35; } }
 /* おみやげ屋 (2026-11-24, om-): ゆのはな堂 — its back wall with two shelves of the eight goods, each standing on its shelf with its price
@@ -987,11 +978,11 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .om-empty { font-size: 11.5px; line-height: 1.35; color: #f2dccc; }
 .om-give { flex: none; min-height: 44px; min-width: 74px; padding-inline: 12px; font-size: 17px; } .om-give.wk-bad { animation: shake .3s ease; }
 .om-plate .om-bit { transform-box: fill-box; transform-origin: center; } .om-plate .om-bit.om-eat { animation: omEat .6s ease-in forwards; } @keyframes omEat { 30% { transform: translateY(-5px); } to { opacity: 0; transform: translate(-6px, 10px) scale(.7); } }
-.om-opts { display: grid; gap: 5px; margin-top: 6px; } .om-opts:empty { display: none; }
+.om-opts { display: grid; gap: 5px; margin-top: 6px; align-content: start; }
 .om-opt { min-height: 44px; padding-block: 3px; font-size: 15.5px; line-height: 1.45; text-align: left; justify-content: flex-start; white-space: normal; } .om-opt rt { font-size: 9px; }
 .om-opt.om-right { box-shadow: 0 0 0 2px #3f9a6a; } .om-opt:is(.om-right, .wk-hint) { opacity: 1; } .om-opt:disabled:not(.om-right):not(.wk-hint) { opacity: .5; }
 .om-opt.wk-bad { animation: shake .3s ease; } .om-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
-.om-talk { display: flex; align-items: center; gap: 8px; min-height: 92px; margin-top: 5px; }   /* as tall as its tallest line (竹内's two-line word and why) from the start (2026-11-25) */ .om-talk .om-mini { flex: none; width: 30px; height: 30px; }
+.om-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 5px; }   /* as tall as the tallest line each customer may bring: JOBS.hold (fix round 2, ruling 8; was a fixed 92 px) */ .om-talk .om-mini { flex: none; width: 30px; height: 30px; }
 .om-talk .wk-say { font-size: 14px; } .om-talk:has(.wk-say:empty) .om-mini { visibility: hidden; } .om-talk .wk-say.om-me b { color: #2f7a6a; }
 @media (prefers-reduced-motion: reduce) { .om-chip.om-in, .om-tray.om-off .om-chip, .om-plate .om-bit.om-eat, .om-give.wk-bad, .om-opt.wk-bad { animation: none; } .om-tray.om-off .om-chip { opacity: 0; } }
 /* ---- フロント (2026-11-24, fr-): 旅館「花月」's front desk seen from behind the counter (spec §5.4) — on the left the open 予約台帳 (cream
@@ -1042,12 +1033,30 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .fr-opt.fr-right { box-shadow: 0 0 0 2px #3f9a6a; } .fr-opt:disabled:not(.fr-right):not(.wk-hint) { opacity: .5; }
 .fr-opt.wk-bad { animation: shake .3s ease; } .fr-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
 .fr-tip { margin: 2px 0; padding: 6px 10px; border-radius: 8px; background: #fbeee0; color: #6a3a1c; font-size: 13.5px; line-height: 1.5; }
-.fr-talk { display: flex; align-items: center; gap: 8px; min-height: 70px; margin-top: 4px; }   /* as tall as its tallest line from the start (2026-11-25: a reply moves nothing — on a 640-tall phone too, where the card has scrolled to it once, at the guest's start) */
-@media (max-height: 699px) {   /* a 640-tall phone (fix round 1, the review's Important 2): the card a little closer set, so that at each guest it scrolls itself to the talk row by a few px at most and its ✕ stays in sight, as before this round — the book's rows, the lobby (its room over the face for the mood mark kept: M-3), the replies and the talk row each a few px tighter; nothing smaller to read or to tap (the replies 42 px) */
-  .wk-front .cls-card { padding-top: 8px; } .wk-front .fr-row { padding-block: 1px; } .wk-front .fr-lobby { margin-top: 4px; padding-bottom: 5px; }
+.fr-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; }   /* as tall as the tallest line each guest may bring: JOBS.hold (fix round 2, ruling 8) */
+@media (max-height: 699px) {   /* a short phone (fix round 1): the フロント a little closer set — the book's rows, the lobby (its room over the face for the mood mark kept: M-3), the replies and the talk row each a few px tighter, more room for the book and keys (fix round 2's column); nothing smaller to read or to tap (the replies 42 px) */
+  .wk-front .wk-head { padding-top: 8px; } .wk-front .fr-row { padding-block: 1px; } .wk-front .fr-lobby { margin-top: 4px; padding-bottom: 5px; }
   .wk-front .fr-opts { gap: 4px; margin-top: 4px; } .wk-front .fr-opt { min-height: 42px; } .wk-front .fr-talk { margin-top: 3px; }
 } .fr-talk .kr-face { width: 34px; height: 34px; flex: none; } .fr-talk .wk-say { font-size: 14px; }
 .fr-talk[data-who="me"] :is(.kr-face, .wk-say), .fr-talk:not([data-who="me"]) .wk-me { display: none; } .fr-talk .wk-me { flex: 1; margin: 0; }
+/* fix round 2, ruling 8 (the user plays on an iPhone: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」 — in Safari every iPhone is under
+   700 px tall): the onsen's four job cards are columns no taller than the screen. The header (its ✕) stays, stuck at the top should the
+   card itself have to scroll; the customer, the replies and the talk row are each held for the whole customer (JOBS.hold); the reading
+   block — the フロント's book and keys, the 案内所's board, the 仲居's room, the おみやげ屋's shelves — takes what is left and scrolls
+   inside itself (its foot fading while there is more below: wk-more, as iOS hides scrollbars), down to its floor; on a tall screen it
+   shows whole. Floors: the book's title, its head and two rows with the keys' first two rows (120); the board's title and one facility
+   card whole (140: they run 95–109 px); the room drawn at 140 px tall at the least (a guest's three two-line replies fit a 360×640 phone
+   so; at a do task, where the replies' place is empty, it is taller and its things 40 px or more to tap); the shelves' top row whole (110) */
+:is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card { --wk-top: clamp(0px, calc(50dvh - 420px), 160px); margin-top: var(--wk-top); padding-top: 0; display: flex; flex-direction: column;
+  max-height: calc(100dvh - max(16px, env(safe-area-inset-top, 0px)) - max(16px, env(safe-area-inset-bottom, 0px)) - var(--wk-top)); }
+:is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card > * { flex-shrink: 0; }
+:is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .wk-head { position: sticky; top: 0; z-index: 4; margin: 0 -12px; padding: 12px 52px 4px 12px; background: inherit; }
+:is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .wk-head .cls-x { top: 8px; right: 8px; }
+.wk-more { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), rgba(0, 0, 0, .2)); mask-image: linear-gradient(#000 calc(100% - 26px), rgba(0, 0, 0, .2)); }
+.wk-front .cls-card > .fr-desk { flex: 1 1 auto; min-height: 120px; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(6px + var(--wk-under, 0px)); }
+.wk-annai .cls-card > .an-board { flex: 1 1 auto; min-height: 140px; padding-top: var(--wk-under, 0px); } .wk-annai .an-btitle { top: var(--wk-under, 0px); }
+.wk-nakai .cls-card > .nk-stage { flex: 1 1 auto; min-height: 140px; display: flex; } .wk-nakai .nk-art { flex: 1 1 auto; min-height: 0; display: flex; } .wk-nakai .nk-art svg { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; }
+.wk-miyage .cls-card > .om-shop { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; } .wk-miyage .om-shelves { flex: 1 1 auto; min-height: 110px; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(5px + var(--wk-under, 0px)); } .wk-miyage .om-front { flex: none; }
 @media (prefers-reduced-motion: reduce) { :is(.fr-opt, .fr-key).wk-bad, .fr-bell.fr-ding .fr-cap, .fr-dn.fr-new { animation: none; } }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */
 :is(.wk-bento, .wk-window, .wk-lost, .wk-taxi) .wk-ear { min-height: 40px; min-width: 44px; }
@@ -1489,6 +1498,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
   .dress { --panel-h: 0px; --panel-w: 380px; }
   .dress-panel { left: auto; top: 0; width: var(--panel-w); height: auto; border-radius: 18px 0 0 18px; transform: translateX(102%); }
 }
+
 .dress-tabs { flex: none; display: flex; gap: 6px; overflow-x: auto; padding: 12px 12px 6px; scrollbar-width: none; }
 .dress-tabs button { flex: none; padding: 7px 13px; border: 0; border-radius: 99px; font: inherit; font-size: 13px; font-weight: 600; color: var(--fg-2); background: var(--bg-elev-2); cursor: pointer; }
 .dress-tabs button[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent); }

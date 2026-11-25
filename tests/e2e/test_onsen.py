@@ -828,16 +828,21 @@ def test_yukataya_sells_a_yukata(b):
 # and both yukata — reads 右前 on the screen whichever way its wearer faces: the top panel's edge running from the viewer's right at the
 # neck down to the viewer's left, facing us and turned, and mirrored by .flip (a passer walking down to the left, a seat that flips) too
 def test_every_crossed_robe_reads_migimae_whichever_way(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const poses = ['', 'flip', 'turn', 'turn flip', 'bench flip', 'kneel flip', 'walk flip'], out = {};
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const poses = ['', 'flip', 'turn', 'turn flip', 'bench flip', 'kneel flip', 'walk flip', 'back', 'back flip', 'back turn', 'back turn flip'], out = {}, kinds = {};
       const host = document.createElement('div'); host.className = 'yard'; host.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:400px;z-index:9999;background:#fff'; document.body.appendChild(host);
+      const shown = (e) => { for (let x = e; x && x !== host; x = x.parentNode) if (x.nodeType === 1 && getComputedStyle(x).display === 'none') return false; return true; };
       for (const top of ['kimono', 'hakui', 'samue', 'jinbei', 'yukata', 'innyukata']) for (const cls of poses) {
         host.innerHTML = `<div class="hero ${cls}" style="position:absolute;left:0;top:0;width:200px;height:350px">${HERO.svg({ look: Object.assign({}, HERO.norm(state.look), { topStyle: top }), wear: {} })}</div>`; await wait(30);
-        const g = [...host.querySelectorAll('.h-cross, .h-cross-m')].find((e) => getComputedStyle(e).display !== 'none' && e.closest('.f-front, .f-front3') && getComputedStyle(e.closest('.f-front, .f-front3')).display !== 'none');
+        const vis = [...host.querySelectorAll('.h-cross, .h-cross-m')].filter(shown); kinds[top + '/' + cls] = [...new Set(vis.map((e) => e.getAttribute('class')))].sort().join(',');   // the copies on show: one kind only (none from behind)
+        const g = vis.find((e) => e.closest('.f-front, .f-front3'));
         if (!g) { out[top + '/' + cls] = 'none'; continue; }
         const path = g.querySelector('path'), a = path.getPointAtLength(0), z = path.getPointAtLength(Math.min(8, path.getTotalLength())), dot = (p) => { const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', '.5'); path.parentNode.appendChild(c); const k = c.getBoundingClientRect(); c.remove(); return [k.left + k.width / 2, k.top + k.height / 2]; };
         const [p0, p1] = [dot(a), dot(z)]; out[top + '/' + cls] = p1[0] < p0[0] - 0.5 && p1[1] > p0[1] ? 'migi' : 'hidari'; }
-      host.remove(); return JSON.stringify(out); })()"""))
-    assert all(v == 'migi' for v in r.values()), {k: v for k, v in r.items() if v != 'migi'}
+      host.remove(); return JSON.stringify({ out, kinds }); })()"""))
+    want = {k: ('none' if '/back' in k else 'migi') for k in r['out']}
+    assert r['out'] == want, {k: v for k, v in r['out'].items() if v != want[k]}
+    one = {k: ('' if '/back' in k else 'h-cross-m' if 'flip' in k.split('/')[1] else 'h-cross') for k in r['kinds']}   # fix round 2 (the review's Minor 3): exactly one of the two copies shows, never both
+    assert r['kinds'] == one, {k: v for k, v in r['kinds'].items() if v != one[k]}
 
 # the yukata on the hero (both kinds): to the ankles, nothing of the bottoms out from under it — no trousers, skirt nor cat's tail, only
 # ankles over his shoes, whatever bottoms he has on; crossed 右前 front-on; kneeling on a 座椅子 its hem gathered up (never through the
@@ -1474,7 +1479,9 @@ def test_the_nakai_card_fits_a_phone(b):
           CLASS.close(); return JSON.stringify(out); })()""")])[-1])
     for w, x in gfit.items():
         assert x['n'] == 3 and x['ask'] == x['wrong'] == x['right'] == [True, True, True, True], (w, gfit)
-    # fix round 2: on a desktop (1280×800) the room keeps its size when a guest comes in — the smaller room is a narrow card's only
+    # fix round 2: on a desktop (1280×800) the room stays large when a guest comes in (more than 300 px tall at a guest as at a check) —
+    # its height may differ between the two (ruling 8, fix round 2 of the test.2 feedback: the room takes what the task leaves it, one
+    # height for the whole task)
     big = json.loads(b.run([("metrics", (1280, 800)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + NK + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm8';
       window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => ['window', 'shoji', 'ac', 'light'].includes(sh.rooms[0].tasks.slice(-1)[0].key)), g0 = NAKAI.make(m8, seed).rooms[0].tasks.slice(-1)[0].k;
       shiftAt(seed, g0, Object.fromEntries(Array.from({ length: g0 }, (_, k) => [k, 0]))); await at('ryokan'); WORK.start(yard(), 'nakai');
@@ -1482,7 +1489,7 @@ def test_the_nakai_card_fits_a_phone(b):
       await watch(() => nk() && nk().k === g0 && ready(), 12000); await wait(300); const guest = h();
       await solve(); await watch(() => nk() && nk().k === g0 + 1 && ready(), 12000); await wait(300); const check = h();
       CLASS.close(); return JSON.stringify({ guest, check }); })()""")])[-1])
-    assert big['guest'] == big['check'] and big['guest'] > 300, big   # at a guest as at a check
+    assert big['guest'] > 300 and big['check'] > 300, big   # at a guest as at a check
 
 # I-1, ruling 33 (fix round 1): over 6,000 shifts every room's guest says something true of the room as it stands when they come in —
 # with nothing done (the countdown beat the hero), with everything done, with some done — and never of a thing whose instruction this
@@ -2259,8 +2266,8 @@ def test_the_front_card_fits_a_phone(b):
         assert x['keyStep'] == [True, True, True, True] and x['two'] == [True, True, True, True] and x['lit'] == [True, True], (w, out)
 
 # fix round 1 (the review's Minor 3): a held bubble is measured again, its customer's own, when the screen changes — the フロント's guest's
-# bubble held at 390×844, let go on a turn to 360×640 (a short phone holds none: the screen's height read as it is measured, not once),
-# held again as before back at 390×844; the 案内所's tourist's bubble held taller on a narrower screen
+# bubble held at 390×844, held again on a turn to 360×640 (on every screen since fix round 2, ruling 8: at least as tall, the card
+# narrower), as before back at 390×844; the 案内所's tourist's bubble held taller on a narrower screen
 def test_a_held_bubble_is_measured_again_on_a_resize(b):
     pre = "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15'; clock(false); window.speakAs = () => new Promise((ok) => setTimeout(ok, 200));
       state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: 0, score: {}, keep: { seed: 5, morning: false } }; saveState();
@@ -2270,7 +2277,7 @@ def test_a_held_bubble_is_measured_again_on_a_resize(b):
     m1 = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", pre)], timeout=120)[-1]
     m2 = b.run([("metrics", (360, 640)), ("eval", look)], timeout=30)[-1]
     m3 = b.run([("metrics", (390, 844)), ("eval", look)], timeout=30)[-1]
-    assert m1.endswith('px') and m2 == '' and m3 == m1, (m1, m2, m3)
+    assert m1.endswith('px') and m2.endswith('px') and float(m2[:-2]) >= float(m1[:-2]) and m3 == m1, (m1, m2, m3)
     pre2 = "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; window.speakAs = () => new Promise((ok) => setTimeout(ok, 200));
       await at('onsen'); WORK.start(yard(), 'annai'); for (let i = 0; i < 60 && !document.querySelector('.wk-annai'); i++) { click('.talk'); await wait(150); }
       await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask', 12000); await wait(600); return parseFloat(document.querySelector('.wk-annai .wk-cust .wk-bub').style.minHeight); })()"""
@@ -2279,9 +2286,10 @@ def test_a_held_bubble_is_measured_again_on_a_resize(b):
     a2 = b.run([("metrics", (360, 640)), ("eval", look2)], timeout=30)[-1]
     assert a1 > 0 and a2 > a1, (a1, a2)   # narrower: its words run to more lines, held taller
 
-# the review of 2bd06dd (Important 2): on a 360×640 phone the フロント card's ✕ stays in the screen and takes a tap without the player
-# scrolling — at the first guest, after a wrong reply at the next (佐藤's word of two lines: the talk row's own height), and at a later
-# guest: the card scrolled 13 px at most, as it was before this round
+# the review of 2bd06dd (Important 2) and of f9f1047: on a 360×640 phone the フロント card's ✕ stays in the screen and takes a tap without
+# the player scrolling — at every guest of a shift (the 備註 guest, #8 of seed 5, too), as each starts and after a wrong reply (佐藤's word
+# and its reason, three lines of them or four); the card's scroll never changed by the reply (fix round 2, ruling 8: a card taller than
+# the screen, as the 備註 guest's, scrolls itself once as the guest comes, its header with the ✕ stuck at the top)
 def test_the_front_close_stays_in_sight_on_a_small_phone(b):
     r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15'; clock(false);
       window.speakAs = () => new Promise((ok) => setTimeout(ok, 200));
@@ -2289,14 +2297,15 @@ def test_the_front_close_stays_in_sight_on_a_small_phone(b):
       await at('ryokan'); WORK.start(yard(), 'front'); for (let i = 0; i < 40 && !fc(); i++) { click('.talk'); await wait(120); }
       const c = () => fc().querySelector('.cls-card');
       const look = () => { const x = fc().querySelector('.cls-x'), q = x.getBoundingClientRect(), e = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
-        return { inView: q.top >= 0 && q.bottom <= innerHeight, hit: Boolean(e && e.closest('.cls-x')), st: Math.round(c().scrollTop), k: fr().k }; };
-      const out = {}; await watch(() => ready() && fr().k === 0, 12000); await wait(900); out.first = look();
-      await work(1); await watch(() => ready() && fr().k === 1, 15000); await wait(900); opt(false).click(); await watch(() => fc().querySelector('.fr-talk .wk-say.bad'), 4000); await wait(500); out.wrong = look();
-      await work(3); await watch(() => ready() && fr().k === 3, 15000); await wait(900); out.later = look();
-      CLASS.close(); return JSON.stringify(out); })()""")])[-1])
-    assert r['first']['k'] == 0 and r['wrong']['k'] == 1 and r['later']['k'] == 3, r
-    for k, v in r.items():
-        assert v['inView'] and v['hit'] and v['st'] <= 13, (k, r)
+        return { inView: q.top >= 0 && q.bottom <= innerHeight, hit: Boolean(e && e.closest('.cls-x')), st: Math.round(c().scrollTop), kind: fr().task.kind }; };
+      const out = [];
+      for (let k = 0; k < 10; k++) { if (!(await watch(() => ready() && fr().k === k && fr().step === 0, 15000))) break; await wait(600); const g = { k, start: look() };
+        const w = opt(false); if (w && !w.disabled) { w.click(); await watch(() => fc().querySelector('.fr-talk .wk-say.bad'), 4000); await wait(500); g.wrong = look(); }
+        out.push(g); await work(k + 1); }
+      CLASS.close(); return JSON.stringify(out); })()""")], timeout=240)[-1])
+    assert len(r) == 10 and any(g['start']['kind'] == 'memo' for g in r), r
+    bad = [(g['k'], m, v) for g in r for m, v in g.items() if m != 'k' and not (v['inView'] and v['hit'] and v['st'] == g['start']['st'])]
+    assert bad == [], bad
 
 # Task 4's N-3: no reply stands out by its shape — every set of replies (each of the book's dinner times too, the birthday wish with the
 # greeting's), laid out as the card lays them out on a 360-px phone, a 390-px one and a 1280-px screen: each of a set on as many lines as
@@ -2361,20 +2370,28 @@ def test_a_long_closing_word_is_said_whole(b):
       document.querySelectorAll('.wk-result').forEach((e) => e.remove()); return JSON.stringify(out); })()"""))
     assert r['front'] == {'cuts': [], 'said': True, 'whole': True} and r['annai'] == {'cuts': [], 'said': True, 'whole': True}, r
 
-# M-1: the book stays in sight while it is wanted — at 360×640 a guest asks of the book, their party in its first row: after a miss the
-# card's self-scroll (to show 佐藤's word) never takes the book's title, its header or its first row out; after two (parked 7, Task 7's
-# re-review: their row lit, the right reply lit, the book wanted no more) it shows 佐藤's reason and the lit reply
-FR_BOOK = """const inView = (sel) => { const c = fc().querySelector('.cls-card'), R = (e) => e.getBoundingClientRect(), top = R(c).top + c.clientTop, bot = top + c.clientHeight, e = fc().querySelector(sel); return Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1; };
-  const book = () => [inView('.fr-btitle'), inView('.fr-hd'), inView('.fr-row')];"""
+# M-1, as ruling 8 has it (fix round 2): the book stays usable while it is wanted — at 360×640 a guest asks of the book, their party in
+# its first row (the 備註 guest's card taller than the screen: scrolled once as they come, its header with the ✕ stuck at the top): the
+# book shows in the desk under the header, its party's row reached by scrolling the desk alone; a miss moves nothing (the card's scroll,
+# the desk's place); after two (their row lit, the right reply lit) the lit row is brought into sight inside the desk, 佐藤's reason and
+# the lit reply in sight too
+FR_BOOK = """const C = () => fc().querySelector('.cls-card'), R = (e) => e.getBoundingClientRect(), D = () => C().querySelector('.fr-desk');
+  const win = () => { const c = C(), ct = R(c).top + c.clientTop; return [Math.max(R(D()).top, ct, R(c.querySelector('.wk-head')).bottom), Math.min(R(D()).bottom, ct + c.clientHeight)]; };
+  const sees = (e) => { const [t, b] = win(), r = e && R(e); return Boolean(e) && r.top >= t - 1 && r.bottom <= b + 1; };
+  const inView = (sel) => { const c = C(), top = Math.max(R(c).top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = R(c).top + c.clientTop + c.clientHeight, e = fc().querySelector(sel); return Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1; };"""
 def test_the_front_book_stays_in_sight_at_a_book_question(b):
     r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + FR + FR_BOOK + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15';
       window.speakAs = () => Promise.resolve(); const out = {};
       const seed = seedWhere((sh) => sh.tasks.some((t, k) => k > 0 && t.kind === 'memo' && t.party === 0 && t.opts.every((o) => o[0].length > 18))), k = where(seed, false, (t) => t.kind === 'memo');
-      await begin(seed, k); await wait(400); out.asked = book();
+      await begin(seed, k); await wait(400);
+      const row = () => fc().querySelectorAll('.fr-row')[fr().task.party], st0 = C().scrollTop, top0 = Math.round(R(D()).top), [w0, w1] = win();
+      D().scrollTop += R(row()).top - w0; const reach = sees(row()); D().scrollTop = 0; out.asked = { seen: Math.round(w1 - w0), reach };
       const wrong = () => { const t = fr().task, i = t.opts.findIndex((o, j) => !o[2] && !fc().querySelector(`.fr-opt[data-o="${j}"]`).disabled); fc().querySelector(`.fr-opt[data-o="${i}"]`).click(); };
-      wrong(); await wait(900); out.one = book(); wrong(); await wait(900); out.two = [inView('.fr-talk'), inView('.fr-opt.wk-hint')]; out.party = fr().task.party; out.lit = Boolean(fc().querySelector('.fr-row.fr-lit'));
+      wrong(); await wait(900); out.one = [C().scrollTop === st0, Math.round(R(D()).top) === top0];
+      wrong(); await wait(900); out.two = [inView('.fr-talk'), inView('.fr-opt.wk-hint'), sees(fc().querySelector('.fr-row.fr-lit'))]; out.party = fr().task.party; out.lit = Boolean(fc().querySelector('.fr-row.fr-lit'));
       CLASS.close(); return JSON.stringify(out); })()""")], timeout=120)[-1])
-    assert r['party'] == 0 and r['asked'] == [True, True, True] and r['one'] == [True, True, True] and r['two'] == [True, True] and r['lit'], r
+    assert r['party'] == 0 and r['asked']['seen'] >= 40 and r['asked']['reach'], r
+    assert r['one'] == [True, True] and r['two'] == [True, True, True] and r['lit'], r
 
 # M-2: the hero's greeting follows the hour, not the shift's half — a morning shift (kept so: its check-outs) taken up at 15:00 greets a
 # guest coming to the desk with 「はい、いかが なさいましたか。」; at 9:00 with おはようございます; one arriving always with いらっしゃいませ
@@ -2624,6 +2641,115 @@ def test_a_reply_moves_nothing_in_the_onsen_jobs(b):
                 for moment in ('right', 'wrong'):
                     if r[moment]['moved'] or not r[moment]['said']: bad.append((job, 'first' if first else 'later', w, moment, r[moment]))
     assert bad == [], bad
+
+# fix round 2, ruling 8 (the user plays on an iPhone: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」): the onsen's four job cards are
+# columns no taller than the screen — the header (its ✕), the customer, the replies and the talk row each one height for the whole
+# customer, the reading block (the フロント's book and keys, the 案内所's board, the 仲居's room, the おみやげ屋's shelves) taking what is
+# left. Every customer of a shift: a wrong reply, then the right one (the 仲居's do tasks, the おみやげ屋's picks, the フロント's keys done as
+# they come), each followed every 50 ms from the tap — the wrong one till 佐藤's (あかり's, 千代's, 竹内's) word is said, the right one till
+# the customer goes — the rows test_a_reply_moves_nothing_in_the_onsen_jobs watches, the card's scroll, its ✕. In Safari on an iPhone
+# (390×664, 393×659 — the later shift) and at 360×640: nothing moves more than 1 px, the card's scroll never changes, the ✕ is whole and
+# takes a tap, after each reply the bubble, the talk row and the replies in sight; on an SE (375×553): nothing moves, the scroll never
+# changes on a reply, the ✕ takes a tap at every moment (what lies under the fold is the report's: IP_UNDER); on the home-screen iPhone
+# and a desktop (390×844, 1280×800): nothing moves, and the reading block shows whole (the 案内所's six cards, the フロント's book and keys;
+# the おみやげ屋's shelves may lose their foot under its tallest customer's words — IP_CUT, the report's)
+IP_READ = {'annai': '.an-board', 'front': '.fr-desk', 'nakai': '.nk-stage', 'miyage': '.om-shelves'}
+IP_TALK = {'annai': '.an-talk', 'front': '.fr-talk', 'nakai': '.nk-talk', 'miyage': '.om-talk'}
+IP_OPTS = {'annai': '.an-opts', 'front': '.fr-opts', 'nakai': '.nk-opts', 'miyage': '.om-opts'}
+IP_BUB = {'annai': '.wk-cust .wk-bub', 'front': '.wk-cust .wk-bub', 'nakai': '.nk-bub', 'miyage': '.wk-cust .wk-bub'}
+IP_SIZES = [((390, 664), True, 'phone'), ((393, 659), False, 'phone'), ((360, 640), True, 'phone'), ((375, 553), True, 'se'), ((390, 844), True, 'tall'), ((1280, 800), True, 'tall')]
+IP_UNDER = {}   # what lay under the fold at 375×553 (the report's), by job
+IP_CUT = {}   # a reading block cut on a tall screen, other than the 案内所's and the フロント's (the report's)
+IP_FLOW = """ const SPEAK = 400; window.speakAs = () => new Promise((ok) => setTimeout(ok, SPEAK));
+  const C = () => document.querySelector(CARD + ' .cls-card'), RR = (e) => e.getBoundingClientRect();
+  const tops = () => { const o = {}, c = C(); o.card = c ? Math.round(RR(c).top) : null;
+    ROWS.forEach((q) => { const e = document.querySelector(CARD + ' ' + q); o[q] = e && e.offsetParent ? Math.round(RR(e).top) : null; }); return o; };
+  const runNow = () => (typeof fr === 'function' && fr()) || (typeof nk === 'function' && nk()) || (typeof my === 'function' && my()) || (typeof ANNAI_RUN === 'object' && ANNAI_RUN.now()) || {};
+  const stepOf = () => { const n = runNow(); return [n.k, n.step === undefined ? '' : n.step].join('/'); };
+  const view = () => { const c = C(), r = RR(c), t = r.top + c.clientTop; return [Math.max(t, 0), Math.min(t + c.clientHeight, innerHeight)]; };
+  const el = (q) => { const e = document.querySelector(CARD + ' ' + q); return e && e.offsetParent ? e : null; };
+  const inv = (q) => { const e = el(q); if (!e) return true; const [t, b] = view(), r = RR(e); return r.top >= t - 1 && r.bottom <= b + 1; };
+  const under = (q) => { const e = el(q); if (!e) return 0; return Math.max(0, Math.round(RR(e).bottom - view()[1])); };
+  const look = () => { const c = C(); if (!c) return null; const x = c.querySelector('.cls-x'), xr = RR(x), hit = document.elementFromPoint(xr.left + xr.width / 2, xr.top + xr.height / 2), rd = c.querySelector(READ);
+    return { st: Math.round(c.scrollTop), xWhole: xr.top >= view()[0] - 1 && xr.bottom <= innerHeight + 1, xHit: Boolean(hit && hit.closest('.cls-x')), bub: inv(BUB), talk: inv(TALK), opts: inv(OPTS),
+      under: { talk: under(TALK), opts: under(OPTS), bub: under(BUB) }, read: rd ? [Math.round(RR(rd).height), rd.scrollHeight - rd.clientHeight] : null }; };
+  const heroSaid = () => [...document.querySelectorAll(CARD + ' :is(.wk-say.nk-me, .wk-say.om-me)')].some((e) => e.offsetParent) || [...document.querySelectorAll(CARD + ' [data-who="me"] .wk-me')].some((e) => e.offsetParent && e.textContent.trim());
+  const keeperSaid = () => [...document.querySelectorAll(CARD + ' .wk-say.bad')].some((e) => e.offsetParent && e.textContent.trim());
+  const gone = (k0) => k() !== k0 || !C() || Boolean(document.querySelector(CARD + ' :is(.wk-cust.bye, .nk-task.nk-bye)'));
+  const until = async (f, ms = 30000) => { const t0 = Date.now(); while (!f() && Date.now() - t0 < ms) { await step(); await wait(60); } return f(); };
+  const follow = async (base, k0, s0, said, tail, on) => { const t0 = Date.now(), st0 = C().scrollTop; let saw = 0, max = 0, stMax = 0, xMiss = 0; const rows = {};
+    while (Date.now() - t0 < 9000) { await wait(50); if (gone(k0) || (!on && stepOf() !== s0)) break; if (on && stepOf() !== s0) await step();
+      const x = tops(); Object.keys(base).forEach((q) => { if (base[q] !== null && x[q] !== null && Math.abs(x[q] - base[q]) > 1) { max = Math.max(max, Math.abs(x[q] - base[q])); rows[q] = x[q] - base[q]; } });
+      stMax = Math.max(stMax, Math.abs(Math.round(C().scrollTop - st0)));
+      if (!look().xHit) xMiss++;
+      if (said()) { if (!saw) saw = Date.now(); else if (Date.now() - saw > tail) break; } }
+    return { max, rows, stMax, xMiss, said: Boolean(saw) }; };
+  const out = [];
+  for (let n = 0; n < 40; n++) {
+    if (!(await until(ask, n ? 15000 : 30000))) break;
+    await wait(400); const k0 = k(), s0 = stepOf(), a = tops(), g = { k: k0, s: s0, start: look() };
+    const w = opt(false);
+    if (w && !w.disabled) { w.click(); g.wrong = await follow(a, k0, s0, keeperSaid, SPEAK + 300, false); g.wrong.end = look(); }
+    if (await until(() => gone(k0) || (ask() && stepOf() === s0), 8000) && !gone(k0) && stepOf() === s0) {
+      await wait(200); const r = opt(true);
+      if (r && !r.disabled) { r.click(); g.right = await follow(a, k0, s0, heroSaid, 200, false); g.right.end = look(); const more = await follow(a, k0, s0, () => false, 0, true); g.right.after = more; } }
+    out.push(g);
+    await until(() => gone(k0) || stepOf() !== s0, 12000);
+  }
+  CLASS.close(); return JSON.stringify(out);"""
+
+def ip_run(b, job, w, h, first):
+    card, rows, js = F_JOBS[job]
+    helper = {'annai': '', 'nakai': NK, 'miyage': MY, 'front': FR}[job]
+    code = "(async () => { " + BEGIN + CALM + WORK4 + helper + " card(['S', 'S', 'S', 'S']); const FIRST = " + ('true' if first else 'false') + ";" + js \
+        + f" const CARD = '{card}', ROWS = {json.dumps(rows)}, READ = '{IP_READ[job]}', TALK = '{IP_TALK[job]}', OPTS = '{IP_OPTS[job]}', BUB = '{IP_BUB[job]}';" + IP_FLOW + " })()"
+    return json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", code)], timeout=300)[-1])
+
+def ip_check(b, job):
+    bad, under, sums = [], [], {}
+    for (w, h), first, kind in IP_SIZES:
+        r = ip_run(b, job, w, h, first)
+        moves = [max(f['max'], (f.get('after') or {}).get('max', 0)) for g in r for f in (g.get('wrong'), g.get('right')) if f]
+        sums[f'{w}x{h}'] = {'customers': len(r), 'moved': max(moves or [0]), 'scrolled': max([max(f['stMax'], (f.get('after') or {}).get('stMax', 0)) for g in r for f in (g.get('wrong'), g.get('right')) if f] or [0]),
+            'start': sorted({g['start']['st'] for g in r}), 'close': all(g['start']['xHit'] and all(f['end']['xHit'] and not f['xMiss'] for f in (g.get('wrong'), g.get('right')) if f) for g in r),
+            'whole': all(g['start']['xWhole'] for g in r), 'read': [min(g['start']['read'][0] for g in r), max(g['start']['read'][0] for g in r)] if r and r[0]['start']['read'] else None}
+        if len(r) < (3 if job == 'miyage' else 5): bad.append((job, w, h, 'too few customers', len(r))); continue
+        for g in r:
+            at = (job, f'{w}x{h}', g['k'])
+            for m in ('wrong', 'right'):
+                f = g.get(m)
+                if not f: continue
+                moved = max(f['max'], (f.get('after') or {}).get('max', 0))
+                if moved > 1: bad.append(at + (m, 'moved', f['rows'], (f.get('after') or {}).get('rows')))
+                if f['stMax'] or (f.get('after') or {}).get('stMax', 0): bad.append(at + (m, 'scrolled', f['stMax']))
+                e = f['end']
+                if kind in ('phone', 'tall'):
+                    if not (e['xWhole'] and e['xHit']): bad.append(at + (m, 'close', e))
+                    if not (e['bub'] and e['talk'] and e['opts']): bad.append(at + (m, 'out of sight', e['under']))
+                if kind == 'se':
+                    if not e['xHit'] or f['xMiss']: bad.append(at + (m, 'close', e, f['xMiss']))
+                    if any(e['under'].values()): under.append((g['k'], m, e['under']))
+            st = g['start']
+            if not (st['xHit'] and (kind == 'se' or st['xWhole'])): bad.append(at + ('start', 'close', st))
+            if kind == 'tall' and st['read'] and st['read'][1] > 1:
+                if job in ('annai', 'front'): bad.append(at + ('start', 'reading block cut', st['read']))   # the 案内所's six cards, the フロント's book and keys: whole
+                else: IP_CUT.setdefault(job, []).append((f'{w}x{h}', g['k'], st['read']))   # the shelves under a tall customer's words: their foot fades (the report's)
+    IP_UNDER[job] = under
+    if os.environ.get('NQ_IP_OUT'):   # the numbers for the report (fix round 2): each size's moves, scroll, ✕, reading block heights; what lay under the fold at 375×553
+        with open(os.environ['NQ_IP_OUT'], 'a', encoding='utf-8') as f: f.write(json.dumps({'job': job, 'sizes': sums, 'under': under, 'cut': IP_CUT.get(job, [])}, ensure_ascii=False) + '\n')
+    assert bad == [], bad[:12]
+
+def test_a_reply_moves_nothing_on_an_iphone_front(b):
+    ip_check(b, 'front')
+
+def test_a_reply_moves_nothing_on_an_iphone_annai(b):
+    ip_check(b, 'annai')
+
+def test_a_reply_moves_nothing_on_an_iphone_nakai(b):
+    ip_check(b, 'nakai')
+
+def test_a_reply_moves_nothing_on_an_iphone_miyage(b):
+    ip_check(b, 'miyage')
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

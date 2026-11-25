@@ -115,16 +115,15 @@ const MIYAGE_RUN = (() => {
     let box = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), all = (q) => (box && box.isConnected ? [...box.querySelectorAll(q)] : []);
     const live = () => mine === runs && Boolean(el('.om-shop')) && ctx.on(), mineNow = (me0) => live() && R === me0;
     let k = ctx.done, P = null, rep = 0, missed = 0, lost = 0, bits = BITS;
-    // a short phone (360×640): the card holds the shelves, the shop's front and the talk row; with the replies too it cannot, so when a
-    // line lands below its fold the card scrolls itself just far enough to show it — never past the shop's front (the customer and
-    // their words stay in sight) — and is back at its top for each customer (the shelves first), as the 案内所's: JOBS.talkLine's (Task 7's
-    // fix round, M-10; its talk row stays its own, below); each line awaited to its end within the lane's cap (said: I-1)
-    const TL = JOBS.talkLine({ box: () => box, sel: '.om-talk', keep: () => el('.om-front') }), { said, seeTalk } = TL;
+    // fix round 2 (ruling 8): the card a column no taller than the screen — the shop's front, the replies and the talk row held for the
+    // whole customer, the shelves taking what is left and scrolling inside themselves; never a self-scroll on a line: the card in sight once
+    // as each customer comes (JOBS.talkLine's start; its talk row its own, below); each line awaited to its end within the lane's cap (I-1)
+    const TL = JOBS.talkLine({ box: () => box, sel: '.om-talk' }), { said } = TL;
     // the talk row under the replies: whoever spoke last — 竹内's word (its 中文, or a miss's reason), a customer's to a tray that is not
     // it (with the reason), the hero's (its 中文 on the job's first shift only, ruling 23: under the reply once said, never under the buttons)
     function talk(id, html, cls = '') {
       const t = el('.om-talk'); if (!t) return; t.dataset.who = id; const m = t.querySelector('.om-mini'); if (m.dataset.who !== id) { m.dataset.who = id; m.innerHTML = TOWNEV.face(id); }
-      const p = t.querySelector('.wk-say'); p.innerHTML = html; p.className = 'wk-say' + (cls ? ' ' + cls : ''); seeTalk();
+      const p = t.querySelector('.wk-say'); p.innerHTML = html; p.className = 'wk-say' + (cls ? ' ' + cls : '');
     }
     const word = ([ja, zh], cls = '') => { if (!el('.om-talk')) return Promise.resolve(); talk(A.who, `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`, cls); return speakAs(A.who, ja); };
     const theirs = (who, [ja], why) => { if (!el('.om-talk')) return Promise.resolve(); talk(who, `<b lang="ja">${ruby(ja)}</b><span>${esc(why)}</span>`, 'bad'); return speakAs(who, ja); };
@@ -136,7 +135,6 @@ const MIYAGE_RUN = (() => {
       const b = el('.wk-cust .wk-bub'); if (!b || !R) return;
       b.innerHTML = bubHtml(open, line || R.line || R.c.line);
       b.classList.toggle('wk-open', Boolean(open));   // open: a pop-up goes under it, never over the words (Task 4's N-4)
-      if (open) seeTalk();
     }
     // the shelves: a good on the tray shows its place empty (its picture faint, ✓), tapped again to put it back; the tray: what is on it; どうぞ
     // once there is something to hand over while a pick is under way
@@ -152,17 +150,31 @@ const MIYAGE_RUN = (() => {
     const trayKey = () => R.tray.slice().sort().join();   // the tray as it stands (a tray handed over and not it: どうぞ off till this changes)
     const hint = () => all('.om-good').forEach((b) => b.classList.toggle('wk-hint', R.c.lit.includes(b.dataset.g)));
     const unhint = () => all('.om-good.wk-hint').forEach((b) => b.classList.remove('wk-hint'));
+    const optsHtml = (c) => c.opts.map(([ja], i) => `<button type="button" class="btn om-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('');
     function opts(on) {
       const o = el('.om-opts'); if (!o) return;
-      o.innerHTML = on ? R.c.opts.map(([ja], i) => `<button type="button" class="btn om-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('') : '';
-      if (on) seeTalk();
+      o.innerHTML = on ? optsHtml(R.c) : '';
+    }
+    // what may come to the talk row at a customer (fix round 2, ruling 8: the row held as tall as the tallest) — 竹内's word to a tray
+    // that is not it (each reason) or to a wrong reply with its why, to a taste, his 「ありがとうございました」s; the customer's own word to a
+    // tray that is not it, with the reason; the hero's greeting, his 「どうぞ」 and the right reply (its 中文 on the job's first shift)
+    function talkHold(c) {
+      const whys = Object.values(s.why), ok = (l) => Array.isArray(l) && l[0];   // a customer's own word to a tray not it, with the reason it goes with (give())
+      const own = [...Object.values(c.no || {}).filter(ok).flatMap((l) => [[l, s.why.few], [l, s.why.small]]), ...(ok(c.over) ? [[c.over, s.why.over]] : []), ...(ok(c.short) ? [[c.short, s.why.short]] : [])];
+      const line = (ja, zh) => `<b lang="ja">${ruby(ja)}</b>${zh ? `<span>${esc(zh)}</span>` : ''}`;
+      const row = (id, html, cls = '') => [`<span class="kr-face om-mini">${TOWNEV.face(id)}</span><p class="wk-say${cls ? ' ' + cls : ''}">${html}</p>`, { 'data-who': id }];
+      JOBS.hold(el('.om-talk'), () => [...whys.map((w) => row(A.who, line(A.pick[0], w))), ...(c.opts || []).filter((o) => !o[2]).map((o) => row(A.who, line(A.form[0], o[1]))),
+        ...[A.taste, ...A.ok, ...A.sell].filter(Boolean).map((l) => row(A.who, line(l[0], l[1]))), ...own.map(([l, w]) => row(c.who, line(l[0], w || s.why.other))),
+        ...[s.hi, s.give, ...(c.opts || []).filter((o) => o[2])].map((l) => row('hero', line(l[0], first ? l[1] : ''), 'om-me'))]);
     }
     function plate() { const p = el('.om-plate'); if (p) p.innerHTML = plateSvg(bits); }
     function show() {
-      const c = tasks[k]; R = { k, c, step: 0, phase: 'hi', tray: [], seed, miss: 0, miss2: 0, busy: false, line: c.line }; rep = 0; TL.toTop();   // the card from its top: the shelves first
+      const c = tasks[k]; R = { k, c, step: 0, phase: 'hi', tray: [], seed, miss: 0, miss2: 0, busy: false, line: c.line }; rep = 0;
       el('.wk-n').textContent = `${k + 1}／${N}`;
       const cu = el('.wk-cust'); cu.className = 'wk-cust'; cu.removeAttribute('data-mood'); cu.dataset.kind = c.kind; cu.innerHTML = JOBS.custHtml(c.who) + hold(c);
       unhint(); shelves(); tray(); opts(false); bub(false); JOBS.hold(el('.wk-cust .wk-bub'), [c.line, c.then, c.after].filter((l) => Array.isArray(l) && l[0]).map((l) => bubHtml(true, l)));   // as tall as their words, every step's (2026-11-25)
+      JOBS.hold(el('.om-opts'), MIYAGE.steps(c).includes('reply') && c.opts ? [optsHtml(c)] : []); talkHold(c);   // the replies and the talk row held for the whole customer too (fix round 2, ruling 8)
+      JOBS.reading(el('.om-shelves'))(); TL.start(el('.om-shelves'));   // the shelves from their top, taking what is left; the card in sight once
       const me0 = R;
       said(JOBS.queue(() => me(s.hi), box), 700).then(() => { if (mineNow(me0)) begin(0); });
     }
@@ -288,8 +300,7 @@ const MIYAGE_RUN = (() => {
     const shelf = (list, top) => `<div class="om-shelf${top ? ' om-top' : ''}">${top ? `<span class="om-sign" lang="ja" aria-hidden="true"><span>${ruby(list[0][1])}</span></span>` : ''}${list.map((g) => `<button type="button" class="om-good" data-g="${g[0]}" aria-label="${esc(g[5])}・${g[2]} 日圓"><span class="om-pic">${pic(g)}<i class="om-tick" aria-hidden="true">✓</i></span>
       <span class="om-tag"><b lang="ja">${ruby(g[3] ? g[6] : g[1])}</b><i>${yenStr(g[2])}円</i></span></button>`).join('')}</div>`;   // a box's pieces read whole: ろっこいり (fix round 1, M-4)
     const G = MIYAGE.goods();
-    CLASS.card('wk-miyage', '伴手禮店', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
-      <div class="wk-head"><b lang="ja">ゆのはな<ruby>堂<rt>どう</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span></div>
+    CLASS.card('wk-miyage', '伴手禮店', `<div class="wk-head"><b lang="ja">ゆのはな<ruby>堂<rt>どう</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
       <div class="om-shop"><div class="om-shelves">${shelf(G.slice(0, 5), true)}${shelf(G.slice(5))}</div>
         <div class="om-front"><i class="om-noren" aria-hidden="true">${NOREN}</i><div class="om-door"><div class="wk-cust"></div></div>
           <div class="om-counter"><span class="om-plate" aria-hidden="true"></span><div class="om-tray"></div><button type="button" class="btn btn-primary om-give" lang="ja" disabled>どうぞ</button></div></div></div>

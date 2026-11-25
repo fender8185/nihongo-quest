@@ -182,21 +182,24 @@ const ANNAI_RUN = (() => {
     // this run's own card (box, once drawn): a shift's goodbye still being said when the next one's card opens never touches that one; its
     // own desk (D: never another run's)
     let box = null, D = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), live = () => mine === runs && Boolean(el('.an-glass')) && ctx.on();
-    // あかり and the hero share the line under the replies (whoever spoke last), as at 原田's window; a short phone (2026-11-24, fix round
-    // 1): the card holds the board, the glass, the replies and the talk line — when a line lands below its fold the card scrolls itself just
-    // far enough to show it, and is back at its top for each tourist (the board and the glass first): JOBS.talkLine (Task 7's fix round, M-10)
-    const TL = JOBS.talkLine({ box: () => box, sel: '.an-talk', who: A.who, first }), { word, me, said, seeTalk } = TL;
+    // あかり and the hero share the line under the replies (whoever spoke last), as at 原田's window: JOBS.talkLine. Fix round 2 (ruling 8):
+    // the card a column no taller than the screen — the glass, the replies and the talk line held for the whole tourist, the board taking
+    // what is left and scrolling inside itself; never a self-scroll on a line: the card in sight once as each tourist comes (start)
+    const TL = JOBS.talkLine({ box: () => box, sel: '.an-talk', who: A.who, first }), { word, me, said } = TL;
     const bubHtml = (open, [ja, zh]) => `<button type="button" class="wk-ear an-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="bt-dots">……</b>'}`;
     function bub(open, line) {
       const R = D.now(), b = el('.wk-cust .wk-bub'); if (!b || !R) return;
       b.innerHTML = bubHtml(open, line || R.task.q);
       b.classList.toggle('wk-open', Boolean(open));   // open: a pop-up goes under it, never over the question (N-4)
-      if (open) seeTalk();   // the bubble grown: the talk line kept in sight
     }
+    const optsHtml = (t) => t.opts.map(([ja], i) => `<button type="button" class="btn an-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('');
     function opts(on) {
       const o = el('.an-opts'), R = D.now(); if (!o) return;
-      o.innerHTML = on && R ? R.task.opts.map(([ja], i) => `<button type="button" class="btn an-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('') : '';
+      o.innerHTML = on && R ? optsHtml(R.task) : '';
     }
+    // what あかり and the hero may say at a tourist (the talk row held as tall as the tallest: TL.keep) — her word to each wrong reply (the
+    // board misread, or a form that answers nothing) with its why, her 「ばっちり」s; the hero's greeting and the right reply
+    const talkLines = (t) => ({ drv: t.opts.filter((o) => !o[2]).map((o) => [(o[3] === 'form' ? A.form : A.fact)[0], o[1]]).concat(A.ok), me: [s.hi].concat(t.opts.filter((o) => o[2])) });
     // the desk's flow (ruling 28: JOBS.desk): the tourist's question heard first, three replies — the right one said, their thanks (a fun
     // tourist their own word, in the bubble), now and then あかり's word; a wrong one: あかり says what kind of miss it is (the board misread,
     // or a form that answers nothing) with why under it, and it cannot be picked again; the question shown, the tourist still there to
@@ -204,15 +207,15 @@ const ANNAI_RUN = (() => {
     D = cur = JOBS.desk({ job: 'annai', ctx, N, box: () => box, alive: '.an-glass', mine: () => mine === runs, tasks: shift.tasks,
       isRight: (t, i) => Boolean(t.opts[i] && t.opts[i][2]), secs: () => SECS, cost: MISS, hi: () => s.hi, fresh: () => ({ seed }),
       me, word, bub, opts, optSel: '.an-opt', earSel: '.an-ear', rightCls: 'an-right', once: true,
-      draw: (t) => { TL.toTop(); el('.wk-cust').dataset.fun = t.fun || ''; JOBS.hold(el('.wk-cust .wk-bub'), [t.q, t.after].filter(Boolean).map((l) => bubHtml(true, l))); },   // the card from its top: the board and the glass first; the bubble as tall as their words (2026-11-25)
+      draw: (t) => { el('.wk-cust').dataset.fun = t.fun || ''; JOBS.hold(el('.wk-cust .wk-bub'), [t.q, t.after].filter(Boolean).map((l) => bubHtml(true, l)));   // the bubble as tall as their words (2026-11-25)
+        JOBS.hold(el('.an-opts'), [optsHtml(t)]); TL.keep(() => talkLines(t)); JOBS.reading(el('.an-board'))(); TL.start(el('.an-board')); },   // the replies and the talk row held too, the board from its top taking what is left, the card in sight once (fix round 2, ruling 8)
       miss: (t, i) => { const o = t.opts[i]; return [(o[3] === 'form' ? A.form : A.fact)[0], o[1]]; },
       served: async (t, R, lv) => {
         const after = t.after || s.thanks; if (t.after) bub(true, after); await said(speakAs(t.who, after[0]), 600); if (!lv()) return;
         el('.wk-cust').classList.add('bye'); if (!R.miss && Math.random() < 0.3) await said(word(A.ok[Math.floor(Math.random() * A.ok.length)], 'ok'));
       },
       end: A.end, all: A.all });
-    CLASS.card('wk-annai', '觀光服務台', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
-      <div class="wk-head"><b lang="ja"><ruby>観光<rt>かんこう</rt></ruby><ruby>案内所<rt>あんないじょ</rt></ruby></b><span class="wk-n">${Math.min(ctx.done + 1, N)}／${N}</span></div>
+    CLASS.card('wk-annai', '觀光服務台', `<div class="wk-head"><b lang="ja"><ruby>観光<rt>かんこう</rt></ruby><ruby>案内所<rt>あんないじょ</rt></ruby></b><span class="wk-n">${Math.min(ctx.done + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
       ${boardHtml(shift.board)}
       <div class="an-glass"><i class="an-rack" aria-hidden="true">${RACK}</i><div class="an-pane"><div class="wk-cust"></div><i class="an-acryl" aria-hidden="true"></i></div><i class="an-rack" aria-hidden="true">${RACK}</i></div>
       <div class="an-opts"></div><div class="an-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(A.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => D.click(e));

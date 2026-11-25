@@ -157,34 +157,39 @@ const FRONT_RUN = (() => {
     // own desk (D: never another run's)
     let box = null, D = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), all = (q) => (box && box.isConnected ? [...box.querySelectorAll(q)] : []);
     const live = () => mine === runs && Boolean(el('.fr-desk')) && ctx.on();
-    // the book wanted (a book question; a check-in's key): the card's self-scroll never takes it out of sight (fix round 1, M-1) — till two
-    // misses in the step have lit their row and the right reply: then 佐藤's reason and that reply come into sight (2026-11-25, parked
-    // from Task 7's re-review: at 360×640 they stayed under the fold)
-    const wanted = () => { const R = D && D.now(); return Boolean(R) && R.phase !== 'done' && R.miss2 < 2 && (R.task.kind === 'memo' || (Boolean(R.task.steps) && R.step === 1)); };
     // 佐藤 and the hero share the line under the replies (whoever spoke last; the hero's 中文 on the job's first shift only, under the
-    // reply once said — ruling 23); a short phone: the card scrolls itself just far enough to show it, never past the book while it is
-    // wanted, and is back at its top for each guest: JOBS.talkLine (M-10), every line awaited within the lane's cap (I-1)
-    const TL = JOBS.talkLine({ box: () => box, sel: '.fr-talk', who: A.who, first, keep: () => (wanted() ? el('.fr-book') : null) }), { word, me, said, seeTalk } = TL;
+    // reply once said — ruling 23); every line awaited within the lane's cap (I-1). Fix round 2 (ruling 8): the card never scrolls itself
+    // on a line — the talk row held as tall as the tallest this guest may bring, the card brought into sight once as each guest comes
+    const TL = JOBS.talkLine({ box: () => box, sel: '.fr-talk', who: A.who, first }), { word, me, said } = TL;
     // the guest's bubble: their words heard first (……, 🔊), shown once right, after two misses, or as they go (line: their word after)
     const bubHtml = (open, [ja, zh]) => `<button type="button" class="wk-ear fr-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="fr-dots">……</b>'}`;
     function bub(open, line) {
       const R = D.now(), b = el('.wk-cust .wk-bub'); if (!b || !R) return;
       b.innerHTML = bubHtml(open, line || R.task.q);
       b.classList.toggle('wk-open', Boolean(open));   // open: a pop-up goes under it, never over the words (Task 4's N-4)
-      if (open) seeTalk();
     }
     // the replies — or, a check-in's second step, the board's keys to tap (the replies' place says so)
+    const TIP = '<p class="fr-tip">在左邊的台帳找到這位客人的名字（看名字上的念法），點他房間的鑰匙。</p>';
+    const optsHtml = (t) => t.opts.map(([ja], i) => `<button type="button" class="btn fr-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('');
     function opts(on) {
       const o = el('.fr-opts'), R = D.now(); if (!o || !R) return; const keyStep = on && Boolean(R.task.steps) && R.step === 1;
       const b = el('.fr-board'); if (b) b.classList.toggle('fr-pick', keyStep);
-      o.innerHTML = !on ? '' : keyStep ? '<p class="fr-tip">在左邊的台帳找到這位客人的名字（看名字上的念法），點他房間的鑰匙。</p>'
-        : R.task.opts.map(([ja], i) => `<button type="button" class="btn fr-opt" data-o="${i}" lang="ja"><span>${ruby(ja)}</span></button>`).join('');
-      if (on) seeTalk();
+      o.innerHTML = !on ? '' : keyStep ? TIP : optsHtml(R.task);
     }
+    // what 佐藤 and the hero may say at a guest (the talk row held as tall as the tallest: TL.keep) — 佐藤's word to each wrong reply and
+    // to a wrong key, his 「結構で ございます」s, his word as 道山 goes; the hero's greetings, each reply, the room as the key is handed
+    // over, dinner's 「かしこまりました」
+    const talkLines = (t) => ({
+      drv: t.opts.filter((o) => !o[2] && A[o[3]]).map((o) => [A[o[3]][0], o[1]]).concat(t.steps ? [[A.key[0], F.keyWhy]] : [], t.fun === 'michiyama' ? [A.lost] : [], A.ok),
+      me: [F.hi.in, F.hi.am, F.hi.pm].concat(t.opts.map((o) => [o[0], o[1]]), t.steps && t.room ? [FRONT.roomLine(t.who, t.room)] : [], t.kind === 'dinner' ? [F.ok] : []) });
     // a guest comes up: the bell rung, the book and the board unlit, the card from its top (the book first); their luggage in hand
     function draw(t) {
-      TL.toTop();   // the bubble as tall as their words shown mid-guest (2026-11-25): their question, the birthday's gladness if that reply is offered, dinner's answer — a fun guest's word as they go, the guest done, not held; a 640-tall phone none (it cannot hold the book, the keys, the talk row and all that at once: Task 7's review keeps the book and keys in sight there; the talk row kept its height)
-      JOBS.hold(el('.wk-cust .wk-bub'), () => (innerHeight < 700 ? [] : [t.q, t.answer, t.opts && t.opts.some((o) => o[3] === 'bday') ? (F.named[t.who] || {}).bday : null].filter((l) => Array.isArray(l) && l[0]).map((l) => bubHtml(true, l))));   // the screen's height read as it is measured (fix round 1: a turn of the phone)
+      // fix round 2 (ruling 8): the guest's bubble, the replies (or the key's tip) and the talk row each held for the whole guest, on every
+      // screen — their question, the birthday's gladness if that reply is offered, dinner's answer, a fun guest's word as they go; the book
+      // and the keys take what is left, from their top; the card in sight once (JOBS.talkLine's start)
+      JOBS.hold(el('.wk-cust .wk-bub'), [t.q, t.answer, t.after, t.opts && t.opts.some((o) => o[3] === 'bday') ? (F.named[t.who] || {}).bday : null].filter((l) => Array.isArray(l) && l[0]).map((l) => bubHtml(true, l)));
+      JOBS.hold(el('.fr-opts'), [optsHtml(t)].concat(t.steps ? [TIP] : []));
+      TL.keep(() => talkLines(t)); JOBS.reading(el('.fr-desk'))(); TL.start(el('.fr-desk'));
       all('.fr-row.fr-lit').forEach((x) => x.classList.remove('fr-lit')); all('.fr-key.wk-hint').forEach((x) => x.classList.remove('wk-hint')); all('.fr-dn.fr-new').forEach((x) => x.classList.remove('fr-new'));
       const c = el('.wk-cust'); c.dataset.kind = t.kind; c.dataset.fun = t.fun || ''; if (t.kind === 'luggage') c.insertAdjacentHTML('beforeend', `<i class="fr-hold" aria-label="提著很多行李">${BAGS}</i>`);
       const bell = el('.fr-bell'); if (bell) { bell.classList.remove('fr-ding'); void bell.getBoundingClientRect(); bell.classList.add('fr-ding'); } SND.play('desk-bell', { vol: 0.45 });
@@ -193,7 +198,8 @@ const FRONT_RUN = (() => {
     function hint(t, R, out) {
       if (t.party === undefined || (t.kind === 'checkin' && R.step === 0 && !out)) return;
       const p = book[t.party], row = el(`.fr-row[data-room="${p.room}"]`); if (row) row.classList.add('fr-lit');
-      if (t.kind === 'checkin' && !p.in) { const k = el(`.fr-key[data-room="${p.room}"]`); if (k) k.classList.add('wk-hint'); }
+      const k = t.kind === 'checkin' && !p.in ? el(`.fr-key[data-room="${p.room}"]`) : null; if (k) k.classList.add('wk-hint');
+      JOBS.inSight(el('.fr-desk'), k || row);   // the book and the keys scroll inside themselves (fix round 2, ruling 8): what is lit brought into sight there — the key to tap, else the row
     }
     // their key handed over the moment it is tapped (fix round 1, M-9: never after a line still being said) — off the board, a bare hook
     // left (nothing to tap), their row ticked
@@ -236,8 +242,7 @@ const FRONT_RUN = (() => {
         if (!R.task.steps || R.step !== 1 || k.classList.contains('fr-out')) return true;
         if (k.dataset.room === R.task.room) { handOver(R.task); D.right(); } else D.miss(k, [A.key[0], F.keyWhy]); return true; },
       end: A.end, all: A.all, extra: () => (tip ? { tip, tipName: F.tipName } : {}) });
-    CLASS.card('wk-front', '旅館櫃台', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
-      <div class="wk-head"><b lang="ja">フロント</b><span class="wk-n">${Math.min(ctx.done + 1, N)}／${N}</span></div>
+    CLASS.card('wk-front', '旅館櫃台', `<div class="wk-head"><b lang="ja">フロント</b><span class="wk-n">${Math.min(ctx.done + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
       <div class="fr-desk"><div class="fr-book" lang="ja">${bookHtml(book)}</div><div class="fr-board" lang="ja">${boardHtml(book)}</div></div>
       <div class="fr-lobby"><div class="wk-cust"></div></div>
       <div class="fr-opts"></div><div class="fr-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(A.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => D.click(e));
