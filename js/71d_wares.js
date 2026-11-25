@@ -5,7 +5,7 @@
 // on it), 'wall' hangs on the left (L, x = 0) or right (R, y = 0) wall (size: w × h, u along the wall, v the height of its middle),
 // 'wear' is worn by the hero (slot), 'clothes' a style of top, trousers or shoes they put on in their own colours (slot: top,
 // bottom, shoe; the ware's id is the style's). A ware bought goes into the storage box (a wear or clothes into the wardrobe); at:
-// where one of 書房's own (starter) is laid out at first.
+// where one of 書房's own (starter) is laid out at first. Not 古道具屋's: gift (given, by whom) and shop (sold in a town shop for 円).
 const WARES = [
   // test (2026-11-09): presents from the neighbours (gift: who brings it; home: where it is set out when there is room), not sold
   { id: 'gramophone', kind: 'floor', h: 2.7, name: '留聲機', price: 100, fp: [1, 1], desc: '老唱機，放著黑膠唱片會一直播輕音樂。點它換唱片或停下來。', act: 'music', gift: 'mugi', home: { w: 'F', x: 19.6, y: 0.6, r: 0 } },
@@ -72,6 +72,10 @@ const WARES = [
   { id: 'shirt', kind: 'clothes', slot: 'top', name: '襯衫', price: 42, desc: '有領子的襯衫，看起來很認真。' },
   { id: 'jinbei', kind: 'clothes', slot: 'top', name: '甚平', price: 66, desc: '夏天在家穿的和風上衣。' },
   { id: 'cattop', kind: 'clothes', slot: 'top', name: '貓咪上衣', price: 72, desc: '毛茸茸的貓咪裝，白肚子、貓掌手，還有鈴鐺。' },
+  // 湯の花's yukata (2026-11-25, the user): the flowered one sold at ゆかた屋 for 円 (shop: where; yen: its price — not at 古道具屋), and
+  // 旅館「花月」's own, given in 桜の間 (gift: who gives it; its colours the inn's) — each put on as it is had
+  { id: 'yukata', kind: 'clothes', slot: 'top', shop: 'yukataya', yen: 1200, name: '浴衣', desc: '湯の花「ゆかた屋」的花色浴衣，顏色在衣櫃自己配。' },
+  { id: 'innyukata', kind: 'clothes', slot: 'top', gift: 'kagetsu', name: '旅館的浴衣', desc: '旅館「花月」的浴衣：白底藍色波紋、深藍腰帶，旅館送的，店裡不賣。' },
   { id: 'shorts', kind: 'clothes', slot: 'bottom', name: '短褲', price: 24, desc: '及膝短褲。' },
   { id: 'wide', kind: 'clothes', slot: 'bottom', name: '寬褲', price: 42, desc: '寬鬆的寬褲，走起路來很舒服。' },
   { id: 'skirt', kind: 'clothes', slot: 'bottom', name: '裙子', price: 36, desc: '及膝的 A 字裙。' },

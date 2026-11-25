@@ -720,6 +720,14 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .kb-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .kb-wallet { display: flex; align-items: center; gap: 4px; padding: 4px 10px; white-space: nowrap; border-radius: 999px; background: #fbf7ec; font-weight: 700; } .kb-pay { min-height: 44px; }
 .kb-slot { display: grid; gap: 6px; justify-items: center; } .kb-ticket { display: grid; justify-items: center; padding: 6px 14px; border-radius: 4px; background: #f6e7c0; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); animation: mdPrint .7s ease-out; } .kb-ticket b { font-size: 18px; } .kb-ticket small { color: #8a7a6e; font-size: 11px; }
 .kb-tip { margin: 0; font-size: 13px; color: #fff; } .kb-ride { min-height: 44px; }
+/* 2026-11-25 (the user: tickets only where walking cannot take you; one at a time): a button each ticket the machine sells, its station
+   named under its fare (the town's three: one, wide; 湯の花's: two); off while a ticket is held; why the town's sell only the one (a note
+   under the chart); 払いもどし beside the ride; 跳過 in the car's top right corner, every ride (the user's pick: 「車上右上角」) */
+.kb-fares.one { grid-template-columns: 1fr; } .kb-fares:not(.one) { grid-template-columns: repeat(2, 1fr); } .kb-fare .kb-to { font-size: 12px; font-weight: 700; color: #3f6a5a; } .kb-fare .kb-to rt { font-size: 7px; font-weight: 400; }
+.kb-fare:disabled { opacity: .45; box-shadow: none; cursor: default; }
+.kb-note { margin: 6px 2px 8px; padding: 6px 10px; border-radius: 8px; background: rgba(63, 154, 140, .12); color: #2f5a50; font-size: 13px; line-height: 1.5; }
+.kb-back { min-height: 44px; padding-inline: 10px; background: #fbf7ec; color: #8a3a1a; } .kb-back small { margin-left: 4px; font-size: 11px; font-weight: 400; color: #8a7a6e; }
+.rd-skip { position: absolute; top: 6px; right: 6px; z-index: 2; min-width: 64px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px; background: rgba(20, 20, 24, .66); color: #fff; font-size: 14px; font-weight: 700; letter-spacing: .04em; cursor: pointer; }
 .rd-box { position: relative; margin: 6px -6px; border-radius: 12px; overflow: hidden; } .rd-car { display: block; width: 100%; height: auto; }
 .rd-led { position: absolute; top: 6px; left: 50%; z-index: 1; transform: translateX(-50%); margin: 0; padding: 2px 12px; border-radius: 4px; background: #141418; color: #ffae3a; font-size: 15px; font-weight: 700; white-space: nowrap; } .rd-led small { font-size: 11px; color: #5fd07a; } .rd-led rt { font-size: 8px; color: #c9cdd4; }
 .rd-strip { animation: rdRun 7s linear infinite; } .rd-car.stop .rd-strip { animation-play-state: paused; } @keyframes rdRun { to { transform: translateX(-1080px); } }
@@ -773,6 +781,12 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .yd-foot { display: grid; justify-items: center; gap: 6px; min-height: 52px; }
 .yd-go, .yd-ok { min-height: 48px; min-width: 180px; font-size: 18px; display: grid; justify-items: center; line-height: 1.15; } .yd-go small { font-size: 11px; font-weight: 600; opacity: .85; } .yd-go rt, .yd-ok rt { font-size: 9px; }
 .yd-done { margin: 4px 0 0; font-size: 17px; font-weight: 700; } .yd-done rt { font-size: 9px; } .yd-note { margin: 0; font-size: 13px; color: #8a7a6e; }
+/* ゆかた屋's card (2026-11-25): the 浴衣 on a pale stand, its price tag, 買う */
+.yd-yukata .cls-card { width: min(360px, 100%); background: #f6ecd8; color: #2b2b33; border-top: 8px solid #c8506a; text-align: center; padding: 14px 12px 12px; }
+.yd-ywear { position: relative; margin: 0 auto 8px; width: min(220px, 70%); border-radius: 14px; background: radial-gradient(circle at 50% 38%, #fffaf0, #efe2c8); box-shadow: inset 0 0 0 2px #e2d2b0; }
+.yd-ywear > svg { display: block; width: 100%; height: auto; } .yd-ywear :is(.head, .h-shadow, .legs, .arm g > circle:last-child) { display: none; }   /* on its stand: no head, hands nor feet */ .yd-ytag { position: absolute; right: -6px; bottom: 10px; margin: 0; padding: 3px 8px; border-radius: 4px; background: #fffef8; box-shadow: 0 2px 4px rgba(0, 0, 0, .18); font-size: 15px; font-weight: 800; transform: rotate(-4deg); } .yd-ytag rt { font-size: 8px; }
+.yd-yukata .yd-note { margin: 0 6px 8px; line-height: 1.5; } .yd-yukata .yd-foot .yd-note { margin: 0; }
+.yd-buy { min-height: 48px; min-width: 180px; font-size: 18px; display: grid; justify-items: center; line-height: 1.15; } .yd-buy small { font-size: 11px; font-weight: 600; opacity: .85; } .yd-buy rt { font-size: 9px; }
 .yd-stall .yd-cork { opacity: 0; } .yd-stall .yd-cork.fly { animation: ydCork .34s ease-in forwards; } @keyframes ydCork { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(.55); } }
 .yd-stall .yd-ponw { opacity: 0; } .yd-stall.fire .yd-ponw { animation: ydPon .7s ease-out; } @keyframes ydPon { 0% { opacity: 0; transform: translate(0, 6px) scale(.6); } 20% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translate(4px, -8px); } }
 .yd-stall .yd-gun { transform-box: fill-box; transform-origin: 30% 100%; } .yd-stall.fire .yd-gun { animation: ydKick .3s ease-out; } @keyframes ydKick { 30% { transform: rotate(-5deg) translate(-2px, 3px); } }
@@ -819,7 +833,6 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .sky .land .rk-shishi { transform-box: fill-box; transform-origin: 50% 50%; animation: rkShishi 17s ease-in-out infinite; }
 @keyframes rkShishi { 0% { transform: rotate(-20deg); } 1% { transform: rotate(-16deg); } 2.6% { transform: rotate(-20deg); } 89% { transform: rotate(-13deg); } 91.6% { transform: rotate(24deg); } 95.1% { transform: rotate(24deg); } 99.5% { transform: rotate(-21deg); } 100% { transform: rotate(-20deg); } }   /* the strike at 99.5%: its コーン (animationiteration) about 85 ms after it (2026-11-25, parked from Task 3: at 99% it was 170 ms late) */
 .sky .land .rk-pour { opacity: 0; animation: rkPour 17s linear infinite; } @keyframes rkPour { 0%, 91% { opacity: 0; } 92%, 95% { opacity: .9; } 97.5%, 100% { opacity: 0; } }
-.sky .land [data-fx="furin"].ring .fx-sway { animation-duration: .24s !important; }   /* the wind chime rung as the garden is looked at */
 .sky .land .rk-bellcap { transform-box: fill-box; transform-origin: 50% 100%; } .sky .land [data-fx="rkbell"].ding .rk-bellcap { animation: rkBell .14s ease-out 4 alternate; } @keyframes rkBell { to { transform: scale(1.08, .86); } }
 @media (prefers-reduced-motion: reduce) { .sky .land :is(.rk-shishi, .rk-pour), .sky .land [data-fx="rkbell"].ding .rk-bellcap { animation: none; } }
 /* 桜の間's things looked at: the TV on a moment (a weather map), the air conditioner's breath and its light, the 押し入れ's fusuma slid
@@ -835,9 +848,13 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 /* 観光案内所 (2026-11-24, an-): seen from inside the counter — the board 「湯の花温泉 ごあんない」 over it (lit indoors: the same by night),
    six cards two across on a phone, three on a wider screen; the glass with the racks of leaflets either side and the acrylic speaking
    board in it, the tourist outside against the day or the night (--day); the replies; あかり or the hero under them */
-.wk-annai .cls-card { background: #f3efe6; color: #2b2b33; border-bottom: 10px solid #2f5a3a; padding: 12px 12px 10px; }
+.wk-annai .cls-card { margin-top: clamp(0px, calc(50dvh - 420px), 160px); background: #f3efe6; color: #2b2b33; border-bottom: 10px solid #2f5a3a; padding: 12px 12px 10px; }
+/* 2026-11-25 (the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」): the card anchored at its top, as the other three onsen cards — centred,
+   it rose by half of whatever grew in it as a reply was picked; its talk row kept as tall as its tallest line (the keeper's word and why)
+   from the start, the tourist's bubble as tall as their words (JOBS.hold): a reply moves nothing */
+.cls.wk-annai { align-items: start; }
 .wk-annai .cls-x { width: 40px; height: 40px; }
-.an-board { max-height: max(200px, calc(100dvh - 470px)); overflow-y: auto; overscroll-behavior: contain; margin: 4px -6px 6px; padding: 0 4px 4px; border-radius: 10px; background: #6e5236; box-shadow: inset 0 0 0 2px #8a6a46, 0 2px 0 rgba(0, 0, 0, .15); }
+.an-board { max-height: max(140px, calc(100dvh - 494px)); overflow-y: auto; overscroll-behavior: contain; margin: 4px -6px 6px; padding: 0 4px 4px; border-radius: 10px; background: #6e5236; box-shadow: inset 0 0 0 2px #8a6a46, 0 2px 0 rgba(0, 0, 0, .15); }
 .an-btitle { position: sticky; top: 0; z-index: 1; margin: 0 -4px 4px; padding: 3px 8px 2px; box-shadow: 0 2px 0 #6e5236; border-radius: 6px; background: #2f5a3a; color: #fbf8f0; font-size: 16px; font-weight: 700; letter-spacing: .06em; text-align: center; } .an-btitle rt { font-size: 9px; letter-spacing: 0; color: #d6e6cf; }
 .an-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; } @media (min-width: 600px) { .an-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .an-fac { display: flex; flex-wrap: wrap; align-items: center; align-content: start; gap: 1px 5px; padding: 3px 5px 4px; border-radius: 6px; background: #fbf8f0; box-shadow: 0 1px 0 rgba(0, 0, 0, .2); }
@@ -850,7 +867,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .an-nm .an-lit { color: #3a4170; font-weight: 700; } .an-nb { white-space: nowrap; }   /* a word kept whole (ライトアップ): a line may break only before it */
 .an-glass { display: flex; align-items: stretch; margin: 0 -6px; overflow: hidden; border: 3px solid #8a6a46; border-bottom: 9px solid #a8743f; border-radius: 10px 10px 4px 4px; }
 .an-rack { flex: none; display: block; width: 22px; } @media (max-width: 400px) { .an-rack { width: 16px; } } .an-rack svg { display: block; width: 100%; height: 100%; }
-.an-pane { position: relative; flex: 1; min-width: 0; padding: 8px 8px 7px; background: linear-gradient(color-mix(in srgb, #cfe6f2 calc(var(--day, 1) * 100%), #1d2650), color-mix(in srgb, #eef5f2 calc(var(--day, 1) * 100%), #2e3560)); }
+.an-pane { position: relative; flex: 1; min-width: 0; padding: 6px 8px 5px; background: linear-gradient(color-mix(in srgb, #cfe6f2 calc(var(--day, 1) * 100%), #1d2650), color-mix(in srgb, #eef5f2 calc(var(--day, 1) * 100%), #2e3560)); }
 .an-acryl { position: absolute; inset: 4px 6px 0; border: 2px solid rgba(255, 255, 255, .75); border-bottom: 0; border-radius: 12px 12px 0 0; background: linear-gradient(115deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, 0) 34%, rgba(255, 255, 255, .12) 60%, rgba(255, 255, 255, 0)); pointer-events: none; }
 .an-acryl::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 34%; height: 9px; transform: translateX(-50%); border-radius: 10px 10px 0 0; background: rgba(40, 52, 66, .3); }
 .an-pane .wk-cust { margin: 0; min-height: 0; gap: 4px 8px; align-items: flex-start; } .wk-annai .wk-cust .kr-face { width: 40px; height: 40px; } .wk-annai .wk-emo { left: 16px; }   /* the 40 px face's corner (as the window's) */
@@ -861,11 +878,11 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 :is(.wk-annai, .wk-window, .wk-miyage, .wk-front) .wk-bub.wk-open ~ .wk-grr { top: auto; bottom: -7px; left: 0; padding: 1px 7px; font-size: 13px; line-height: 20px; }
 .wk-annai .wk-cust:is([data-fun="book"], [data-fun="ghost"], [data-fun="future"])::before { position: absolute; left: 26px; top: 24px; z-index: 1; font-size: 19px; line-height: 1; pointer-events: none; }   /* the face clips (.kr-face): the mark hangs on the row */
 .wk-annai .wk-cust[data-fun="book"]::before { content: '📖'; } .wk-annai .wk-cust[data-fun="ghost"]::before { content: '👻'; } .wk-annai .wk-cust[data-fun="future"]::before { content: '🔮'; }
-.an-opts { display: grid; gap: 5px; margin-top: 6px; }
+.an-opts { display: grid; gap: 4px; margin-top: 6px; }
 .an-opt { min-height: 44px; padding-block: 3px; font-size: 15.5px; line-height: 1.45; text-align: left; justify-content: flex-start; flex-direction: column; align-items: flex-start; white-space: normal; } .an-opt rt { font-size: 9px; }
 .an-opt.an-right { box-shadow: 0 0 0 2px #3f9a6a; } .an-opt:disabled:not(.an-right):not(.wk-hint) { opacity: .5; }
 .an-opt.wk-bad { animation: shake .3s ease; } .an-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
-.an-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } .an-talk .kr-face { width: 34px; height: 34px; flex: none; } .an-talk .wk-say { font-size: 14px; }
+.an-talk { display: flex; align-items: center; gap: 8px; min-height: 70px; margin-top: 2px; } .an-talk .kr-face { width: 34px; height: 34px; flex: none; } .an-talk .wk-say { font-size: 14px; }
 .an-talk[data-who="me"] :is(.kr-face, .wk-say), .an-talk:not([data-who="me"]) .wk-me { display: none; } .an-talk .wk-me { flex: 1; margin: 0; }
 @media (prefers-reduced-motion: reduce) { .an-opt.wk-bad { animation: none; } }
 /* 仲居 (2026-11-24, nk-): 桜の間 front-on (washitsuArt) under its room plate and the 「お客様 到着まで」 countdown at the top right (as the
@@ -909,10 +926,16 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .nk-bub .wk-ear { grid-row: span 2; min-height: 40px; min-width: 44px; } .nk-bub > :not(.wk-ear) { grid-column: 2; } .nk-bub span { font-size: 12.5px; opacity: .65; } .nk-bub rt { font-size: 9px; }
 .nk-bub .nk-dots { color: #8a7a6e; letter-spacing: .1em; } .nk-bub:not(:has(.wk-ear)) { padding-left: 12px; }
 .nk-opts { display: grid; gap: 5px; margin-top: 6px; } .nk-opts:empty { display: none; }
+/* a screen tall enough (2026-11-25, the user: 「回答會跑版」): the replies' place kept as a task with none comes, and the room one size the
+   whole shift — so the talk row never jumps up into where the replies were; a short phone (640) still draws the room bigger for a task
+   done by tapping it (its things big enough to tap: Task 5's review) */
+@media (min-height: 700px) { .nk-opts { min-height: 142px; align-content: start; } .nk-opts:empty { display: grid; } .wk-nakai .cls-card .nk-art svg { max-height: max(230px, calc(100dvh - 404px)); } }
+@media (min-height: 700px) and (max-width: 440px) { .wk-nakai .cls-card .nk-art svg { max-height: max(126px, calc(100dvh - 512px)); } }
+@media (max-height: 699px) { .wk-nakai .cls-card.nk-ask:not(.nk-guest) .nk-art svg { max-height: max(196px, calc(100dvh - 444px)); } }   /* a 640-tall phone: the room a little smaller again while a reply is picked, for the bubble and the talk row held at their tallest (2026-11-25) — the whole card in sight, as before */
 .nk-opt { min-height: 44px; padding-block: 3px; font-size: 15.5px; line-height: 1.45; text-align: left; justify-content: flex-start; white-space: normal; } .nk-opt rt { font-size: 9px; }
 .nk-opt.nk-right { box-shadow: 0 0 0 2px #3f9a6a; } .nk-opt:is(.nk-right, .wk-hint) { opacity: 1; } .nk-opt:disabled:not(.nk-right):not(.wk-hint) { opacity: .5; }
 .nk-opt.wk-bad { animation: shake .3s ease; } .nk-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
-.nk-talk { display: flex; align-items: center; gap: 8px; min-height: 40px; margin-top: 5px; } .nk-talk .nk-mini { flex: none; width: 30px; height: 30px; }
+.nk-talk { display: flex; align-items: center; gap: 8px; min-height: 52px; margin-top: 5px; }   /* as tall as its tallest line from the start (2026-11-25) */ .nk-talk .nk-mini { flex: none; width: 30px; height: 30px; }
 .nk-talk .wk-say { font-size: 14px; } .nk-talk:has(.wk-say:empty) .nk-mini { visibility: hidden; } .nk-talk .wk-say.nk-me b { color: #2f7a6a; }
 @media (prefers-reduced-motion: reduce) { .nk-art :is(.nk-in, .nk-drop, .nk-back, .nk-fade), .nk-art :is(.nk-glow, .nk-shine), .nk-stage.nk-enter .nk-art, .nk-task.nk-come, .nk-opt.wk-bad, .nk-nya { animation: none; } .nk-art :is(.nk-out, .nk-gone) { display: none; } .nk-art .nk-catgo { animation-duration: .01s; } .nk-art .nk-shine { fill-opacity: .35; } }
 /* おみやげ屋 (2026-11-24, om-): ゆのはな堂 — its back wall with two shelves of the eight goods, each standing on its shelf with its price
@@ -964,7 +987,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .om-opt { min-height: 44px; padding-block: 3px; font-size: 15.5px; line-height: 1.45; text-align: left; justify-content: flex-start; white-space: normal; } .om-opt rt { font-size: 9px; }
 .om-opt.om-right { box-shadow: 0 0 0 2px #3f9a6a; } .om-opt:is(.om-right, .wk-hint) { opacity: 1; } .om-opt:disabled:not(.om-right):not(.wk-hint) { opacity: .5; }
 .om-opt.wk-bad { animation: shake .3s ease; } .om-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
-.om-talk { display: flex; align-items: center; gap: 8px; min-height: 40px; margin-top: 5px; } .om-talk .om-mini { flex: none; width: 30px; height: 30px; }
+.om-talk { display: flex; align-items: center; gap: 8px; min-height: 92px; margin-top: 5px; }   /* as tall as its tallest line (竹内's two-line word and why) from the start (2026-11-25) */ .om-talk .om-mini { flex: none; width: 30px; height: 30px; }
 .om-talk .wk-say { font-size: 14px; } .om-talk:has(.wk-say:empty) .om-mini { visibility: hidden; } .om-talk .wk-say.om-me b { color: #2f7a6a; }
 @media (prefers-reduced-motion: reduce) { .om-chip.om-in, .om-tray.om-off .om-chip, .om-plate .om-bit.om-eat, .om-give.wk-bad, .om-opt.wk-bad { animation: none; } .om-tray.om-off .om-chip { opacity: 0; } }
 /* ---- フロント (2026-11-24, fr-): 旅館「花月」's front desk seen from behind the counter (spec §5.4) — on the left the open 予約台帳 (cream
@@ -1015,7 +1038,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .fr-opt.fr-right { box-shadow: 0 0 0 2px #3f9a6a; } .fr-opt:disabled:not(.fr-right):not(.wk-hint) { opacity: .5; }
 .fr-opt.wk-bad { animation: shake .3s ease; } .fr-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
 .fr-tip { margin: 2px 0; padding: 6px 10px; border-radius: 8px; background: #fbeee0; color: #6a3a1c; font-size: 13.5px; line-height: 1.5; }
-.fr-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } .fr-talk .kr-face { width: 34px; height: 34px; flex: none; } .fr-talk .wk-say { font-size: 14px; }
+.fr-talk { display: flex; align-items: center; gap: 8px; min-height: 70px; margin-top: 4px; }   /* as tall as its tallest line from the start (2026-11-25: a reply moves nothing — on a 640-tall phone too, where the card has scrolled to it once, at the guest's start) */ .fr-talk .kr-face { width: 34px; height: 34px; flex: none; } .fr-talk .wk-say { font-size: 14px; }
 .fr-talk[data-who="me"] :is(.kr-face, .wk-say), .fr-talk:not([data-who="me"]) .wk-me { display: none; } .fr-talk .wk-me { flex: 1; margin: 0; }
 @media (prefers-reduced-motion: reduce) { :is(.fr-opt, .fr-key).wk-bad, .fr-bell.fr-ding .fr-cap, .fr-dn.fr-new { animation: none; } }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */
@@ -1376,6 +1399,10 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 @keyframes heroSwing { from { transform: rotate(-12deg); } to { transform: rotate(10deg); } }
 :is(.study, .yard) .hero.kneel .bob { animation: none; transform: translateY(20px); } :is(.study, .yard) .hero.kneel .legs { display: none; }
 :is(.study, .yard) .hero.sofa .h-shadow { display: none; }   /* up on the cushion */
+/* a long robe (the yukata, the kimono, the wizard's robe; 2026-11-25): what is below its obi gathered up as he kneels (his knees folded
+   under it, never through the cushion) and as he sits (his feet out from under it) */
+:is(.study, .yard) .hero .robe-hem { transform-box: view-box; transform-origin: 2px -30px; } :is(.study, .yard) .hero.kneel .robe-hem { transform: scaleY(.36); }
+:is(.study, .yard) .hero:is(.bench, .sit, .sofa) .robe-hem { transform: scaleY(.6); }
 /* test (2026-11-09): asleep on the bed — laid along it (feet at the hero's spot, the head toward the pillow), eyes shut, z z Z */
 :is(.study, .yard) .hero.sleep .bob { animation: heroSleep 3.2s ease-in-out infinite; transform-origin: 0 0; transform: translateY(-54px) rotate(63deg); } :is(.study, .yard) .hero.sleep .h-shadow { display: none; }
 @keyframes heroSleep { 50% { transform: translateY(-55.5px) rotate(63deg); } }
@@ -1620,6 +1647,13 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .sky .land [data-fx].flown { animation: fxFlown 6s ease-in-out; } @keyframes fxFlown { 0% { transform: none; opacity: 1; } 14% { transform: translate(80px, -160px); opacity: 0; } 82% { transform: translate(-40px, -70px); opacity: 0; } 100% { transform: none; opacity: 1; } }
 .sky .land [data-fx]:is(.buy, .honk, .purr, .wake) { transform-box: fill-box; transform-origin: 50% 100%; animation: fxNudge .2s ease-in-out 8 alternate; } @keyframes fxNudge { to { transform: scale(1.04, .96); } }
 .sky .land [data-fx].ring { animation: fxRing .32s ease-in-out 6 alternate !important; } @keyframes fxRing { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+/* 花月's 風鈴 rung as the garden is looked at (2026-11-25, the user: 「只需要輕輕晃動就好，目前是上下大震」): its group is no swinging thing of its
+   own (the ring above turned it round the land's corner: the shake) — its chime swings a few times about its hook, dying away, on top of
+   its idle sway (rotate: the two add up, neither restarts the other) */
+.sky .land [data-fx="furin"].ring { animation: none !important; }
+.sky .land [data-fx="furin"].ring .fx-sway { animation: fxSway 2.6s ease-in-out infinite alternate, rkFurin 2.2s ease-in-out 1 !important; }
+@keyframes rkFurin { 0% { rotate: 0deg; } 10% { rotate: 7deg; } 28% { rotate: -5.2deg; } 46% { rotate: 3.4deg; } 64% { rotate: -2deg; } 82% { rotate: .9deg; } 100% { rotate: 0deg; } }
+@media (prefers-reduced-motion: reduce) { .sky .land [data-fx="furin"].ring .fx-sway { animation: none !important; } }
 .sky .land [data-fx].shake { transform-box: fill-box; transform-origin: 50% 100%; animation: fxShake .16s ease-in-out 10 alternate; } @keyframes fxShake { from { transform: rotate(-1.6deg); } to { transform: rotate(1.6deg); } }
 .sky .land [data-fx].pinch { animation-play-state: paused; } .sky .land .pinch .claws { transform-box: fill-box; transform-origin: 50% 100%; animation: fxPinch .2s ease-in-out infinite alternate; } @keyframes fxPinch { to { transform: translateY(-4px) scaleY(1.2); } }
 .sky .land [data-fx].spout { animation: none; transform-box: fill-box; transform-origin: 0 100%; transform: scale(1.9); }

@@ -166,9 +166,10 @@ const FRONT_RUN = (() => {
     // wanted, and is back at its top for each guest: JOBS.talkLine (M-10), every line awaited within the lane's cap (I-1)
     const TL = JOBS.talkLine({ box: () => box, sel: '.fr-talk', who: A.who, first, keep: () => (wanted() ? el('.fr-book') : null) }), { word, me, said, seeTalk } = TL;
     // the guest's bubble: their words heard first (……, 🔊), shown once right, after two misses, or as they go (line: their word after)
+    const bubHtml = (open, [ja, zh]) => `<button type="button" class="wk-ear fr-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="fr-dots">……</b>'}`;
     function bub(open, line) {
-      const R = D.now(), b = el('.wk-cust .wk-bub'); if (!b || !R) return; const [ja, zh] = line || R.task.q;
-      b.innerHTML = `<button type="button" class="wk-ear fr-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="fr-dots">……</b>'}`;
+      const R = D.now(), b = el('.wk-cust .wk-bub'); if (!b || !R) return;
+      b.innerHTML = bubHtml(open, line || R.task.q);
       b.classList.toggle('wk-open', Boolean(open));   // open: a pop-up goes under it, never over the words (Task 4's N-4)
       if (open) seeTalk();
     }
@@ -182,7 +183,8 @@ const FRONT_RUN = (() => {
     }
     // a guest comes up: the bell rung, the book and the board unlit, the card from its top (the book first); their luggage in hand
     function draw(t) {
-      TL.toTop();
+      TL.toTop();   // the bubble as tall as their words shown mid-guest (2026-11-25): their question, the birthday's gladness if that reply is offered, dinner's answer — a fun guest's word as they go, the guest done, not held; a 640-tall phone none (it cannot hold the book, the keys, the talk row and all that at once: Task 7's review keeps the book and keys in sight there; the talk row kept its height)
+      JOBS.hold(el('.wk-cust .wk-bub'), innerHeight < 700 ? [] : [t.q, t.answer, t.opts && t.opts.some((o) => o[3] === 'bday') ? (F.named[t.who] || {}).bday : null].filter((l) => Array.isArray(l) && l[0]).map((l) => bubHtml(true, l)));
       all('.fr-row.fr-lit').forEach((x) => x.classList.remove('fr-lit')); all('.fr-key.wk-hint').forEach((x) => x.classList.remove('wk-hint')); all('.fr-dn.fr-new').forEach((x) => x.classList.remove('fr-new'));
       const c = el('.wk-cust'); c.dataset.kind = t.kind; c.dataset.fun = t.fun || ''; if (t.kind === 'luggage') c.insertAdjacentHTML('beforeend', `<i class="fr-hold" aria-label="提著很多行李">${BAGS}</i>`);
       const bell = el('.fr-bell'); if (bell) { bell.classList.remove('fr-ding'); void bell.getBoundingClientRect(); bell.classList.add('fr-ding'); } SND.play('desk-bell', { vol: 0.45 });

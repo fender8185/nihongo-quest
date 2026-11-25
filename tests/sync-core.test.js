@@ -333,6 +333,38 @@ test('mergeStates: a thing once a day (射的: oneADay.shateki) keeps the later 
   assert.deepEqual(C.mergeStates(at(2, { koutsuhi: '2026-11-24' }), at(1, { koutsuhi: '2026-11-25' })).oneADay, { koutsuhi: '2026-11-25' });
 });
 
+// a ticket's 払いもどし (2026-11-25): the 円 paid back, each device's own sum (refunds, top-level), merged as purse.spent — the larger of each
+// device's, either copy, either way; a copy without it (1.21.0's, or before any refund) keeps it; nothing invented. By 1.21.0's own
+// mergeStates (the fixture) it is a key it does not know: kept whole from whichever copy has it
+test('mergeStates: the 円 paid back for tickets (refunds) keep each device\'s larger sum, kept by 1.21.0 too (2026-11-25)', () => {
+  const at = (h, refunds) => Object.assign({ v: 3, updatedAt: `2026-11-25T0${h}:00:00.000Z` }, refunds ? { refunds } : {});
+  assert.deepEqual(C.mergeStates(at(1, { d1: 680 }), at(2, { d1: 260, d2: 420 })).refunds, { d1: 680, d2: 420 });   // the newer copy holds d1's older sum
+  assert.deepEqual(C.mergeStates(at(2, { d1: 260, d2: 420 }), at(1, { d1: 680 })).refunds, { d1: 680, d2: 420 });
+  assert.deepEqual(C.mergeStates(at(1, { d1: 260 }), at(2)).refunds, { d1: 260 });   // a copy without it: kept
+  assert.deepEqual(C.mergeStates(at(2), at(1, { d1: 260 })).refunds, { d1: 260 });
+  assert.equal(C.mergeStates(at(1), at(2)).refunds, undefined);   // nothing invented
+  const OLD = require('./fixtures/sync-core-1.21.0.js');
+  for (const [a, b] of [[at(1, { d1: 260 }), at(2)], [at(2, { d1: 260 }), at(1)]]) { assert.deepEqual(OLD.mergeStates(a, b).refunds, { d1: 260 }); assert.deepEqual(OLD.mergeStates(b, a).refunds, { d1: 260 }); }
+});
+
+// the yukata (2026-11-25): the inn's given (innyukata) and ゆかた屋's bought (yukata) are owned ids like any ware — merged a union by id by
+// 1.21.0's own mergeStates and by this build's, either copy newer; the look worn (topStyle 'innyukata', a style 1.21.0 does not know) is
+// the newer copy's whole, as every look: nothing owned is lost, and a 1.21.0 device draws an unknown style as its default (HERO.norm)
+test('mergeStates: the yukata owned (innyukata, yukata) survive 1.21.0\'s merge and this build\'s, either way (2026-11-25)', () => {
+  const OLD = require('./fixtures/sync-core-1.21.0.js');
+  const mine = (t) => ({ v: 3, updatedAt: t, owned: { innyukata: { paid: 0, on: '2026-11-25', gift: 'kagetsu' }, yukata: { paid: 0, on: '2026-11-25' }, tee: { paid: 24, on: '2026-11-01' } }, look: { topStyle: 'innyukata', top: '#d0574b' } });
+  const theirs = (t) => ({ v: 3, updatedAt: t, owned: { tee: { paid: 24, on: '2026-11-01' }, beanie: { paid: 30, on: '2026-11-02' } }, look: { topStyle: 'hoodie', top: '#2f4a7a' } });
+  for (const merge of [OLD.mergeStates, C.mergeStates]) {
+    for (const [a, b] of [[mine('2026-11-25T10:00:00.000Z'), theirs('2026-11-25T11:00:00.000Z')], [mine('2026-11-25T12:00:00.000Z'), theirs('2026-11-25T11:00:00.000Z')]]) {
+      for (const out of [merge(a, b), merge(b, a)]) {
+        assert.deepEqual(Object.keys(out.owned).sort(), ['beanie', 'innyukata', 'tee', 'yukata']);
+        assert.equal(out.owned.innyukata.gift, 'kagetsu');
+        assert.equal(out.look.topStyle, a.updatedAt > b.updatedAt ? 'innyukata' : 'hoodie');   // the newer copy's look
+      }
+    }
+  }
+});
+
 // Review Focus 4 of the onsen plan (2026-11-24, ruling 5): a device still on 1.21.0 merges a save holding the onsen jobs' records
 // (annai, nakai, miyage, front — done, and one under way with what it keeps) and the once-a-day days (射的: oneADay.shateki; the welcome
 // まんじゅう: purse.gifts.kangei; 交通費: oneADay.koutsuhi, 2026-11-25) with its own copy that has none of them — by 1.21.0's own

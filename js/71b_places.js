@@ -272,9 +272,9 @@ const PLACE_USE = {
     { id: 'sign', name: '駅名標', box: [628, 130, 792, 186], kind: 'do', go: [110, 108], back: 1, pose: 'look', say: 'みなと' },
     { id: 'board', name: '發車標', box: [520, 30, 700, 68], kind: 'do', go: [10, 104], back: 1, pose: 'look', toast: () => EKI.next(Math.floor(sceneHour()), Math.floor((sceneHour() % 1) * 60), 2).map((x) => `${x.t} ${x.kind} ${EKI.name(x.to)}（${x.track}番線）`).join('・') },
     { id: 'wait', name: '待合室', box: [815, 146, 965, 240], kind: 'do', go: [290, 112], back: 1, pose: 'look', say: 'あったかい…' },
-    // a train stopped, its doors open (PLATFORM puts the button over it): aboard — 1番線 by its middle door, 2番線 round by the stairs
-    { id: 'board1', name: '搭車', box: [300, 96, 700, 224], kind: 'do', go: [-110, 126], back: 1, pose: 'reach', when: () => false, open: (y) => RIDE.board(y, 1) },
-    { id: 'board2', name: '搭車', box: [330, 106, 800, 206], kind: 'do', go: [493, 118], back: 1, pose: 'reach', when: () => false, open: (y) => RIDE.board(y, 2) }],
+    // a train stopped at 1番線, its doors open (PLATFORM puts the button over it): aboard by its middle door — 2番線's, to みなと港, are not
+    // the hero's (2026-11-25: the harbour is a walk or the free bus away)
+    { id: 'board1', name: '搭車', box: [300, 96, 700, 224], kind: 'do', go: [-110, 126], back: 1, pose: 'reach', when: () => false, open: (y) => RIDE.board(y, 1) }],
   sento: [
     { id: 'milk', name: '牛奶販賣機', box: [158, 142, 224, 236], kind: 'do', go: [-409, 122], back: 1, pose: 'reach', say: 'ぷはー！', fx: 'milk', fxc: 'buy', buy: 'milk' },
     { id: 'cat', name: '貓', box: [304, 254, 358, 288], kind: 'do', go: [-270, 50], pose: 'crouch', say: '♡', fx: 'scat', fxc: 'purr', ms: 2600 },
@@ -406,10 +406,10 @@ function yBurst(yard, [x0, y0, x1], colours) {
 }
 const npcAt = (el) => { const m = /translate\((-?[\d.]+)px/.exec(el.style.transform || ''); return m ? Number(m[1]) : NaN; };
 const npcXY = (el) => { const m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px/.exec(el.style.transform || ''); return m ? [Number(m[1]), -Number(m[2])] : [NaN, NaN]; };
-function ySeat(yard, t, [u, v, h, how]) {
+function ySeat(yard, t, [u, v, h, how, dz = 0.45]) {   // dz: how far past the seat's middle he is drawn in depth (桜の間's seats facing us: past their whole seat)
   const el = yard.querySelector('.yhero'); if (!el) return;
   const f = how.split(' ');
-  yh.use = { up: [yh.X, yh.Y] }; [yh.X, yh.Y] = isoXY(u, v, h); yh.z = isoZ(u, v + 0.45, h);   // over his seat, under the table before it
+  yh.use = { up: [yh.X, yh.Y] }; [yh.X, yh.Y] = isoXY(u, v, h); yh.z = isoZ(u, v + dz, h);   // over his seat, under the table before it
   yh.back = f.includes('back'); yh.turn = f.includes('turn'); yh.flip = f.includes('flip'); el.classList.add(f.includes('kneel') ? 'kneel' : 'bench'); yHeroPlace(yard); SND.use(yPlace, t);
   if (t.say) yPop(yard, yh.X + 600, 370 - yh.Y - 190 * ISO.k, t.say);
 }

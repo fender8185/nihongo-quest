@@ -131,9 +131,10 @@ const MIYAGE_RUN = (() => {
     const me = ([ja, zh]) => { if (!el('.om-talk')) return Promise.resolve(); talk('hero', `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`, 'om-me'); return speakAs('hero', ja); };
     const keeper = (l, cls) => JOBS.queue(() => word(l, cls), box);   // after any line being said (ruling 27)
     // the bubble: their words heard first (……, 🔊), shown once right, after two misses, or as they go
+    const bubHtml = (open, [ja, zh]) => `<button type="button" class="wk-ear om-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="om-dots">……</b>'}`;
     function bub(open, line) {
-      const b = el('.wk-cust .wk-bub'); if (!b || !R) return; const [ja, zh] = line || R.line || R.c.line;
-      b.innerHTML = `<button type="button" class="wk-ear om-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="om-dots">……</b>'}`;
+      const b = el('.wk-cust .wk-bub'); if (!b || !R) return;
+      b.innerHTML = bubHtml(open, line || R.line || R.c.line);
       b.classList.toggle('wk-open', Boolean(open));   // open: a pop-up goes under it, never over the words (Task 4's N-4)
       if (open) seeTalk();
     }
@@ -161,7 +162,7 @@ const MIYAGE_RUN = (() => {
       const c = tasks[k]; R = { k, c, step: 0, phase: 'hi', tray: [], seed, miss: 0, miss2: 0, busy: false, line: c.line }; rep = 0; TL.toTop();   // the card from its top: the shelves first
       el('.wk-n').textContent = `${k + 1}／${N}`;
       const cu = el('.wk-cust'); cu.className = 'wk-cust'; cu.removeAttribute('data-mood'); cu.dataset.kind = c.kind; cu.innerHTML = JOBS.custHtml(c.who) + hold(c);
-      unhint(); shelves(); tray(); opts(false); bub(false);
+      unhint(); shelves(); tray(); opts(false); bub(false); JOBS.hold(el('.wk-cust .wk-bub'), [c.line, c.then, c.after].filter((l) => Array.isArray(l) && l[0]).map((l) => bubHtml(true, l)));   // as tall as their words, every step's (2026-11-25)
       const me0 = R;
       said(JOBS.queue(() => me(s.hi), box), 700).then(() => { if (mineNow(me0)) begin(0); });
     }

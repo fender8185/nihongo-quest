@@ -50,8 +50,9 @@ def test_fares_and_times_reach_yunohana(b):
     assert r['minato'] == [['10:25', 'shirasagi'], ['10:32', 'minatoko']] and r['line'] == ['shirasagi', 'daigaku', 'koen', 'byoin', 'minato', 'minatoko'], r   # みなと線 as it was
     assert r['names'] == ['湯の花', 'ゆのはな', '森下', 'もりした'] and 'ゆのはな' in r['label'] and '湯の花' in r['label'], r
 
-# みなと's machine sells as far as 湯の花 (420; its chart has やまなみ線 past 白鷺); a 420 ticket aboard 1番線: on past 白鷺 — the change
-# there (its announcement), やまなみ線's stops, off at 湯の花駅前, the ticket used and nothing more to pay
+# みなと's machine sells one ticket, up to 湯の花 (420; its chart still has every station, やまなみ線 past 白鷺); aboard 1番線: on past 白鷺 —
+# the change there (its announcement), やまなみ線's stops, off at 湯の花駅前, the ticket used and nothing more to pay (2026-11-25, the user:
+# tickets only where walking cannot take you)
 def test_a_ride_to_yunohana_changes_at_shirasagi(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ await at('station'); const out = { said: [] };
       RIDE.machine(yard(), 'minato'); await wait(100); out.fares = [...document.querySelectorAll('.kb-fare')].map((x) => Number(x.dataset.f));
@@ -62,9 +63,9 @@ def test_a_ride_to_yunohana_changes_at_shirasagi(b):
       await watch(() => RIDE.now() && RIDE.now().phase === 'run' && RIDE.now().line === 'yama'); out.head = document.querySelector('.rd-card .wk-head').textContent;
       await arrive('yunohana', '#/onsen'); out.phases = phases; out.at = location.hash; out.used = RIDE.ticket(); out.left = yenBalance();
       return JSON.stringify(out); })()"""))
-    assert r['fares'] == [140, 170, 220, 260, 310, 350, 420], r   # 森下 350, 湯の花 420 besides みなと線's five
+    assert r['fares'] == [420], r   # 湯の花 only
     assert '森下' in r['chart'] and '湯の花' in r['chart'] and '420' in r['chart'] and '350' in r['chart'] and 'のりかえ' in r['chart'], r
-    assert r['ticket']['fare'] == 420 and r['paid'] == 580 and r['to'] == 'yunohana' and 'やまなみ' in r['head'], r
+    assert r['ticket']['fare'] == 420 and r['ticket']['to'] == 'yunohana' and r['paid'] == 580 and r['to'] == 'yunohana' and 'やまなみ' in r['head'], r
     p = r['phases']
     assert 'change@shirasagi' in p and 'stop@morishita' in p and p.index('stop@daigaku') < p.index('change@shirasagi') < p.index('stop@morishita') < p.index('end@yunohana'), p
     assert r['at'] == '#/onsen' and r['used'] is None and r['left'] == 580, r
@@ -74,22 +75,8 @@ def test_a_ride_to_yunohana_changes_at_shirasagi(b):
     assert said[-1].startswith('{終点|しゅうてん|終點}、{湯の花|ゆのはな}です。'), said
     assert not any(l.startswith('{終点|しゅうてん|終點}、{白鷺|しらさぎ}です。お{忘れ物') for l in said), said   # changing, not getting off
 
-# Review Focus 3: a ticket bought at みなと for less than 湯の花 (310, to 白鷺) — at 白鷺 the ride may go on (やまなみ線に 乗り換える), and
-# 乗り越し精算 at 湯の花 takes the 110 still owed
-def test_short_ticket_pays_the_rest_at_yunohana(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {};
-      RIDE.keep({ from: 'minato', fare: 310, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1);
-      await watch(end('shirasagi')); out.on = (document.querySelector('.rd-card .os-on') || {}).textContent || ''; out.off = Boolean(document.querySelector('.rd-card .rd-off'));
-      click('.rd-card .os-on'); await watch(end('yunohana')); out.pay = document.querySelector('.rd-card .rd-end').textContent; out.before = yenBalance();
-      click('.rd-off'); await watch(() => location.hash === '#/onsen', 5000); await wait(300);
-      out.phases = phases; out.at = location.hash; out.left = yenBalance(); out.used = RIDE.ticket(); return JSON.stringify(out); })()"""))
-    assert 'やまなみ' in r['on'] and r['off'], r   # 白鷺: off here, or on by やまなみ線
-    assert '110' in r['pay'] and r['before'] == 1000 and r['left'] == 890 and r['at'] == '#/onsen' and r['used'] is None, r
-    p = r['phases']
-    assert p.index('end@shirasagi') < p.index('change@shirasagi') < p.index('end@yunohana'), p
-
-# home from 湯の花: the station's 改札 opens its machine (湯の花 現在地, fares from there), a ticket to みなと (420): the change at 白鷺 the
-# other way (みなと線は お乗り換えです), off at みなと's platform; a ticket only as far as 白鷺 (260) ends there, at the castle
+# home from 湯の花: the station's 改札 opens its machine (湯の花 現在地, its two tickets down), the one to みなと (420): the change at 白鷺 the
+# other way (みなと線は お乗り換えです), off at みなと's platform; the one to 白鷺 (260) ends there, at the castle
 def test_the_way_home_from_yunohana(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = { said: [] }; window.speakAs = (w, l) => { if (w === 'ann') out.said.push(l); return Promise.resolve(); };
       await at('onsen'); click('.use-btn[data-use="gate"]'); await watch(() => document.querySelector('.kb-card'), 5000);
@@ -101,22 +88,184 @@ def test_the_way_home_from_yunohana(b):
       click('.kb-fare[data-f="260"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride'); await arrive('shirasagi', '#/castle'); out.castle = location.hash; out.left2 = yenBalance();
       return JSON.stringify(out); })()"""))
     assert r['here'] == 'yunohana' and '湯の花' in r['now'] and '現在地' in r['now'], r
-    assert r['fares'] == [220, 260, 310, 350, 420] and r['rides'] == 1, r
+    assert r['fares'] == [260, 420] and r['rides'] == 1, r
     p = r['phases']
     assert 'change@shirasagi' in p and p.index('stop@morishita') < p.index('change@shirasagi') < p.index('end@minato'), p
     assert r['home'] == '#/platform' and r['left'] == 580, r
     assert '{終点|しゅうてん|終點}、{白鷺|しらさぎ}です。みなと{線|せん}は お{乗り換え|のりかえ|轉乘}です。' in r['said'] and r['said'].index('つぎは {白鷺|しらさぎ}、{白鷺|しらさぎ}です。') > r['said'].index('つぎは {森下|もりした}、{森下|もりした}です。'), r['said']
     assert r['castle'] == '#/castle' and r['left2'] == 320, r
 
-# 白鷺 is on both lines: its machine sells to 湯の花 (260) and asks which train — みなと線 (home, first: as before) or やまなみ線
-def test_shirasagi_sells_both_lines(b):
+# 白鷺's machine sells the way up: one ticket (to 湯の花, 260), one train — 「電車に 乗る」 — up the やまなみ線, no change
+def test_shirasagi_sells_the_way_up(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {};
       await at('castle'); RIDE.machine(yard(), 'shirasagi'); await wait(100); out.fares = [...document.querySelectorAll('.kb-fare')].map((x) => Number(x.dataset.f));
-      click('.kb-fare[data-f="260"]'); await wait(60); click('.kb-pay'); await wait(200); out.rides = [...document.querySelectorAll('.kb-ride')].map((x) => [x.dataset.line || '', x.textContent.trim()]);
-      click('.kb-ride[data-line="yama"]'); await arrive('yunohana', '#/onsen'); out.phases = phases; out.at = location.hash; out.left = yenBalance(); return JSON.stringify(out); })()"""))
-    assert r['fares'] == [170, 220, 260, 310, 350], r
-    assert [x[0] for x in r['rides']] == ['minato', 'yama'] and 'みなと' in r['rides'][0][1] and 'やまなみ' in r['rides'][1][1], r
+      click('.kb-fare[data-f="260"]'); await wait(60); click('.kb-pay'); await wait(200); out.rides = [...document.querySelectorAll('.kb-ride')].map((x) => { const c = x.cloneNode(true); c.querySelectorAll('rt').forEach((e) => e.remove()); return c.textContent.trim(); });
+      click('.kb-ride'); await arrive('yunohana', '#/onsen'); out.phases = phases; out.at = location.hash; out.left = yenBalance(); return JSON.stringify(out); })()"""))
+    assert r['fares'] == [260], r
+    assert r['rides'] == ['電車に 乗る'], r
     assert 'change@shirasagi' not in r['phases'] and 'stop@morishita' in r['phases'] and r['at'] == '#/onsen' and r['left'] == 740, r
+
+# ---- 2026-11-25, the user's test of nq-v1.21.0-test.1: tickets only where walking cannot take you, a ticket names its station and the
+# ride ends there, one ticket at a time (払いもどし pays one back), the train in at みなと with a ticket, 跳過 on every ride, 2番線 not his ----
+# buy(to): the fare button of the ticket to `to` pressed and the money put in; face(): the ticket's face as read (no furigana)
+TICKET = """const buy = async (to) => { click(`.kb-fare[data-to="${to}"]`); await wait(60); click('.kb-pay'); await wait(200); };
+  const face = () => { const t = document.querySelector('.kb-ticket'); if (!t) return ''; const c = t.cloneNode(true); c.querySelectorAll('rt').forEach((x) => x.remove()); return c.textContent.replace(/\\s+/g, ' ').trim(); };"""
+
+# the town's three machines (みなと, みなと港, 白鷺) sell one ticket — up to 湯の花 — with a Chinese note why (the castle and the harbour are a
+# walk or the free bus away); 湯の花's two, down to 白鷺 and to みなと; none to 森下 or to a station with nowhere to get off; every chart
+# still has every station with its fare (reading practice)
+def test_each_machine_sells_only_its_tickets(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {};
+      for (const [place, here] of [['station', 'minato'], ['harbor', 'minatoko'], ['castle', 'shirasagi'], ['onsen', 'yunohana']]) {
+        await at(place); RIDE.machine(yard(), here); await wait(100); const c = document.querySelector('.kb-card');
+        out[here] = { fares: [...c.querySelectorAll('.kb-fare')].map((x) => [Number(x.dataset.f), x.dataset.to]), prices: [...c.querySelectorAll('.md-f')].map((x) => Number(x.textContent)),
+          note: (c.querySelector('.kb-note') || {}).textContent || '' }; CLASS.close(); }
+      return JSON.stringify(out); })()"""))
+    assert r['minato']['fares'] == [[420, 'yunohana']] and r['minatoko']['fares'] == [[420, 'yunohana']] and r['shirasagi']['fares'] == [[260, 'yunohana']], r
+    assert r['yunohana']['fares'] == [[260, 'shirasagi'], [420, 'minato']], r
+    for k in ('minato', 'minatoko', 'shirasagi'):
+        assert '湯の花' in r[k]['note'] and '免費' in r[k]['note'] and '公車' in r[k]['note'], r
+    assert r['yunohana']['note'] == '', r
+    assert all(len(r[k]['prices']) == 7 for k in r) and 350 in r['minato']['prices'] and 220 in r['yunohana']['prices'], r   # every other station's fare, 森下's too
+
+# a ticket names its station ({ from, to, fare, day }; its face 「みなと → 湯の花　420円」) and the ride ends there: from みなと's platform up to
+# 湯の花 through the change at 白鷺 (never off there: no 乗り換える, no 乗り越し精算); from みなと港's machine the same, みなと passed through; from
+# 白鷺 up the やまなみ線; from 湯の花 down to 白鷺 (the castle), or through to みなと (the platform); each ride costs its ticket and nothing more
+def test_a_ticket_names_its_station_and_the_ride_ends_there(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TICKET + """ const out = {}; state.purse.gift = 3000; saveState();
+      let extra = false; const spy = setInterval(() => { const n = RIDE.now(); if (document.querySelector('.rd-card .os-on, .rd-card .rd-pay') || (n && n.phase === 'end' && n.at !== n.to)) extra = true; }, 15);
+      await at('station'); RIDE.machine(yard(), 'minato'); await wait(100); await buy('yunohana'); out.ticket = RIDE.ticket(); out.face = face(); out.paid = yenBalance(); CLASS.close();
+      await at('platform'); RIDE.board(yard(), 1); await wait(50); out.to = RIDE.now() && RIDE.now().to; await arrive('yunohana', '#/onsen');
+      out.up = [location.hash, yenBalance(), RIDE.ticket(), phases.includes('change@shirasagi'), phases.filter((p) => p.startsWith('end@'))];
+      phases.length = 0; await at('harbor'); RIDE.machine(yard(), 'minatoko'); await wait(100); await buy('yunohana'); click('.kb-ride'); await arrive('yunohana', '#/onsen');
+      out.port = [location.hash, yenBalance(), phases.includes('stop@minato'), phases.includes('change@shirasagi'), phases.filter((p) => p.startsWith('end@'))];
+      phases.length = 0; await at('castle'); RIDE.machine(yard(), 'shirasagi'); await wait(100); await buy('yunohana'); out.rides = document.querySelectorAll('.kb-ride').length; click('.kb-ride'); await arrive('yunohana', '#/onsen');
+      out.castle = [location.hash, yenBalance(), phases.includes('change@shirasagi'), phases.filter((p) => p.startsWith('end@'))];
+      phases.length = 0; RIDE.machine(yard(), 'yunohana'); await wait(100); await buy('shirasagi'); out.face2 = face(); click('.kb-ride'); await arrive('shirasagi', '#/castle');
+      out.down = [location.hash, yenBalance(), phases.filter((p) => p.startsWith('end@'))];
+      phases.length = 0; await at('onsen'); RIDE.machine(yard(), 'yunohana'); await wait(100); await buy('minato'); click('.kb-ride'); await arrive('minato', '#/platform');
+      out.home = [location.hash, yenBalance(), phases.includes('change@shirasagi'), phases.filter((p) => p.startsWith('end@'))];
+      clearInterval(spy); out.extra = extra; return JSON.stringify(out); })()"""))
+    t = r['ticket']
+    assert t['from'] == 'minato' and t['to'] == 'yunohana' and t['fare'] == 420 and t['day'], r
+    assert 'みなと → 湯の花' in r['face'] and '420円' in r['face'] and r['paid'] == 2580 and r['to'] == 'yunohana', r
+    assert r['up'] == ['#/onsen', 2580, None, True, ['end@yunohana']], r
+    assert r['port'] == ['#/onsen', 2160, True, True, ['end@yunohana']], r
+    assert r['rides'] == 1 and r['castle'] == ['#/onsen', 1900, False, ['end@yunohana']], r
+    assert '湯の花 → 白鷺' in r['face2'] and '260円' in r['face2'] and r['down'] == ['#/castle', 1640, ['end@shirasagi']], r
+    assert r['home'] == ['#/platform', 1220, True, ['end@minato']], r
+    assert r['extra'] is False, r   # never 乗り換える or 乗り越し精算, never off anywhere but where the ticket says
+
+# one ticket at a time (the user): while one is held no machine sells another — its screen says so, shows the ticket, its fare buttons
+# off — and every machine pays it back in full (払いもどし), then sells again: a 湯の花→白鷺 ticket still held after going home by ‹ 書房,
+# paid back at みなと. The money back is the wallet's for good: kept through a reload and a merge with a copy that never had it
+def test_one_ticket_at_a_time_and_its_refund(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TICKET + """ const out = {};
+      await at('onsen'); RIDE.machine(yard(), 'yunohana'); await wait(100); await buy('shirasagi'); out.bought = [yenBalance(), (RIDE.ticket() || {}).to];
+      await buy('minato'); out.second = [yenBalance(), (RIDE.ticket() || {}).to, [...document.querySelectorAll('.kb-fare')].map((x) => x.disabled)];
+      CLASS.close(); window.go('#/today'); await wait(300);   // home by 書房, the ticket still held
+      await at('station'); RIDE.machine(yard(), 'minato'); await wait(100); const c = document.querySelector('.kb-card');
+      out.held = [c.querySelector('.kb-screen').textContent, face(), [...c.querySelectorAll('.kb-fare')].map((x) => x.disabled), Boolean(c.querySelector('.kb-back')), Boolean(c.querySelector('.kb-ride'))];
+      await buy('yunohana'); out.refused = [yenBalance(), (RIDE.ticket() || {}).to];
+      click('.kb-back'); await wait(200); out.back = [yenBalance(), RIDE.ticket(), [...document.querySelectorAll('.kb-fare')].map((x) => x.disabled), Boolean(document.querySelector('.kb-back')), document.querySelector('.kb-screen').textContent];
+      await buy('yunohana'); out.again = [yenBalance(), (RIDE.ticket() || {}).to]; CLASS.close();
+      const T = (s, t) => Object.assign(JSON.parse(JSON.stringify(s)), { updatedAt: t }), mine = normalizeState(JSON.parse(JSON.stringify(state))), theirs = JSON.parse(JSON.stringify(mine)); delete theirs.refunds;
+      out.kept = [mine.refunds].concat([['2026-11-25T10:00:00.000Z', '2026-11-25T11:00:00.000Z'], ['2026-11-25T12:00:00.000Z', '2026-11-25T11:00:00.000Z']]
+        .flatMap(([a, c]) => [SyncCore.mergeStates(T(mine, a), T(theirs, c)), SyncCore.mergeStates(T(theirs, c), T(mine, a))]).map((m) => { const s = normalizeState(m); return Object.values(s.refunds || {}).reduce((x, y) => x + y, 0); }));
+      return JSON.stringify(out); })()"""))
+    assert r['bought'] == [740, 'shirasagi'], r
+    assert r['second'] == [740, 'shirasagi', [True, True]], r   # one at a time: nothing more sold, the buttons off
+    assert 'きっぷが あります' in r['held'][0] and '湯の花 → 白鷺' in r['held'][1] and '260円' in r['held'][1] and r['held'][2:] == [[True], True, False], r
+    assert r['refused'] == [740, 'shirasagi'], r
+    assert r['back'][:4] == [1000, None, [False], False] and '払' in r['back'][4], r   # all of it back, the ticket gone, the machine selling again
+    assert r['again'] == [580, 'yunohana'], r
+    assert sum(r['kept'][0].values()) == 260 and r['kept'][1:] == [260] * 4, r
+
+# the train is in (the user's pick): up to みなと's platform holding a ticket from みなと, the 1番線 train to 白鷺 stands there at once, doors
+# open, its 搭車 button, for as long as he stays — the timetable meanwhile on 2番線 (in and out, never a button there); aboard, it goes; ✕ on
+# the ride card mid-ride: the ticket still his and the train in again. Without a ticket the timetable on both tracks (no button at 2番線);
+# a ticket from another station: a toast naming where it is from, no train held. The cruise group's own (t3, 2番線) wins over his
+def test_the_train_is_in_with_a_ticket_from_minato(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m); PLATFORM.speed = 12;
+      const g = (k) => yard().querySelector(`.pf-train[data-track="${k}"]`), btn = (k) => Boolean(yard().querySelector(`.pf-board[data-use="board${k}"]`));
+      const look = async (ms, f) => { const t0 = Date.now(), seen = new Set(); let bad = false; while (Date.now() - t0 < ms) { const n = PLATFORM.now(); if (n) seen.add(n.track + n.phase); if (f()) bad = true; await wait(25); } return [bad, [...seen].sort()]; };
+      RIDE.keep({ from: 'minato', to: 'yunohana', fare: 420, day: todayStr() }); await at('station'); await at('platform');
+      out.at = [g(1).style.transform, g(1).classList.contains('open'), btn(1), btn(2)];
+      out.stay = await look(4500, () => g(1).style.transform !== 'translateX(0px)' || !g(1).classList.contains('open') || !btn(1) || btn(2));
+      RIDE.board(yard(), 1); await wait(400); out.gone = [Boolean(document.querySelector('.rd-card')), g(1).classList.contains('open'), btn(1)];
+      document.querySelector('.rd-card .cls-x').click(); await wait(300);
+      out.back = [(RIDE.ticket() || {}).to, g(1).style.transform, g(1).classList.contains('open'), btn(1)];
+      RIDE.keep(null); await at('station'); await at('platform'); let one = false;
+      out.none = await look(5000, () => { if (btn(1)) one = true; return btn(2); }); out.none.push(one);
+      toasts.length = 0; RIDE.keep({ from: 'yunohana', to: 'minato', fare: 420, day: todayStr() }); await at('station'); await at('platform');
+      out.other = [toasts.filter((m) => /湯の花/.test(m)).length, g(1).style.transform === 'translateX(0px)' && g(1).classList.contains('open')];
+      const cb = CRUISE.boarding; CRUISE.boarding = () => 'minatoko'; RIDE.keep({ from: 'minato', to: 'yunohana', fare: 420, day: todayStr() }); await at('station'); await at('platform'); await wait(200);
+      out.cruise = [g(2).classList.contains('open'), g(2).style.transform, /1400px/.test(g(1).style.transform), btn(1), btn(2)]; CRUISE.boarding = cb;
+      out.board2 = PLACE_USE.platform.some((t) => t.id === 'board2'); PLATFORM.speed = 1; return JSON.stringify(out); })()"""))
+    assert r['at'] == ['translateX(0px)', True, True, False], r   # in at once, doors open, its button; none at 2番線
+    assert r['stay'][0] is False and {'2in', '2stop', '2out'} <= set(r['stay'][1]) and not any(x.startswith('1') for x in r['stay'][1]), r   # it stays; 2番線 runs
+    assert r['gone'] == [True, False, False], r   # aboard: its doors shut, its button gone
+    assert r['back'] == ['yunohana', 'translateX(0px)', True, True], r   # ✕ mid-ride: the ticket still his, the train in again
+    assert r['none'][0] is False and '1stop' in r['none'][1] and '2stop' in r['none'][1] and r['none'][2] is True, r   # no ticket: both tracks by the timetable, a button at 1番線 only
+    assert r['other'] == [1, False], r
+    assert r['cruise'] == [True, 'translateX(0px)', True, False, False] and r['board2'] is False, r
+
+# 跳過 (the user's pick: top right of the ride card, on every ride): tapped, the line being said stops and the ride jumps past the stops and
+# the change to the arrival — the LED (終点 at 湯の花), 降りる, the arrival's one line said, none of the stops skipped said after — and 降りる
+# uses the ticket and keeps the 交通費 just as a full ride's; down to みなと (no 終点 there) likewise, its own line, みなと線's car
+def test_skip_jumps_to_the_arrival(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, said = []; let stops = 0; const st0 = window.stopSpeaking; window.stopSpeaking = () => { stops++; return st0(); };
+      window.speakAs = (w, l) => { if (w === 'ann') said.push(l); return new Promise((ok) => setTimeout(ok, 350)); };
+      const led = () => { const e = document.querySelector('.rd-card .rd-led'); if (!e) return ''; const c = e.cloneNode(true); c.querySelectorAll('rt').forEach((x) => x.remove()); return c.textContent.replace(/\\s+/g, ' ').trim(); };
+      RIDE.speed = 1; localStorage.removeItem('nq_fare'); RIDE.keep({ from: 'minato', to: 'yunohana', fare: 420, day: todayStr() });
+      await at('platform'); RIDE.board(yard(), 1); await wait(500); const n0 = said.length, s0 = stops; out.first = said.slice();
+      click('.rd-card .rd-skip'); await wait(250);
+      out.up = { phase: RIDE.now().phase, at: RIDE.now().at, led: led(), off: Boolean(document.querySelector('.rd-card .rd-off')), skip: Boolean(document.querySelector('.rd-card .rd-skip')), diesel: Boolean(document.querySelector('.rd-card .os-dcar')), stopped: stops > s0 };
+      await wait(1600); out.up.said = said.slice(n0);
+      click('.rd-off'); await watch(() => location.hash === '#/onsen', 5000); await wait(300);
+      out.up.after = [location.hash, RIDE.ticket(), RIDE.fare(dateStr(TOWNEV.today())), yenBalance()];
+      RIDE.keep({ from: 'yunohana', to: 'minato', fare: 420, day: todayStr() }); RIDE.machine(yard(), 'yunohana'); await wait(100); click('.kb-ride'); await wait(500);
+      const n1 = said.length; click('.rd-card .rd-skip'); await wait(250);
+      out.down = { phase: RIDE.now().phase, at: RIDE.now().at, led: led(), car: Boolean(document.querySelector('.rd-card .rd-car:not(.os-dcar)')) };
+      await wait(1600); out.down.said = said.slice(n1);
+      click('.rd-off'); await watch(() => location.hash === '#/platform', 5000); await wait(300); out.down.after = [location.hash, RIDE.ticket(), RIDE.fare(dateStr(TOWNEV.today()))];
+      RIDE.speed = 20; return JSON.stringify(out); })()"""))
+    u = r['up']
+    assert r['first'] and r['first'][0].startswith('つぎは'), r   # under way when skipped
+    assert u['phase'] == 'end' and u['at'] == 'yunohana' and '湯の花' in u['led'] and '終点' in u['led'] and u['off'] and not u['skip'] and u['diesel'] and u['stopped'], r
+    assert len(u['said']) == 1 and u['said'][0].startswith('{終点|しゅうてん|終點}、{湯の花|ゆのはな}です。'), r   # the arrival's line, once; nothing of the stops
+    assert u['after'] == ['#/onsen', None, 420, 1000], r   # the ticket used, the 交通費 kept, nothing paid on board
+    d = r['down']
+    assert d['phase'] == 'end' and d['at'] == 'minato' and 'みなと' in d['led'] and '終点' not in d['led'] and d['car'], r
+    assert d['said'] == ['みなと、みなとです。お{忘れ物|わすれもの|遺失物}の ないように ご{注意|ちゅうい|注意} ください。'], r
+    assert d['after'] == ['#/platform', None, 420], r   # down: no 交通費 of its own (the day's ride up stays)
+
+# 跳過 sits at the ride card's top right — in the car's top right corner (the user: 「車上右上角」), over the ride's picture — never over its ✕
+# nor crowding it (4 px clear at least), a 40 px target, at 360, 390 and 1280
+def test_the_skip_button_sits_by_the_close(b):
+    out = {}
+    for w, h in ((360, 640), (390, 844), (1280, 800)):
+        out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + """ RIDE.speed = 1;
+          RIDE.keep({ from: 'minato', to: 'yunohana', fare: 420, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); await wait(300);
+          const R = (q) => { const e = document.querySelector('.rd-card ' + q); if (!e) return null; const k = e.getBoundingClientRect(); return [k.left, k.top, k.right, k.bottom].map((n) => Math.round(n)); };
+          const s = R('.rd-skip'), x = R('.cls-x'), card = R('.cls-card'), box = R('.rd-box'), ann = R('.rd-ann'); CLASS.close(); RIDE.speed = 20;
+          return JSON.stringify({ s, x, card, box, ann }); })()""")])[-1])
+    for w, v in out.items():
+        s, x, card, box = v['s'], v['x'], v['card'], v['box']
+        assert s and x, (w, v)
+        assert s[2] - s[0] >= 40 and s[3] - s[1] >= 40, (w, v)   # a 40 px target
+        assert s[0] >= x[2] + 4 or s[2] <= x[0] - 4 or s[1] >= x[3] + 4 or s[3] <= x[1] - 4, (w, v)   # clear of the ✕
+        assert box[0] <= s[0] and s[2] <= box[2] and s[1] >= box[1] and s[3] <= v['ann'][1], (w, v)   # over the car's picture
+        assert box[2] - s[2] <= 12 and s[1] - box[1] <= 12 and card[2] - s[2] <= 40, (w, v)   # in its top right corner, at the card's right
+
+# ✕ on the ride card from 湯の花 mid-ride: the ticket still his, the machine there shows it with its ride button, and the ride goes again
+def test_a_ride_shut_midway_leaves_the_ticket(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TICKET + """ const out = {};
+      await at('onsen'); RIDE.machine(yard(), 'yunohana'); await wait(100); await buy('shirasagi'); click('.kb-ride'); await wait(300);
+      document.querySelector('.rd-card .cls-x').click(); await wait(200); out.after = [(RIDE.ticket() || {}).to, yenBalance(), location.hash];
+      RIDE.machine(yard(), 'yunohana'); await wait(100); out.machine = [face(), Boolean(document.querySelector('.kb-ride')), Boolean(document.querySelector('.kb-back'))];
+      click('.kb-ride'); await arrive('shirasagi', '#/castle'); out.end = [location.hash, RIDE.ticket(), yenBalance()]; return JSON.stringify(out); })()"""))
+    assert r['after'] == ['shirasagi', 740, '#/onsen'] and '湯の花 → 白鷺' in r['machine'][0] and r['machine'][1:] == [True, True] and r['end'] == ['#/castle', None, 740], r
 
 # 湯の花駅前 (spec §3.1, §4): あかり at the 観光案内所's window calls ようこそ the first time the hero is there while she is (9–18) — once,
 # kept as state.town.arrived (synced, kept on load); the 足湯: sat on, his feet in it
@@ -149,7 +298,7 @@ def test_the_change_announcement_is_not_cut(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const log = [];
       window.speakAs = (w, l) => { if (w !== 'ann') return Promise.resolve(); log.push(['say', l, performance.now()]); const long = /乗り換え/.test(l);
         return new Promise((ok) => setTimeout(() => { log.push(['done', l, performance.now()]); ok(); }, long ? 900 : 400)); };
-      RIDE.keep({ from: 'minato', fare: 420, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); await arrive('yunohana', '#/onsen');
+      RIDE.keep({ from: 'minato', to: 'yunohana', fare: 420, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); await arrive('yunohana', '#/onsen');
       const says = log.filter((x) => x[0] === 'say'), ch = says.findIndex((x) => /乗り換え/.test(x[1])), doneAt = (k) => (log.find((x) => x[0] === 'done' && x[1] === says[k][1] && x[2] >= says[k][2]) || [])[2];
       const cut = says.slice(1).filter((x, k) => !(doneAt(k) <= x[2] + 1)).map((x) => x[1]);
       return JSON.stringify({ n: says.length, ch, next: ch >= 0 && says[ch + 1] ? says[ch + 1][1] : null, gap: ch >= 0 && says[ch + 1] ? says[ch + 1][2] - doneAt(ch) : null, cut, at: location.hash }); })()"""))
@@ -170,26 +319,12 @@ def test_town_keys_survive_a_load_and_a_merge(b):
     assert r['merged'] == [{'手紙': 1}, {'onsen': 1}, {'k': 1}] and r['seen'] == {'kenta': 1, 'akari': 1} and r['done'] == {'a1': '2026-11-01'}, r   # a sync too
     assert r['bare'] == {'done': {}, 'seen': {}, 'stops': {}, 'talks': {}}, r   # nothing invented
 
-# a ticket past 白鷺 whose rest the wallet cannot pay ends at 白鷺 — it covers that far — and is never refused (350, 森下's fare, with 50 円);
-# with the money it goes on to 湯の花 and pays the 70 there; 乗り換える at 白鷺 with too little: a toast, and still the way off
-def test_a_short_wallet_ends_at_shirasagi_and_rides_on_only_with_the_money(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
-      state.purse.gift = 50; saveState(); RIDE.keep({ from: 'minato', fare: 350, day: todayStr() }); await at('platform');
-      out.boarded = RIDE.board(yard(), 1); out.to = RIDE.now() && RIDE.now().to; await watch(end('shirasagi'));
-      click('.rd-card .os-on'); await wait(200); out.on = [RIDE.now().phase, Boolean(document.querySelector('.rd-card .rd-off')), toasts.filter((m) => /錢包不夠/.test(m)).length];
-      await arrive('shirasagi', '#/castle'); out.castle = [location.hash, yenBalance()];
-      state.purse.gift = 1000; saveState(); RIDE.keep({ from: 'minato', fare: 350, day: todayStr() }); await at('platform');
-      RIDE.board(yard(), 1); out.to2 = RIDE.now() && RIDE.now().to; await arrive('yunohana', '#/onsen'); out.onsen = [location.hash, yenBalance()];
-      return JSON.stringify(out); })()"""))
-    assert r['boarded'] and r['to'] == 'shirasagi' and r['on'] == ['end', True, 1] and r['castle'] == ['#/castle', 50], r
-    assert r['to2'] == 'yunohana' and r['onsen'] == ['#/onsen', 930], r
-
 # no free ride home (the coordinator's ruling 6): 湯の花's machine, the money short — the app's own way home (書房) in the card and in
 # its toast; a ticket to 湯の花 bought with too little left for the way back (260 to 白鷺): a warning, the ticket sold all the same
 def test_short_of_money_the_way_home_is_named(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
       state.purse.gift = 100; saveState(); await at('onsen'); RIDE.machine(yard(), 'yunohana'); await wait(100);
-      click('.kb-fare[data-f="220"]'); await wait(60); click('.kb-pay'); await wait(200);
+      click('.kb-fare[data-f="260"]'); await wait(60); click('.kb-pay'); await wait(200);
       out.home = [Boolean(document.querySelector('.kb-card .os-home')), toasts.filter((m) => /書房/.test(m)).length, RIDE.ticket()];
       click('.kb-card .os-home'); await watch(() => location.hash === '#/today', 3000); out.at = location.hash;
       state.purse.gift = 500; saveState(); await at('station'); RIDE.machine(yard(), 'minato'); await wait(100);
@@ -199,27 +334,21 @@ def test_short_of_money_the_way_home_is_named(b):
     assert r['home'] == [True, 1, None] and r['at'] == '#/today', r
     assert r['warn'] == [1, 420, 80], r
 
-# a machine never sells a ticket no train from there can take with the money left (the coordinator's ruling, fix round 2): 湯の花's 220
-# (森下: no scene) with 230 円 would leave 10, and the train to 白鷺 wants 40 more — refused as if too little money, the wallet untouched,
-# the way home named; 白鷺's 170 with 200 円 likewise (either train wants more than the 30 left); a ticket that one of 白鷺's trains can
-# take is sold, the other's button then refused in the card, the way home named, the ride by the other still there; みなと's always (2番線)
-def test_no_ticket_is_sold_that_cannot_be_ridden(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
-      const buy = async (f) => { click(`.kb-fare[data-f="${f}"]`); await wait(60); click('.kb-pay'); await wait(200); };
+# every ticket is paid in full at the machine, so a machine sells one whenever the wallet holds its fare and never when it does not
+# (the wallet untouched, the way home named in the card and the toast): 湯の花's 260 with 230 円, 白鷺's 260 with 200, みなと's 420 with 400;
+# with just the fare it sells, and the ride needs nothing more (0 円 left: still the whole way)
+def test_no_ticket_is_sold_the_wallet_cannot_pay(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TICKET + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
       const money = (n) => { state.purse = { spent: {}, book: {}, gift: n }; saveState(); };
-      money(230); await at('onsen'); RIDE.machine(yard(), 'yunohana'); await wait(100); await buy(220);
-      out.yunohana = [yenBalance(), RIDE.ticket(), Boolean(document.querySelector('.kb-card .os-home')), toasts.filter((m) => /書房/.test(m)).length]; CLASS.close();
-      toasts.length = 0; money(200); await at('castle'); RIDE.machine(yard(), 'shirasagi'); await wait(100); await buy(170);
-      out.castle = [yenBalance(), RIDE.ticket(), Boolean(document.querySelector('.kb-card .os-home')), toasts.filter((m) => /書房/.test(m)).length]; CLASS.close();
-      toasts.length = 0; money(290); RIDE.machine(yard(), 'shirasagi'); await wait(100); await buy(260); out.sold = [yenBalance(), (RIDE.ticket() || {}).fare];
-      click('.kb-ride[data-line="minato"]'); await wait(200);
-      out.refused = [Boolean(document.querySelector('.kb-card')), Boolean(document.querySelector('.kb-card .os-home')), Boolean(document.querySelector('.kb-ride[data-line="yama"]')), toasts.filter((m) => /書房/.test(m) && /50/.test(m)).length, RIDE.now() ? RIDE.now().to : null];
-      CLASS.close(); money(150); await at('station'); RIDE.machine(yard(), 'minato'); await wait(100); await buy(140); out.minato = [yenBalance(), (RIDE.ticket() || {}).fare]; CLASS.close();
+      const tried = () => [yenBalance(), RIDE.ticket(), Boolean(document.querySelector('.kb-card .os-home')), toasts.filter((m) => /書房/.test(m)).length];
+      money(230); await at('onsen'); RIDE.machine(yard(), 'yunohana'); await wait(100); await buy('shirasagi'); out.yunohana = tried(); CLASS.close();
+      toasts.length = 0; money(200); await at('castle'); RIDE.machine(yard(), 'shirasagi'); await wait(100); await buy('yunohana'); out.castle = tried(); CLASS.close();
+      toasts.length = 0; money(400); await at('station'); RIDE.machine(yard(), 'minato'); await wait(100); await buy('yunohana'); out.minato = tried(); CLASS.close();
+      money(260); await at('castle'); RIDE.machine(yard(), 'shirasagi'); await wait(100); await buy('yunohana'); out.exact = [yenBalance(), (RIDE.ticket() || {}).to];
+      click('.kb-ride'); await arrive('yunohana', '#/onsen'); out.rode = [location.hash, yenBalance(), RIDE.ticket()];
       return JSON.stringify(out); })()"""))
-    assert r['yunohana'] == [230, None, True, 1], r   # nothing taken, no ticket, the way home in the card and the toast
-    assert r['castle'] == [200, None, True, 1], r
-    assert r['sold'] == [30, 260] and r['refused'] == [True, True, True, 1, None], r   # みなと線 wants 50 more: refused in the card; やまなみ線 still to hand
-    assert r['minato'] == [10, 140], r   # みなと's: 2番線 to みなと港 takes any ticket
+    assert r['yunohana'] == [230, None, True, 1] and r['castle'] == [200, None, True, 1] and r['minato'] == [400, None, True, 1], r   # nothing taken, no ticket, the way home
+    assert r['exact'] == [0, 'yunohana'] and r['rode'] == ['#/onsen', 0, None], r
 
 # ---- Task 2: 湯けむり通り, 湯畑, the food and 射的 (spec §3.2, §3.3, §6) ----
 # motion reduced (a walk out is there at once, a meal straight to its end) and nobody about the street
@@ -495,6 +624,26 @@ def test_the_shishi_odoshi_and_the_bell(b):
     assert len(r['still']) == 1 and r['still'][0] <= 0.3, r   # motion reduced: a faint コーン now and then
     assert '6:00〜10:00' in r['away'] and '15:00〜21:00' in r['away'], r   # the bell's "not here" from 佐藤's own hours
 
+# 2026-11-25 (the user: 「花月一樓的風鈴按了那個互動方式應該只需要輕輕晃動就好，目前是上下大震」): looking at the garden rings the lobby's 風鈴 — a few
+# small swings about its hook that die away (8° at most, a third or less of that by the end), never up and down: its bell keeps its
+# height, its group is not turned (the shared ring's swing turned it round the land's corner: the shake); its idle sway stays gentle (4°)
+def test_the_furin_swings_gently(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ await at('ryokan'); const g = yard().querySelector('[data-fx="furin"]'), sw = g.querySelector('.fx-sway'), bell = sw.querySelectorAll('path')[1];
+      const turn = (e) => { const m = getComputedStyle(e).transform; if (!m || m === 'none') return 0; const v = m.match(/matrix\\(([^)]+)\\)/); if (!v) return 0; const [p, q] = v[1].split(',').map(Number); return Math.atan2(q, p) * 180 / Math.PI; };
+      const rot = (e) => parseFloat(getComputedStyle(e).rotate) || 0;
+      const at0 = () => { const k = bell.getBoundingClientRect(); return [k.left + k.width / 2, k.top + k.height / 2]; };
+      const sample = async (ms) => { const o = []; const t0 = performance.now(); while (performance.now() - t0 < ms) { o.push([performance.now() - t0, turn(g), turn(sw), rot(sw), ...at0()]); await wait(25); } return o; };
+      const idle = await sample(2700);
+      click('.use-btn[data-use="niwa"]'); await watch(() => g.classList.contains('ring'), 8000); const rung = await sample(2300);
+      const mx = (xs) => Math.max(...xs.map(Math.abs)), span = (xs) => Math.max(...xs) - Math.min(...xs), part = (a, b) => rung.filter((x) => x[0] >= a && x[0] < b);
+      const mm = window.matchMedia; window.matchMedia = (q) => (/reduced-motion/.test(q) ? { matches: true } : mm.call(window, q));
+      return JSON.stringify({ idle: mx(idle.map((x) => x[2] + x[3])), group: mx(rung.map((x) => x[1])), swing: mx(rung.map((x) => x[3])), early: mx(part(0, 700).map((x) => x[3])), late: mx(part(1600, 2300).map((x) => x[3])),
+        updown: span(rung.map((x) => x[5])), across: span(rung.map((x) => x[4])), bellH: bell.getBoundingClientRect().height }); })()"""))
+    assert r['group'] < 0.5, r   # its group never turned (the ring's swing round the land's corner: the shake)
+    assert 4 <= r['swing'] <= 8.5 and r['late'] <= r['early'] / 3, r   # a small swing, dying away
+    assert r['updown'] <= max(1.5, r['bellH'] * 0.12), r   # no up and down: the bell keeps its height
+    assert r['idle'] <= 4.5, r   # its idle sway gentle
+
 # ruling 3: 桜の間 front-on for the 仲居 card — washitsuArt(state) draws the room from { window, shoji, light, ac, tv, futon 0–3, zabuton 0–4,
 # tea, yukata, flower } (and room: sakura | kiku | matsu — the scroll and the flower; cat: the inn's cat asleep on a futon): every key
 # changes the drawing; each thing its own group carrying data-k — the futons' three places and the cushions' four each their own,
@@ -549,6 +698,101 @@ def test_the_inn_keeps_him_on_its_floor(b):
     assert r['doma'][2] >= r['domaU'] - 0.01, r   # up on the floor, not down in the 土間
     assert r['round'] == [True, True, True], r   # round the things, never through
     assert r['keptLobby'] == [[0, True], [0, True]] and r['keptRoom'] == [[0, True], [0, True]], r   # a spot kept in a thing or off the floor: back beside it
+
+# 2026-11-25 (the user: 「花月二樓那些椅子類的互動都有些問題」, then 「椅子是人會變成在椅子後面」): sat on any of 桜の間's seats — the 広縁's two chairs,
+# the four 座椅子 — the hero is drawn in front of what he sits on. Facing us (the far seats) nothing of his seat covers him: his head and
+# chest in sight; his back to us (the near seats) only the seat's own back, truly nearer, covers his chest; his head always in sight (the
+# 鴨居 over the shoji's track no more across his face in the 広縁). Points on him (where he is hit with the room's things hidden) are hit
+# on him with them shown, by the browser's own paint order (elementFromPoint), at 390×844 and 1280×800
+def test_sat_in_the_washitsu_he_is_drawn_before_his_seat(b):
+    out = {}
+    for w, h in ((390, 844), (1280, 800)):
+        out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + """ const res = {};
+          const light = (e) => e.matches('.glow, .rk-glow, .lit, [fill^="url(#gl"], [fill^="url(#rkPool"]');   // a lamp's glow over him is light, not a thing
+          const hits = (ps) => ps.map(([x, y]) => { const e = document.elementsFromPoint(x, y).find((q) => !light(q)); return e ? (e.closest('.yhero') ? 'hero' : e.closest('svg.land') ? 'prop' : 'other') : 'none'; });
+          const grid = (k, y0, y1) => [0.25, 0.4, 0.5, 0.6, 0.75].flatMap((fx) => [y0, (y0 + y1) / 2, y1].map((fy) => [k.left + k.width * fx, k.top + k.height * fy]));
+          for (const id of ['engawa', 'zaisu']) { const t = PLACE_USE.washitsu.find((q) => q.id === id);
+            for (let i = 0; i < t.seats.length; i++) { await at('washitsu'); const s = t.seats[i], [X, Y] = isoXY(s[0], s[1], s[2]); yard()._at = { x: X, y: Y };
+              click(`.use-btn[data-use="${id}"]`); await watch(() => yh.use, 8000); yCamTo(yard(), yh.X); await wait(300);   // (motion reduced: the camera on him as a walk would bring it)
+              document.querySelectorAll('.yard .use-btn, .yard .way-btn, .yard .thing, .yard .ypop, .yard .ysay, .yard-tools, .topbar').forEach((e) => { e.style.pointerEvents = 'none'; e.style.visibility = 'hidden'; });
+              if (!document.getElementById('hitPaint')) document.head.insertAdjacentHTML('beforeend', '<style id="hitPaint">.yard svg.land * { pointer-events: visiblePainted !important; }</style>');   // the scene's layers hit where they are drawn (the sky takes no taps: none by inheritance; a layer's own box never)
+              const hel = document.querySelector('.yhero'), hs = [...hel.querySelectorAll('.head')].map((e) => e.getBoundingClientRect()).filter((k) => k.width > 0);   // the view shown: its back hair's and its face's heads
+              const head = { left: Math.min(...hs.map((k) => k.left)), top: Math.min(...hs.map((k) => k.top)), right: Math.max(...hs.map((k) => k.right)), bottom: Math.max(...hs.map((k) => k.bottom)) }; head.width = head.right - head.left; head.height = head.bottom - head.top;
+              const hp = grid(head, 0.35, 0.8), cp = [0.3, 0.42, 0.5, 0.58, 0.7].map((fx) => [head.left + head.width * fx, head.bottom + head.height * 0.12]);
+              const props = [...document.querySelectorAll('.yard svg.land.prop')]; props.forEach((e) => { e.style.visibility = 'hidden'; });
+              const on = [hits(hp), hits(cp)]; props.forEach((e) => { e.style.visibility = ''; }); const now = [hits(hp), hits(cp)];
+              const k = (j, want) => on[j].reduce((n, x, q) => n + (x === 'hero' && now[j][q] === want ? 1 : 0), 0);
+              res[id + i] = { far: !/back/.test(s[3]), head: [on[0].filter((x) => x === 'hero').length, k(0, 'hero')], chest: [on[1].filter((x) => x === 'hero').length, k(1, 'hero'), k(1, 'prop')] }; } }
+          return JSON.stringify(res); })()""")])[-1])
+    for w, v in out.items():
+        for seat, x in v.items():
+            assert x['head'][0] >= 6 and x['head'][1] == x['head'][0], (w, seat, x, v)   # his head never covered
+            if x['far']: assert x['chest'][0] >= 2 and x['chest'][1] == x['chest'][0], (w, seat, x, v)   # facing us: nothing of his seat over him
+            else: assert x['chest'][2] >= 1, (w, seat, x, v)   # his back to us: the seat's back, nearer, before his chest
+
+# 2026-11-25 (the user: 「浴衣如果可以讓使用者取得感覺應該是滿好的，首次互動就真的多了一套可以穿的浴衣，而且取得當下就直接換上」): the first tap on 桜の間's
+# yukata tray gives the hero the inn's own (innyukata: given, as the neighbours' presents — never 古道具屋's), on at once — drawn anew where he
+# stands, in the inn's white, indigo and navy — with its toast; the 衣櫃 lists it; later taps: the tray's toast, nothing given or put on again
+def test_the_inn_gives_its_yukata_once_and_on(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
+      await at('washitsu'); out.before = [owns('innyukata'), HERO.norm(state.look).topStyle];
+      click('.use-btn[data-use="yukata"]'); await watch(() => owns('innyukata'), 6000); await wait(200);
+      const h = document.querySelector('.yhero'); out.got = [state.owned.innyukata, state.look.topStyle, Boolean(h && h.innerHTML.includes('#2f3a5e') && h.innerHTML.includes('#f4f2ec')), toasts.filter((m) => /拿到旅館的浴衣/.test(m)).length];
+      const w = WARE.get('innyukata'); out.ware = [w && w.kind, w && w.slot, w && w.gift, w && w.price];
+      state.look = Object.assign({}, state.look, { topStyle: 'hoodie' }); saveState(); toasts.length = 0; await at('washitsu');
+      click('.use-btn[data-use="yukata"]'); await wait(1500); out.again = [state.look.topStyle, toasts.filter((m) => /浴衣/.test(m)).length, toasts.some((m) => /拿到/.test(m)), Object.keys(state.owned).filter((k) => /yukata/.test(k))];
+      DRESS.open(yard(), 'wear'); await wait(300); click('[data-act="dress-tab"][data-tab="top"]'); await wait(150);
+      out.wardrobe = [...document.querySelectorAll('.dress-opt[data-key="topStyle"]')].map((x) => x.dataset.val); DRESS.close(false); await wait(600);
+      return JSON.stringify(out); })()"""))
+    assert r['before'] == [False, 'hoodie'], r
+    assert r['got'][0]['gift'] == 'kagetsu' and r['got'][0]['paid'] == 0 and r['got'][1:] == ['innyukata', True, 1], r   # his, on, drawn anew, said so
+    assert r['ware'] == ['clothes', 'top', 'kagetsu', None], r   # given, never sold
+    assert r['again'] == ['hoodie', 1, False, ['innyukata']], r   # the tray's toast only, nothing put on again
+    assert 'innyukata' in r['wardrobe'], r
+
+# ゆかた屋 sells it (the user's pick; ruling 2: 1,200 円): open, a tap on the shop opens its card — the 浴衣 drawn on the hero's shoulders in
+# his own top colour, its price tag, 「買う」 — too few 円: refused with a toast, nothing spent; enough: the 円 spent, the ware his and on at
+# once, his 「これを ください。」, a toast, the card saying so; again: the card says it is his; the 衣櫃 lists it (its colour his choice); not
+# 古道具屋's; shut, its knock and when it opens, as before
+def test_yukataya_sells_a_yukata(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = {}, toasts = [], said = []; window.toast = (m) => toasts.push(m); window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
+      const card = () => document.querySelector('.yd-yukata'), tag = () => { const t = card() && card().querySelector('.yd-ytag'); if (!t) return ''; const c = t.cloneNode(true); c.querySelectorAll('rt').forEach((x) => x.remove()); return c.textContent; };
+      await at('yudori'); click('.use-btn[data-use="yukataya"]'); await watch(card, 6000);
+      out.card = [Boolean(card()), tag(), Boolean(card() && card().querySelector('.yd-ywear svg')), Boolean(card() && card().querySelector('.yd-buy'))];
+      click('.yd-buy'); await wait(200); out.short = [yenBalance(), owns('yukata'), toasts.filter((m) => /1,200/.test(m)).length, said.length];
+      CLASS.close(); state.purse.gift = 2000; saveState(); await at('yudori'); click('.use-btn[data-use="yukataya"]'); await watch(card, 6000);
+      click('.yd-buy'); await wait(300); out.bought = [yenBalance(), state.owned.yukata && state.owned.yukata.paid, state.look.topStyle, said.slice(), toasts.filter((m) => /買了浴衣/.test(m)).length, (card().querySelector('.yd-foot') || {}).textContent];
+      out.drawn = Boolean(document.querySelector('.yhero') && /M13 -66 L-8 -40/.test(document.querySelector('.yhero').innerHTML));   // on him, crossed 右前
+      CLASS.close(); click('.use-btn[data-use="yukataya"]'); await watch(card, 6000); out.again = [Boolean(card().querySelector('.yd-buy')), /已經是你的/.test(card().textContent)]; CLASS.close();
+      const w = WARE.get('yukata'); out.ware = [w.kind, w.slot, w.shop, w.yen, w.price];
+      DRESS.open(yard(), 'wear'); await wait(300); click('[data-act="dress-tab"][data-tab="top"]'); await wait(150);
+      out.wardrobe = [...document.querySelectorAll('.dress-opt[data-key="topStyle"]')].map((x) => x.dataset.val); DRESS.close(false); await wait(600);
+      TOWNEV.clock = { h: 20, day: new Date(2026, 10, 10) }; toasts.length = 0; await at('yudori'); out.shut = [Boolean(document.querySelector('.use-btn[data-use="yukataya"]')), Boolean(document.querySelector('.use-btn[data-use="yukatayashut"]'))];
+      return JSON.stringify(out); })()"""))
+    assert r['card'] == [True, 'ゆかた　1,200円', True, True], r
+    assert r['short'] == [1000, False, 1, 0], r   # 1,000 円: refused, nothing spent, not his
+    assert r['bought'][:5] == [800, 0, 'yukata', ['hero:これを ください。'], 1] and '換上' in r['bought'][5], r
+    assert r['drawn'] and r['again'] == [False, True], r
+    assert r['ware'] == ['clothes', 'top', 'yukataya', 1200, None], r   # sold for 円 here, never at 古道具屋 (no 言靈 price)
+    assert 'yukata' in r['wardrobe'] and r['shut'] == [False, True], r
+
+# the yukata on the hero (both kinds): to the ankles, nothing of the bottoms out from under it — no trousers, skirt nor cat's tail, only
+# ankles over his shoes, whatever bottoms he has on; crossed 右前 front-on; kneeling on a 座椅子 its hem gathered up (never through the
+# cushion: its foot at his seat's); turned and from behind, walking too
+def test_the_yukata_on_the_hero(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const out = { bottoms: {} };
+      for (const top of ['yukata', 'innyukata']) for (const bs of ['pants', 'shorts', 'wide', 'skirt', 'catpants', 'santapants']) {
+        const svg = HERO.svg({ look: Object.assign({}, state.look, { topStyle: top, bottomStyle: bs, bottom: '#123456', top: '#d0574b' }), wear: {} });
+        out.bottoms[top + ':' + bs] = [svg.includes('#123456'), /class="tail/.test(svg), svg.includes('L30 -5'), /M13 -66 L-8 -40/.test(svg), /M-9 -66 L12 -40/.test(svg)]; }
+      state.look = Object.assign({}, state.look, { topStyle: 'innyukata' }); state.owned.innyukata = { paid: 0, on: todayStr(), gift: 'kagetsu' }; saveState();
+      await at('washitsu'); const t = PLACE_USE.washitsu.find((q) => q.id === 'zaisu'), s = t.seats[2], [X, Y] = isoXY(s[0], s[1], s[2]); yard()._at = { x: X, y: Y };
+      click('.use-btn[data-use="zaisu"]'); await watch(() => yh.use, 8000); yCamTo(yard(), yh.X); await wait(300);
+      const h = document.querySelector('.yhero'), hem = [...h.querySelectorAll('.robe-hem')].map((e) => e.getBoundingClientRect()).filter((k) => k.width > 0)[0], box = h.getBoundingClientRect();
+      out.kneel = [h.classList.contains('kneel'), Math.round(hem.bottom - (box.top + box.height * 200 / 210))];   // the hem's foot against his own (the seat)
+      return JSON.stringify(out); })()"""))
+    for k, v in r['bottoms'].items():
+        assert v == [False, False, True, True, False], (k, v)   # no bottoms' colour, no tail; to the ankles; 右前, never 左前
+    assert r['kneel'][0] and r['kneel'][1] <= 2, r   # gathered up: its foot no lower than his
 
 # ---- Task 4: the onsen work area and its 観光案内所 (spec §1, §5, §5.1, §8) ----
 # the four jobs; card(grades): the 打工證's 經驗 from shifts done in the other areas (S 5, A 4 …, one a job); stub(job): a stand-in
@@ -894,7 +1138,7 @@ def test_shateki_and_the_yukata_shop_keep_their_hours(b):
       toasts.length = 0; click('.yard .use-btn[data-use="yukatayashut"]'); await wait(1400); out.ykShut = toasts.join('|');
       const th = (id) => PLACE_USE.yudori.find((x) => x.id === id); out.snd = ['shatekishut', 'yukatayashut', 'yukataya', 'junbi'].map((id) => useSound('yudori', th(id)).join());   // shut, a knock (fix round 2)
       TOWNEV.clock = { h: 8.5, day: new Date(2026, 10, 10) }; await at('yudori'); toasts.length = 0; click('.yard .use-btn[data-use="shatekishut"]'); await wait(1400); out.early = toasts.join('|');
-      TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; await at('yudori'); toasts.length = 0; click('.yard .use-btn[data-use="yukataya"]'); await wait(1400); out.ykOpen = toasts.join('|');
+      TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; await at('yudori'); toasts.length = 0; click('.yard .use-btn[data-use="yukataya"]'); await wait(1400); out.ykOpen = [Boolean(document.querySelector('.yd-yukata')), toasts.join('|')]; CLASS.close();
       return JSON.stringify(out); })()"""))
     assert r['hours'] == [[10, 23], [9, 18]], r
     for h, shut in ((9, True), (23, True), (10, False), (22, False)):
@@ -907,7 +1151,8 @@ def test_shateki_and_the_yukata_shop_keep_their_hours(b):
     assert r['snd'] == ['knock', 'knock', 'cloth', 'knock'], r   # a shut shop knocks, as ゆのはな堂 does
     assert '射的' in r['shutSay'] and '明天' in r['shutSay'] and '10:00' in r['shutSay'] and r['kept'] == [0, None, False], r   # nothing taken
     assert '10:00' in r['early'] and '明天' not in r['early'], r
-    assert 'ゆかた屋' in r['ykShut'] and '9:00' in r['ykShut'] and '可以租' not in r['ykShut'] and '可以租' in r['ykOpen'], r
+    assert 'ゆかた屋' in r['ykShut'] and '9:00' in r['ykShut'] and '可以租' not in r['ykShut'], r
+    assert r['ykOpen'][0] and '可以租' not in r['ykOpen'][1], r   # open: its card, a 浴衣 to buy (2026-11-25) — no rental promised that there is none of
 
 # M-2 (spec §5): a tourist who gives up waiting goes — the question shown whole in their bubble, their leaving line popping up beside it
 # (as their mood lines do), never over it (N-4, fix round 2: over the face while the bubble is open; at 390×844 and 360×640); the right
@@ -937,7 +1182,7 @@ def test_time_marks_read_every_hour(b):
 # place kept as arrived); the next ride up, no more
 def test_arriving_by_train_akari_greets_once(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
-      const ride = async () => { RIDE.keep({ from: 'minato', fare: 420, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); const g = greeting(); await arrive('yunohana', '#/onsen'); await g; };
+      const ride = async () => { RIDE.keep({ from: 'minato', to: 'yunohana', fare: 420, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); const g = greeting(); await arrive('yunohana', '#/onsen'); await g; };
       await ride(); const once = said.filter((x) => x.startsWith('akari:')), first = [location.hash, state.town.arrived, Boolean(document.querySelector('.cls'))];
       await ride(); return JSON.stringify({ once, first, again: said.filter((x) => x.startsWith('akari:')).length }); })()"""))
     assert r['first'] == ['#/onsen', {'onsen': 1}, False] and r['once'] == ['akari:ようこそ、{湯の花|ゆのはな}{温泉|おんせん}へ！'] and r['again'] == 1, r
@@ -2128,9 +2373,9 @@ def test_yes_on_the_rules_begins_the_first_shift_after_a_redraw(b):
     assert r == {'redrawn': True, 'talk': True, 'card': True}, r
 
 # ruling 37 (the final review's I-2): 交通費 — the day's first onsen shift pays back what the ride up to 湯の花 cost that day (the
-# ticket and any 乗り越し精算, kept on arriving there, on this device): from みなと 420, once (a second shift that day: none); via 白鷺
-# 260; a short ticket and its 精算 the two together; no ride, none. Shown on the results as 交通費 (none of the card's +% on it); the day
-# kept as oneADay.koutsuhi, kept by a load and by a merge with a copy that has none, either way
+# ticket, kept on arriving there, on this device — every ticket paid in full at the machine since 2026-11-25): from みなと 420, once (a
+# second shift that day: none); via 白鷺 260; no ride, none. Shown on the results as 交通費 (none of the card's +% on it); the day kept as
+# oneADay.koutsuhi, kept by a load and by a merge with a copy that has none, either way
 def test_the_fare_up_is_paid_back_once_with_the_days_first_shift(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; state.purse.gift = 3000;
       state.work.res['2026-10-21'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState(); localStorage.removeItem('nq_fare'); localStorage.setItem('nq_work_free', '1');
@@ -2145,17 +2390,14 @@ def test_the_fare_up_is_paid_back_once_with_the_days_first_shift(b):
       const T = (s, t) => Object.assign(JSON.parse(JSON.stringify(s)), { updatedAt: t }), mine = normalizeState(JSON.parse(JSON.stringify(state))), theirs = JSON.parse(JSON.stringify(mine)); delete theirs.oneADay;
       out.kept = [mine.oneADay && mine.oneADay.koutsuhi].concat([['2026-11-25T10:00:00.000Z', '2026-11-25T11:00:00.000Z'], ['2026-11-25T12:00:00.000Z', '2026-11-25T11:00:00.000Z']]
         .flatMap(([a, c]) => [SyncCore.mergeStates(T(mine, a), T(theirs, c)), SyncCore.mergeStates(T(theirs, c), T(mine, a))]).map((m) => (normalizeState(m).oneADay || {}).koutsuhi));
-      day(11); await at('castle'); RIDE.machine(yard(), 'shirasagi'); await wait(100); click('.kb-fare[data-f="260"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride[data-line="yama"]');
+      day(11); await at('castle'); RIDE.machine(yard(), 'shirasagi'); await wait(100); click('.kb-fare[data-f="260"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride');
       await arrive('yunohana', '#/onsen'); out.shirasagi = await shift();
-      day(12); await at('onsen'); out.none = await shift();
-      day(13); RIDE.keep({ from: 'minato', fare: 310, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); await watch(end('shirasagi')); click('.rd-card .os-on'); await arrive('yunohana', '#/onsen');
-      out.short = await shift(); localStorage.removeItem('nq_work_free'); return JSON.stringify(out); })()"""))
+      day(12); await at('onsen'); out.none = await shift(); localStorage.removeItem('nq_work_free'); return JSON.stringify(out); })()"""))
     assert r['minato'][0] == 680 and '交通費' in r['minato'][1] and '+420円' in r['minato'][1], r   # 200 + S 50 + ベテラン's 4%, and the 420 back
     assert r['again'] == [260, ''] and r['day'] == '2026-11-10', r   # once a day
     assert r['kept'] == ['2026-11-10'] * 5, r   # a load, and a merge with a copy without it, either copy newer, either way round
     assert r['shirasagi'][0] == 520 and '+260円' in r['shirasagi'][1], r
     assert r['none'] == [260, ''], r
-    assert r['short'][0] == 680 and '+420円' in r['short'][1], r   # 310 and 110 at 湯の花
 
 # the final review's I-1, the egg stand's own case: full today, the right coin shuts its card (CLASS.close) — the square drawn anew at once
 # when it is out of date (an hour turned while the card was up) — and his 「まだ おなかが いっぱいです。」 opens on the square as drawn now
@@ -2222,6 +2464,63 @@ def test_the_mood_mark_stays_by_the_face_at_the_annai_and_the_miyage(b):
           put(['jam']); give(); await watch(() => ready(), 4000); await wait(100); put(['kokeshi']); give(); await watch(() => ready(), 4000); await wait(300);
           const miyage = mark(document.querySelector('.wk-miyage')); CLASS.close(); return JSON.stringify({ annai, miyage }); })()""")])[-1])
     assert all(x == {'by': True, 'clear': True, 'tall': True} for v in out.values() for x in v.values()), out
+
+# 2026-11-25 (the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」): in the onsen's four jobs a reply moves nothing — the card, what is read
+# (the board, the room, the shelves, the book), the customer's face and bubble, the replies and the talk row each keep their top from just
+# before a reply, watched every 50 ms until its line is up (right: the hero's line shown; wrong: the keeper's word and why — each said after
+# the customer's question, still being said when the reply is tapped), on a first shift (the hero's 中文 under his line) and a later one, at
+# 390×844, 360×640 and 1280×800 — none of it re-centred (the 案内所's card rose by half of what grew in it), no bubble grown by its words
+# shown, no short phone's card scrolled by itself mid-customer (the フロント's on 360×640 to its talk row as a keeper's word of two lines grew it)
+F_JOBS = {
+  'annai': ('.wk-annai', ['.an-board', '.wk-cust .kr-face', '.wk-bub', '.an-opts', '.an-talk'], """ const N = () => ANNAI_RUN.now(); state.currentUnit = 'm7';
+    if (!FIRST) state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState();
+    await at('onsen'); WORK.start(yard(), 'annai'); for (let i = 0; i < 60 && !document.querySelector('.wk-annai'); i++) { click('.talk'); await wait(150); }
+    const k = () => (N() || {}).k, ask = () => Boolean(N()) && N().phase === 'ask' && Boolean(document.querySelector('.wk-annai .an-opt:not(:disabled)'));
+    const opt = (good) => document.querySelector(`.wk-annai .an-opt[data-o="${N().task.opts.findIndex((o) => (good ? o[2] : !o[2]))}"]`); const step = async () => {};"""),
+  'nakai': ('.wk-nakai', ['.nk-art', '.nk-task .kr-face', '.nk-bub', '.nk-opts', '.nk-talk'], """ state.currentUnit = 'm8';
+    if (FIRST) { state.work.res[dateStr(TOWNEV.today())] = { place: 'nakai', done: 0, score: {}, keep: { seed: 5 } }; saveState(); } else shiftAt(5);
+    await at('ryokan'); WORK.start(yard(), 'nakai'); for (let i = 0; i < 60 && !document.querySelector('.wk-nakai'); i++) { click('.talk'); await wait(150); }
+    const k = () => (nk() || {}).k, ask = () => Boolean(nk()) && nk().phase === 'ask' && !nk().busy && Boolean(document.querySelector('.wk-nakai .nk-opt:not(:disabled)'));
+    const step = async () => { if (ready() && nk().phase === 'do') await solve(); };"""),
+  'miyage': ('.wk-miyage', ['.om-shelves', '.wk-cust .kr-face', '.wk-bub', '.om-tray', '.om-opts', '.om-talk'], """ state.currentUnit = 'm11';
+    const r0 = MIYAGE.make(m11, 5).findIndex((c) => MIYAGE.steps(c).includes('reply'));   // the shift taken up at its first customer with a reply
+    if (FIRST) { state.work.res[dateStr(TOWNEV.today())] = { place: 'miyage', done: r0, score: upTo(r0), keep: { seed: 5 } }; saveState(); } else shiftAt(5, r0, upTo(r0));
+    await at('yudori'); WORK.start(yard(), 'miyage'); for (let i = 0; i < 60 && !document.querySelector('.wk-miyage'); i++) { click('.talk'); await wait(150); }
+    const k = () => (my() || {}).k, ask = () => Boolean(my()) && my().phase === 'reply' && !my().busy && Boolean(document.querySelector('.wk-miyage .om-opt:not(:disabled)'));
+    const step = async () => { if (ready() && my().phase === 'pick') await serve(); };"""),
+  'front': ('.wk-front', ['.fr-desk', '.wk-cust .kr-face', '.wk-bub', '.fr-opts', '.fr-talk'], """ state.currentUnit = 'm15'; clock(false);
+    if (FIRST) { state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: 0, score: {}, keep: { seed: 5, morning: false } }; saveState(); } else shiftAt(5, false);
+    await at('ryokan'); WORK.start(yard(), 'front'); for (let i = 0; i < 60 && !document.querySelector('.wk-front'); i++) { click('.talk'); await wait(150); }
+    const k = () => (fr() || {}).k, ask = () => ready() && fr().step !== 1 && Boolean(document.querySelector('.wk-front .fr-opt:not(:disabled)'));
+    const step = async () => { if (ready() && fr().step === 1) await serve(); };""")}
+F_FLOW = """ window.speakAs = () => new Promise((ok) => setTimeout(ok, 1500));
+  const tops = () => { const o = {}, c = document.querySelector(CARD + ' .cls-card'); o.card = c ? Math.round(c.getBoundingClientRect().top) : null; o.scroll = c ? c.scrollTop : null;
+    ROWS.forEach((q) => { const e = document.querySelector(CARD + ' ' + q); o[q] = e && e.offsetParent ? Math.round(e.getBoundingClientRect().top) : null; }); return o; };
+  const until = async (f, ms = 30000) => { const t0 = Date.now(); while (!f() && Date.now() - t0 < ms) { await step(); await wait(60); } return f(); };
+  const heroSaid = () => Boolean(document.querySelector(CARD + ' :is(.wk-say.nk-me, .wk-say.om-me)')) || [...document.querySelectorAll(CARD + ' [data-who="me"] .wk-me')].some((e) => e.textContent.trim());
+  const keeperSaid = () => Boolean(document.querySelector(CARD + ' .wk-say.bad'));
+  const gone = (k0) => k() !== k0 || !document.querySelector(CARD + ' .cls-card') || Boolean(document.querySelector(CARD + ' :is(.wk-cust.bye, .nk-task.nk-bye)'));
+  const follow = async (a, k0, said) => { const t0 = Date.now(); let saw = 0, moved = null;
+    while (Date.now() - t0 < 6000) { await wait(50); if (gone(k0)) break; const x = tops(), d = Object.keys(a).filter((q) => a[q] !== null && x[q] !== null && Math.abs(a[q] - x[q]) > 1);
+      if (d.length && !moved) moved = Object.fromEntries(d.map((q) => [q, [a[q], x[q]]]));
+      if (said()) { if (!saw) saw = Date.now(); else if (Date.now() - saw > 300) break; } }
+    return { moved, said: Boolean(saw) }; };
+  if (!(await until(ask))) return JSON.stringify({ err: 'no ask' }); await wait(500); const k0 = k(), a = tops(); opt(true).click(); const right = await follow(a, k0, heroSaid);
+  if (!(await until(() => ask() && k() !== k0))) return JSON.stringify({ err: 'no next', right }); await wait(500); const k1 = k(), c = tops(); opt(false).click(); const wrong = await follow(c, k1, keeperSaid);
+  CLASS.close(); return JSON.stringify({ right, wrong });"""
+
+def test_a_reply_moves_nothing_in_the_onsen_jobs(b):
+    bad = []
+    for job, (card, rows, js) in F_JOBS.items():
+        helper = {'annai': '', 'nakai': NK, 'miyage': MY, 'front': FR}[job]
+        for first in (True, False):
+            for w, h in ((390, 844), (360, 640), (1280, 800)):
+                r = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + helper + " card(['S', 'S', 'S', 'S']); const FIRST = " + ('true' if first else 'false') + ";"
+                    + js + f" const CARD = '{card}', ROWS = {json.dumps(rows)};" + F_FLOW + " })()")], timeout=150)[-1])
+                if 'err' in r: bad.append((job, first, w, r)); continue
+                for moment in ('right', 'wrong'):
+                    if r[moment]['moved'] or not r[moment]['said']: bad.append((job, 'first' if first else 'later', w, moment, r[moment]))
+    assert bad == [], bad
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

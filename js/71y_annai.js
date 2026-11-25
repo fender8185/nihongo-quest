@@ -186,9 +186,10 @@ const ANNAI_RUN = (() => {
     // 1): the card holds the board, the glass, the replies and the talk line — when a line lands below its fold the card scrolls itself just
     // far enough to show it, and is back at its top for each tourist (the board and the glass first): JOBS.talkLine (Task 7's fix round, M-10)
     const TL = JOBS.talkLine({ box: () => box, sel: '.an-talk', who: A.who, first }), { word, me, said, seeTalk } = TL;
+    const bubHtml = (open, [ja, zh]) => `<button type="button" class="wk-ear an-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="bt-dots">……</b>'}`;
     function bub(open, line) {
-      const R = D.now(), b = el('.wk-cust .wk-bub'); if (!b || !R) return; const [ja, zh] = line || R.task.q;
-      b.innerHTML = `<button type="button" class="wk-ear an-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="bt-dots">……</b>'}`;
+      const R = D.now(), b = el('.wk-cust .wk-bub'); if (!b || !R) return;
+      b.innerHTML = bubHtml(open, line || R.task.q);
       b.classList.toggle('wk-open', Boolean(open));   // open: a pop-up goes under it, never over the question (N-4)
       if (open) seeTalk();   // the bubble grown: the talk line kept in sight
     }
@@ -203,7 +204,7 @@ const ANNAI_RUN = (() => {
     D = cur = JOBS.desk({ job: 'annai', ctx, N, box: () => box, alive: '.an-glass', mine: () => mine === runs, tasks: shift.tasks,
       isRight: (t, i) => Boolean(t.opts[i] && t.opts[i][2]), secs: () => SECS, cost: MISS, hi: () => s.hi, fresh: () => ({ seed }),
       me, word, bub, opts, optSel: '.an-opt', earSel: '.an-ear', rightCls: 'an-right', once: true,
-      draw: (t) => { TL.toTop(); el('.wk-cust').dataset.fun = t.fun || ''; },   // the card from its top: the board and the glass first
+      draw: (t) => { TL.toTop(); el('.wk-cust').dataset.fun = t.fun || ''; JOBS.hold(el('.wk-cust .wk-bub'), [t.q, t.after].filter(Boolean).map((l) => bubHtml(true, l))); },   // the card from its top: the board and the glass first; the bubble as tall as their words (2026-11-25)
       miss: (t, i) => { const o = t.opts[i]; return [(o[3] === 'form' ? A.form : A.fact)[0], o[1]]; },
       served: async (t, R, lv) => {
         const after = t.after || s.thanks; if (t.after) bub(true, after); await said(speakAs(t.who, after[0]), 600); if (!lv()) return;

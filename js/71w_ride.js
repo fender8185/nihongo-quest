@@ -3,112 +3,120 @@
 // The hero's own rides on みなと線: at a station's ticket machine, the fare chart over it (that station 現在地) — find where you are
 // going, press its fare (大人), put the money in: a ticket. On みなと's platform a train stopped with its doors open: aboard (no
 // ticket: buy one first). Inside the car the world going by in the windows, the straps swaying, the LED over the door and the
-// announcements (つぎは 病院前、病院前です), stop by stop to the end of the line — 白鷺 (the castle) or みなと港 (the harbour); a ticket
-// short of it, the rest paid there (乗り越し精算). Home from either by its station's sign: the machine there, the ride back to
-// みなと's platform. The bus stays free; the train costs, as trains do. One ticket at a time, kept on this device (a new one
-// replaces it; a ride uses it up).
+// announcements (つぎは 病院前、病院前です), stop by stop to the station the ticket names. The bus stays free; the train costs, as trains do.
 // 2026-11-23 (湯の花温泉, docs/superpowers/specs/2026-11-23-onsen-work-design.md §2.2): やまなみ線 on from 白鷺 to 湯の花, a one-car diesel.
-// Every chart has it past 白鷺 (のりかえ); a ticket further than 白鷺 rides on — the change at 白鷺 (its announcement, the hero across
-// the platform to the other train) — and at 白鷺 a shorter one may ride on all the same, the rest paid at the end; 白鷺's machine asks
-// which train. Up the valley: the river, a bridge, two tunnels, cedars, the steam of the town; off at 湯の花駅前 (SCENE). No
-// announcement cuts another: each waits for the one before to be said (a clip that never ends: 8 s at most). A ticket past 白鷺 whose
-// rest the wallet cannot pay ends at 白鷺 (it covers that far); no free ride home — short of money at 湯の花, the card names the app's
-// own way home (書房), and a ticket up there bought with too little left for the way back gets a warning (the review, 2026-11-23)
+// Every chart has it past 白鷺 (のりかえ); a ride from みなと線 to it changes at 白鷺 (its announcement, the hero across the platform to
+// the other train). Up the valley: the river, a bridge, two tunnels, cedars, the steam of the town; off at 湯の花駅前 (SCENE). No
+// announcement cuts another: each waits for the one before to be said (a clip that never ends: 8 s at most). No free ride home — short
+// of money at 湯の花, the card names the app's own way home (書房), and a ticket up there bought with too little left for the way back
+// gets a warning (the review, 2026-11-23).
+// 2026-11-25 (the user, playing test.1: 「有些地方本來就可以走到，買票感覺沒有意義，浪費使用者的錢」, 「買哪的票就要強迫他上車後是抵達那個對應的
+// 站，然後也不能一次買一堆票」): the castle and the harbour are a walk or the free bus away, so the train is only the way up to 湯の花 and back
+// down — the town's machines sell the ticket up, 湯の花's the two down (SELLS); a ticket names its station and the ride ends there, paid in
+// full at the machine (no 乗り越し精算, no ride on from 白鷺); one ticket at a time (払いもどし pays one back whole: one held where it cannot
+// be used — a 湯の花→白鷺 one after going home by 書房 — would else block every machine); at みなと the train is in for a ticket from there
+// (PLATFORM.ready); 「跳過 ›」 on every ride, straight to its arrival (the user's pick)
 // the season's leaves (the valley in the diesel's windows, 湯の花駅前's slope): [two of the trees, a third], by the month
 const seasonLeaves = (m = (typeof sceneDate === 'function' ? sceneDate() : new Date()).getMonth() + 1) => (m >= 3 && m <= 5 ? ['#f2c4d0', '#f8dce4', '#8ab86e'] : m >= 6 && m <= 8 ? ['#6aa860', '#86bc6a', '#5a9a52'] : m >= 9 && m <= 11 ? ['#d8653a', '#e8a23a', '#c8452e'] : ['#9a8a7a', '#b0a294', '#8a7a6a']);
 const RIDE = (() => {
   const TK = 'nq_ticket', SCENE = { shirasagi: 'castle', minatoko: 'harbor', minato: 'platform', yunohana: 'onsen' };
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>');
   const L = () => TOWN.EKI.ride, api = { speed: 1, trace: null };   // trace: an array to have each phase written into as 'phase@station' (the tests)
-  let R = null, runs = 0;   // the ride now (the tests): { from, to, i, phase, at, line }
+  let R = null, runs = 0;   // the ride now (the tests): { from, to, i, phase, at, line, gen }
   const ms = (s) => (s * 1000) / api.speed;
-  const ticket = () => { try { return JSON.parse(localStorage.getItem(TK) || 'null'); } catch (e) { return null; } };
+  // what each machine sells: the town's three the way up to 湯の花 only, 湯の花's the two ways down — never 森下, never a station with
+  // nowhere to get off; NEAR: what is a walk or the free bus away from each of the town's three (its machine's note)
+  const SELLS = { minato: ['yunohana'], minatoko: ['yunohana'], shirasagi: ['yunohana'], yunohana: ['shirasagi', 'minato'] };
+  const NEAR = { minato: '白鷺城、港口', minatoko: '白鷺城、車站前', shirasagi: '車站前、港口' };
+  // the ticket held: { from, to, fare, day }, kept on this device, one at a time. One bought before tickets named their station (to
+  // 2026-11-25) is read as the one its fare buys from there now; none (a 310 to 白鷺 from みなと): to '' — ridden nowhere, paid back at any machine
+  const ticket = () => { let t = null; try { t = JSON.parse(localStorage.getItem(TK) || 'null'); } catch (e) { return null; }
+    if (!t || typeof t !== 'object' || !t.from) return null;
+    const fare = Number(t.fare) || 0; return Object.assign({}, t, { fare, to: t.to || (SELLS[t.from] || []).find((id) => EKI.fare(t.from, id) === fare) || '' }); };
   const keep = (t) => { try { if (t) localStorage.setItem(TK, JSON.stringify(t)); else localStorage.removeItem(TK); } catch (e) { /* none kept */ } };
-  // what the ride up to 湯の花 cost (2026-11-25, ruling 37: 交通費, paid back by the day's first onsen shift — WORK): the ticket and any
-  // 乗り越し精算, kept on arriving there with the town's day, on this device (as the ticket is); a later ride up that day replaces it
+  // what the ride up to 湯の花 cost (ruling 37: 交通費, paid back by the day's first onsen shift — WORK): its ticket's fare, kept on
+  // arriving there with the town's day, on this device (as the ticket is); a later ride up that day replaces it
   const FARE = 'nq_fare';
   const fareKeep = (yen) => { try { localStorage.setItem(FARE, JSON.stringify({ day: dateStr(TOWNEV.today()), yen })); } catch (e) { /* none kept */ } };
   const fare = (day) => { try { const f = JSON.parse(localStorage.getItem(FARE) || 'null'); return f && f.day === day ? Math.max(0, Number(f.yen) || 0) : 0; } catch (e) { return 0; } };
-  const spend = (n) => yenSpend(n);   // a ticket, the rest paid off the train (40_core.js)
   const st = (id) => ([...TOWN.EKI.LINE, ...((TOWN.EKI.YAMA || {}).LINE || [])].find((x) => x[0] === id) || [, id])[1];
   const fill = (l, o) => [l[0].replace(/\{S\}/g, o.S || '').replace('{P}', o.P || '').replace('{L}', o.L || ''), l[1].replace(/\{s\}/g, o.s || '').replace('{p}', o.p || '').replace('{l}', o.l || '')];
   const lineName = (ln) => L().lines[ln] || ['', ''];
   const night = () => sceneClock(lightHour(sceneHour())).day < 0.5;
-  // the way back from 湯の花 at least (to 白鷺: a scene, the castle); a warning when what is left on getting there will not buy it (left
-  // below 0: the rest not paid, the ride ends at 白鷺 — no warning)
+  // the way back from 湯の花 at least (to 白鷺: a scene, the castle); a warning when what is left will not buy it
   const backFare = () => EKI.fare('yunohana', 'shirasagi');
   const warnBack = (left) => { if (left >= 0 && left < backFare()) toast(`提醒：從湯の花回來最少要 ${backFare()} 円（到白鷺），付完只剩 ${yenStr(Math.max(0, left))} 円。`, 4600); };
-  // ---- the machine: the chart (fares from here), its screen, a button a fare, the coin slot, the ticket out ----
+  // a ticket's face (「みなと → 湯の花　420円」; one from before tickets named their station: its fare's 区間), and as a toast names it
+  const faceOf = (t) => `<span lang="ja">${ruby(st(t.from))} → ${t.to ? ruby(st(t.to)) : `${t.fare}円区間`}</span><b>${t.fare}円</b><small>${esc(t.day || '')}・大人</small>`;
+  const named = (t) => `${EKI.name(t.from)} → ${t.to ? EKI.name(t.to) : `${t.fare} 円`}`;
+  // ---- the machine: the chart (fares from here), its screen, a button each ticket it sells, the coin slot, the ticket out ----
   // やまなみ線's part of a chart (2026-11-23): a row under みなと線's, from 白鷺 (のりかえ, under it) to 湯の花, its fares from here
   const yamaRow = (here) => `<div class="os-yama"><i class="os-rail"></i><div class="md-st os-jct"><b class="md-dot">◎</b><span class="os-chg" lang="ja">のりかえ</span></div>
     ${EKI.yama().slice(1).map((x) => (x.id === here ? `<div class="md-st here"><b class="md-dot">●</b>${EKI.label(x.id, true)}<em>現在地</em></div>`
       : `<div class="md-st"><b class="md-dot">●</b>${EKI.label(x.id, true)}<span class="md-f">${EKI.fare(here, x.id)}</span></div>`)).join('')}
     <p class="os-name" lang="ja">${ruby(lineName('yama')[0])}</p></div>`;
   function machine(yard, here) {
-    const all = EKI.line().concat(EKI.yama().slice(1)), fares = [...new Set(all.filter((x) => x.id !== here).map((x) => EKI.fare(here, x.id)))].sort((a, b) => a - b);
-    let pick = 0;
+    const sells = (SELLS[here] || []).map((to) => ({ to, fare: EKI.fare(here, to) }));
+    let pick = null;   // the ticket whose fare button is pressed: { to, fare }
     const chart = `<div class="md-wall kb-wall"><div class="md-chart"><i class="md-rail"></i>${EKI.line().map((x) => x.id === here
       ? `<div class="md-st here"><b class="md-dot">●</b>${EKI.label(x.id, true)}<em>現在地</em></div>`
       : `<div class="md-st"><b class="md-dot${x.rapid ? '' : ' no'}">${x.rapid ? '●' : '○'}</b>${EKI.label(x.id, true)}<span class="md-f">${EKI.fare(here, x.id)}</span></div>`).join('')}</div>
       ${yamaRow(here)}<p class="md-key"><span>大人（円）</span><span lang="ja">${ruby(st(here))}から</span></p></div>`;
-    const screen = (l, cls = '') => { const e = document.querySelector('.kb-screen'); if (e) { e.innerHTML = `<b lang="ja">${ruby(l[0])}</b><span>${esc(l[1])}</span>`; e.className = 'kb-screen' + (cls ? ' ' + cls : ''); } };
-    // short of money — or of what the ticket would still want on board: refused alike, the wallet untouched (a machine never sells a
-    // ticket that cannot be ridden with the money left — 湯の花's 220 to 森下 with under 260 円 went nowhere; 2026-11-23); the app's own
-    // way home (書房 — on a phone its button is not on the screen in a place, so the card has it); 円 come from the cruise and the jobs
-    const homeHint = () => { const sl = document.querySelector('.kb-slot'); if (sl && !sl.querySelector('.os-home')) sl.insertAdjacentHTML('beforeend', `<p class="kb-tip">錢不夠搭車：先回書房吧。帶郵輪的客人、打工都能賺円。</p><button type="button" class="btn os-home">‹ 書房</button>`); };
+    const note = NEAR[here] ? `<p class="kb-note">${NEAR[here]}走路或坐公車就到了（免費），這裡只賣去湯の花的票。</p>` : '';   // the town's three: why only the one
+    const q = (s) => document.querySelector('.kb-card ' + s);
+    const screen = (l, cls = '') => { const e = q('.kb-screen'); if (e) { e.innerHTML = `<b lang="ja">${ruby(l[0])}</b><span>${esc(l[1])}</span>`; e.className = 'kb-screen' + (cls ? ' ' + cls : ''); } };
+    // short of money: refused, the wallet untouched; the app's own way home (書房 — on a phone its button is not on the screen in a
+    // place, so the card has it); 円 come from the cruise and the jobs
+    const homeHint = () => { const sl = q('.kb-slot'); if (sl && !sl.querySelector('.os-home')) sl.insertAdjacentHTML('beforeend', `<p class="kb-tip">錢不夠搭車：先回書房吧。帶郵輪的客人、打工都能賺円。</p><button type="button" class="btn os-home">‹ 書房</button>`); };
     const refuse = () => { playSfx('bad'); screen(L().short, 'bad'); toast(`錢包只有 ${yenStr(yenBalance())} 円，不夠搭車。可以按「‹ 書房」先回書房。`, 4200); homeHint(); };
-    // aboard from here: one train (its line), or at 白鷺 either — みなと線 home first (as it was), やまなみ線 up to 湯の花
-    const rides = here === 'shirasagi' ? ['minato', 'yama'] : [EKI.lineOf(here)];
-    const rideBtn = (ln) => `<button type="button" class="btn btn-primary kb-ride" data-line="${ln}" lang="ja"><span>${rides.length > 1 ? ruby(fill(L().aboard, { L: lineName(ln)[0] })[0]) : `<ruby>電車<rt>でんしゃ</rt></ruby>に <ruby>乗<rt>の</rt></ruby>る`}</span></button>`;
+    const rideBtn = '<button type="button" class="btn btn-primary kb-ride" lang="ja"><span><ruby>電車<rt>でんしゃ</rt></ruby>に <ruby>乗<rt>の</rt></ruby>る</span></button>';
+    const backBtn = () => `<button type="button" class="btn kb-back" lang="ja"><span>${ruby(L().refund[0])}</span><small>${esc(L().refund[1])}</small></button>`;
+    // the ticket held, or none: the fare buttons on (none) or off (one at a time), the wallet, the slot — the ticket, what to do with it
+    // (here: its train; みなと: up to the platform), 払いもどし
+    function draw() {
+      const t = ticket(), s = q('.kb-slot'), p = q('.kb-pay'); if (!s || !p) return;
+      document.querySelectorAll('.kb-card .kb-fare').forEach((b) => { b.disabled = Boolean(t); b.classList.remove('on'); }); pick = null; p.disabled = true;
+      const w = q('.kb-wallet'); if (w) w.innerHTML = `${yenIcon()}${yenStr(yenBalance())} 円`;
+      if (!t) { s.innerHTML = ''; return; }
+      const mine = t.from === here && t.to;
+      const tip = !mine ? `<p class="kb-tip">${t.from === here ? '這張是以前的票，現在沒有它能搭的車了' : `這張是${esc(EKI.name(t.from))}出發的票，在這裡不能搭`}：按「払いもどし」退票，錢全部退回錢包，就能再買。</p>`
+        : here === 'minato' ? '<p class="kb-tip">從剪票口上月台：1番線（往白鷺）的電車已經停著等你，上車就好，到白鷺換やまなみ線。</p>' : '';
+      s.innerHTML = `<div class="kb-ticket" data-from="${t.from}" data-to="${t.to}">${faceOf(t)}</div>${tip}<div class="os-rides">${mine && here !== 'minato' ? rideBtn : ''}${backBtn()}</div>`;
+    }
     CLASS.card('kb-card', '券売機', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
-      <div class="wk-head"><b lang="ja"><ruby>券売機<rt>けんばいき</rt></ruby></b><span>${esc(EKI.name(here))}<ruby>駅<rt>えき</rt></ruby></span></div>${chart}
-      <div class="kb-machine"><p class="kb-screen"></p><div class="kb-fares">${fares.map((f) => `<button type="button" class="kb-fare" data-f="${f}"><small>大人</small>${f}</button>`).join('')}</div>
+      <div class="wk-head"><b lang="ja"><ruby>券売機<rt>けんばいき</rt></ruby></b><span>${esc(EKI.name(here))}<ruby>駅<rt>えき</rt></ruby></span></div>${chart}${note}
+      <div class="kb-machine"><p class="kb-screen"></p><div class="kb-fares${sells.length > 1 ? '' : ' one'}">${sells.map((x) => `<button type="button" class="kb-fare" data-f="${x.fare}" data-to="${x.to}"><small>大人</small>${x.fare}<span class="kb-to" lang="ja">${EKI.ruby(x.to)}</span></button>`).join('')}</div>
         <div class="kb-row"><span class="kb-wallet">${yenIcon()}${yenStr(yenBalance())} 円</span><button type="button" class="btn btn-primary kb-pay" disabled lang="ja"><span>お<ruby>金<rt>かね</rt></ruby>を <ruby>入<rt>い</rt></ruby>れる</span></button></div>
         <div class="kb-slot"></div></div>`, (e) => {
-      const f = e.target.closest('.kb-fare'); if (f) { pick = Number(f.dataset.f); document.querySelectorAll('.kb-fare').forEach((x) => x.classList.toggle('on', x === f)); document.querySelector('.kb-pay').disabled = false; SND.play('tick', { vol: 0.5 }); screen(fill(L().put, { P: YEN.priceMark(pick), p: pick })); return; }
+      const f = e.target.closest('.kb-fare');
+      if (f && !f.disabled) { pick = { to: f.dataset.to, fare: Number(f.dataset.f) }; document.querySelectorAll('.kb-card .kb-fare').forEach((x) => x.classList.toggle('on', x === f)); q('.kb-pay').disabled = false; SND.play('tick', { vol: 0.5 }); screen(fill(L().put, { P: YEN.priceMark(pick.fare), p: pick.fare })); return; }
       if (e.target.closest('.kb-pay') && pick) {
-        if (yenBalance() < pick || !rideable(here, pick, yenBalance() - pick)) { refuse(); return; }   // the wallet untouched
-        const paid = pick; spend(pick); keep({ from: here, fare: pick, day: todayStr() }); playSfx('coin', 3); SND.play('paper', { vol: 0.6 }); screen(L().take, 'ok');
-        if (here !== 'shirasagi' && EKI.lineOf(here) === 'minato' && paid > EKI.fare(here, 'shirasagi')) warnBack(yenBalance() - Math.max(0, EKI.fare(here, 'yunohana') - paid));   // a ticket up to 湯の花 (白鷺's: its train picked, at board)
-        pick = 0; document.querySelector('.kb-pay').disabled = true; document.querySelectorAll('.kb-fare.on').forEach((x) => x.classList.remove('on'));   // paid once (a second tap, nothing)
-        const w = document.querySelector('.kb-wallet'); if (w) w.innerHTML = `${yenIcon()}${yenStr(yenBalance())} 円`;
-        const far = paid > EKI.fare('minato', 'shirasagi');   // みなと: past 白鷺 — 1番線, and the change there
-        document.querySelector('.kb-slot').innerHTML = `<div class="kb-ticket"><span lang="ja">${ruby(st(here))} → ${paid}円区間</span><b>${paid}円</b><small>${todayStr()}・大人</small></div>${here === 'minato' ? `<p class="kb-tip">${far ? '從剪票口上月台，搭 1番線（往白鷺），到白鷺換やまなみ線。' : '從剪票口上月台，點停著的電車就能上車。'}</p>` : `<div class="os-rides">${rides.map(rideBtn).join('')}</div>`}`;
-        return;
+        if (ticket()) { playSfx('bad'); screen(L().held, 'bad'); draw(); return; }   // one at a time
+        if (yenBalance() < pick.fare) { refuse(); return; }   // the wallet untouched
+        const t = { from: here, to: pick.to, fare: pick.fare, day: todayStr() };
+        yenSpend(t.fare); keep(t); playSfx('coin', 3); SND.play('paper', { vol: 0.6 }); screen(L().take, 'ok');
+        if (t.to === 'yunohana') warnBack(yenBalance());   // up there with too little left for the way back
+        draw(); return;
       }
-      const b = e.target.closest('.kb-ride');
-      if (b) {   // aboard — unless this train wants more on board than there is: said here, in the card, the way home with it (白鷺: the other train still to hand)
-        const t = ticket(), more = t && t.from === here ? Math.max(0, EKI.fare(here, dest(here, 0, b.dataset.line, t.fare)) - t.fare) : 0;
-        if (more > yenBalance()) { playSfx('bad'); toast(`這張票只到 ${t.fare} 円的站，錢包也不夠補票（還要 ${more} 円）。可以按「‹ 書房」先回書房。`, 4600); homeHint(); return; }
-        CLASS.close(); board(document.querySelector('#view .yard') || yard, 0, here, b.dataset.line); return;   // the station as drawn now (shutting the card may draw it anew: the final review's I-1)
+      if (e.target.closest('.kb-back')) {   // 払いもどし: the whole fare back in the wallet, the ticket gone, the machine selling again
+        const t = ticket(); if (!t) return;
+        keep(null); yenRefund(t.fare); playSfx('coin', 5); screen(fill(L().back, { p: yenStr(t.fare) }), 'ok'); draw(); return;
       }
+      if (e.target.closest('.kb-ride')) { CLASS.close(); board(document.querySelector('#view .yard') || yard, 0, here); return; }   // the station as drawn now (shutting the card may draw it anew: the final review's I-1)
       if (e.target.closest('.os-home')) { CLASS.close(); window.go('#/today'); }   // (go: the ride's own, below)
     });
     const c = document.querySelector('.cls.kb-card'); if (c) c.dataset.here = here;   // which station's machine (the tests)
-    screen(L().pick);
+    draw(); screen(ticket() ? L().held : L().pick);
   }
-  // ---- aboard: a ticket from here, enough with the money there is to reach the end; then the ride ----
-  // where a train from here takes the hero: from みなと 1番線 to 白鷺 — on to 湯の花 with a ticket past 白鷺 — and 2番線 to みなと港;
-  // from 白鷺 by the line picked; from 湯の花 to 白鷺, or home to みなと with a ticket past 白鷺; from みなと港 home (or on to 湯の花).
-  // A ticket past 白鷺 goes on only if the wallet pays its rest there; else it ends at 白鷺, as far as it covers (the review, 2026-11-23)
-  function dest(from, track, line, fare, wallet = yenBalance()) {
-    const past = (far, near) => (fare > EKI.fare(from, 'shirasagi') && EKI.fare(from, far) - fare <= wallet ? far : near);
-    if (from === 'minato') return track === 2 ? 'minatoko' : past('yunohana', 'shirasagi');
-    if (from === 'shirasagi') return line === 'yama' ? 'yunohana' : 'minato';
-    if (EKI.lineOf(from) === 'yama') return past('minato', 'shirasagi');
-    return past('yunohana', 'minato');
-  }
-  // whether a ticket of this fare from here can be ridden with what is left after it: some train from here (みなと: either track; 白鷺:
-  // either line) whose rest on board the wallet pays — みなと's always can (2番線 to みなと港 wants nothing more)
-  const trains = (here) => (here === 'minato' ? [[1], [2]] : here === 'shirasagi' ? [[0, 'minato'], [0, 'yama']] : [[0, EKI.lineOf(here)]]);
-  const rideable = (here, fare, left) => trains(here).some(([track, line]) => Math.max(0, EKI.fare(here, dest(here, track, line, fare, left)) - fare) <= left);
-  function board(yard, track, from = 'minato', line) {
+  // ---- aboard: the ticket held, from here; the ride to the station it names ----
+  function board(yard, track, from = 'minato') {
     const t = ticket();
-    if (!t || t.from !== from) { toast(from === 'minato' ? '要先買票：車站門口的紅色券売機。' : '要先在券売機買票。', 3200); if (yard) yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), 'きっぷ…'); return false; }
-    const to = dest(from, track, line, t.fare), rest = Math.max(0, EKI.fare(from, to) - t.fare);
-    if (rest > yenBalance()) { toast(`這張票只到 ${t.fare} 円的站，錢包也不夠補票（還要 ${rest} 円）。回不了家的話，可以先回書房。`, 4600); return false; }   // the way home said (the coordinator, 2026-11-23)
-    if (from === 'shirasagi' && to === 'yunohana') warnBack(yenBalance() - rest);   // 白鷺's やまなみ線: up to 湯の花 with too little for the way back
-    go(from, to); return true;
+    if (!t || t.from !== from || !t.to) {
+      toast(!t ? (from === 'minato' ? '要先買票：車站門口的紅色券売機。' : '要先在券売機買票。') : t.from !== from ? `手上的票是從${EKI.name(t.from)}出發的（${named(t)}），在這裡不能搭。可以在券売機退票（払いもどし）。` : '這張是以前的票，現在沒有它能搭的車了：在券売機退票（払いもどし）就能再買。', 4200);
+      if (yard) yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), 'きっぷ…'); return false;
+    }
+    go(from, t.to); if (from === 'minato' && typeof PLATFORM === 'object') PLATFORM.away();   // みなと: his train away with him
+    return true;
   }
   // the car inside: three windows (the world going by: sky, hills, the sea or fields, houses, poles), the straps, the long seat, the
   // LED over the door; scenery: the strip slides while the train runs, stands while it is stopped
@@ -189,44 +197,42 @@ const RIDE = (() => {
   }
   // the hero across 白鷺's platform (the change): walking, from the train come in to the one waiting
   const walker = () => `<div class="hero os-walker walk turn" aria-hidden="true">${HERO.svg({ look: state.look, wear: state.wear })}</div>`;
+  // the ride, from the station boarded at to the one the ticket names: its legs (from one line to the other the change at 白鷺), stop by
+  // stop with the announcements, off at its end — 降りる uses the ticket (up at 湯の花 its fare kept for the 交通費). 跳過 (2026-11-25, the
+  // user's pick): the line being said stopped, straight to the arrival, shown and said as a full ride's. Shut mid-ride (✕, a tap outside):
+  // the ride let go, the ticket still held — at みなと the train in again for it (PLATFORM.ready)
+  const TERM = ['shirasagi', 'minatoko', 'yunohana'];   // 終点 only at the lines' ends: みなと is passed through (2026-11-22, the review: it taught 終点 wrong)
   function go(from, to) {
-    const mine = ++runs, t = ticket(), paid = t ? t.fare : 0, first = EKI.legs(from, to)[0];
-    R = { from, to, i: 0, phase: 'run', at: from, line: first.line };
-    const el = (q) => document.querySelector('.rd-card ' + q), live = () => mine === runs && Boolean(el('.rd-box'));
+    const mine = ++runs, legs = EKI.legs(from, to), first = legs[0];
+    R = { from, to, i: 0, phase: 'run', at: from, line: first.line, gen: 0 };   // gen: 1 once skipped (what was queued before it never said after)
+    const el = (q) => document.querySelector('.rd-card ' + q), live = () => mine === runs && Boolean(el('.rd-box')), going = () => live() && !R.gen;
     const mark = (phase, at) => { R.phase = phase; if (at) R.at = at; if (Array.isArray(api.trace) && mine === runs) api.trace.push(`${phase}@${R.at}`); };   // a phase, the station it is at
     const led = (html) => { const e = el('.rd-led'); if (e) e.innerHTML = html; };
     let talking = Promise.resolve();
     const said = (p) => Promise.race([Promise.resolve(p).catch(() => {}), sleep(8000)]);
-    // an announcement: once the one before it is said (2026-11-23: none cuts another — the change's least of all)
-    const say = (l) => { talking = said(talking).then(() => { if (!live()) return null; const e = el('.rd-ann'); if (e) e.innerHTML = `<b lang="ja">${ruby(l[0])}</b><span>${esc(l[1])}</span>`; return said(speakAs('ann', l[0])); }); return talking; };
+    // an announcement: once the one before it is said (2026-11-23: none cuts another — the change's least of all); one queued before 跳過
+    // is never said after it
+    const say = (l) => { const g = R.gen; talking = said(talking).then(() => { if (!live() || g !== R.gen) return null; const e = el('.rd-ann'); if (e) e.innerHTML = `<b lang="ja">${ruby(l[0])}</b><span>${esc(l[1])}</span>`; return said(speakAs('ann', l[0])); }); return talking; };
     const run = (on) => { const c = el('.rd-car'); if (c) c.classList.toggle('stop', !on); };
-    const rest = () => Math.max(0, EKI.fare(from, R.to) - paid);
     const head = () => `<b lang="ja">${ruby(lineName(R.line)[0])}</b><span lang="ja">${ruby(st(from))} → ${ruby(st(R.to))}</span>`;
     const view = (svg) => { const b = el('.rd-box'); if (!b) return; b.querySelectorAll('.rd-car, .os-walker').forEach((x) => x.remove()); b.insertAdjacentHTML('beforeend', svg); const h = el('.wk-head'); if (h) h.innerHTML = head(); };
     const carFor = (leg) => (leg.line === 'yama' ? dcar(night()) : car(leg.to));
     CLASS.card('rd-card', lineName(first.line)[1], `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head">${head()}</div>
-      <div class="rd-box"><p class="rd-led" lang="ja"></p>${carFor(first)}</div><p class="rd-ann"></p><div class="rd-end"></div>`, (e) => {
-      if (e.target.closest('.os-on') && R.phase === 'end' && R.at === 'shirasagi') {   // on from 白鷺 by the other line, the rest paid at its end
-        const on = R.line === 'minato' ? 'yunohana' : 'minato', more = Math.max(0, EKI.fare(from, on) - paid);
-        if (more > yenBalance()) { toast(`錢包不夠補票（到${EKI.name(on)}還要 ${more} 円）。`, 3200); return; }
-        if (on === 'yunohana') warnBack(yenBalance() - more);
-        R.to = on; el('.rd-end').innerHTML = ''; ride(EKI.legs('shirasagi', on), true); return;
-      }
+      <div class="rd-box"><p class="rd-led" lang="ja"></p><button type="button" class="rd-skip" aria-label="跳過，直接到站">跳過 ›</button>${carFor(first)}</div><p class="rd-ann"></p><div class="rd-end"></div>`, (e) => {
+      if (e.target.closest('.rd-skip')) { skip(); return; }
       if (!e.target.closest('.rd-off') || R.phase !== 'end') return;
-      const r = rest(); if (r) spend(r);
-      if (R.at === 'yunohana') fareKeep(paid + r);   // up at 湯の花: what it cost, for the 交通費
+      const t = ticket(); if (R.at === 'yunohana') fareKeep(t ? t.fare : 0);   // up at 湯の花: what it cost, for the 交通費
       keep(null); mark('off'); CLASS.close(); SND.play('door-chime', { vol: 0.6 });
       const place = SCENE[R.at]; yh.arrive = { from: 'train', to: place }; window.go(PLACE_ROUTE[place]);
-    });
-    // the change at 白鷺 to the other line: the platform, the hero across it while it is said; onward (乗り換える tapped at 白鷺's end):
-    // the train came in and its end was said already — neither again
-    async function change(toLine, onward) {
+    }, () => { if (mine === runs && R.phase !== 'off' && from === 'minato' && typeof PLATFORM === 'object') PLATFORM.ready(); });
+    // the change at 白鷺 to the other line: the platform, the hero across it while it is said
+    async function change(toLine) {
       mark('change', 'shirasagi'); run(false); led('');   // off the train: the platform's own sign says where
-      const l = onward ? null : say(fill(L().change, { S: st('shirasagi'), s: EKI.name('shirasagi'), L: lineName(toLine)[0], l: lineName(toLine)[1] }));
-      if (!onward) SND.play(toLine === 'yama' ? 'train-in' : 'diesel-in', { vol: 0.35 });
+      const l = say(fill(L().change, { S: st('shirasagi'), s: EKI.name('shirasagi'), L: lineName(toLine)[0], l: lineName(toLine)[1] }));
+      SND.play(toLine === 'yama' ? 'train-in' : 'diesel-in', { vol: 0.35 });
       const b = el('.rd-box'); if (b) { b.querySelectorAll('.rd-car').forEach((x) => x.remove()); b.insertAdjacentHTML('beforeend', chg(toLine, night()) + walker()); const w = b.querySelector('.os-walker'); if (w) w.style.setProperty('--os-walk', `${ms(3.6) / 1000}s`); }
-      await Promise.all([l ? said(l) : null, sleep(ms(4.2))]);
+      await Promise.all([said(l), sleep(ms(4.2))]);
     }
     // the valley's sights as a やまなみ線 leg runs: [what, from (s), for (s)] by which way and which stretch
     const SIGHTS = { up: [[['brg', 1.2, 2.4]], [['tun', 0.8, 1.6], ['tun', 3.0, 1.3], ['yu', 4.5, 3]]], down: [[['yu', 0, 1.4], ['tun', 1.4, 1.3], ['tun', 3.4, 1.6]], [['brg', 2.2, 2.4]]] };
@@ -234,39 +240,48 @@ const RIDE = (() => {
     function sights(leg, k) {
       const up = leg.to === 'yunohana', list = (SIGHTS[up ? 'up' : 'down'][k] || []);
       list.forEach(([w, at, len]) => setTimeout(() => {
-        const c = el('.os-dcar'); if (!live() || !c) return;
+        const c = el('.os-dcar'); if (!going() || !c) return;
         if (w === 'tun') SND.play('diesel-horn', { vol: 0.35 });
         if (SIGHT_SND[w]) SND.play(SIGHT_SND[w], { vol: 0.5 });
         c.classList.add('os-in-' + w); setTimeout(() => { if (w !== 'yu' || !up) c.classList.remove('os-in-' + w); }, ms(len));
       }, ms(at)));
     }
-    async function ride(legs, onward) {
+    // the arrival at the ticket's station: the car standing, its LED (終点 at a line's end), 降りる, its line said — skipped to, the last
+    // leg's car (up the valley: the town in its windows, as a full ride ends)
+    function arrive(leg, jumped) {
+      const yl = leg.line === 'yama', term = TERM.includes(leg.to);
+      if (jumped) { R.line = leg.line; view(carFor(leg)); if (yl && leg.to === 'yunohana') { const c = el('.os-dcar'); if (c) c.classList.add('os-in-yu'); } }
+      run(false); SND.play(yl ? 'diesel-in' : 'train-in', { vol: 0.35 }); led(term ? `${EKI.ruby(leg.to)} <small>終点</small>` : EKI.ruby(leg.to));
+      const k = el('.rd-skip'); if (k) k.remove();
+      el('.rd-end').innerHTML = '<button type="button" class="btn btn-primary rd-off" lang="ja"><span><ruby>降<rt>お</rt></ruby>りる</span></button>';
+      mark('end', leg.to);   // its button first: a tap the moment it is 'end' finds it
+      say(fill(term ? L().end : L().at, { S: st(leg.to), s: EKI.name(leg.to) }));
+    }
+    // 跳過: what is being said stopped, the stops and the change jumped, straight to the arrival
+    function skip() {
+      if (!live() || R.gen || R.phase === 'end' || R.phase === 'off') return;
+      R.gen = 1; stopSpeaking(); talking = Promise.resolve(); mark('skip'); arrive(legs[legs.length - 1], true);
+    }
+    async function ride() {
       for (let k = 0; k < legs.length; k++) {
         const leg = legs[k], yl = leg.line === 'yama';
-        if (k > 0 || onward) { await change(leg.line, onward); if (!live()) return; R.line = leg.line; view(carFor(leg)); }
-        R.line = leg.line; const stops = EKI.stops('普通', leg.to, leg.from), last = k === legs.length - 1;
+        if (k > 0) { await change(leg.line); if (!going()) return; R.line = leg.line; view(carFor(leg)); }
+        R.line = leg.line; const stops = EKI.stops('普通', leg.to, leg.from);
         SND.play(yl ? 'diesel-out' : 'train-out', { vol: 0.4 });
         for (let i = 0; i < stops.length; i++) {
-          if (!live()) return; R.i = i; mark('run'); run(true); const s = stops[i], o = { S: st(s), s: EKI.name(s) }, endRun = s === leg.to;
+          if (!going()) return; R.i = i; mark('run'); run(true); const s = stops[i], o = { S: st(s), s: EKI.name(s) }, endRun = s === leg.to;
           led(`<small>つぎは</small> ${EKI.ruby(s)}`);
           if (yl) sights(leg, i);
           say(fill(L().next, o));
-          if (yl && endRun && s === 'yunohana') setTimeout(() => { if (live()) say(fill(L().soon, o)); }, ms(4.5));   // up the valley: まもなく 終点 as the town comes in sight
-          await sleep(ms(yl ? 6.2 : 4.5)); if (!live()) return;
+          if (yl && endRun && s === 'yunohana') setTimeout(() => { if (going()) say(fill(L().soon, o)); }, ms(4.5));   // up the valley: まもなく 終点 as the town comes in sight
+          await sleep(ms(yl ? 6.2 : 4.5)); if (!going()) return;
           if (endRun) break;
-          mark('stop', s); run(false); SND.play('door-chime', { vol: 0.5 }); led(EKI.ruby(s)); await sleep(ms(2.2)); SND.play('door-chime', { vol: 0.5 });
+          mark('stop', s); run(false); SND.play('door-chime', { vol: 0.5 }); led(EKI.ruby(s)); await sleep(ms(2.2)); if (!going()) return; SND.play('door-chime', { vol: 0.5 });
         }
-        if (!last) continue;
-        // 終点 only at the lines' ends (白鷺, みなと港, 湯の花): みなと is passed through (2026-11-22, the review: it taught 終点 wrong)
-        const term = ['shirasagi', 'minatoko', 'yunohana'].includes(leg.to);
-        if (!live()) return; run(false); SND.play(yl ? 'diesel-in' : 'train-in', { vol: 0.35 }); led(term ? `${EKI.ruby(leg.to)} <small>終点</small>` : EKI.ruby(leg.to));
-        const r = rest(), other = leg.to === 'shirasagi' ? (leg.line === 'minato' ? 'yama' : 'minato') : '';
-        el('.rd-end').innerHTML = `${r ? `<p class="rd-pay" lang="ja">${ruby(fill(L().pay, { P: YEN.priceMark(r) })[0])}<small>${esc(fill(L().pay, { p: r })[1])}</small></p>` : ''}<button type="button" class="btn btn-primary rd-off" lang="ja"><span><ruby>降<rt>お</rt></ruby>りる</span></button>${other ? `<button type="button" class="btn os-on" lang="ja"><span>${ruby(fill(L().on, { L: lineName(other)[0] })[0])}</span></button>` : ''}`;
-        mark('end', leg.to);   // its buttons first: a tap the moment it is 'end' finds them
-        say(fill(term ? L().end : L().at, { S: st(leg.to), s: EKI.name(leg.to) }));
+        if (k === legs.length - 1 && going()) arrive(leg, false);
       }
     }
-    ride(EKI.legs(from, to), false);
+    ride();
   }
   // the station's sign out at 白鷺城 and みなと漁港 (way-edge: at the screen's edge when its spot is off it): walked to, its machine
   const SIGN = { shirasagi: ['白鷺駅', -560, 64, [-540, 110]], minatoko: ['みなと港駅', -556, 14, [-530, 30]] };
@@ -275,12 +290,17 @@ const RIDE = (() => {
     const yard = el.closest('.yard'), here = el.dataset.here; if (!yard || !SIGN[here]) return; yNamed(el);
     yHeroWalk(yard, SIGN[here][3], () => machine(yard, here));
   }
-  // the announcements for every station (their clips): みなと線's next and arrival at each; やまなみ線's (2026-11-23) — つぎは 森下 (both
-  // ways) and 湯の花, まもなく 終点 and 終点 at 湯の花, the change at 白鷺 either way (つぎは 白鷺 and 白鷺's 終点 are みなと線's already)
+  // the announcements the rides say (their clips): of each ticket a machine sells, every つぎは on its way, the change at 白鷺 between the
+  // lines, まもなく 終点 coming up to 湯の花, its arrival (終点 at a line's end) — みなと港's and the stops' own arrivals no ride says now
   const lines = (add) => {
-    EKI.line().forEach((x, i, ln) => { add('ann', fill(L().next, { S: st(x.id) })[0]); add('ann', fill(i === 0 || i === ln.length - 1 ? L().end : L().at, { S: st(x.id) })[0]); });
-    ['morishita', 'yunohana'].forEach((id) => add('ann', fill(L().next, { S: st(id) })[0])); add('ann', fill(L().soon, { S: st('yunohana') })[0]); add('ann', fill(L().end, { S: st('yunohana') })[0]);
-    ['yama', 'minato'].forEach((ln) => add('ann', fill(L().change, { S: st('shirasagi'), L: lineName(ln)[0] })[0]));
+    const seen = new Set(), one = (l) => { if (!seen.has(l)) { seen.add(l); add('ann', l); } };
+    Object.entries(SELLS).forEach(([from, tos]) => tos.forEach((to) => EKI.legs(from, to).forEach((leg, k, all) => {
+      if (k > 0) one(fill(L().change, { S: st('shirasagi'), L: lineName(leg.line)[0] })[0]);
+      EKI.stops('普通', leg.to, leg.from).forEach((s) => one(fill(L().next, { S: st(s) })[0]));
+      if (k < all.length - 1) return;
+      if (leg.line === 'yama' && leg.to === 'yunohana') one(fill(L().soon, { S: st(leg.to) })[0]);
+      one(fill(TERM.includes(leg.to) ? L().end : L().at, { S: st(leg.to) })[0]);
+    })));
   };
-  return Object.assign(api, { ticket, keep, fare, machine, board, go, signHtml, fromSign, lines, now: () => R, SCENE });
+  return Object.assign(api, { ticket, keep, fare, machine, board, go, signHtml, fromSign, lines, named, now: () => R, SCENE, SELLS });
 })();

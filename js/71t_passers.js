@@ -22,7 +22,7 @@ const PASSERS = (() => {
   function look() {
     const O = HERO.OPTS, one = (k) => pick(O[k])[0], [, fringe, sides, hairBack, hairTop] = pick(HERO.STYLES);
     const sold = (slot) => WARES.filter((w) => w.kind === 'clothes' && w.slot === slot);
-    const styles = (k, slot) => O[k].map(([id]) => id).filter((id) => { const w = sold(slot).find((x) => x.id === id); return !w || inSeason(w); });
+    const styles = (k, slot) => O[k].map(([id]) => id).filter((id) => { const w = sold(slot).find((x) => x.id === id); return !w || (inSeason(w) && !w.gift); });   // never the inn's own yukata (given to the hero)
     const lk = { face: one('face'), skin: one('skin'), cheeks: one('cheeks'), fringe, sides, hairBack, hairTop, hairColor: one('hairColor'), eyes: one('eyes'), eyeColor: one('eyeColor'),
       brows: one('brows'), mouth: one('mouth'), beard: Math.random() < 0.2 ? one('beard') : 'none',
       top: one('top'), topStyle: pick(styles('topStyle', 'top')), bottom: one('bottom'), bottomStyle: pick(styles('bottomStyle', 'bottom')), shoe: one('shoe'), shoeStyle: pick(styles('shoeStyle', 'shoe')) };

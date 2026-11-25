@@ -758,7 +758,7 @@ def test_clothes_are_sold_put_on_in_the_dressing_room_and_dyed_in_the_heros_colo
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click();
       act('.study-edit'); const box = [...document.querySelectorAll('.tray-it')].some(t => t.dataset.id === 'tee'); act('[data-act="room-edit-done"]');   /* clothes are no furniture */
       act('.study-tools [data-act="wardrobe"]'); act('[data-act="dress-tab"][data-tab="top"]');
-      const offered = [...document.querySelectorAll('[data-act="dress-pick"][data-key="topStyle"]')].map(b => b.dataset.val), more = (document.querySelector('.dress-more') || {}).textContent || '', sold = WARES.filter(it => it.kind === 'clothes' && it.slot === 'top' && !owns(it.id) && forSale(it)).length;
+      const offered = [...document.querySelectorAll('[data-act="dress-pick"][data-key="topStyle"]')].map(b => b.dataset.val), more = (document.querySelector('.dress-more') || {}).textContent || '', sold = WARES.filter(it => it.kind === 'clothes' && it.slot === 'top' && !owns(it.id) && !it.gift && !it.shop && forSale(it)).length;   // 古道具屋's (not the inn's given yukata nor ゆかた屋's, 2026-11-25)
       act('[data-act="dress-pick"][data-key="topStyle"][data-val="tee"]'); act('[data-act="dress-pick"][data-key="top"][data-val="#3f9a8c"]'); DRESS.pick('topStyle', 'sweater');   /* not bought: not put on */
       act('[data-act="dress-done"]'); await wait(600); const worn = HERO.norm(state.look);
       shopTab = 'wear'; location.hash = '#/shop'; route(); const card = document.querySelector('[data-ware="tee"] [data-act="clothes-wear"]'), label = card.textContent, clip = document.querySelector('[data-ware="tee"] .art svg').getAttribute('style');
@@ -1360,7 +1360,7 @@ def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
       bch.querySelector('.town-shop[data-shop="salon"]').click(); let chat = null; for (let i = 0; i < 120 && !chat; i++) { await wait(50); chat = bch.querySelector('.talk'); }
       return JSON.stringify({ before, knock, guest, name, held, got, after, next, k0, npcs, town, chat: !!chat && chat.querySelector('.talk-name').textContent, take: !!(chat && chat.querySelector('[data-talk="take"]')) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['before'] == {'visitor': 'koharu', 'shop': ['fullMirror', 'gramophone'], 'mirror': False}, r   # 小春 first; presents are not sold
+    assert r['before'] == {'visitor': 'koharu', 'shop': ['fullMirror', 'gramophone', 'innyukata'], 'mirror': False}, r   # 小春 first; presents are not sold (旅館「花月」's yukata too, 2026-11-25)
     assert r['knock'] == [True, True] and r['guest'] and r['name'].startswith('小春') and r['held'], r
     assert r['got'] == [True, ['study', 9.55], True], r   # the mirror along 書房's left wall, past the peg rail (2026-11-14: no longer by the front door)
     assert r['after'] == {'visitor': None, 'knock': False, 'doorOut': True} and r['next'] == 'mugi', r   # not straight after; ムギ a few minutes after 小春
@@ -1486,7 +1486,7 @@ def test_the_wardrobe_has_a_tab_for_each_of_the_seven_parts(b):
 def test_the_shops_wear_tab_is_the_seven_parts_each_with_three_wares_or_more(b):
     js = "(async () => { " + FRESH + """ saveState(); shopTab = 'wear'; location.hash = '#/shop'; document.getElementById('view').innerHTML = ''; route(); await new Promise(q => setTimeout(q, 300));
       const secs = [...document.querySelectorAll('#view .shop-sec')].map(s => [s.dataset.sec, s.querySelector('.shop-h').textContent, [...s.querySelectorAll('.shop-item[data-ware]')].map(c => c.dataset.ware)]);
-      const toWear = (it) => it.kind === 'wear' || it.kind === 'clothes', sold = Object.fromEntries(WEAR_SLOTS.map(([k]) => [k, WARES.filter(it => toWear(it) && it.slot === k && !it.limited && !it.gift).map(it => it.id)]));
+      const toWear = (it) => it.kind === 'wear' || it.kind === 'clothes', sold = Object.fromEntries(WEAR_SLOTS.map(([k]) => [k, WARES.filter(it => toWear(it) && it.slot === k && !it.limited && !it.gift && !it.shop).map(it => it.id)]));   // shop: sold in a town shop for 円 (ゆかた屋's 浴衣, 2026-11-25)
       const limited = WARES.filter(it => it.limited && toWear(it)).map(it => it.id), shown = secs.flatMap(s => s[2]);
       return JSON.stringify({ secs: secs.map(s => s.slice(0, 2)), sold, same: secs.every(([k, , ids]) => JSON.stringify(ids) === JSON.stringify(sold[k])), leak: shown.filter(id => limited.includes(id)),
         body: WARES.filter(it => it.slot === 'body').map(it => it.id), soon: !!document.querySelector('.shop-sec[data-sec="back"] .shop-item.soon') }); })()"""

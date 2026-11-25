@@ -586,6 +586,7 @@ function talkLines() {
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
   DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
   add('hero', TOWNEV.DROP_BY[0]); CRUISE.lines(add); YEN.lines(add); CLASS.lines(add); CHINA.lines(add); WORK.lines(add); RIDE.lines(add);   // the cruise's, buying with 円, 日本語教室's かるた and singing
+  if (typeof YUDORI === 'object') add('hero', YUDORI.BUY);   // buying a 浴衣 at ゆかた屋 (2026-11-25)
   if (TOWN.ONSEN && TOWN.ONSEN.welcome) add('akari', TOWN.ONSEN.welcome[0]);   // 湯の花's ようこそ, the first time (2026-11-23)
   if (TOWN.ONSEN && TOWN.ONSEN.bell) add('sato', TOWN.ONSEN.bell[0]);   // 旅館「花月」's front desk bell answered (2026-11-24)
   Object.keys(TOWN.YATAI || {}).forEach((id) => { const v = TOWN.YATAI[id]; if (v.scoop) add(id, v.scoop[0]); (v.call || []).forEach((l) => add(id, l[0])); });   // the goldfish's old man; the 朝市's keepers calling out

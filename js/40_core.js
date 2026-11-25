@@ -435,6 +435,7 @@ function normalizeState(s) {
   // things had once a day (2026-11-23: 湯けむり通り's 射的, oneADay.shateki): the day each was last had. Out of the town and the purse,
   // which 1.21.0 rebuilds key by key: a copy that has been through a device on 1.21.0 still has it
   const once = Object.fromEntries(Object.entries(obj(out.oneADay)).filter(([, v]) => typeof v === 'string' && /^\d{4}-\d\d-\d\d$/.test(v))); if (Object.keys(once).length) out.oneADay = once; else delete out.oneADay;
+  const back = Object.fromEntries(Object.entries(obj(out.refunds)).map(([d, n]) => [d, num(n)]).filter(([, n]) => n > 0)); if (Object.keys(back).length) out.refunds = back; else delete out.refunds;   // 円 paid back (2026-11-25, 払いもどし): each device's sum
   const wk = obj(out.work);   // 中華街の打工 (2026-11-14): a record a day, as WORK keeps it
   out.work = { res: Object.fromEntries(Object.entries(obj(wk.res)).filter(([d, r]) => /^\d{4}-\d\d-\d\d(#\d+)?$/.test(d) && r && typeof r === 'object' && typeof r.place === 'string').map(([d, r]) => [d, Object.assign({ place: r.place, done: num(r.done), score: Object.fromEntries(Object.entries(obj(r.score)).map(([k, v]) => [k, num(v)])) },
     r.yen !== undefined && r.yen !== null ? { yen: num(r.yen), grade: typeof r.grade === 'string' ? r.grade : 'E', tip: num(r.tip) } : r.keep && typeof r.keep === 'object' ? { keep: r.keep } : {})])) };   // keep: what a runner needs back after a break (the taxi's おつり, 外場's stars), till paid
@@ -1166,11 +1167,19 @@ const YEN_CAP = 99990000;
 const yenEarned = () => Object.values((state.cruise && state.cruise.res) || {}).reduce((a, r) => a + (Number(r.yen) || 0), 0) + ((state.purse && Number(state.purse.gift)) || 0)   // gift: the test site's
   + Object.values((state.work && state.work.res) || {}).reduce((a, r) => a + (Number(r && r.yen) || 0), 0);   // 中華街の打工's pay (2026-11-14)
 const yenSpent = () => kotoSum(state.purse && state.purse.spent);   // each device's own sum (sync-core keeps the larger of each)
-const yenBalance = () => Math.min(YEN_CAP, yenEarned() - yenSpent());
+const yenBack = () => kotoSum(state.refunds);   // paid back (a ticket's 払いもどし, 2026-11-25): each device's own sum, as spent
+const yenBalance = () => Math.min(YEN_CAP, yenEarned() - yenSpent() + yenBack());
 // n 円 spent here (2026-11-24: the one way to spend — a thing bought from its menu or paid into its box (YEN.pay), a train ticket
 // (RIDE), a go at 射的): this device's own sum grows (sync keeps the larger of each), saved, the wallet's button shows what is left
 function yenSpend(n) {
   const p = state.purse, dev = kotoDevice(); p.spent = p.spent || {}; p.spent[dev] = (Number(p.spent[dev]) || 0) + n;
+  saveState(); if (typeof kotoButtons === 'function') kotoButtons(document);
+}
+// n 円 paid back (2026-11-25: a train ticket returned at a machine, 払いもどし — RIDE): this device's own sum of them grows, as spent does
+// (sync keeps the larger of each). Top-level (state.refunds), not in the purse, which a 1.21.0 device rebuilds key by key: there it is
+// kept, only not counted (its wallet shows that much less till it updates)
+function yenRefund(n) {
+  const dev = kotoDevice(); state.refunds = state.refunds || {}; state.refunds[dev] = (Number(state.refunds[dev]) || 0) + n;
   saveState(); if (typeof kotoButtons === 'function') kotoButtons(document);
 }
 const yenStr = (n) => Math.round(n).toLocaleString('en-US');

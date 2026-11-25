@@ -150,12 +150,12 @@ function kyoshitsuHtml() {
 const CLASS = (() => {
   const HOURS = ['じゅうにじ', 'いちじ', 'にじ', 'さんじ', 'よじ', 'ごじ', 'ろくじ', 'しちじ', 'はちじ', 'くじ', 'じゅうじ', 'じゅういちじ'];
   const still = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let el = null, timers = [], token = 0;
+  let el = null, timers = [], token = 0, shut = null;   // shut: the open card's own last word as it goes (a ride let go midway: RIDE)
   const later = (fn, ms) => { const t = token; timers.push(setTimeout(() => { if (t === token && el) fn(); }, ms)); };
   const radio = (on) => { const r = document.querySelector('#view .land [data-fx="radio"]'); if (r) r.classList.toggle('playing', on); };   // the scene's radio plays while the class sings
-  function close() { token++; timers.forEach(clearTimeout); timers = []; stopSpeaking(); if (songSrc.length) stopSong(); radio(false); if (el) { el.remove(); el = null; MUSIC.sync(); if (document.body.classList.contains('scene')) sceneMinute(); } }   // a job's card shut: its music off (WORK.tune); on a scene, the town as it is now at once — who stood there only for the card (千代 in 桜の間 on her 仲居 shift) gone back, no minute's wait (2026-11-24, 仲居 fix round 1); never elsewhere (a practice page's 寫寫看: the theme stays put mid-questions, as TALK.close; fix round 2)
-  function open(cls, label, html, onClick) {
-    close();
+  function close() { token++; timers.forEach(clearTimeout); timers = []; stopSpeaking(); if (songSrc.length) stopSong(); radio(false); const f = shut; shut = null; if (el) { el.remove(); el = null; MUSIC.sync(); if (document.body.classList.contains('scene')) sceneMinute(); } if (f) f(); }   // a job's card shut: its music off (WORK.tune); on a scene, the town as it is now at once — who stood there only for the card (千代 in 桜の間 on her 仲居 shift) gone back, no minute's wait (2026-11-24, 仲居 fix round 1); never elsewhere (a practice page's 寫寫看: the theme stays put mid-questions, as TALK.close; fix round 2)
+  function open(cls, label, html, onClick, onShut) {   // onShut: called once as the card goes, however it goes (✕, a tap outside, another card)
+    close(); shut = onShut || null;
     el = document.createElement('div'); el.className = 'cls ' + cls; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', label);
     el.innerHTML = `<div class="cls-card">${html}</div>`;
     el.addEventListener('pointerdown', (e) => e.stopPropagation());

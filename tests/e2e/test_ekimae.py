@@ -393,47 +393,49 @@ RIDE_HELP = """ window.speak = () => Promise.resolve(); window.speakAs = () => P
   const card = (c) => document.querySelector(c), click = (q) => { const e = document.querySelector(q); if (e && !e.disabled) e.click(); return Boolean(e && !e.disabled); };
   async function arrive(to) { for (let i = 0; i < 400 && !(RIDE.now() && RIDE.now().phase === 'end'); i++) await wait(20); click('.rd-off'); for (let i = 0; i < 100 && location.hash !== to; i++) await wait(50); await wait(900); }"""
 
-# the fare pressed and the money in: a ticket (from みなと, 310) and 310 円 gone; too little money: none
+# the fare pressed and the money in: a ticket (from みなと to 湯の花, 420 — the one ticket みなと sells since 2026-11-25: the castle and the
+# harbour are a walk or the free bus away) and 420 円 gone; too little money: none
 def test_ticket_machine_sells_by_fare(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/station'; route(); await wait(300); const out = {};
       RIDE.machine(yard(), 'minato'); await wait(100); out.fares = [...document.querySelectorAll('.kb-fare')].map((x) => Number(x.dataset.f));
-      click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(300); out.ticket = RIDE.ticket(); out.left = yenBalance(); CLASS.close();
-      state.purse.gift = 0; state.purse.spent = {}; saveState(); RIDE.keep(null); RIDE.machine(yard(), 'minato'); await wait(100); click('.kb-fare[data-f="140"]'); await wait(60); click('.kb-pay'); await wait(300);
+      click('.kb-fare[data-f="420"]'); await wait(60); click('.kb-pay'); await wait(300); out.ticket = RIDE.ticket(); out.left = yenBalance(); CLASS.close();
+      state.purse.gift = 0; state.purse.spent = {}; saveState(); RIDE.keep(null); RIDE.machine(yard(), 'minato'); await wait(100); click('.kb-fare[data-f="420"]'); await wait(60); click('.kb-pay'); await wait(300);
       out.none = RIDE.ticket(); out.said = document.querySelector('.kb-screen').textContent; CLASS.close(); return JSON.stringify(out); })()"""))
-    assert r['fares'] == [140, 170, 220, 260, 310, 350, 420], r   # みなと線's five, and やまなみ線's 森下 350 and 湯の花 420 past 白鷺 (2026-11-23, test_onsen.py)
-    assert r['ticket']['from'] == 'minato' and r['ticket']['fare'] == 310 and r['left'] == 690, r
+    assert r['fares'] == [420], r   # up to 湯の花 only (test_onsen.py: every machine's tickets)
+    assert r['ticket']['from'] == 'minato' and r['ticket']['to'] == 'yunohana' and r['ticket']['fare'] == 420 and r['left'] == 580, r
     assert r['none'] is None and 'たりません' in r['said'], r
 
-# aboard at みなと's platform: no ticket, no ride; with one, to 白鷺 by every stop (つぎは…), off at the castle, the ticket used up
-def test_ride_to_shirasagi(b):
+# aboard at みなと's platform: no ticket, no ride; with one, by every stop to 白鷺 (つぎは…), the change there for the やまなみ線, off at
+# 湯の花 (its 終点), the ticket used up and nothing more paid
+def test_ride_from_minato_calls_every_stop(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/platform'; route(); await wait(300); const out = { said: [] };
       RIDE.board(yard(), 1); await wait(200); out.without = Boolean(RIDE.now());
-      RIDE.keep({ from: 'minato', fare: 310, day: todayStr() }); window.speakAs = (w, l) => { if (w === 'ann') out.said.push(l); return Promise.resolve(); };
-      RIDE.board(yard(), 1); await wait(100); out.to = RIDE.now() && RIDE.now().to; await arrive('#/castle');
+      RIDE.keep({ from: 'minato', to: 'yunohana', fare: 420, day: todayStr() }); window.speakAs = (w, l) => { if (w === 'ann') out.said.push(l); return Promise.resolve(); };
+      RIDE.board(yard(), 1); await wait(100); out.to = RIDE.now() && RIDE.now().to; await arrive('#/onsen');
       out.at = location.hash; out.ticket = RIDE.ticket(); out.left = yenBalance(); return JSON.stringify(out); })()"""))
-    assert not r['without'] and r['to'] == 'shirasagi' and r['at'] == '#/castle' and r['ticket'] is None and r['left'] == 1000, r
-    assert r['said'][-1].startswith('{終点|しゅうてん|終點}、{白鷺|しらさぎ}です。'), r   # 白鷺 is the end of the line
-    assert [l for l in r['said'] if l.startswith('つぎは')] == ['つぎは {病院|びょういん}{前|まえ}、{病院|びょういん}{前|まえ}です。', 'つぎは {公園|こうえん}{前|まえ}、{公園|こうえん}{前|まえ}です。', 'つぎは {大学|だいがく}{前|まえ}、{大学|だいがく}{前|まえ}です。', 'つぎは {白鷺|しらさぎ}、{白鷺|しらさぎ}です。'], r
+    assert not r['without'] and r['to'] == 'yunohana' and r['at'] == '#/onsen' and r['ticket'] is None and r['left'] == 1000, r
+    assert r['said'][-1].startswith('{終点|しゅうてん|終點}、{湯の花|ゆのはな}です。'), r   # 湯の花 is the end of the line
+    assert [l for l in r['said'] if l.startswith('つぎは')][:4] == ['つぎは {病院|びょういん}{前|まえ}、{病院|びょういん}{前|まえ}です。', 'つぎは {公園|こうえん}{前|まえ}、{公園|こうえん}{前|まえ}です。', 'つぎは {大学|だいがく}{前|まえ}、{大学|だいがく}{前|まえ}です。', 'つぎは {白鷺|しらさぎ}、{白鷺|しらさぎ}です。'], r
+    assert '{終点|しゅうてん|終點}、{白鷺|しらさぎ}です。やまなみ{線|せん}は お{乗り換え|のりかえ|轉乘}です。' in r['said'], r
 
-# back from 白鷺 to みなと: みなと is not the end of the line (みなと港 is) — its own arrival, no 終点 (2026-11-22, the review); 白鷺 is
+# home from 湯の花 to みなと: みなと is not the end of the line (みなと港 is) — its own arrival, no 終点 (2026-11-22, the review); 湯の花 is
 def test_ride_home_is_not_the_end(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/castle'; route(); await wait(400); const out = { said: [] };
+    r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/onsen'; route(); await wait(400); const out = { said: [] };
       window.speakAs = (w, l) => { if (w === 'ann') out.said.push(l); return Promise.resolve(); };
-      RIDE.machine(yard(), 'shirasagi'); await wait(100); click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride');
+      RIDE.machine(yard(), 'yunohana'); await wait(100); click('.kb-fare[data-to="minato"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride');
       for (let i = 0; i < 400 && !(RIDE.now() && RIDE.now().phase === 'end'); i++) await wait(20); out.led = document.querySelector('.rd-card').textContent; await arrive('#/platform');
       out.last = out.said[out.said.length - 1]; out.end = TOWN.EKI.ride.end[0]; return JSON.stringify(out); })()"""))
     assert r['last'] == 'みなと、みなとです。お{忘れ物|わすれもの|遺失物}の ないように ご{注意|ちゅうい|注意} ください。' and '終点' not in r['led'], r
     assert r['end'].startswith('{終点|しゅうてん|終點}、'), r
 
-# a ticket short of the end: the rest paid there (乗り越し精算: 170 to 白鷺's 310); back from 白鷺 by its station's sign, home to みなと's platform
-def test_ride_short_ticket_and_back(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/platform'; route(); await wait(300); const out = {};
-      RIDE.keep({ from: 'minato', fare: 170, day: todayStr() }); RIDE.board(yard(), 1); for (let i = 0; i < 400 && !(RIDE.now() && RIDE.now().phase === 'end'); i++) await wait(20);
-      out.short = document.querySelector('.rd-card').textContent.includes('140'); await arrive('#/castle'); out.paid = yenBalance();
+# out at 白鷺 by its station's sign (the castle's way-edge): its machine there (現在地 白鷺), its one ticket up to 湯の花 (260), ridden there
+def test_the_castles_sign_and_its_machine(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/castle'; route(); await wait(400); const out = {};
       document.querySelector('.eki-btn[data-act="eki-sign"]').click(); for (let i = 0; i < 100 && !document.querySelector('.kb-card'); i++) await wait(50);
-      out.here = document.querySelector('.kb-card').dataset.here; click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride'); await arrive('#/platform');
-      out.home = location.hash; out.left = yenBalance(); return JSON.stringify(out); })()"""))
-    assert r['short'] and r['paid'] == 860 and r['here'] == 'shirasagi' and r['home'] == '#/platform' and r['left'] == 550, r
+      out.here = document.querySelector('.kb-card').dataset.here; out.fares = [...document.querySelectorAll('.kb-fare')].map((x) => [Number(x.dataset.f), x.dataset.to]);
+      click('.kb-fare[data-f="260"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride'); await arrive('#/onsen');
+      out.at = location.hash; out.left = yenBalance(); return JSON.stringify(out); })()"""))
+    assert r['here'] == 'shirasagi' and r['fares'] == [[260, 'yunohana']] and r['at'] == '#/onsen' and r['left'] == 740, r
 
 # ---- the final review's findings (2026-11-21) ----
 # the last train 22:40 (原田's word); the next train counted from the minute after; the station's own board on the timetable
@@ -448,9 +450,9 @@ def test_review_timetable_ends_and_next_minute(b):
 # the ticket machine: お金を入れる twice takes the fare once
 def test_review_ticket_machine_charges_once(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/station'; route(); await wait(300);
-      RIDE.machine(yard(), 'minato'); await wait(100); click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(100); document.querySelector('.kb-pay').click(); await wait(200);
+      RIDE.machine(yard(), 'minato'); await wait(100); click('.kb-fare[data-f="420"]'); await wait(60); click('.kb-pay'); await wait(100); document.querySelector('.kb-pay').click(); await wait(200);
       const out = { left: yenBalance(), ticket: document.querySelector('.kb-ticket').textContent }; CLASS.close(); return JSON.stringify(out); })()"""))
-    assert r['left'] == 690 and '310円' in r['ticket'] and '→ 0円' not in r['ticket'], r   # the ticket the fare paid (2026-11-22: it said 0円)
+    assert r['left'] == 580 and '420円' in r['ticket'] and '0円' not in r['ticket'].replace('420円', ''), r   # the ticket the fare paid (2026-11-22: it said 0円)
 
 # 2026-11-22, the user: お金を 入れる's kana and kanji out of line — a button's label one piece (a ruby a flex item of its own sat
 # lower, the gap between the pieces): the machine's buttons, the taxi's four
@@ -458,9 +460,9 @@ ONE = """ const one = (b) => [...b.childNodes].filter((n) => n.nodeType === 1 ? 
 def test_review_ruby_buttons_are_one_piece(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + ONE + """ location.hash = '#/station'; route(); await wait(300);
       RIDE.machine(yard(), 'shirasagi'); await wait(100); click('.kb-fare'); await wait(60); const out = { pay: one(document.querySelector('.kb-pay')) };
-      click('.kb-pay'); await wait(100); out.ride = one(document.querySelector('.kb-ride')); CLASS.close();
+      click('.kb-pay'); await wait(100); out.ride = one(document.querySelector('.kb-ride')); out.back = one(document.querySelector('.kb-back')); CLASS.close();
       return JSON.stringify(out); })()"""))
-    assert r == {'pay': True, 'ride': True}, r
+    assert r == {'pay': True, 'ride': True, 'back': True}, r   # 払いもどし (2026-11-25) too
     r = json.loads(ev(b, "(async () => { " + BEGIN + TAXI_HELP + ONE + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
       WORK.start(yard(), 'taxi'); for (let i = 0; i < 400 && !(now() && now().choosing); i++) await wait(20);
       const out = [...document.querySelectorAll('.tx-go')].map(one); CLASS.close(); JOBS.pat.scale = 1; return JSON.stringify(out); })()"""))

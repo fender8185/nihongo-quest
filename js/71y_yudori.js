@@ -453,7 +453,29 @@ const YUDORI = (() => {
     setTimeout(() => knock(c, i, hit), 340);
   }
   function knock(c, i, hit) { const g = c.querySelector(`.yd-prize[data-i="${i}"]`); if (!g) return; g.classList.remove('wob', 'down'); void g.getBoundingClientRect(); g.classList.add(hit ? 'down' : 'wob'); }
-  return { H, Y0, FAR, HALF0, K, END, scale, half, top, clamp, SHOPS, shop, pAt, door, BLOCKS, passWay, passFade, open, isOpen, shutSay, hoursSay, sig, html, shateki, prize, PRIZES, PRICE, played };
+  // ---- ゆかた屋 (2026-11-25, the user: the shop sells the hero a yukata; ruling 2: 1,200 円): open, a tap on it opens its card — the 浴衣
+  // on the hero's shoulders in his own top colour (chosen in the 衣櫃 as any clothes'), its price tag, 「買う」. Bought: the 円 spent (this
+  // device's, as 射的's), the ware his and on at once, his 「これを ください。」; too few 円: a word, nothing spent; had: the card says so ----
+  const YUKATA = 'yukata', YUKATA_YEN = 1200, BUY = 'これを ください。';   // BUY: his word as he buys (a clip of his already: m1's event reply)
+  function yukataya(yard) {
+    const had = owns(YUKATA), art = HERO.svg({ look: Object.assign({}, HERO.norm(state.look), { topStyle: YUKATA }), front: true, box: '-36 -71 76 77' });   // the whole robe, shoulders to feet, on a stand (no head: css)
+    const foot = had ? '<p class="yd-done">這件浴衣已經是你的了：在衣櫃的「衣服」換上，顏色自己配。</p>'
+      : `<button type="button" class="btn btn-primary yd-buy" lang="ja"><span><ruby>買<rt>か</rt></ruby>う</span><small>${YEN.reading(YUKATA_YEN)} ${yenStr(YUKATA_YEN)}円</small></button><p class="yd-note">錢包：${yenStr(Math.max(0, yenBalance()))} 円</p>`;
+    CLASS.card('yd-yukata', 'ゆかた屋', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button><p class="yd-board" lang="ja">${ruby('ゆかた{屋|や}')}</p>
+      <div class="yd-ywear">${art}<p class="yd-ytag" lang="ja">${ruby('ゆかた　1,200{円|えん}')}</p></div>
+      <p class="yd-note">花色浴衣：買了就是你的，顏色在衣櫃自己配。</p><div class="yd-foot">${foot}</div>`, (e) => { if (e.target.closest('.yd-buy')) buyYukata(yard); });
+  }
+  function buyYukata(yard) {
+    const c = document.querySelector('.yd-yukata'); if (!c || owns(YUKATA)) return;
+    if (!isOpen('yukataya')) { CLASS.close(); toast(shutSay('yukataya'), 3600); return; }   // shut meanwhile: nothing spent
+    if (yenEarned() <= 0 || yenBalance() < YUKATA_YEN) { playSfx('bad'); toast(`錢包只有 ${yenStr(Math.max(0, yenBalance()))} 円，浴衣要 ${yenStr(YUKATA_YEN)} 円。帶郵輪導覽、打工都能賺円。`, 4200); return; }
+    speakAs('hero', BUY); yenSpend(YUKATA_YEN); SND.play('coins');
+    state.owned[YUKATA] = { paid: 0, on: todayStr() }; state.look = Object.assign({}, state.look, { topStyle: YUKATA }); saveState();
+    const f = c.querySelector('.yd-foot'); if (f) f.innerHTML = '<p class="yd-done">買好了，已經換上了！</p>';
+    if (yard && yard.isConnected) yHeroRedraw(yard);
+    toast('買了浴衣！已經換上了（顏色、換回來：衣櫃）。', 4600);
+  }
+  return { H, Y0, FAR, HALF0, K, END, scale, half, top, clamp, SHOPS, shop, pAt, door, BLOCKS, passWay, passFade, open, isOpen, shutSay, hoursSay, sig, html, shateki, prize, PRIZES, PRICE, played, yukataya, YUKATA_YEN, BUY };
 })();
 DOWN.yudori = YUDORI;   // seen down its length (71a_yard.js)
 // the pavement's things reaching into the street (YUDORI.BLOCKS) — ゆのはな堂's price board only while it stands out there, the shop open
@@ -476,7 +498,7 @@ PLACE_USE.yudori = (() => {
     thing('shatekishut', 'shateki', { name: '射的（準備中）', when: () => !YUDORI.isOpen('shateki'), pick: () => ['しまってる…', YUDORI.shutSay('shateki')] }),   // its hours (ruling 21)
     thing('sakaya', 'sakaya', { name: '酒屋', say: 'おさけの におい…', toast: '酒屋（賣酒的店）：屋簷下掛著用杉樹葉做的「杉玉」，表示今年的新酒釀好了。' }),
     thing('kagetsu', 'kagetsu', { name: '旅館「花月」', open: (y) => yGo(y.querySelector('.use-btn[data-use="kagetsu"]') || y, 'ryokan') }),   // in through its gate (2026-11-24: RYOKAN)
-    thing('yukataya', 'yukataya', { name: 'ゆかた屋', when: () => YUDORI.isOpen('yukataya'), pick: () => ['きれい…！', `ゆかた屋：櫥窗裡掛著各種顏色的浴衣，可以租來穿著逛街（營業時間 ${YUDORI.hoursSay('yukataya')}）。`] }),   // its hours (ruling 26)
+    thing('yukataya', 'yukataya', { name: 'ゆかた屋', when: () => YUDORI.isOpen('yukataya'), say: 'きれい…！', open: (y) => YUDORI.yukataya(y) }),   // its hours (ruling 26); its card: a 浴衣 to buy (2026-11-25)
     thing('yukatayashut', 'yukataya', { name: 'ゆかた屋（準備中）', when: () => !YUDORI.isOpen('yukataya'), pick: () => ['しまってる…', YUDORI.shutSay('yukataya')] }),   // shut: when it opens, and a knock (fix round 2)
     thing('kanmi', 'kanmi', { name: '甘味処', say: 'あまい におい…', toast: '甘味処（日式甜點店）：紅色大傘下的長椅，坐著吃糰子、喝茶。' }),
     { id: 'neko', name: '貓', box: [Math.round(cx - 30 * k), Math.round(cy - 22 * k), Math.round(cx + 30 * k), Math.round(cy + 10 * k)], over: 1, kind: 'do', go: [Math.round(YUDORI.half(YUDORI.H - p) - 14), Math.round(YUDORI.H - p)], back: 1, pose: 'crouch', say: 'ニャ…', fx: 'neko', fxc: 'stir', ms: 2200 }];

@@ -133,9 +133,11 @@ const NAKAI_RUN = (() => {
       r.classList.remove('nk-bye'); if (f.dataset.who === id && !back) return;
       f.dataset.who = id; f.innerHTML = face(id); r.classList.remove('nk-come'); void r.offsetWidth; r.classList.add('nk-come');
     }
+    const bubHtml = (open, [ja, zh], ear = true) => `${ear ? `<button type="button" class="wk-ear nk-ear" aria-label="再聽一次">${icon('speaker')}</button>` : ''}${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="nk-dots">……</b>'}`;
     function bub(open, line) {
-      const b = el('.nk-bub'); if (!b || !t) return; const [ja, zh] = line || t.line;
-      b.innerHTML = `${line ? '' : `<button type="button" class="wk-ear nk-ear" aria-label="再聽一次">${icon('speaker')}</button>`}${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="nk-dots">……</b>'}`;
+      const b = el('.nk-bub'); if (!b || !t) return;
+      b.innerHTML = bubHtml(open, line || t.line, !line);
+      if (!open && !line) JOBS.hold(b, [bubHtml(true, t.line)].concat(t.after ? [bubHtml(true, t.after, false)] : []));   // a task (a guest) begun: as tall as its words (2026-11-25)
       b.classList.toggle('nk-open', Boolean(open));
     }
     // 千代's word beside the hero, shown as it is said — or the hero's reply (Japanese with its reading; its 中文 on the job's first

@@ -148,7 +148,7 @@ function renderShop(view) {
       <div class="counter"></div><div class="purse">${kotoIcon()}言靈 <b>${bal}</b></div></div>
     <div class="page-head shop-head"><div><div class="page-title">古道具屋</div><div class="page-sub">山上的老店，老闆福爺不收錢，只收言靈。</div></div></div>
     <div class="shop-tabs" role="tablist">${SHOP_TABS.map(([k, name]) => `<button type="button" role="tab" data-act="shop-tab" data-tab="${k}" aria-selected="${shopTab === k}">${name}${k === 'sale' && live.length ? '<i class="dot" aria-label="特賣中"></i>' : ''}</button>`).join('')}</div>
-    ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name], i, all) => { const list = WARES.filter((it) => inSec(it, k) && !it.starter && !it.limited && !it.gift), more = shopTab === 'wear' && i === all.length - 1 ? SOON : '';
+    ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name], i, all) => { const list = WARES.filter((it) => inSec(it, k) && !it.starter && !it.limited && !it.gift && !it.shop), more = shopTab === 'wear' && i === all.length - 1 ? SOON : '';
       return list.length || more ? `<section class="shop-sec" data-sec="${k}"><h2 class="shop-h">${name}</h2>${grid(list, more)}</section>` : ''; }).join('')}
     ${onTestSite() && shopTab === 'sale' ? `<div class="row-wrap mt-4">${Object.keys(SALES).map((k) => `<button type="button" class="btn btn-sm" data-act="sale-preview" data-k="${k}" aria-pressed="${salePreview(k)}">測試用：預覽${SALES[k].name}</button>`).join('')}<button type="button" class="btn btn-sm" data-act="sale-preview" data-k="0">照日期來</button></div>` : ''}
     ${onTestSite() ? '<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="koto-gift">測試用：+100 言靈</button><button type="button" class="btn btn-sm" data-act="koto-gift" data-n="1000">測試用：+1000 言靈</button><button type="button" class="btn btn-sm" data-act="witch-again">測試用：巫婆／聖誕老公公再飛一次</button></div>' : ''}
@@ -208,7 +208,7 @@ const DRESS = (() => {
   // palette, its key the part's); for the others what was bought at 古道具屋 for it, a tap putting it on or taking it off. Then
   // 古道具屋's that part, when it has more (a limited one only while its sale is on)
   function part(slot) {
-    const name = partName(slot), sold = WARES.filter((it) => (it.kind === 'wear' || it.kind === 'clothes') && it.slot === slot && !it.gift && forSale(it));
+    const name = partName(slot), sold = WARES.filter((it) => (it.kind === 'wear' || it.kind === 'clothes') && it.slot === slot && !it.gift && !it.shop && forSale(it));
     const more = sold.filter((it) => !owns(it.id)).length, nudge = more ? `<p class="dress-more">古道具屋的「${name}」還有 ${more} 樣<button type="button" class="btn btn-sm" data-act="dress-shop">去看看</button></p>` : '';
     if (STYLE_OF[slot]) return sec('款式', styles(STYLE_OF[slot])) + sec('顏色', sws(slot)) + nudge;
     const got = WARES.filter((it) => it.kind === 'wear' && it.slot === slot && owns(it.id));
@@ -316,7 +316,7 @@ Object.assign(ACTIONS, {
   'ware-peek': (el) => { if (!el.closest('.ware-peek')) warePeek(el.dataset.id); },
   'ware-buy': (el) => {
     const it = WARE.get(el.dataset.id);
-    if (!it || owns(it.id) || it.gift) return;
+    if (!it || owns(it.id) || it.gift || it.shop) return;
     if (kotoBalance() < it.price) { fukuSay('short'); return; }
     saleCheck(it, () => openModal(`買下${it.name}？`, `<p>用 <b>${it.price}</b> 言靈買下「${esc(it.name)}」。${it.kind === 'wear' ? `買了之後按書房右上角的衣櫃，在「${partName(it.slot)}」穿上或脫下。` : it.kind === 'clothes' ? `買了之後按書房右上角的衣櫃，在「${partName(it.slot)}」換上，顏色照你配的。` : it.kind === 'house' ? '買了院子的房子馬上換成它；想換回原本的小屋，在這張卡片上切換。' : it.kind === 'ground' ? '買了院子的地面馬上換成它；想換回草地，在這張卡片或院子的擺設裡切換。' : it.kind === 'yard' ? '買了會先收在院子的收納箱，到院子按「擺設」拿出來擺。' : it.kind === 'record' ? '買了之後點書房的留聲機就能換上這張唱片。' : '買了會先收在收納箱，到書房按「擺設」拿出來擺。'}</p>
       <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="ware-buy-ok" data-id="${it.id}">買下</button><button type="button" class="btn" data-act="close-modal">再想想</button></div>`, { width: 380 }));

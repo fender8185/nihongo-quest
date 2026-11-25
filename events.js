@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 98 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 99 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -3512,18 +3512,20 @@ const TOWN = {
       riders: ['nishimura', 'sophia', 'misaki', 'kaneda', 'umeko']
     },
     // the hero's own rides (2026-11-20, spec §9): the ticket machine's screen; the announcements in the car ({S}: a station as LINE
-    // writes it); 乗り越し精算 at the end ({P}: the rest to pay)
+    // writes it). One ticket at a time (2026-11-25, the user): the screen while one is held, the button that pays it back (払いもどし)
+    // and its word after ({p}: the 円 back) — every ticket paid in full at the machine, a ride has nothing more to pay
     ride: {
       pick: ['{行|い}き{先|さき}の {運賃|うんちん|車資}の ボタンを {押|お}して ください。', '請按目的地的票價按鈕。'], put: ['{P}です。お{金|かね}を {入|い}れて ください。', '{p} 日圓。請投錢。'],
       take: ['きっぷを お{取|と|拿}りください。', '請取票。'], short: ['お{金|かね}が たりません。', '錢不夠。'],
+      held: ['まだ {使|つか}って いない きっぷが あります。', '手上還有一張沒用過的車票：搭完或退票（払いもどし）才能再買。'],
+      refund: ['{払|はら}いもどし', '退票'], back: ['{払|はら}いもどしました。', '已退票：{p} 日圓退回錢包。'],
       next: ['つぎは {S}、{S}です。', '下一站是{s}。'], at: ['{S}、{S}です。お{忘れ物|わすれもの|遺失物}の ないように ご{注意|ちゅうい|注意} ください。', '{s}到了。請注意不要遺忘隨身物品。'], end: ['{終点|しゅうてん|終點}、{S}です。お{忘れ物|わすれもの|遺失物}の ないように ご{注意|ちゅうい|注意} ください。', '終點{s}到了。請注意不要遺忘隨身物品。'],
-      pay: ['{乗り越し精算|のりこしせいさん|補票}：あと {P}', '補票：還要 {p} 日圓'], none: ['きっぷが ありません…。', '沒有車票……。'],
-      // やまなみ線 (2026-11-23, spec §2.2): the lines' names ({L}); at 白鷺 riding on, the change said in place of 終点's word ({L}:
-      // the line changed to); the end of the line near; the buttons — on from 白鷺 by the other line, and which train from 白鷺's machine
+      none: ['きっぷが ありません…。', '沒有車票……。'],
+      // やまなみ線 (2026-11-23, spec §2.2): the lines' names ({L}); a ride on through 白鷺, the change said in place of 終点's word ({L}:
+      // the line changed to); the end of the line near
       lines: { minato: ['みなと{線|せん}', 'みなと線'], yama: ['やまなみ{線|せん}', 'やまなみ線'] },
       change: ['{終点|しゅうてん|終點}、{S}です。{L}は お{乗り換え|のりかえ|轉乘}です。', '終點{s}到了。往{l}的旅客請在這裡轉車。'],
-      soon: ['まもなく {終点|しゅうてん|終點}、{S}です。', '即將抵達終點{s}。'],
-      on: ['{L}に {乗り換える|のりかえる|轉乘}', '轉搭{l}'], aboard: ['{L}に {乗|の}る', '搭{l}']
+      soon: ['まもなく {終点|しゅうてん|終點}、{S}です。', '即將抵達終點{s}。']
     }
   },
   // 湯の花温泉 (2026-11-23, docs/superpowers/specs/2026-11-23-onsen-work-design.md §4): あかり's ようこそ the first time the hero is at

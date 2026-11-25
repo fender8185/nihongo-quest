@@ -237,7 +237,7 @@ const WORK = (() => {
     r.done = Math.max(r.done || 0, Object.keys(r.score).length); saveState();
   }
   // 交通費 (2026-11-25, ruling 37 — the final review's I-2: an onsen shift paid about what the train up cost): the day's first shift at
-  // 湯の花 pays back what the ride up there cost that day (the ticket and any 乗り越し精算: RIDE.fare, kept on arriving, on this device),
+  // 湯の花 pays back what the ride up there cost that day (its ticket's fare, paid in full at the machine since 2026-11-25: RIDE.fare, kept on arriving, on this device),
   // as a real アルバイト's 実費 is — once a day (oneADay.koutsuhi, synced: ruling 9), none without a ride; in the shift's 円, on top of
   // its pay (no card's +% on it)
   const fareFor = (s) => (PLACES[s.job] || {}).area === 'onsen' && (state.oneADay || {}).koutsuhi !== s.day && typeof RIDE === 'object' ? RIDE.fare(s.day) : 0;

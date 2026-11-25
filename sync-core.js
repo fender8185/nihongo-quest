@@ -54,6 +54,7 @@
   //   town          (the town's events): done, seen, stops, arrived each a union by id; talks (chats with each person) the larger count
   //   cruise        (the cruise ship's trips): done a union; the one under way: the later trip, further on, unless done on either
   //   oneADay       (things had once a day: 射的): the later day of each
+  //   refunds       (円 paid back: a ticket's 払いもどし): each device's sum the larger, as purse.spent
   //   everything else (settings, currentUnit, today, placed, wear, …): from the copy saved later
   function stampOf(s) { return (s && typeof s.updatedAt === 'string') ? s.updatedAt : ''; }
   function pickRec(x, y) {
@@ -214,6 +215,10 @@
     if (older.oneADay || newer.oneADay) {   // a thing had once a day (2026-11-23, 射的): the later day of each — the copy saved later may hold the earlier
       const once = Object.assign({}, older.oneADay); Object.entries(newer.oneADay || {}).forEach(([k, v]) => { if (!once[k] || v > once[k]) once[k] = v; });
       out.oneADay = once;
+    }
+    if (older.refunds || newer.refunds) {   // 円 paid back (2026-11-25, a ticket's 払いもどし): each device's sum only grows (the larger kept), as spent
+      const back = Object.assign({}, older.refunds); Object.entries(newer.refunds || {}).forEach(([d, v]) => { back[d] = Math.max(Number(back[d]) || 0, Number(v) || 0); });
+      out.refunds = back;
     }
     if (older.cruise || newer.cruise) out.cruise = mergeCruise(older.cruise, newer.cruise);
     if (older.work || newer.work) out.work = mergeWork(older.work, newer.work);

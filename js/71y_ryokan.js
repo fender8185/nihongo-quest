@@ -290,11 +290,13 @@ const RYOKAN = (() => {
   const TOKO = [6.8, 12.0, 1.4, 6.0], POST = [12.0, 12.4];   // the 床の間: [u0, u1, its depth, its opening's height]; the 床柱
   const TV = [12.8, 15.2, 0.15, 1.2], OSHI = [15.6, 18.8], AC = [15.9, 18.5, 6.5, 7.3], RDOOR = [19.4, 21.8];
   const ZATAKU = [11.6, 16.4, 6.6, 9.4], ZTOP = 1.0;   // the 座卓
-  const ZAISU = [[12.7, 5.5, 'kneel turn flip'], [15.3, 5.5, 'kneel turn flip'], [12.7, 10.5, 'kneel back turn'], [15.3, 10.5, 'kneel back turn']];   // its four 座椅子: [u, v, how one sits there]
+  // its four 座椅子: [u, v, how one sits there, where he is drawn in depth (dz past v: the far two face us — before their backs and their
+  // cushions; the near two back to us — their backs, nearer, before him: isoZ's 0.45)]
+  const ZAISU = [[12.7, 5.5, 'kneel turn flip', 0.6], [15.3, 5.5, 'kneel turn flip', 0.6], [12.7, 10.5, 'kneel back turn'], [15.3, 10.5, 'kneel back turn']];
   const PLATE = [12.7, 8.6];   // the welcome まんじゅう's plate on the 座卓 (TOWN.GIFTS.kangei)
-  const LAMP = [14, 8, 4.9];   // the paper lamp hung over the 座卓: [u, v, its shade's foot]
+  const LAMP = [14, 8, 6.2];   // the paper lamp hung over the 座卓: [u, v, its shade's foot] — up near the ceiling, clear of the face of one kneeling at the far 座椅子 (2026-11-25; at 4.9 it hid it)
   const YTRAY = [19.2, 21.4, 12.6, 14.2];   // the yukata in their tray
-  const ENGAWA_SET = [1.6, 3.6, 6.8, 12.4], ECHAIRS = [[2.6, 7.5, 'bench turn flip'], [2.6, 11.7, 'bench back turn']], ETABLE = [2.6, 9.6];   // the 広縁's two chairs and its little table
+  const ENGAWA_SET = [1.6, 3.6, 6.8, 12.4], ECHAIRS = [[2.6, 7.5, 'bench turn flip', 0.65], [2.6, 11.7, 'bench back turn']], ETABLE = [2.6, 9.6];   // the 広縁's two chairs (as ZAISU: the far one faces us) and its little table
   const ROOM_DOOR = [20.6, 0.6];   // where one comes in from the corridor (the lobby's stairs)
   const MATS = [[6, 14, 0, 4, 'u'], [14, 22, 0, 4, 'u'], [6, 10, 4, 12, 'v'], [18, 22, 4, 12, 'v'], [10, 18, 4, 8, 'u'], [10, 18, 8, 12, 'u'], [6, 14, 12, 16, 'u'], [14, 22, 12, 16, 'u']];   // eight tatami (8 × 4), no four corners meeting
   const had = () => ((state.purse || {}).gifts || {}).kangei === day();
@@ -411,21 +413,27 @@ const RYOKAN = (() => {
     return dish + (done ? `<g class="rk-wrap"><path d="M${r1(x - 6)} ${r1(y - 1)} l5 -3 l7 1 l-4 3.6 Z" fill="#f4efe2" stroke="#d9cfba" stroke-width=".5"/><path d="M${r1(x - 2)} ${r1(y - 2.6)} l3 1" stroke="#c8322a" stroke-width=".8"/></g>`
       : `<g class="rk-manju"><path d="M${r1(x - 8)} ${r1(y - 1)} Q${r1(x - 9)} ${r1(y - 9)} ${x} ${r1(y - 9.4)} Q${r1(x + 9)} ${r1(y - 9)} ${r1(x + 8)} ${r1(y - 1)} Q${x} ${r1(y + 2)} ${r1(x - 8)} ${r1(y - 1)} Z" fill="#fbf6ea" stroke="#e0d6c0" stroke-width=".6"/><path d="M${r1(x - 7)} ${r1(y - 4)} Q${x} ${r1(y - 6.4)} ${r1(x + 7)} ${r1(y - 4)}" stroke="#e8dcc4" stroke-width=".6" fill="none"/><circle cx="${x}" cy="${r1(y - 5)}" r="2" fill="#c8322a"/><path d="M${r1(x + 9)} ${r1(y + 1)} l7 -3.4 v-6 l-7 3.4 Z" fill="#fbf8f0" stroke="#c9b48a" stroke-width=".5"/><path d="M${r1(x + 10.6)} ${r1(y - 2.6)} l4 -2" stroke="#c8322a" stroke-width=".7"/></g>`);
   }
-  // a 座椅子: its cushion on the tatami, its back of lacquered wood with a padded front, on the side away from the 座卓
-  function zaisu(u, v, far) {
-    const w = 0.5, c = '#6e3a4e', back = far ? [u - w, v - w, u + w, v - w + 0.18] : [u - w, v + w - 0.18, u + w, v + w];
-    const seat = iBox(c, u - w, v - w, 0.05, u + w, v + w, 0.24, { top: '#8a4a62', fv: '#5e3242', fu: '#52283a' }) + iOnF(0.24, `<rect x="${f(u - w + 0.08)}" y="${f(v - w + 0.08)}" width="${f(2 * w - 0.16)}" height="${f(2 * w - 0.16)}" rx=".1" fill="none" stroke="#a8607a" stroke-width=".04"/>`);
-    const bk = iBox('#3a2418', back[0], back[1], 0.24, back[2], back[3], 1.55, { top: '#4a2e1e', fv: far ? '#5e3242' : '#3a2418', fu: '#2e1c12' }) + (far ? iOnV(back[3], `<rect x="${f(u - w + 0.1)}" y="-1.48" width="${f(2 * w - 0.2)}" height="1.1" rx=".12" fill="#7a4058"/>`) : '');
-    return far ? bk + seat : seat + bk;
+  // a 座椅子: its cushion on the tatami, its back of lacquered wood with a padded front, on the side away from the 座卓 — the two drawn
+  // apart (2026-11-25, the user: 「椅子是人會變成在椅子後面」): one sat on is drawn over its cushion; its back over him only when it is
+  // the nearer (his back to us). ZAISU_BK: the back's depth on the floor
+  const ZAISU_W = 0.5, ZAISU_BK = 0.18;
+  const zaisuBack = (u, v, far) => (far ? [u - ZAISU_W, u + ZAISU_W, v - ZAISU_W, v - ZAISU_W + ZAISU_BK] : [u - ZAISU_W, u + ZAISU_W, v + ZAISU_W - ZAISU_BK, v + ZAISU_W]);
+  function zaisu(u, v, far, part) {
+    const w = ZAISU_W, c = '#6e3a4e', [b0, b1, bv0, bv1] = zaisuBack(u, v, far);
+    if (part === 'seat') return iBox(c, u - w, v - w, 0.05, u + w, v + w, 0.24, { top: '#8a4a62', fv: '#5e3242', fu: '#52283a' }) + iOnF(0.24, `<rect x="${f(u - w + 0.08)}" y="${f(v - w + 0.08)}" width="${f(2 * w - 0.16)}" height="${f(2 * w - 0.16)}" rx=".1" fill="none" stroke="#a8607a" stroke-width=".04"/>`);
+    return iBox('#3a2418', b0, bv0, 0.24, b1, bv1, 1.55, { top: '#4a2e1e', fv: far ? '#5e3242' : '#3a2418', fu: '#2e1c12' }) + (far ? iOnV(bv1, `<rect x="${f(u - w + 0.1)}" y="-1.48" width="${f(2 * w - 0.2)}" height="1.1" rx=".12" fill="#7a4058"/>`) : '');
   }
-  // the 広縁's two chairs (rattan on wooden frames, cushioned) facing each other over a little round table
-  function eChair(u, v, faceMore) {
-    const w = 0.55, wood = '#6e4a2e', backV = faceMore ? [v - w, v - w + 0.16] : [v + w - 0.16, v + w];
+  // the 広縁's two chairs (rattan on wooden frames, cushioned) facing each other over a little round table — as the 座椅子, the chair and
+  // its back drawn apart (part 'seat': its legs, seat and arms; else its back)
+  const ECHAIR_W = 0.55, ECHAIR_BK = 0.16;
+  const eChairBack = (u, v, faceMore) => (faceMore ? [v - ECHAIR_W, v - ECHAIR_W + ECHAIR_BK] : [v + ECHAIR_W - ECHAIR_BK, v + ECHAIR_W]);
+  function eChair(u, v, faceMore, part) {
+    const w = ECHAIR_W, wood = '#6e4a2e', backV = eChairBack(u, v, faceMore);
+    if (part !== 'seat') return iBox('#c8a46a', u - w, backV[0], 0.82, u + w, backV[1], 2.0, { top: '#b8945a', fv: '#c8a46a', fu: '#a8844e' }) + (faceMore ? iOnV(backV[1], `<path d="${[0.2, 0.45, 0.7, 0.95].map((d) => `M${f(u - w + 0.05)} ${f(-0.85 - d)} H${f(u + w - 0.05)}`).join(' ')}" stroke="#a8844e" stroke-width=".04"/>`) : '');
     const legs = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => iBox(wood, u + a * (w - 0.08) - 0.05, v + b * (w - 0.08) - 0.05, 0, u + a * (w - 0.08) + 0.05, v + b * (w - 0.08) + 0.05, 0.7)).join('');
     const seat = iBox('#c8a46a', u - w, v - w, 0.7, u + w, v + w, 0.82, { top: '#dcbc84' }) + iBox('#e9dcc2', u - w + 0.06, v - w + 0.06, 0.82, u + w - 0.06, v + w - 0.06, 0.96, { top: '#f2e8d2' });
-    const back = iBox('#c8a46a', u - w, backV[0], 0.82, u + w, backV[1], 2.0, { top: '#b8945a', fv: '#c8a46a', fu: '#a8844e' }) + (faceMore ? iOnV(backV[1], `<path d="${[0.2, 0.45, 0.7, 0.95].map((d) => `M${f(u - w + 0.05)} ${f(-0.85 - d)} H${f(u + w - 0.05)}`).join(' ')}" stroke="#a8844e" stroke-width=".04"/>`) : '');
     const arms = [-1, 1].map((a) => iBox(wood, u + a * w - (a > 0 ? 0.08 : 0), v - w, 0.96, u + a * w + (a > 0 ? 0 : 0.08), v + w, 1.3)).join('');
-    return faceMore ? back + legs + seat + arms : legs + seat + arms + back;
+    return legs + seat + arms;
   }
   function eTable() {
     const [u, v] = ETABLE;
@@ -463,12 +471,16 @@ const RYOKAN = (() => {
     isoProps = [];
     const land = `<svg class="land indoor-land iso rk-land" viewBox="0 -530 1200 900" preserveAspectRatio="xMidYMax slice" style="height:900px">${GLOW_DEFS}${ISO_DEFS}
       ${isoShell({ floor: '#c8a77c', seam: '#b08e64', wallL: '#ecdfc2', wallR: '#f1e6cc', wainL: '#ecdfc2', wainR: '#f1e6cc', batten: '#ecdfc2', trim: '#ecdfc2', edgeU: '#8a6e4c', edgeV: '#9a7a56', capU: '#e6dcc6', capV: '#ece2cc', top: '#ddd2bc' })}
-      ${engawaFloor()}${tatami()}${engawaWindow()}${woodwork()}${toko()}${oshiire()}${roomDoor()}
-    </svg>`;
+      ${engawaFloor()}${tatami()}${engawaWindow()}${woodwork()}${toko()}${oshiire()}${roomDoor()}${kamoi()}
+    </svg>`;   // the 鴨居 over the shoji's track up with the room's walls, behind whoever is in the 広縁 (2026-11-25: as a thing of its own it crossed the face of one sat there)
     const [z0, z1, zv0, zv1] = ZATAKU;
-    const props = isoProp(SHOJI, `<g data-fx="shoji">${shoji()}</g>`, 6.4) + isoProp([5.45, 5.95, 0, 16], kamoi(), 6.4) + isoProp(TV, tv(), 2.8)
-      + isoProp(ZATAKU, zataku(), 1.6) + ZAISU.map(([u, v], i) => isoProp([u - 0.55, u + 0.55, v - 0.55, v + 0.55], zaisu(u, v, i < 2), 1.6)).join('')
-      + ECHAIRS.map(([u, v], i) => isoProp([u - 0.6, u + 0.6, v - 0.6, v + 0.6], eChair(u, v, i === 0), 2.1)).join('') + isoProp([ETABLE[0] - 0.65, ETABLE[0] + 0.65, ETABLE[1] - 0.65, ETABLE[1] + 0.65], eTable(), 1.5)
+    // each seat and its back a layer of their own (the back's box its own strip of the floor): one sat on facing us is drawn over both,
+    // one with his back to us over the seat and under the back (ZAISU, ECHAIRS: how deep he is drawn)
+    const seatProps = (u, v, w, bk, far, h, art) => { const back = far ? [v - w, v - w + bk] : [v + w - bk, v + w], seat = far ? [back[1], v + w] : [v - w, back[0]];
+      return isoProp([u - w, u + w, seat[0], seat[1]], art('seat'), h) + isoProp([u - w, u + w, back[0], back[1]], art('back'), h + 0.6); };
+    const props = isoProp(SHOJI, `<g data-fx="shoji">${shoji()}</g>`, 6.4) + isoProp(TV, tv(), 2.8)
+      + isoProp(ZATAKU, zataku(), 1.6) + ZAISU.map(([u, v], i) => seatProps(u, v, ZAISU_W, ZAISU_BK, i < 2, 1.0, (part) => zaisu(u, v, i < 2, part))).join('')
+      + ECHAIRS.map(([u, v], i) => seatProps(u, v, ECHAIR_W, ECHAIR_BK, i === 0, 1.4, (part) => eChair(u, v, i === 0, part))).join('') + isoProp([ETABLE[0] - 0.65, ETABLE[0] + 0.65, ETABLE[1] - 0.65, ETABLE[1] + 0.65], eTable(), 1.5)
       + isoProp(YTRAY, ytray(), 0.7) + isoProp([LAMP[0] - 0.6, LAMP[0] + 0.6, LAMP[1] - 0.6, LAMP[1] + 0.6], squareLamp(...LAMP), 6.4);
     const [dx, dy] = isoXY(ROOM_DOOR[0], 0, 5.3);
     return `${land}${isoLay(props)}${yHeroHtml()}${TOWNEV.castHtml('washitsu')}
@@ -483,6 +495,17 @@ const RYOKAN = (() => {
       swap(y); const [x, py] = isoPt(PLATE[0], PLATE[1], ZTOP + 1.2); yPop(y, x, py, 'また あした…'); toast('今天的茶點饅頭已經吃過了，明天會再放一個新的。', 3600); return;
     }
     YEN.gift('kangei'); swap(y);
+  }
+  // the yukata's tray (2026-11-25, the user: 「首次互動就真的多了一套可以穿的浴衣，而且取得當下就直接換上」): the first time, the inn's own yukata
+  // is the hero's (a ware given, as the neighbours' presents: never sold) and on at once, drawn anew where he stands; after, as before:
+  // what the tray is
+  const INN_YUKATA = 'innyukata';
+  function yukata(y) {
+    if (owns(INN_YUKATA)) { toast('浴衣：旅館準備的浴衣，可以穿著在館內和溫泉街走走。', 4600); return; }
+    state.owned[INN_YUKATA] = { paid: 0, on: todayStr(), gift: 'kagetsu' };
+    state.look = Object.assign({}, state.look, { topStyle: INN_YUKATA }); saveState();
+    if (y && y.isConnected) yHeroRedraw(y);
+    SND.play('cloth'); toast('拿到旅館的浴衣！已經換上了（換回來：衣櫃）。', 4600);
   }
   function swap(y) {
     const p = y && y.querySelector('.rk-plate'); if (!p) return;
@@ -610,7 +633,7 @@ const RYOKAN = (() => {
     const dim = st.light ? '' : `<rect class="rk-dim" width="${ART.W}" height="${ART.H}" fill="#1c1430" pointer-events="none"/>`;
     return `<svg class="rk-art" viewBox="0 0 ${ART.W} ${ART.H}" role="img" aria-label="${ROOMS[room].name}の間">${shell}${toko}${glow}${flower}${ac}${light}${tv}${shoji}${win}${futon}${cat}${table}${tea}${zabuton}${yukata}${dim}</svg>`;
   }
-  return { ART, art, ROOM_DOOR, had, sig, washitsuHtml, welcome, ENGAWA, EWIN, SHOJI, TOKO, POST, TV, OSHI, AC, RDOOR, ZATAKU, ZTOP, ZAISU, PLATE, YTRAY, ENGAWA_SET, ECHAIRS, ETABLE, DOMA, EDGE, GETA, DOOR, STAIRS, FOOT, DESK, BACKC, BELL, LEDGER, KEYS, WIN, BATH, SOFAS, SOFA, LOWT, IKEBANA, ANDON, TEA, TEA_H, HANG, html: lobbyHtml, mount, bell, day, dn, dns, poly, at };
+  return { ART, art, ROOM_DOOR, had, sig, washitsuHtml, welcome, yukata, ENGAWA, EWIN, SHOJI, TOKO, POST, TV, OSHI, AC, RDOOR, ZATAKU, ZTOP, ZAISU, PLATE, YTRAY, ENGAWA_SET, ECHAIRS, ETABLE, DOMA, EDGE, GETA, DOOR, STAIRS, FOOT, DESK, BACKC, BELL, LEDGER, KEYS, WIN, BATH, SOFAS, SOFA, LOWT, IKEBANA, ANDON, TEA, TEA_H, HANG, html: lobbyHtml, mount, bell, day, dn, dns, poly, at };
 })();
 const ryokanHtml = () => RYOKAN.html(), washitsuHtml = () => RYOKAN.washitsuHtml();
 
@@ -670,10 +693,9 @@ PLACE_USE.washitsu = (() => {
     { id: 'tv', name: '電視', box: isoBBox(R.TV[0], R.TV[1], R.TV[2], R.TV[3], 0, 2.7), kind: 'do', go: isoXY(14.0, 2.5), face: 'back turn', pose: 'look', say: 'てんきよほう…', fx: 'rktv', fxc: 'on', ms: 3000 },
     { id: 'ac', name: '冷氣', box: isoBBox(R.AC[0], R.AC[1], 0, 0.55, R.AC[2], R.AC[3]), kind: 'do', go: isoXY(16.4, 2.2), face: 'back turn', pose: 'reach', say: 'ピッ', fx: 'rkac', fxc: 'on', ms: 3000 },
     { id: 'shoji', name: '障子', box: isoBBox(R.SHOJI[0], R.SHOJI[1], R.SHOJI[2], R.SHOJI[3], 0, 6), kind: 'do', go: isoXY(6.9, 6.8), face: 'back turn flip', pose: 'reach', say: 'スーッ', fx: 'shoji', fxc: 'slide', ms: 1500 },
-    { id: 'engawa', name: '廣緣的椅子', box: isoBBox(e0, e1, ev0, ev1, 0, 2.1), kind: 'seat', say: 'いい ながめ…', seats: R.ECHAIRS.map(([u, v, how]) => [u, v, 0.1, how]) },
-    { id: 'zaisu', name: '座椅子', box: isoBBox(z0 - 0.4, z1 + 0.4, zv0 - 1.6, zv1 + 1.6, 0, 1.6), kind: 'seat', say: 'ほっ…', seats: R.ZAISU.map(([u, v, how]) => [u, v, 0.2, how]) },   // kneeling on its cushion
-    { id: 'yukata', name: '浴衣', box: isoBBox(y0, y1, yv0, yv1, 0, 0.9), kind: 'do', go: isoXY((y0 + y1) / 2, yv1 + 0.9), face: 'back turn', pose: 'crouch', say: 'ゆかた！',
-      toast: '浴衣：旅館準備的浴衣，可以穿著在館內和溫泉街走走。' },
+    { id: 'engawa', name: '廣緣的椅子', box: isoBBox(e0, e1, ev0, ev1, 0, 2.1), kind: 'seat', say: 'いい ながめ…', seats: R.ECHAIRS.map(([u, v, how, dz]) => [u, v, 0.1, how, dz]) },
+    { id: 'zaisu', name: '座椅子', box: isoBBox(z0 - 0.4, z1 + 0.4, zv0 - 1.6, zv1 + 1.6, 0, 1.6), kind: 'seat', say: 'ほっ…', seats: R.ZAISU.map(([u, v, how, dz]) => [u, v, 0.2, how, dz]) },   // kneeling on its cushion
+    { id: 'yukata', name: '浴衣', box: isoBBox(y0, y1, yv0, yv1, 0, 0.9), kind: 'do', go: isoXY((y0 + y1) / 2, yv1 + 0.9), face: 'back turn', pose: 'crouch', say: 'ゆかた！', open: (y) => RYOKAN.yukata(y) },   // the first time: the inn's yukata his, and on (2026-11-25)
     // the welcome まんじゅう on its plate while not had today (a gift: free, stamped, had before 桜の間), else its wrapper
     { id: 'manju', name: 'お茶菓子', box: isoBBox(p0 - 0.6, p0 + 0.6, p1 - 0.6, p1 + 0.6, 1.0, 2.2), kind: 'do', go: isoXY(p0, zv1 + 1.9), face: 'back turn', pose: 'reach', say: 'おまんじゅう！', when: () => !RYOKAN.had(), open: (y) => RYOKAN.welcome(y) },
     { id: 'wrapper', name: 'お茶菓子（包裝紙）', box: isoBBox(p0 - 0.6, p0 + 0.6, p1 - 0.6, p1 + 0.6, 1.0, 2.2), kind: 'do', go: isoXY(p0, zv1 + 1.9), face: 'back turn', pose: 'look', when: () => RYOKAN.had(),

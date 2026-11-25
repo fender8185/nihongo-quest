@@ -157,10 +157,12 @@ function pfBoardRows() {
 }
 
 // ---- the trains: now and then one in on 1番線 (to 白鷺, from the right), then one on 2番線 (to みなと港, from the left); each slows to
-// its stop, opens its doors (ピンポン), waits, plays its bell, shuts and goes. PLATFORM.speed: the tests run it fast ----
+// its stop, opens its doors (ピンポン), waits, plays its bell, shuts and goes. PLATFORM.speed: the tests run it fast. 2番線 is not the
+// hero's (2026-11-25: the harbour is a walk away; the cruise's group still rides it, t3); up here with a ticket from みなと, his train is
+// in at 1番線 and waits for him (the user's pick: no waiting), the timetable meanwhile on 2番線 ----
 const PLATFORM = (() => {
-  let run = 0, cur = null, held = '';   // cur: the train in now { track, to, kind, phase }; held: where the one the cruise's group boards goes (berth)
-  const api = { speed: 1, now: () => cur, mount, berth };
+  let run = 0, cur = null, held = '', mine = 0, was = '';   // cur: the train in now { track, to, kind, phase }; held: where the one the cruise's group boards goes (berth); mine: his train's turn (0: none waits for him); was: the place drawn last
+  const api = { speed: 1, now: () => cur, mount, berth, ready, away };
   // ---- the people on it (not under e2e; still for one who'd rather): a few waiting at 1番線's boarding marks, their backs to us;
   // in when the doors open — and one or two off it, away down the stairs; new ones up the stairs to wait while it is gone ----
   const MARKS = [0.5, 0.83, 1.17, 1.5, 1.83].map((t) => Math.round(PF_NEAR.at + PF_NEAR.len * t + (t > 1 ? 6 : 0) - 600));   // the doors' X (the stall stands at the first)
@@ -205,13 +207,13 @@ const PLATFORM = (() => {
   // the trains' sounds under a card (駅弁's own bell, a ride): none (2026-11-21, the review: the platform's bell rang behind the bento's)
   const play = (n, o) => { if (!document.querySelector('.cls')) SND.play(n, o); };
   const still = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // a train standing with its doors open: a button over it to get on (PLACE_USE.platform board1 / board2: RIDE.board)
+  // a train standing at 1番線 with its doors open: a button over it to get on (PLACE_USE.platform board1: RIDE.board) — none at 2番線
   function boardBtn(y, track, on) {
-    y.querySelectorAll(`.pf-board[data-use="board${track}"]`).forEach((b) => b.remove()); if (!on) return;
+    y.querySelectorAll(`.pf-board[data-use="board${track}"]`).forEach((b) => b.remove()); if (!on || track !== 1) return;
     const t = PLACE_USE.platform.find((x) => x.id === 'board' + track), w = y.querySelector('.yworld'); if (!t || !w) return; const [x0, y0, x1, y1] = t.box, b = document.createElement('button');
     b.type = 'button'; b.className = 'use-btn thing signed pf-board'; b.dataset.act = 'scene-use'; b.dataset.use = 'board' + track; b.setAttribute('aria-label', '搭車');
     b.style.cssText = `margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${Math.round(150 - (370 - y1) / 4)};--tx:50%;--ty:40%`;
-    b.innerHTML = `<span class="tag">${ySign('bus', track === 1 ? '搭車（往白鷺）' : '搭車（往みなと港）')}</span>`; w.appendChild(b);
+    b.innerHTML = `<span class="tag">${ySign('bus', '搭車（往白鷺）')}</span>`; w.appendChild(b);
   }
   // one train's call: in (slowing), stopped with its doors open, its bell, doors shut, away
   async function call(y, mine, track, x) {
@@ -260,20 +262,42 @@ const PLATFORM = (() => {
     if (!here()) return;
     cur.phase = 'stop'; if (!g.classList.contains('open')) { g.classList.add('open'); if (!now) play('door-chime', { vol: track === 1 ? 1 : 0.5 }); }
   }
+  // his train (2026-11-25, the user's pick: 「拿著票上月台時，往白鷺的電車已經停在 1番線、門開著，不用等」): up here holding a ticket from みなと,
+  // the 1番線 train to 白鷺 stands in at once, doors open, its 搭車 button, till he boards (away: it goes with him) or leaves the platform;
+  // ready(): in again at once — a ride from here shut midway (✕), the ticket still his. The timetable meanwhile on 2番線 alone (mount);
+  // the cruise group's own berth wins (held: none of his)
+  const mineOk = () => typeof RIDE === 'object' && (({ from, to } = RIDE.ticket() || {}) => from === 'minato' && Boolean(to))();
+  function ready() {
+    const y = home; if (!y || !y.isConnected || held || !mine || !mineOk()) return;
+    mine += 1; const g = y.querySelector('.pf-train[data-track="1"]'); if (!g) return;   // (a departure under way given up)
+    const h = sceneHour(), x = EKI.next(Math.floor(h), Math.floor((h % 1) * 60), 8).find((n) => n.track === 1) || { kind: '普通', to: 'shirasagi' };   // the next one there by the timetable
+    const svg = g.querySelector('g'); if (svg) svg.innerHTML = pfTrain(PF_NEAR.len, PF_NEAR.h, x, false);
+    g.style.transition = 'none'; g.style.transform = 'translateX(0px)'; g.classList.add('open'); boardBtn(y, 1, true);
+  }
+  function away() {
+    const y = home; if (!y || !y.isConnected || !mine) return;
+    const turn = ++mine, g = y.querySelector('.pf-train[data-track="1"]'); if (!g) return;
+    boardBtn(y, 1, false); g.classList.remove('open');
+    setTimeout(() => { if (mine !== turn || home !== y) return; g.style.transition = still() ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.6, 0, .9, .6)`; g.style.transform = 'translateX(-1400px)'; }, ms(1.4));   // its doors shut, then away to the left (白鷺's way)
+  }
   // the departure board again each minute
   function boardRows(y) { const b = y.querySelector('.pf-dep'); if (b) b.innerHTML = pfBoardRows(); }
   async function mount(y, place) {
-    const mine = ++run; cur = null; held = ''; clear(); home = place === 'platform' ? y : null; if (place !== 'platform') return;
-    const wait = (s) => new Promise((ok) => setTimeout(ok, ms(s))), alive = () => run === mine && y.isConnected && !held;
-    const tick = setInterval(() => { if (run !== mine || !y.isConnected) { clearInterval(tick); return; } boardRows(y); }, 30000);   // on while a train is held too
+    const again = was === place; was = place;   // the platform drawn anew while on it (who is about changed): no word again
+    const turn = ++run; cur = null; held = ''; mine = 0; clear(); home = place === 'platform' ? y : null; if (place !== 'platform') return;
+    const wait = (s) => new Promise((ok) => setTimeout(ok, ms(s))), alive = () => run === turn && y.isConnected && !held;
+    const tick = setInterval(() => { if (run !== turn || !y.isConnected) { clearInterval(tick); return; } boardRows(y); }, 30000);   // on while a train is held too
     if (!quiet()) { for (let i = 0; i < 2; i++) { const m = free()[i * 2], p = person(y, [m, WAIT_Y]); if (p) { p.mark = m; p.el.classList.add('back'); } } const more = setInterval(() => { if (!alive()) { clearInterval(more); return; } if (!cur || cur.phase !== 'stop') comeToWait(y); }, 9000); }
     const to = typeof CRUISE === 'object' ? CRUISE.boarding() : ''; if (to) { berth(y, to, true); return; }   // the cruise's group waiting here to board: theirs is in
+    const t = typeof RIDE === 'object' ? RIDE.ticket() : null;
+    if (mineOk()) { mine = 1; ready(); }   // his ticket from here: his train in, waiting
+    else if (t && !again) toast(t.from !== 'minato' ? `手上的票是從${EKI.name(t.from)}出發的（${RIDE.named(t)}），在這裡不能搭。可以在駅前的券売機退票（払いもどし）。` : '這張是以前的票，現在沒有它能搭的車了：在駅前的券売機退票（払いもどし）就能再買。', 4600);
     await wait(2);
     for (let k = 0; alive(); k++) {
-      const now = sceneHour(), next = EKI.next(Math.floor(now), Math.floor((now % 1) * 60), 8), track = k % 2 ? 2 : 1;
-      const x = next.find((t) => t.track === track) || { kind: '普通', to: track === 1 ? 'shirasagi' : 'minatoko' };
-      await call(y, mine, track, x); if (!alive()) return;
-      await wait(k % 2 ? 9 : 6);
+      const now = sceneHour(), next = EKI.next(Math.floor(now), Math.floor((now % 1) * 60), 8), track = mine || k % 2 ? 2 : 1;   // his train at 1番線: the timetable on 2番線 alone
+      const x = next.find((tr) => tr.track === track) || { kind: '普通', to: track === 1 ? 'shirasagi' : 'minatoko' };
+      await call(y, turn, track, x); if (!alive()) return;
+      await wait(track === 2 ? 9 : 6);
     }
   }
   return api;
