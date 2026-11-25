@@ -1020,7 +1020,7 @@ def test_nakai_guest_reply_never_jidoushi_with_teoku(b):
       return JSON.stringify({ n: gs.length, bad: bad.slice(0, 6), win: [win.line[0], win.opts.find((o) => o[2])[0], win.opts.filter((o) => !o[2]).map((o) => o[0])], fall: fall.key, keys: NAKAI.GUESTS }); })()"""))
     assert r['n'] > 300 and r['bad'] == [] and len(r['keys']) >= 6, r
     w = r['win']
-    assert w[0] == 'あれ、{窓|まど}が {開|あ}いて いますね。' and w[1] == 'はい、{開|あ}けて おきました。{閉|し}めましょうか。', r
+    assert w[0] == 'あれ、{窓|まど}が {開|あ}いて いますね。' and w[1] == 'はい、あけて おきました。{閉|し}めましょうか。', r
     assert any('あいて おきました' in x for x in w[2]) and any('{閉|し}めて おきました' in x for x in w[2]), r
     assert r['fall'] == 'tea', r   # the window shut after all: they remark on what is so (the tea set out)
 

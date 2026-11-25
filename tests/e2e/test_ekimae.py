@@ -664,6 +664,20 @@ def test_the_bento_stands_closing_word_is_said_whole(b):
       const o = await WHOLE('bento'); JOBS.pat.scale = 1; return JSON.stringify(Object.assign(o, { want })); })()"""))
     assert r == dict(WHOLE_OK, want=4), r
 
+# the final re-review (2026-11-25, out of scope 2): ハル's word for one left on the last train is said, not only shown (since 1.20.0 its
+# turn was dropped: the shift paid as the train goes, no longer on) — then her closing word, the last line, neither of them cut
+def test_the_bento_stands_word_for_one_left_on_the_last_train_is_said(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + BENTO_HELP + LONG + """ LONG(300, () => false);
+      location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; LAST('bento', 6);
+      WORK.start(yard(), 'bento'); for (let i = 0; i < 300 && !(BENTO_RUN.now() && BENTO_RUN.now().t === 2 && BENTO_RUN.now().phase === 'stop'); i++) await wait(30);
+      const want = BENTO_RUN.now().wins.length; let served = 0; for (let i = 0; i < 400 && served < want - 1; i++) { const c = calling(); if (c.length) { await serve(c[0]); served++; } else await wait(30); }
+      const res = () => document.querySelector('.wk-result'); for (let i = 0; i < 600 && !res(); i++) await wait(50);
+      const S = TOWN.WORK.say.bento, hers = log.filter(([, w]) => w === S.who).map(([, , l]) => l), mine = (x) => [S.gone[0], S.end[0]].some((l) => x.includes(l));
+      const o = { gone: hers.includes(S.gone[0]), end: hers[hers.length - 1] === S.end[0], after: hers.includes(S.gone[0]) && hers.lastIndexOf(S.gone[0]) < hers.lastIndexOf(S.end[0]),
+        cuts: cuts.filter(mine), paid: Boolean(res()), want };
+      document.querySelectorAll('.wk-result').forEach((e) => e.remove()); JOBS.pat.scale = 1; return JSON.stringify(o); })()"""))
+    assert r == {'gone': True, 'end': True, 'after': True, 'cuts': [], 'paid': True, 'want': 4}, r
+
 # parked 8 (Task 7): the mood mark (💦／💢) sits on the face's top corner, clear of the bubble's edge — at 原田's window (the words opened
 # after two misses) and at 小林's lost and found (all told: the bubble at its tallest), both 44 px faces, at 390×844 and 360×640
 def test_the_mood_mark_stays_by_the_face_at_the_window_and_the_lost_and_found(b):

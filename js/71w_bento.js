@@ -174,7 +174,7 @@ const BENTO_RUN = (() => {
         B.sel = null; B.hand = {}; bubble(); hand();
         SND.play('door-chime', { vol: 0.6 }); await sleep(T(0.6)); if (!go()) return false;
         const car = el('.bt-car'); if (car) car.dataset.state = 'out'; SND.play('train-out', { vol: 0.45 });
-        if (left.length) await said(word(s.gone, 'bad'), T(1.2)); else await sleep(T(1.3));
+        if (left.length) await said(word(s.gone, 'bad', last ? { up: on } : undefined), T(1.2)); else await sleep(T(1.3));   // the last train's: said while the card is up, as her closing word (the final re-review)
         return go();
       })();
       if (!last) { if (await away) { t++; arrive(); } return; }
