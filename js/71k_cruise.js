@@ -176,7 +176,7 @@ const CRUISE = (() => {
   function sit(p, q) {
     if (!Array.isArray(q)) { const k = yScale(q.t.dep); p.seat = q; p.s = k; p.pos = [q.X, q.t.top - 40 * k * p.k]; p.z = q.t.z || 300 - q.t.dep - 1; p.back = p.turn = p.flip = false; p.el.classList.add('bench'); face(p); put(p); return; }
     const [u, v, h, how, dz = 0.45] = q, f = how.split(' ');
-    p.seat = q; p.pos = isoXY(u, v, h); p.z = isoZ(u, v + dz);   // (dz: as the hero's, ySeat) p.back = f.includes('back'); p.turn = f.includes('turn'); p.flip = f.includes('flip');
+    p.seat = q; p.pos = isoXY(u, v, h); p.z = isoZ(u, v + dz); p.back = f.includes('back'); p.turn = f.includes('turn'); p.flip = f.includes('flip');   // dz: as the hero's (ySeat)
     p.el.classList.add(f.includes('kneel') ? 'kneel' : 'bench'); face(p); put(p);
   }
   const foot = (q) => (Array.isArray(q) ? isoXY(q[0], q[1]) : [q.X, Math.max(14, q.t.dep - 16)]);

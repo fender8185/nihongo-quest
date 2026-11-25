@@ -180,7 +180,7 @@ const YEN = (() => {
     // もらったもの: what was given, not bought (its hint before it is had)
     const gave = gs.length ? `<section class="fb-menu fb-gifts"><h4 lang="ja">もらったもの</h4><div class="fb-items">${gs.map((x) => { const it = x.item, h = b[it[0]];
       return `<div class="fb-item${h ? ' had' : ''}"><span class="fb-pic">${h ? pic(it) : ''}</span><span class="fb-name" lang="ja">${h ? soft(ruby(it[1])) : '？？？'}</span><small>${esc(h ? it[2] : x.how)}</small><small>非賣品</small>${h ? `<i class="fb-stamp" aria-label="${esc(h)}">済</i><small class="fb-day">${esc(String(h).slice(5).replace('-', '/'))}</small>` : ''}</div>`; }).join('')}</div></section>` : '';
-    return `<div class="food-book"><p class="fb-count">吃過、用過 ${had} / ${all.length} 樣・一共花了 ${yenStr(yenSpent())} 円</p>
+    return `<div class="food-book"><p class="fb-count">吃過、用過 ${had} / ${all.length} 樣・一共花了 ${yenStr(yenSpent() - yenBack())} 円</p>
       ${pages().map(([name, items]) => `<section class="fb-menu"><h4 lang="ja">${ruby(name)}</h4><div class="fb-items">${items.map((it) => `<div class="fb-item${b[it[0]] ? ' had' : ''}">
         <span class="fb-pic">${b[it[0]] ? pic(it) : ''}</span><span class="fb-name" lang="ja">${soft(ruby(it[1]))}</span><small>${esc(it[2])}</small><small>${yenStr(it[3])} 円</small>${b[it[0]] ? `<i class="fb-stamp" aria-label="${esc(b[it[0]])}">済</i><small class="fb-day">${esc(String(b[it[0]]).slice(5).replace('-', '/'))}</small>` : ''}</div>`).join('')}</div></section>`).join('')}${gave}
       <p class="muted small">在鎮上點販賣機、麵包、菜單、黑板、牛奶機、澡堂、籤筒就能買。第一次買的會蓋上章。有些東西買不到，要別人送。</p></div>`;

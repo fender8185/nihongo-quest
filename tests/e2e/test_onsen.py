@@ -181,6 +181,23 @@ def test_one_ticket_at_a_time_and_its_refund(b):
     assert r['again'] == [580, 'yunohana'], r
     assert sum(r['kept'][0].values()) == 260 and r['kept'][1:] == [260] * 4, r
 
+# fix round 1 (the review's Minor 1): 重設所有進度 takes the ticket held and the day's fare with the progress that paid them — else
+# 払いもどし would pay 円 into the new start
+def test_a_reset_takes_the_ticket_and_the_fare_with_it(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TICKET + """ await at('station'); RIDE.machine(yard(), 'minato'); await wait(100); await buy('yunohana'); CLASS.close();
+      localStorage.setItem('nq_fare', JSON.stringify({ day: dateStr(TOWNEV.today()), yen: 420 })); const before = [Boolean(RIDE.ticket()), RIDE.fare(dateStr(TOWNEV.today())), yenBalance()];
+      window.confirm = () => true; openSettings('data'); await wait(200); const btn = document.querySelector('.modal [data-act=reset-all]'); btn.closest('details').open = true; btn.click(); await wait(400);
+      return JSON.stringify({ before, after: [RIDE.ticket(), localStorage.getItem('nq_ticket'), localStorage.getItem('nq_fare'), yenBalance()] }); })()"""))
+    assert r['before'] == [True, 420, 580], r
+    assert r['after'] == [None, None, None, 0], r   # nothing held, nothing to pay back into the new start
+
+# fix round 1 (the review's Minor 2): the food book's 「一共花了」 leaves out what was paid back — a ticket bought and paid back adds nothing
+def test_the_food_book_total_leaves_out_a_refund(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TICKET + """ const spent = () => (/一共花了 ([\\d,]+) 円/.exec(YEN.book()) || [])[1];
+      const before = spent(); await at('station'); RIDE.machine(yard(), 'minato'); await wait(100); await buy('yunohana'); const bought = spent();
+      click('.kb-back'); await wait(200); const back = spent(); CLASS.close(); return JSON.stringify({ before, bought, back }); })()"""))
+    assert r == {'before': '0', 'bought': '420', 'back': '0'}, r
+
 # the train is in (the user's pick): up to みなと's platform holding a ticket from みなと, the 1番線 train to 白鷺 stands there at once, doors
 # open, its 搭車 button, for as long as he stays — the timetable meanwhile on 2番線 (in and out, never a button there); aboard, it goes; ✕ on
 # the ride card mid-ride: the ticket still his and the train in again. Without a ticket the timetable on both tracks (no button at 2番線);
@@ -239,6 +256,37 @@ def test_skip_jumps_to_the_arrival(b):
     assert d['phase'] == 'end' and d['at'] == 'minato' and 'みなと' in d['led'] and '終点' not in d['led'] and d['car'], r
     assert d['said'] == ['みなと、みなとです。お{忘れ物|わすれもの|遺失物}の ないように ご{注意|ちゅうい|注意} ください。'], r
     assert d['after'] == ['#/platform', None, 420], r   # down: no 交通費 of its own (the day's ride up stays)
+
+# 跳過 at its two other moments (the review of 2bd06dd): tapped during the change at 白鷺 (off the みなと線, the platform there) it still
+# lands at 湯の花 — the diesel's car, the LED with 終点, 降りる, nothing of the change left — and 降りる there uses the ticket and keeps the
+# 交通費 as a full ride's; tapped and then ✕ on the arrival (降りる not tapped): the ticket still his, the みなと train in again at 1番線,
+# doors open, its 搭車 button, and the ride goes again
+def test_skip_in_the_change_and_skip_then_close(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, said = []; window.speakAs = (w, l) => { if (w === 'ann') said.push(l); return new Promise((ok) => setTimeout(ok, 300)); };
+      const led = () => { const e = document.querySelector('.rd-card .rd-led'); if (!e) return ''; const c = e.cloneNode(true); c.querySelectorAll('rt').forEach((x) => x.remove()); return c.textContent.replace(/\\s+/g, ' ').trim(); };
+      const g = () => yard().querySelector('.pf-train[data-track="1"]'), btn = () => Boolean(yard().querySelector('.pf-board[data-use="board1"]'));
+      RIDE.speed = 6; localStorage.removeItem('nq_fare'); RIDE.keep({ from: 'minato', to: 'yunohana', fare: 420, day: todayStr() });
+      await at('platform'); RIDE.board(yard(), 1); out.change = await watch(() => RIDE.now() && RIDE.now().phase === 'change', 30000); await wait(150);
+      const n0 = said.length; click('.rd-card .rd-skip'); await wait(300);
+      out.chg = { phase: RIDE.now().phase, at: RIDE.now().at, led: led(), off: Boolean(document.querySelector('.rd-card .rd-off')), skip: Boolean(document.querySelector('.rd-card .rd-skip')),
+        diesel: Boolean(document.querySelector('.rd-card .os-dcar')), left: document.querySelectorAll('.rd-card .os-chgsvg, .rd-card .os-walker').length };
+      await wait(1200); out.chg.said = said.slice(n0); click('.rd-off'); await watch(() => location.hash === '#/onsen', 5000); await wait(300);
+      out.chg.after = [location.hash, RIDE.ticket(), RIDE.fare(dateStr(TOWNEV.today())), yenBalance()];
+      RIDE.speed = 1; RIDE.keep({ from: 'minato', to: 'yunohana', fare: 420, day: todayStr() }); await at('station'); await at('platform'); RIDE.board(yard(), 1); await wait(400);
+      click('.rd-card .rd-skip'); await wait(300); out.shut = { phase: RIDE.now().phase, off: Boolean(document.querySelector('.rd-card .rd-off')) };
+      document.querySelector('.rd-card .cls-x').click(); await wait(400);
+      out.shut.after = [(RIDE.ticket() || {}).to, location.hash, g().style.transform, g().classList.contains('open'), btn(), Boolean(document.querySelector('.rd-card'))];
+      RIDE.speed = 20; RIDE.board(yard(), 1); await arrive('yunohana', '#/onsen'); out.shut.again = [location.hash, RIDE.ticket()];
+      return JSON.stringify(out); })()"""))
+    c = r['chg']
+    assert r['change'] and c['phase'] == 'end' and c['at'] == 'yunohana' and '湯の花' in c['led'] and '終点' in c['led'] and c['off'] and not c['skip'], r
+    assert c['diesel'] and c['left'] == 0, r   # the diesel's car, nothing of the change left on it
+    assert len(c['said']) == 1 and c['said'][0].startswith('{終点|しゅうてん|終點}、{湯の花|ゆのはな}です。'), r
+    assert c['after'] == ['#/onsen', None, 420, 1000], r   # the ticket used, the 交通費 kept, nothing paid on board
+    s = r['shut']
+    assert s['phase'] == 'end' and s['off'], r
+    assert s['after'] == ['yunohana', '#/platform', 'translateX(0px)', True, True, False], r   # ✕: the ticket kept, his train in again
+    assert s['again'] == ['#/onsen', None], r
 
 # 跳過 sits at the ride card's top right — in the car's top right corner (the user: 「車上右上角」), over the ride's picture — never over its ✕
 # nor crowding it (4 px clear at least), a 40 px target, at 360, 390 and 1280
@@ -750,7 +798,7 @@ def test_the_inn_gives_its_yukata_once_and_on(b):
     assert r['again'] == ['hoodie', 1, False, ['innyukata']], r   # the tray's toast only, nothing put on again
     assert 'innyukata' in r['wardrobe'], r
 
-# ゆかた屋 sells it (the user's pick; ruling 2: 1,200 円): open, a tap on the shop opens its card — the 浴衣 drawn on the hero's shoulders in
+# ゆかた屋 sells it (the user's pick; ruling 5: 3,000 円 — not under a day's rental on the 案内所's board): open, a tap on the shop opens its card — the 浴衣 drawn on the hero's shoulders in
 # his own top colour, its price tag, 「買う」 — too few 円: refused with a toast, nothing spent; enough: the 円 spent, the ware his and on at
 # once, his 「これを ください。」, a toast, the card saying so; again: the card says it is his; the 衣櫃 lists it (its colour his choice); not
 # 古道具屋's; shut, its knock and when it opens, as before
@@ -759,8 +807,8 @@ def test_yukataya_sells_a_yukata(b):
       const card = () => document.querySelector('.yd-yukata'), tag = () => { const t = card() && card().querySelector('.yd-ytag'); if (!t) return ''; const c = t.cloneNode(true); c.querySelectorAll('rt').forEach((x) => x.remove()); return c.textContent; };
       await at('yudori'); click('.use-btn[data-use="yukataya"]'); await watch(card, 6000);
       out.card = [Boolean(card()), tag(), Boolean(card() && card().querySelector('.yd-ywear svg')), Boolean(card() && card().querySelector('.yd-buy'))];
-      click('.yd-buy'); await wait(200); out.short = [yenBalance(), owns('yukata'), toasts.filter((m) => /1,200/.test(m)).length, said.length];
-      CLASS.close(); state.purse.gift = 2000; saveState(); await at('yudori'); click('.use-btn[data-use="yukataya"]'); await watch(card, 6000);
+      click('.yd-buy'); await wait(200); out.short = [yenBalance(), owns('yukata'), toasts.filter((m) => /3,000/.test(m)).length, said.length];
+      CLASS.close(); state.purse.gift = 3800; saveState(); await at('yudori'); click('.use-btn[data-use="yukataya"]'); await watch(card, 6000);
       click('.yd-buy'); await wait(300); out.bought = [yenBalance(), state.owned.yukata && state.owned.yukata.paid, state.look.topStyle, said.slice(), toasts.filter((m) => /買了浴衣/.test(m)).length, (card().querySelector('.yd-foot') || {}).textContent];
       out.drawn = Boolean(document.querySelector('.yhero') && /M13 -66 L-8 -40/.test(document.querySelector('.yhero').innerHTML));   // on him, crossed 右前
       CLASS.close(); click('.use-btn[data-use="yukataya"]'); await watch(card, 6000); out.again = [Boolean(card().querySelector('.yd-buy')), /已經是你的/.test(card().textContent)]; CLASS.close();
@@ -769,12 +817,27 @@ def test_yukataya_sells_a_yukata(b):
       out.wardrobe = [...document.querySelectorAll('.dress-opt[data-key="topStyle"]')].map((x) => x.dataset.val); DRESS.close(false); await wait(600);
       TOWNEV.clock = { h: 20, day: new Date(2026, 10, 10) }; toasts.length = 0; await at('yudori'); out.shut = [Boolean(document.querySelector('.use-btn[data-use="yukataya"]')), Boolean(document.querySelector('.use-btn[data-use="yukatayashut"]'))];
       return JSON.stringify(out); })()"""))
-    assert r['card'] == [True, 'ゆかた　1,200円', True, True], r
+    assert r['card'] == [True, 'ゆかた　3,000円', True, True], r
     assert r['short'] == [1000, False, 1, 0], r   # 1,000 円: refused, nothing spent, not his
-    assert r['bought'][:5] == [800, 0, 'yukata', ['hero:これを ください。'], 1] and '換上' in r['bought'][5], r
+    assert r['bought'][:5] == [800, 0, 'yukata', ['hero:これを ください。'], 1] and '換上' in r['bought'][5], r   # 3,800 − 3,000
     assert r['drawn'] and r['again'] == [False, True], r
-    assert r['ware'] == ['clothes', 'top', 'yukataya', 1200, None], r   # sold for 円 here, never at 古道具屋 (no 言靈 price)
+    assert r['ware'] == ['clothes', 'top', 'yukataya', 3000, None], r   # sold for 円 here, never at 古道具屋 (no 言靈 price)
     assert 'yukata' in r['wardrobe'] and r['shut'] == [False, True], r
+
+# fix round 1, ruling 6 (左前 is how the dead are dressed): every crossed front — the 女将's kimono, the 巫女's 白衣, the 作務衣, the 甚平
+# and both yukata — reads 右前 on the screen whichever way its wearer faces: the top panel's edge running from the viewer's right at the
+# neck down to the viewer's left, facing us and turned, and mirrored by .flip (a passer walking down to the left, a seat that flips) too
+def test_every_crossed_robe_reads_migimae_whichever_way(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const poses = ['', 'flip', 'turn', 'turn flip', 'bench flip', 'kneel flip', 'walk flip'], out = {};
+      const host = document.createElement('div'); host.className = 'yard'; host.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:400px;z-index:9999;background:#fff'; document.body.appendChild(host);
+      for (const top of ['kimono', 'hakui', 'samue', 'jinbei', 'yukata', 'innyukata']) for (const cls of poses) {
+        host.innerHTML = `<div class="hero ${cls}" style="position:absolute;left:0;top:0;width:200px;height:350px">${HERO.svg({ look: Object.assign({}, HERO.norm(state.look), { topStyle: top }), wear: {} })}</div>`; await wait(30);
+        const g = [...host.querySelectorAll('.h-cross, .h-cross-m')].find((e) => getComputedStyle(e).display !== 'none' && e.closest('.f-front, .f-front3') && getComputedStyle(e.closest('.f-front, .f-front3')).display !== 'none');
+        if (!g) { out[top + '/' + cls] = 'none'; continue; }
+        const path = g.querySelector('path'), a = path.getPointAtLength(0), z = path.getPointAtLength(Math.min(8, path.getTotalLength())), dot = (p) => { const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', '.5'); path.parentNode.appendChild(c); const k = c.getBoundingClientRect(); c.remove(); return [k.left + k.width / 2, k.top + k.height / 2]; };
+        const [p0, p1] = [dot(a), dot(z)]; out[top + '/' + cls] = p1[0] < p0[0] - 0.5 && p1[1] > p0[1] ? 'migi' : 'hidari'; }
+      host.remove(); return JSON.stringify(out); })()"""))
+    assert all(v == 'migi' for v in r.values()), {k: v for k, v in r.items() if v != 'migi'}
 
 # the yukata on the hero (both kinds): to the ankles, nothing of the bottoms out from under it — no trousers, skirt nor cat's tail, only
 # ankles over his shoes, whatever bottoms he has on; crossed 右前 front-on; kneeling on a 座椅子 its hem gathered up (never through the
@@ -787,7 +850,7 @@ def test_the_yukata_on_the_hero(b):
       state.look = Object.assign({}, state.look, { topStyle: 'innyukata' }); state.owned.innyukata = { paid: 0, on: todayStr(), gift: 'kagetsu' }; saveState();
       await at('washitsu'); const t = PLACE_USE.washitsu.find((q) => q.id === 'zaisu'), s = t.seats[2], [X, Y] = isoXY(s[0], s[1], s[2]); yard()._at = { x: X, y: Y };
       click('.use-btn[data-use="zaisu"]'); await watch(() => yh.use, 8000); yCamTo(yard(), yh.X); await wait(300);
-      const h = document.querySelector('.yhero'), hem = [...h.querySelectorAll('.robe-hem')].map((e) => e.getBoundingClientRect()).filter((k) => k.width > 0)[0], box = h.getBoundingClientRect();
+      const h = document.querySelector('.yhero'), hem = [...h.querySelectorAll('.h-hem')].map((e) => e.getBoundingClientRect()).filter((k) => k.width > 0)[0], box = h.getBoundingClientRect();
       out.kneel = [h.classList.contains('kneel'), Math.round(hem.bottom - (box.top + box.height * 200 / 210))];   // the hem's foot against his own (the seat)
       return JSON.stringify(out); })()"""))
     for k, v in r['bottoms'].items():
@@ -2194,6 +2257,46 @@ def test_the_front_card_fits_a_phone(b):
         assert f['inside'] and f['rows'] == 5 and f['keys'] == 5 and f['bell'] and f['left'] and f['cust'] and f['opts'] == 4 and f['names'] and f['reads'][0] and f['reads'][1] >= 2, (w, out)
         assert f['btns'] == [] and x['btns2'] == [] and f['small'] == [] and f['rt'] >= 8, (w, out)
         assert x['keyStep'] == [True, True, True, True] and x['two'] == [True, True, True, True] and x['lit'] == [True, True], (w, out)
+
+# fix round 1 (the review's Minor 3): a held bubble is measured again, its customer's own, when the screen changes — the フロント's guest's
+# bubble held at 390×844, let go on a turn to 360×640 (a short phone holds none: the screen's height read as it is measured, not once),
+# held again as before back at 390×844; the 案内所's tourist's bubble held taller on a narrower screen
+def test_a_held_bubble_is_measured_again_on_a_resize(b):
+    pre = "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15'; clock(false); window.speakAs = () => new Promise((ok) => setTimeout(ok, 200));
+      state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: 0, score: {}, keep: { seed: 5, morning: false } }; saveState();
+      await at('ryokan'); WORK.start(yard(), 'front'); for (let i = 0; i < 40 && !fc(); i++) { click('.talk'); await wait(120); }
+      await watch(() => ready() && fr().k === 0, 12000); await wait(600); return fc().querySelector('.wk-cust .wk-bub').style.minHeight; })()"""
+    look = "(async () => { await new Promise((r) => setTimeout(r, 600)); const b = document.querySelector('.wk-front .wk-cust .wk-bub'); return b ? b.style.minHeight : 'gone'; })()"
+    m1 = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", pre)], timeout=120)[-1]
+    m2 = b.run([("metrics", (360, 640)), ("eval", look)], timeout=30)[-1]
+    m3 = b.run([("metrics", (390, 844)), ("eval", look)], timeout=30)[-1]
+    assert m1.endswith('px') and m2 == '' and m3 == m1, (m1, m2, m3)
+    pre2 = "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; window.speakAs = () => new Promise((ok) => setTimeout(ok, 200));
+      await at('onsen'); WORK.start(yard(), 'annai'); for (let i = 0; i < 60 && !document.querySelector('.wk-annai'); i++) { click('.talk'); await wait(150); }
+      await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask', 12000); await wait(600); return parseFloat(document.querySelector('.wk-annai .wk-cust .wk-bub').style.minHeight); })()"""
+    look2 = "(async () => { await new Promise((r) => setTimeout(r, 600)); return parseFloat(document.querySelector('.wk-annai .wk-cust .wk-bub').style.minHeight); })()"
+    a1 = b.run([("metrics", (1280, 800)), ("nav", URL), ("wait", READY), ("eval", pre2)], timeout=120)[-1]
+    a2 = b.run([("metrics", (360, 640)), ("eval", look2)], timeout=30)[-1]
+    assert a1 > 0 and a2 > a1, (a1, a2)   # narrower: its words run to more lines, held taller
+
+# the review of 2bd06dd (Important 2): on a 360×640 phone the フロント card's ✕ stays in the screen and takes a tap without the player
+# scrolling — at the first guest, after a wrong reply at the next (佐藤's word of two lines: the talk row's own height), and at a later
+# guest: the card scrolled 13 px at most, as it was before this round
+def test_the_front_close_stays_in_sight_on_a_small_phone(b):
+    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15'; clock(false);
+      window.speakAs = () => new Promise((ok) => setTimeout(ok, 200));
+      state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: 0, score: {}, keep: { seed: 5, morning: false } }; saveState();   // a first shift: the hero's 中文 under his lines
+      await at('ryokan'); WORK.start(yard(), 'front'); for (let i = 0; i < 40 && !fc(); i++) { click('.talk'); await wait(120); }
+      const c = () => fc().querySelector('.cls-card');
+      const look = () => { const x = fc().querySelector('.cls-x'), q = x.getBoundingClientRect(), e = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+        return { inView: q.top >= 0 && q.bottom <= innerHeight, hit: Boolean(e && e.closest('.cls-x')), st: Math.round(c().scrollTop), k: fr().k }; };
+      const out = {}; await watch(() => ready() && fr().k === 0, 12000); await wait(900); out.first = look();
+      await work(1); await watch(() => ready() && fr().k === 1, 15000); await wait(900); opt(false).click(); await watch(() => fc().querySelector('.fr-talk .wk-say.bad'), 4000); await wait(500); out.wrong = look();
+      await work(3); await watch(() => ready() && fr().k === 3, 15000); await wait(900); out.later = look();
+      CLASS.close(); return JSON.stringify(out); })()""")])[-1])
+    assert r['first']['k'] == 0 and r['wrong']['k'] == 1 and r['later']['k'] == 3, r
+    for k, v in r.items():
+        assert v['inView'] and v['hit'] and v['st'] <= 13, (k, r)
 
 # Task 4's N-3: no reply stands out by its shape — every set of replies (each of the book's dinner times too, the birthday wish with the
 # greeting's), laid out as the card lays them out on a 360-px phone, a 390-px one and a 1280-px screen: each of a set on as many lines as

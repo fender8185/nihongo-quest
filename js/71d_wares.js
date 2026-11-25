@@ -74,7 +74,7 @@ const WARES = [
   { id: 'cattop', kind: 'clothes', slot: 'top', name: '貓咪上衣', price: 72, desc: '毛茸茸的貓咪裝，白肚子、貓掌手，還有鈴鐺。' },
   // 湯の花's yukata (2026-11-25, the user): the flowered one sold at ゆかた屋 for 円 (shop: where; yen: its price — not at 古道具屋), and
   // 旅館「花月」's own, given in 桜の間 (gift: who gives it; its colours the inn's) — each put on as it is had
-  { id: 'yukata', kind: 'clothes', slot: 'top', shop: 'yukataya', yen: 1200, name: '浴衣', desc: '湯の花「ゆかた屋」的花色浴衣，顏色在衣櫃自己配。' },
+  { id: 'yukata', kind: 'clothes', slot: 'top', shop: 'yukataya', yen: 3000, name: '浴衣', desc: '湯の花「ゆかた屋」的花色浴衣，顏色在衣櫃自己配。' },
   { id: 'innyukata', kind: 'clothes', slot: 'top', gift: 'kagetsu', name: '旅館的浴衣', desc: '旅館「花月」的浴衣：白底藍色波紋、深藍腰帶，旅館送的，店裡不賣。' },
   { id: 'shorts', kind: 'clothes', slot: 'bottom', name: '短褲', price: 24, desc: '及膝短褲。' },
   { id: 'wide', kind: 'clothes', slot: 'bottom', name: '寬褲', price: 42, desc: '寬鬆的寬褲，走起路來很舒服。' },

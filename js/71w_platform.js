@@ -161,7 +161,7 @@ function pfBoardRows() {
 // hero's (2026-11-25: the harbour is a walk away; the cruise's group still rides it, t3); up here with a ticket from みなと, his train is
 // in at 1番線 and waits for him (the user's pick: no waiting), the timetable meanwhile on 2番線 ----
 const PLATFORM = (() => {
-  let run = 0, cur = null, held = '', mine = 0, was = '';   // cur: the train in now { track, to, kind, phase }; held: where the one the cruise's group boards goes (berth); mine: his train's turn (0: none waits for him); was: the place drawn last
+  let run = 0, cur = null, held = '', his = false, hisTurn = 0, was = '';   // cur: the train in now { track, to, kind, phase }; held: where the one the cruise's group boards goes (berth); his: his train waits for him at 1番線 (a ticket from みなと: the timetable on 2番線 alone); hisTurn: its turn (a departure given up as it comes in again); was: the place drawn last
   const api = { speed: 1, now: () => cur, mount, berth, ready, away };
   // ---- the people on it (not under e2e; still for one who'd rather): a few waiting at 1番線's boarding marks, their backs to us;
   // in when the doors open — and one or two off it, away down the stairs; new ones up the stairs to wait while it is gone ----
@@ -216,8 +216,8 @@ const PLATFORM = (() => {
     b.innerHTML = `<span class="tag">${ySign('bus', '搭車（往白鷺）')}</span>`; w.appendChild(b);
   }
   // one train's call: in (slowing), stopped with its doors open, its bell, doors shut, away
-  async function call(y, mine, track, x) {
-    const g = y.querySelector(`.pf-train[data-track="${track}"]`), alive = () => run === mine && y.isConnected && !held; if (!g || !alive()) return;
+  async function call(y, turn, track, x) {
+    const g = y.querySelector(`.pf-train[data-track="${track}"]`), alive = () => run === turn && y.isConnected && !held; if (!g || !alive()) return;
     const from = track === 1 ? 1400 : -1400, wait = (s) => new Promise((ok) => setTimeout(ok, ms(s)));
     const svg = g.querySelector('g'); if (svg) svg.innerHTML = pfTrain(PF_NEAR.len, PF_NEAR.h, x, track === 2);   // its LED says where to
     cur = { track, to: x.to, kind: x.kind, phase: 'in' };
@@ -241,8 +241,8 @@ const PLATFORM = (() => {
   // track drawn on out. No 搭車 button: the group gets on by 高橋's 「！」
   async function berth(y, to, now = false) {
     if (home !== y || !y.isConnected || held === to) return;
-    held = to; const mine = run, track = TOWN.EKI.TRACK[to] || 2, from = track === 1 ? 1400 : -1400, quick = now || still();
-    const here = () => run === mine && held === to && y.isConnected, wait = (s) => new Promise((ok) => setTimeout(ok, ms(s)));
+    held = to; const turn = run, track = TOWN.EKI.TRACK[to] || 2, from = track === 1 ? 1400 : -1400, quick = now || still();
+    const here = () => run === turn && held === to && y.isConnected, wait = (s) => new Promise((ok) => setTimeout(ok, ms(s)));
     [1, 2].forEach((k) => boardBtn(y, k, false));
     const o = y.querySelector(`.pf-train[data-track="${3 - track}"]`);   // the other track's goes out its way (the side this one comes in from)
     if (o && !/1400px/.test(o.style.transform)) { o.classList.remove('open'); o.style.transition = quick ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.6, 0, .9, .6)`; o.style.transform = `translateX(${from}px)`; if (!quick) play('train-out', { vol: 0.5 }); }
@@ -268,33 +268,33 @@ const PLATFORM = (() => {
   // the cruise group's own berth wins (held: none of his)
   const mineOk = () => typeof RIDE === 'object' && (({ from, to } = RIDE.ticket() || {}) => from === 'minato' && Boolean(to))();
   function ready() {
-    const y = home; if (!y || !y.isConnected || held || !mine || !mineOk()) return;
-    mine += 1; const g = y.querySelector('.pf-train[data-track="1"]'); if (!g) return;   // (a departure under way given up)
+    const y = home; if (!y || !y.isConnected || held || !his || !mineOk()) return;
+    hisTurn += 1; const g = y.querySelector('.pf-train[data-track="1"]'); if (!g) return;   // (a departure under way given up)
     const h = sceneHour(), x = EKI.next(Math.floor(h), Math.floor((h % 1) * 60), 8).find((n) => n.track === 1) || { kind: '普通', to: 'shirasagi' };   // the next one there by the timetable
     const svg = g.querySelector('g'); if (svg) svg.innerHTML = pfTrain(PF_NEAR.len, PF_NEAR.h, x, false);
     g.style.transition = 'none'; g.style.transform = 'translateX(0px)'; g.classList.add('open'); boardBtn(y, 1, true);
   }
   function away() {
-    const y = home; if (!y || !y.isConnected || !mine) return;
-    const turn = ++mine, g = y.querySelector('.pf-train[data-track="1"]'); if (!g) return;
+    const y = home; if (!y || !y.isConnected || !his) return;
+    const turn = ++hisTurn, g = y.querySelector('.pf-train[data-track="1"]'); if (!g) return;
     boardBtn(y, 1, false); g.classList.remove('open');
-    setTimeout(() => { if (mine !== turn || home !== y) return; g.style.transition = still() ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.6, 0, .9, .6)`; g.style.transform = 'translateX(-1400px)'; }, ms(1.4));   // its doors shut, then away to the left (白鷺's way)
+    setTimeout(() => { if (hisTurn !== turn || home !== y) return; g.style.transition = still() ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.6, 0, .9, .6)`; g.style.transform = 'translateX(-1400px)'; }, ms(1.4));   // its doors shut, then away to the left (白鷺's way)
   }
   // the departure board again each minute
   function boardRows(y) { const b = y.querySelector('.pf-dep'); if (b) b.innerHTML = pfBoardRows(); }
   async function mount(y, place) {
     const again = was === place; was = place;   // the platform drawn anew while on it (who is about changed): no word again
-    const turn = ++run; cur = null; held = ''; mine = 0; clear(); home = place === 'platform' ? y : null; if (place !== 'platform') return;
+    const turn = ++run; cur = null; held = ''; his = false; hisTurn = 0; clear(); home = place === 'platform' ? y : null; if (place !== 'platform') return;
     const wait = (s) => new Promise((ok) => setTimeout(ok, ms(s))), alive = () => run === turn && y.isConnected && !held;
     const tick = setInterval(() => { if (run !== turn || !y.isConnected) { clearInterval(tick); return; } boardRows(y); }, 30000);   // on while a train is held too
     if (!quiet()) { for (let i = 0; i < 2; i++) { const m = free()[i * 2], p = person(y, [m, WAIT_Y]); if (p) { p.mark = m; p.el.classList.add('back'); } } const more = setInterval(() => { if (!alive()) { clearInterval(more); return; } if (!cur || cur.phase !== 'stop') comeToWait(y); }, 9000); }
     const to = typeof CRUISE === 'object' ? CRUISE.boarding() : ''; if (to) { berth(y, to, true); return; }   // the cruise's group waiting here to board: theirs is in
     const t = typeof RIDE === 'object' ? RIDE.ticket() : null;
-    if (mineOk()) { mine = 1; ready(); }   // his ticket from here: his train in, waiting
-    else if (t && !again) toast(t.from !== 'minato' ? `手上的票是從${EKI.name(t.from)}出發的（${RIDE.named(t)}），在這裡不能搭。可以在駅前的券売機退票（払いもどし）。` : '這張是以前的票，現在沒有它能搭的車了：在駅前的券売機退票（払いもどし）就能再買。', 4600);
+    if (mineOk()) { his = true; ready(); }   // his ticket from here: his train in, waiting
+    else if (t && !again) toast(t.from !== 'minato' ? `手上的票是從${EKI.name(t.from)}出發的（${RIDE.named(t)}），在這裡不能搭。可以在駅前的券売機退票（払いもどし）。` : '這張是以前的票，現在已經沒有車可以搭了：在駅前的券売機退票（払いもどし）就能再買。', 4600);
     await wait(2);
     for (let k = 0; alive(); k++) {
-      const now = sceneHour(), next = EKI.next(Math.floor(now), Math.floor((now % 1) * 60), 8), track = mine || k % 2 ? 2 : 1;   // his train at 1番線: the timetable on 2番線 alone
+      const now = sceneHour(), next = EKI.next(Math.floor(now), Math.floor((now % 1) * 60), 8), track = his || k % 2 ? 2 : 1;   // his train at 1番線: the timetable on 2番線 alone
       const x = next.find((tr) => tr.track === track) || { kind: '普通', to: track === 1 ? 'shirasagi' : 'minatoko' };
       await call(y, turn, track, x); if (!alive()) return;
       await wait(track === 2 ? 9 : 6);

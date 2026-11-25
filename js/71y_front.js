@@ -184,7 +184,7 @@ const FRONT_RUN = (() => {
     // a guest comes up: the bell rung, the book and the board unlit, the card from its top (the book first); their luggage in hand
     function draw(t) {
       TL.toTop();   // the bubble as tall as their words shown mid-guest (2026-11-25): their question, the birthday's gladness if that reply is offered, dinner's answer — a fun guest's word as they go, the guest done, not held; a 640-tall phone none (it cannot hold the book, the keys, the talk row and all that at once: Task 7's review keeps the book and keys in sight there; the talk row kept its height)
-      JOBS.hold(el('.wk-cust .wk-bub'), innerHeight < 700 ? [] : [t.q, t.answer, t.opts && t.opts.some((o) => o[3] === 'bday') ? (F.named[t.who] || {}).bday : null].filter((l) => Array.isArray(l) && l[0]).map((l) => bubHtml(true, l)));
+      JOBS.hold(el('.wk-cust .wk-bub'), () => (innerHeight < 700 ? [] : [t.q, t.answer, t.opts && t.opts.some((o) => o[3] === 'bday') ? (F.named[t.who] || {}).bday : null].filter((l) => Array.isArray(l) && l[0]).map((l) => bubHtml(true, l))));   // the screen's height read as it is measured (fix round 1: a turn of the phone)
       all('.fr-row.fr-lit').forEach((x) => x.classList.remove('fr-lit')); all('.fr-key.wk-hint').forEach((x) => x.classList.remove('wk-hint')); all('.fr-dn.fr-new').forEach((x) => x.classList.remove('fr-new'));
       const c = el('.wk-cust'); c.dataset.kind = t.kind; c.dataset.fun = t.fun || ''; if (t.kind === 'luggage') c.insertAdjacentHTML('beforeend', `<i class="fr-hold" aria-label="提著很多行李">${BAGS}</i>`);
       const bell = el('.fr-bell'); if (bell) { bell.classList.remove('fr-ding'); void bell.getBoundingClientRect(); bell.classList.add('fr-ding'); } SND.play('desk-bell', { vol: 0.45 });

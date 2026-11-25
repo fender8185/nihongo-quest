@@ -453,16 +453,22 @@ const YUDORI = (() => {
     setTimeout(() => knock(c, i, hit), 340);
   }
   function knock(c, i, hit) { const g = c.querySelector(`.yd-prize[data-i="${i}"]`); if (!g) return; g.classList.remove('wob', 'down'); void g.getBoundingClientRect(); g.classList.add(hit ? 'down' : 'wob'); }
-  // ---- ゆかた屋 (2026-11-25, the user: the shop sells the hero a yukata; ruling 2: 1,200 円): open, a tap on it opens its card — the 浴衣
+  // ---- ゆかた屋 (2026-11-25, the user: the shop sells the hero a yukata; ruling 5: 3,000 円, as much as a day's rental on the 案内所's board at most): open, a tap on it opens its card — the 浴衣
   // on the hero's shoulders in his own top colour (chosen in the 衣櫃 as any clothes'), its price tag, 「買う」. Bought: the 円 spent (this
   // device's, as 射的's), the ware his and on at once, his 「これを ください。」; too few 円: a word, nothing spent; had: the card says so ----
-  const YUKATA = 'yukata', YUKATA_YEN = 1200, BUY = 'これを ください。';   // BUY: his word as he buys (a clip of his already: m1's event reply)
+  const YUKATA = 'yukata', YUKATA_YEN = 3000, BUY = 'これを ください。';   // BUY: his word as he buys (a clip of his already: m1's event reply)
+  // the robe on display (fix round 1): on a wooden hanger, its hook over the collar, the collar round the back of the neck (no head: its
+  // neckline whole, never cut) — the whole robe in the frame, from the hook to its hem; no hands, no feet (css)
+  const HANGER = '<g class="yd-hanger"><path d="M2 -66.6 V-72.4 Q2 -76.2 5.2 -76.2 Q8.2 -76.2 8.2 -73.4" fill="none" stroke="#8a7a68" stroke-width="1.1" stroke-linecap="round"/><rect x="-31" y="-68.6" width="66" height="2.8" rx="1.4" fill="#9a6a44"/></g>';
+  const nape = (c) => { const v = (i) => parseInt(c.slice(i, i + 2), 16), l = '#' + [1, 3, 5].map((i) => Math.round(v(i) + (255 - v(i)) * 0.85).toString(16).padStart(2, '0')).join('');   // its collar's colour (the hero's lt(c, .85))
+    return `<path d="M-8.6 -66.6 Q2 -73.6 12.6 -66.6 L9.6 -66.6 Q2 -70.6 -5.6 -66.6 Z" fill="${l}" stroke="${c}" stroke-width=".5"/>`; };
   function yukataya(yard) {
-    const had = owns(YUKATA), art = HERO.svg({ look: Object.assign({}, HERO.norm(state.look), { topStyle: YUKATA }), front: true, box: '-36 -71 76 77' });   // the whole robe, shoulders to feet, on a stand (no head: css)
+    const lk = Object.assign({}, HERO.norm(state.look), { topStyle: YUKATA }), had = owns(YUKATA);
+    const art = HERO.svg({ look: lk, front: true, box: '-36 -79 76 85' }).replace('<g class="fig">', `${HANGER}${nape(lk.top)}<g class="fig">`);
     const foot = had ? '<p class="yd-done">這件浴衣已經是你的了：在衣櫃的「衣服」換上，顏色自己配。</p>'
       : `<button type="button" class="btn btn-primary yd-buy" lang="ja"><span><ruby>買<rt>か</rt></ruby>う</span><small>${YEN.reading(YUKATA_YEN)} ${yenStr(YUKATA_YEN)}円</small></button><p class="yd-note">錢包：${yenStr(Math.max(0, yenBalance()))} 円</p>`;
     CLASS.card('yd-yukata', 'ゆかた屋', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button><p class="yd-board" lang="ja">${ruby('ゆかた{屋|や}')}</p>
-      <div class="yd-ywear">${art}<p class="yd-ytag" lang="ja">${ruby('ゆかた　1,200{円|えん}')}</p></div>
+      <div class="yd-ywear">${art}<p class="yd-ytag" lang="ja">${ruby(`ゆかた　${yenStr(YUKATA_YEN)}{円|えん}`)}</p></div>
       <p class="yd-note">花色浴衣：買了就是你的，顏色在衣櫃自己配。</p><div class="yd-foot">${foot}</div>`, (e) => { if (e.target.closest('.yd-buy')) buyYukata(yard); });
   }
   function buyYukata(yard) {
@@ -473,7 +479,7 @@ const YUDORI = (() => {
     state.owned[YUKATA] = { paid: 0, on: todayStr() }; state.look = Object.assign({}, state.look, { topStyle: YUKATA }); saveState();
     const f = c.querySelector('.yd-foot'); if (f) f.innerHTML = '<p class="yd-done">買好了，已經換上了！</p>';
     if (yard && yard.isConnected) yHeroRedraw(yard);
-    toast('買了浴衣！已經換上了（顏色、換回來：衣櫃）。', 4600);
+    toast('買了浴衣！已經換上了（想換顏色或換回來：到衣櫃）。', 4600);
   }
   return { H, Y0, FAR, HALF0, K, END, scale, half, top, clamp, SHOPS, shop, pAt, door, BLOCKS, passWay, passFade, open, isOpen, shutSay, hoursSay, sig, html, shateki, prize, PRIZES, PRICE, played, yukataya, YUKATA_YEN, BUY };
 })();

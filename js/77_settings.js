@@ -217,6 +217,7 @@ Object.assign(ACTIONS, {
     state.ttsConfig = keep.ttsConfig; state.settings.theme = keep.theme;
     Sync.allowEmpty = true;   // the one empty progress the cloud takes (1.8.2)
     state.resetAt = new Date().toISOString();   // and the mark the cloud's guard lets through (1.9.1, supabase/progress-guard.sql)
+    ['nq_ticket', 'nq_fare'].forEach((k) => { try { localStorage.removeItem(k); } catch (e) { /* nothing kept */ } });   // a ticket held and the day's fare go with the progress that paid them (fix round 1: else 払いもどし would pay 円 into the new start)
     saveState(); buildRegistry();
     SESSION = null; FLASH = null; EXAM = null;
     closeModal(); toast('已重設'); go('#/today');

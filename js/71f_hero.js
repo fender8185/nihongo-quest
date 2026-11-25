@@ -375,8 +375,8 @@ const HERO = (() => {
       front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M2 -62 V-28" ${sk(F, d, 1.2)} stroke-opacity=".6" stroke-width=".9"/><path d="M5.2 -62 V-28" ${sk(F, d, 1.2)} stroke-opacity=".35" stroke-width=".7"/>${[-56, -48, -40].map((y) => `<circle cx="3.6" cy="${y}" r="1" fill="${lt(c, 0.65)}" ${sk(F, d, 1.2)} stroke-opacity=".5" stroke-width=".35"/>`).join('')}<path d="M-10 -55 h6 v6 h-6 Z" fill="none" ${sk(F, d, 1.2)} stroke-opacity=".5" stroke-width=".9"/><path d="M-10 -53.4 h6" ${sk(F, d, 1.2)} stroke-opacity=".35" stroke-width=".6"/>${stitch(F, d, 1.2, 'M-21.4 -31.6 Q2 -26.6 25.4 -31.6', 0.5)}`,
       collar: (F, c) => `${wSh('M-9 -67.4 L-1 -59 L-.3 -57.4 L-8.8 -65.6 Z M13 -67.4 L5 -59 L4.3 -57.4 L12.8 -65.6 Z', 0.12)}<path ${F(lt(c, 0.55), 1.6)} d="M-9 -67.4 L-1 -59 L2 -65 Z M13 -67.4 L5 -59 L2 -65 Z"/>`,
       back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M-13 -58 Q2 -55.6 17 -58" fill="none" ${sk(F, d, 1.2)} stroke-opacity=".45" stroke-width="1"/><path d="M2 -55.8 V-46" ${sk(F, d, 1.2)} stroke-opacity=".3" stroke-width=".7"/>${stitch(F, d, 1.2, 'M-21.4 -31.6 Q2 -26.6 25.4 -31.6', 0.5)}` },
-    jinbei: { sleeve: 'wide',
-      front: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -28 H-18 Z"/><path d="M-18 -30.6 H22 M-16.4 -28.2 L-16.8 -32.4 M20.4 -28.2 L20.8 -32.4" stroke="#000" stroke-opacity=".12" stroke-width=".8"/><path ${F(d, 1.3)} d="M15 -66 L-1 -42 L3 -41 L18 -63 Z"/>${stitch(F, lt(c, 0.5), 1.3, 'M15.8 -64.4 L.6 -41.8', 0.55)}<path d="M-6 -66 L2 -52 M-14 -42 l5 1.6 M-14 -40 l4 4" fill="none" ${sk(F, d, 1.2)} stroke-width="1.2"/>${[[-8, -56], [-4, -46], [12, -50], [15, -38], [-12, -34]].map(([x, y]) => `<path d="M${x - 1.6} ${y} h3.2 M${x} ${y - 1.6} v3.2" ${sk(F, lt(c, 0.5), 1.2)} stroke-opacity=".7" stroke-width=".9"/>`).join('')}`,   // 2026-11-11 (finer): a hem fold, side slits, the front panel's edge stitched
+    jinbei: { sleeve: 'wide', cross: true,
+      front: (F, c, d, X) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -28 H-18 Z"/><path d="M-18 -30.6 H22 M-16.4 -28.2 L-16.8 -32.4 M20.4 -28.2 L20.8 -32.4" stroke="#000" stroke-opacity=".12" stroke-width=".8"/>${X(`<path ${F(d, 1.3)} d="M15 -66 L-1 -42 L3 -41 L18 -63 Z"/>${stitch(F, lt(c, 0.5), 1.3, 'M15.8 -64.4 L.6 -41.8', 0.55)}<path d="M-6 -66 L2 -52 M-14 -42 l5 1.6 M-14 -40 l4 4" fill="none" ${sk(F, d, 1.2)} stroke-width="1.2"/>`)}${[[-8, -56], [-4, -46], [12, -50], [15, -38], [-12, -34]].map(([x, y]) => `<path d="M${x - 1.6} ${y} h3.2 M${x} ${y - 1.6} v3.2" ${sk(F, lt(c, 0.5), 1.2)} stroke-opacity=".7" stroke-width=".9"/>`).join('')}`,   // 2026-11-11 (finer): a hem fold, side slits, the front panel's edge stitched
       collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-7 -67 L2 -58 L11 -67 L8.4 -67 L2 -61 L-4.4 -67 Z"/>`,
       back: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -28 H-18 Z"/><path d="M2 -66 V-28" ${sk(F, d, 1.2)} stroke-opacity=".4" stroke-width="1"/><path d="M-18 -30.6 H22 M-16.4 -28.2 L-16.8 -32.4 M20.4 -28.2 L20.8 -32.4" stroke="#000" stroke-opacity=".12" stroke-width=".8"/>` },
     cattop: { sleeve: 'long', paw: true,   // fur in the top's colour, a white belly, a red collar and a bell
@@ -397,26 +397,27 @@ const HERO = (() => {
     // 浴衣 (test, 2026-11-09: the town's 緣日, the festival's people; 2026-11-25: ゆかた屋 sells it to the hero, his top's colour): to the
     // ankles, a wide light obi, little flowers; crossed 右前 — the wearer's left over the right, a "y" seen from the front (it was drawn
     // the other way, 左前, as the dead are dressed) — with wide sleeves of its own colour (kimono's: the robe's gold edge is the wizard's)
-    yukata: { sleeve: 'kimono', long: true,
-      front: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M13 -66 L-8 -40" fill="none" stroke="${d}" stroke-width="1.4"/>${[[10, -58], [-8, -52], [16, -24], [-6, -16], [-14, -30], [6, -12]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.8" fill="${lt(c, 0.75)}"/><circle cx="${x}" cy="${y}" r="1" fill="${d}"/>`).join('')}
+    yukata: { sleeve: 'kimono', long: true, cross: true,
+      front: (F, c, d, X) => `<path ${F(c, 1.2)} d="${ROBE}"/>${X(`<path d="M13 -66 L-8 -40" fill="none" stroke="${d}" stroke-width="1.4"/>`)}${[[10, -58], [-8, -52], [16, -24], [-6, -16], [-14, -30], [6, -12]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.8" fill="${lt(c, 0.75)}"/><circle cx="${x}" cy="${y}" r="1" fill="${d}"/>`).join('')}
         <path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path d="M-18 -38.6 Q2 -34.6 22 -38.6" fill="none" stroke="${d}" stroke-opacity=".5" stroke-width=".9"/>`,
       collar: (F, c) => `<path ${F(lt(c, 0.85), 1.6)} d="M12 -67 L-1 -53 L-8 -67 L-5 -67 L-1 -59 L9 -67 Z"/>`,
       back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path ${F(lt(c, 0.7), 1.3)} d="M-7 -46 L2 -39 L11 -46 L11 -30 L2 -36 L-7 -30 Z"/>` },
     // 旅館「花月」の浴衣 (2026-11-25, given at 桜の間 — the user: 「首次互動就真的多了一套可以穿的浴衣」): the room's tray's own, in the inn's
     // colours whatever the hero's top colour — white cotton, rows of indigo waves (as on the tray), a narrow navy obi tied in a bow at the
     // back, the collar's edge navy, crossed 右前; wide sleeves of the same white
-    innyukata: { sleeve: 'kimono', long: true, sleeveColor: '#f4f2ec',
-      front: (F) => `<path ${F('#f4f2ec', 1.2)} d="${ROBE}"/>${INN_WAVES}<path d="M13 -66 L-8 -40" fill="none" stroke="#2f4a7a" stroke-width="1.5"/>
+    innyukata: { sleeve: 'kimono', long: true, cross: true, sleeveColor: '#f4f2ec',
+      front: (F, c, d, X) => `<path ${F('#f4f2ec', 1.2)} d="${ROBE}"/>${INN_WAVES}${X('<path d="M13 -66 L-8 -40" fill="none" stroke="#2f4a7a" stroke-width="1.5"/>')}
         <path ${F('#2f3a5e', 1.3)} d="M-18 -41 Q2 -37 22 -41 V-35 Q2 -31 -18 -35 Z"/><path d="M-18 -38.2 Q2 -34.2 22 -38.2" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width=".7"/>`,
       collar: (F) => `<path ${F('#2f3a5e', 1.6)} d="M12 -67 L-1 -53 L-8 -67 L-5 -67 L-1 -59 L9 -67 Z"/>`,
       back: (F) => `<path ${F('#f4f2ec', 1.2)} d="${ROBE}"/>${INN_WAVES}<path ${F('#2f3a5e', 1.3)} d="M-18 -41 Q2 -37 22 -41 V-35 Q2 -31 -18 -35 Z"/><path ${F('#2f3a5e', 1.32)} d="M-5 -43 L2 -38 L9 -43 L9 -33 L2 -37 L-5 -33 Z M1 -39 L-1 -28 M3 -39 L5 -28" stroke="#2f3a5e" stroke-width="1.6"/>` },
-    // 着物 (旅館「花月」's 女将, 2026-11-24): a plain-coloured kimono to the ankles, its own colour's sleeves; at the neck a white 半襟 inside
+    // 着物 (旅館「花月」's 女将, 2026-11-24; crossed 右前 since fix round 1, ruling 6 — 左前 is how the dead are dressed, as the 白衣 and the
+    // 作務衣 below): a plain-coloured kimono to the ankles, its own colour's sleeves; at the neck a white 半襟 inside
     // its collar; a brocade obi with a pale 帯揚げ along its top and a red 帯締め across it; a spray of small flowers at the hem; from
     // behind the obi tied in its お太鼓
-    kimono: { sleeve: 'kimono', long: true,
-      front: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-9 -66 L12 -40 M12 -33 L17 -5" fill="none" stroke="${d}" stroke-width="1.3"/>${[[-14, -11], [-6, -8], [6, -12], [16, -9], [22, -14]].map(([x, y], k) => `<g fill="${lt(c, 0.55 + (k % 2) * 0.15)}">${[0, 72, 144, 216, 288].map((a) => `<circle cx="${(x + 1.7 * Math.cos(a * Math.PI / 180)).toFixed(1)}" cy="${(y + 1.7 * Math.sin(a * Math.PI / 180)).toFixed(1)}" r="1.15"/>`).join('')}</g><circle cx="${x}" cy="${y}" r=".7" fill="#e6c25a"/>`).join('')}
+    kimono: { sleeve: 'kimono', long: true, cross: true,
+      front: (F, c, d, X) => `<path ${F(c, 1.2)} d="${ROBE}"/>${X(`<path d="M13 -66 L-8 -40 M-8 -33 L-13 -5" fill="none" stroke="${d}" stroke-width="1.3"/>`)}${[[-14, -11], [-6, -8], [6, -12], [16, -9], [22, -14]].map(([x, y], k) => `<g fill="${lt(c, 0.55 + (k % 2) * 0.15)}">${[0, 72, 144, 216, 288].map((a) => `<circle cx="${(x + 1.7 * Math.cos(a * Math.PI / 180)).toFixed(1)}" cy="${(y + 1.7 * Math.sin(a * Math.PI / 180)).toFixed(1)}" r="1.15"/>`).join('')}</g><circle cx="${x}" cy="${y}" r=".7" fill="#e6c25a"/>`).join('')}
         <path ${F('#e2cc96', 1.3)} d="M-18 -44 Q2 -40 22 -44 V-33 Q2 -29 -18 -33 Z"/><path d="M-18 -41 Q2 -37 22 -41 M-18 -36 Q2 -32 22 -36" fill="none" stroke="#b8923a" stroke-opacity=".6" stroke-width=".7"/><path d="M-18 -44 Q2 -40 22 -44 V-42.4 Q2 -38.4 -18 -42.4 Z" fill="#f2c4cc"/><path d="M-18 -38.4 Q2 -34.4 22 -38.4" fill="none" stroke="#c8323a" stroke-width="1.3"/><circle cx="4" cy="-34.6" r="1.3" fill="#c8323a"/>`,
-      collar: (F, c, d) => `<path ${F(dk(c, 0.8), 1.6)} d="M-9.4 -67 L4 -50.4 L13.4 -67 L11.6 -67 L4 -54.6 L-7.4 -67 Z"/><path ${F('#f6f2ea', 1.65)} d="M-7.4 -67 L4 -54.6 L11.6 -67 L9.4 -67 L4 -58.4 L-5 -67 Z"/>`,
+      collar: (F, c, d) => `<path ${F(dk(c, 0.8), 1.6)} d="M13.4 -67 L0 -50.4 L-9.4 -67 L-7.6 -67 L0 -54.6 L11.4 -67 Z"/><path ${F('#f6f2ea', 1.65)} d="M11.4 -67 L0 -54.6 L-7.6 -67 L-5.4 -67 L0 -58.4 L9 -67 Z"/>`,
       back: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path ${F('#e2cc96', 1.3)} d="M-18 -44 Q2 -40 22 -44 V-33 Q2 -29 -18 -33 Z"/><path ${F('#e2cc96', 1.32)} d="M-7 -47 H11 Q12 -47 12 -46 V-27 Q2 -25 -8 -27 V-46 Q-8 -47 -7 -47 Z"/><path d="M-8 -43 H12 M-8 -31 Q2 -29 12 -31" fill="none" stroke="#b8923a" stroke-opacity=".6" stroke-width=".7"/><path d="M-18 -38.4 Q2 -34.4 22 -38.4" fill="none" stroke="#c8323a" stroke-width="1.3"/><path d="M2 -66 V-47" stroke="${d}" stroke-opacity=".35" stroke-width="1"/>` },
     // 聖誕老人外套 (Christmas, 2026-11-14): to the hips in the top's colour, white fur down the front, round the hem and the neck, a
     // black belt with a gold buckle; the fur cuffs on the sleeves (fur, in arm). From behind the fur hem and the belt
@@ -430,12 +431,12 @@ const HERO = (() => {
       back: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L27 -23 Q2 -18 -23 -23 Z"/><path ${F('#f7f3ec', 1.2)} d="M-23.6 -27.8 Q2 -22.6 27.6 -27.8 Q28.6 -24.6 27.6 -21.4 Q2 -16 -23.6 -21.4 Q-24.6 -24.6 -23.6 -27.8 Z"/><path ${F('#2b2b33', 1.3)} d="M-20 -43 Q2 -39 24 -43 V-37.4 Q2 -33.4 -20 -37.4 Z"/><path d="M2 -64 V-44" stroke="${d}" stroke-opacity=".35" stroke-width="1"/>`,
       over: (F) => `<path ${F('#f7f3ec', 1.6)} d="M-12 -68 Q2 -64 16 -68 L15.6 -63.6 Q2 -59.6 -11.6 -63.6 Z"/>` },
     // the town's work clothes (test, 2026-11-10, the user: who they are at a glance) — ROLE_STYLES, worn by the town's people only
-    hakui: { sleeve: 'kimono',   // 巫女の白衣: white, a crossed collar edged in red, wide sleeves; tucked into the 緋袴
-      front: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -34 Q2 -30 -18 -34 Z"/><path d="M-8 -66 L9 -40 M12 -66 L3 -52" fill="none" stroke="${d}" stroke-opacity=".55" stroke-width="1"/>`,
-      collar: (F, c) => `<path ${F('#c8323a', 1.6)} d="M-9.4 -67 L4 -50.4 L13.4 -67 L11.6 -67 L4 -54.6 L-7.4 -67 Z"/><path ${F(lt(c, 0.5), 1.65)} d="M-7.4 -67 L4 -54.6 L11.6 -67 L9.4 -67 L4 -58.4 L-5 -67 Z"/>`,
+    hakui: { sleeve: 'kimono', cross: true,   // 巫女の白衣: white, a crossed collar edged in red, wide sleeves; tucked into the 緋袴
+      front: (F, c, d, X) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -34 Q2 -30 -18 -34 Z"/>${X(`<path d="M12 -66 L-5 -40 M-8 -66 L1 -52" fill="none" stroke="${d}" stroke-opacity=".55" stroke-width="1"/>`)}`,
+      collar: (F, c) => `<path ${F('#c8323a', 1.6)} d="M13.4 -67 L0 -50.4 L-9.4 -67 L-7.6 -67 L0 -54.6 L11.4 -67 Z"/><path ${F(lt(c, 0.5), 1.65)} d="M11.4 -67 L0 -54.6 L-7.6 -67 L-5.4 -67 L0 -58.4 L9 -67 Z"/>`,
       back: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -34 Q2 -30 -18 -34 Z"/><path d="M2 -66 V-34" stroke="${d}" stroke-opacity=".35" stroke-width="1"/>` },
-    samue: { sleeve: 'long', cuff: true,   // 作務衣 (居酒屋の大将): a crossed collar in a darker band, a tie at the side
-      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/><path ${F(dk(c, 0.7), 1.3)} d="M-9 -66 L11 -38 L15 -39.4 L-5 -66 Z"/><path d="M13 -66 L3 -53" fill="none" stroke="${dk(c, 0.7)}" stroke-width="1.6"/><path d="M14 -40 l5 3 M14 -40 l3 6" fill="none" stroke="${dk(c, 0.6)}" stroke-width="1.2" stroke-linecap="round"/>`,
+    samue: { sleeve: 'long', cuff: true, cross: true,   // 作務衣 (居酒屋の大将): a crossed collar in a darker band, a tie at the side
+      front: (F, c, d, X) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/>${X(`<path ${F(dk(c, 0.7), 1.3)} d="M13 -66 L-7 -38 L-11 -39.4 L9 -66 Z"/><path d="M-9 -66 L1 -53" fill="none" stroke="${dk(c, 0.7)}" stroke-width="1.6"/><path d="M-10 -40 l-5 3 M-10 -40 l-3 6" fill="none" stroke="${dk(c, 0.6)}" stroke-width="1.2" stroke-linecap="round"/>`)}`,
       collar: (F, c) => `<path ${F(dk(c, 0.7), 1.6)} d="M-7 -67 L2 -58 L11 -67 L8.4 -67 L2 -61 L-4.4 -67 Z"/>`,
       back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/><path d="M2 -66 V-29" stroke="${d}" stroke-opacity=".4" stroke-width="1"/>` },
     kappogi: { sleeve: 'long', cuff: true, light: true,   // 割烹着 (食堂のおかみ): a white smock past the hips, a round neck, two pockets
@@ -789,15 +790,19 @@ const HERO = (() => {
     const flat = (h) => `style="fill:${C(h)};stroke:${C(h)};stroke-width:1.6px;stroke-linejoin:round"`;
     const hw = flat(hc), hs = `style="stroke:${C(dk(hc, 0.7))}"`, hair = (draw) => draw(hw, flat(dk(hc, 0.8)));
     const top = lk.top, topDk = dk(lk.top, 0.84), pants = lk.bottom, skin = lk.skin, tp = TOPS[lk.topStyle], bt = tp.long ? ROBE_LEGS : BOTTOMS[lk.bottomStyle], full = FULL[wear.head];
-    // a long robe drawn as two (2026-11-25): above the obi, and below it (robe-hem: gathered up as he kneels or sits — CSS), the two a
+    // a long robe drawn as two (2026-11-25): above the obi, and below it (h-hem: gathered up as he kneels or sits — CSS), the two a
     // hair over each other where they meet (no seam)
     const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath>${tp.long ? `<clipPath id="ru${n}" clipPathUnits="userSpaceOnUse"><rect x="-80" y="-230" width="160" height="200.6"/></clipPath><clipPath id="rh${n}" clipPathUnits="userSpaceOnUse"><rect x="-80" y="-30.6" width="160" height="60"/></clipPath>` : ''}</defs>`;
-    const robe = (d) => (tp.long ? `<g clip-path="url(#ru${n})">${d}</g><g class="robe-hem"><g clip-path="url(#rh${n})">${d}</g></g>` : d);
+    const robe = (d) => (tp.long ? `<g clip-path="url(#ru${n})">${d}</g><g class="h-hem"><g clip-path="url(#rh${n})">${d}</g></g>` : d);
     const pd = dk(pants, 0.78), leg = (cls, x, b) => `<g class="leg ${cls}">${bt.leg(L, pants, x, skin)}${bt.foot ? bt.foot(L, pants, x, pd) : (SHOES[lk.shoeStyle] || SHOES.sneaker)(L, lk.shoe, x, skin, b)}</g>`;
     const legs = (t, b) => `<g class="legs">${bt.hips ? bt.hips(L, pants) : ''}${leg('l', -7 + t * 0.2, b)}${leg('r', 11 - t * 0.4, b)}</g>${bt.over ? bt.over(L, pants, pd) : ''}`;   // a skirt hangs over both legs, not with them; b: from behind
     const atop = ON_HAIR.has(wear.face);   // the face's thing goes over the hair and the hat (the fox mask)
     const arms = (t) => arm(L, tp, top, topDk, skin, 'l', -1, t * 0.3) + arm(L, tp, top, topDk, skin, 'r', 1, -t * 0.5);
-    const fd = dk(top, 0.74), whole = full && full(L, top, fd), collar = tp.collar ? tp.collar(L, top, topDk) : '';   // a whole head: the hero's own, hair and face things give way
+    // a crossed front (cross: the yukata, the kimono, the 白衣, the 作務衣, the 甚平; fix round 1, ruling 6) drawn 右前 — and again mirrored
+    // (h-cross-m), shown instead under .flip: the figure turned the other way by a mirror would carry its crossing with it, 左前, as the
+    // dead are dressed; mirrored back, it reads 右前 whichever way he faces (X: its crossing's lines and its collar)
+    const X = tp.cross ? (m) => `<g class="h-cross">${m}</g><g class="h-cross-m" transform="matrix(-1 0 0 1 4 0)">${m}</g>` : (m) => m;
+    const fd = dk(top, 0.74), whole = full && full(L, top, fd), collar = tp.collar ? X(tp.collar(L, top, topDk)) : '';   // a whole head: the hero's own, hair and face things give way
     const onHead = (s) => `<g class="head"><g transform="${HEAD}">${s}</g></g>`;   // the head's things in the head's units, set on the body
     // a little turned (test, 2026-11-09: 微微側身), to the viewer's right — the other way is it mirrored (.flip): the head's layers
     // slide apart (the face's things most, the fringe less, the back hair the other way, so more of it shows behind), the far eye
@@ -811,7 +816,7 @@ const HERO = (() => {
       ex = EX; return s;
     };
     const shade = (t) => by(t * 0.45, `<g opacity=".13" transform="translate(0 2.4)" clip-path="url(#fc${n})">${hairOf.front('fill="#3a2016"')}</g>`);   // the fringe's shadow on the forehead
-    const front = (t) => `${onHead(whole ? '' : by(-t * 0.5, hair(hairOf.back)))}${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs(t)}${narrow(t, robe(tp.front(L, top, topDk)) + W('body', 0) + W('back', 2) + W('neck', 0))}${arms(t)}${narrow(t, collar)}
+    const front = (t) => `${onHead(whole ? '' : by(-t * 0.5, hair(hairOf.back)))}${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs(t)}${narrow(t, robe(tp.front(L, top, topDk, X)) + W('body', 0) + W('back', 2) + W('neck', 0))}${arms(t)}${narrow(t, collar)}
       ${onHead(whole ? by(t * 0.4, whole[0]) : `${face(t)}${shade(t)}${by(t * 0.3, hairOf.ear(L(skin, 2.4)))}${by(t * 0.45, hair(hairOf.front) + hairOf.over() + hairOf.deco(hs, hw) + W('head', 0) + (atop ? W('face', 0) : ''))}`)}`;   // the arms under the head: a raised hand never covers the face (the user), it goes out to the side
     // from behind, turned the same way: the hair slides left over the head, so a sliver of cheek shows on the right
     const back = (t) => `${legs(-t, true)}${arms(-t)}${narrow(-t, robe(tp.back(L, top, topDk)) + W('body', 1) + (tp.over ? tp.over(L, top, topDk) : ''))}${bt.tail ? `<g class="tail t1">${bt.tail(L, pants, pd, 1)}</g>` : ''}${narrow(-t, W('neck', 1) + W('back', 1))}

@@ -803,6 +803,24 @@ def test_the_menu_tags_take_no_tap_over_gensan(b):
           return JSON.stringify(Object.assign(hits, { rect: [r.left, r.top, r.width, r.height].map(Math.round), inView: r.right > 0 && r.left < innerWidth })); })()""")])[-1])
     assert all(x['menu'] == 0 and x['inView'] and x['gen'] >= 17 for x in out.values()), out
 
+# 2026-11-25 (the review of 2bd06dd, Critical 1): a passenger sat down in a room faces as the seat says, as the town's people do —
+# the 居酒屋's stools their backs to us ('bench back turn'), its low table's cushions turned to the room's left ('kneel turn flip'):
+# each seated passenger's back, turn and flip exactly the seat's (a comment had swallowed them: every one kept the facing of the walk)
+def test_seated_in_a_room_each_faces_as_the_seat_says(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ const t = TOWN.CRUISE.TRIPS.find((x) => x.id === 't2'), k = t.stops.findIndex((s) => s.id === 'yakitori');   // 開動: sat down
+      state.cruise.on = { trip: 't2', step: k, stop: 'yakitori', place: 'izakaya', score: {} }; saveState(); await go('izakaya'); await wait(500);
+      const seats = (PLACE_USE.izakaya || []).filter((q) => q.kind === 'seat').flatMap((q) => q.seats);
+      const XY = (e) => { const m = /translate\\(([-\\d.]+)px,\\s*([-\\d.]+)px\\)/.exec(e.style.transform); return [+m[1], -m[2]]; };
+      const sat = [...document.querySelectorAll('#view .tourist.bench, #view .tourist.kneel')].map((e) => { const [X, Y] = XY(e);
+        const q = seats.find((s) => { const [sx, sy] = isoXY(s[0], s[1], s[2]); return Math.hypot(sx - X, sy - Y) < 1.5; });
+        return { who: e.dataset.who, how: q ? q[3] : null, has: ['back', 'turn', 'flip'].filter((c) => e.classList.contains(c)) }; });
+      return JSON.stringify({ place: y() && y().dataset.place, sat }); })()"""))
+    sat = r['sat']
+    assert r['place'] == 'izakaya' and len(sat) >= 4 and all(x['how'] for x in sat), r   # each on one of the room's seats
+    assert [x for x in sat if x['has'] != [c for c in ('back', 'turn', 'flip') if c in x['how'].split()]] == [], r   # each facing as its seat says
+    hows = ' '.join(x['how'] for x in sat).split()
+    assert 'back' in hows and 'turn' in hows and 'flip' in hows, r   # a stool and a cushion both taken: each kind checked
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":

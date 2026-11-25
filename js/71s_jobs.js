@@ -124,16 +124,27 @@ const JOBS = (() => {
   const custHtml = (who) => `<span class="kr-face">${TOWNEV.face(who)}</span><i class="wk-emo"></i><p class="wk-bub"></p><span class="wk-pat"><i></i></span>`;
   // a bubble kept, for one customer (or task), as tall as the most it will show (2026-11-25, the user: 「新的打工回答會跑版，版面會因為回覆
   // 導致版面向上擠壓」): their words shown on a reply, a miss or as they go, a word after — never growing it, so nothing under it moves and a
-  // short phone's card never scrolls itself for it mid-customer. htmls: what it may hold, each measured in a hidden copy of it the same
-  // width; its min-height the tallest (none: let go). The onsen's four jobs call it as each customer (each task) comes
-  function hold(b, htmls) {
-    if (!b || !b.isConnected) return;
-    b.style.minHeight = ''; const w = b.getBoundingClientRect().width; if (!w || !htmls || !htmls.length) return;
+  // short phone's card never scrolls itself for it mid-customer. htmls: what it may hold — or a function giving it, asked each time it is
+  // measured (the screen's height read then, not once); each measured in a hidden copy of it the same width; its min-height the tallest
+  // (none: let go). The onsen's four jobs call it as each customer (each task) comes. Measured again, the customer's own, on a resize or
+  // a turn of the phone, and once the web fonts (Noto Sans JP/TC, display=swap) are in (fix round 1, the review's Minor 3)
+  const held = new Map();   // each element held → what it may hold (its customer's, the latest)
+  function measure(b, src) {
+    b.style.minHeight = ''; const list = typeof src === 'function' ? src() : src, w = b.getBoundingClientRect().width; if (!w || !list || !list.length) return;
     const c = b.cloneNode(false); c.style.cssText = `position:absolute;left:0;top:0;width:${w}px;min-height:0;visibility:hidden;pointer-events:none`;
     b.parentNode.appendChild(c); let h = b.getBoundingClientRect().height;
-    htmls.forEach((x) => { c.innerHTML = x; h = Math.max(h, c.getBoundingClientRect().height); });
+    list.forEach((x) => { c.innerHTML = x; h = Math.max(h, c.getBoundingClientRect().height); });
     c.remove(); b.style.minHeight = `${Math.ceil(h)}px`;
   }
+  function hold(b, htmls) {
+    if (!b || !b.isConnected) return;
+    held.forEach((_, e) => { if (!e.isConnected) held.delete(e); }); held.set(b, htmls); measure(b, htmls);
+    if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(rehold);
+  }
+  let reholdT = 0;
+  function rehold() { clearTimeout(reholdT); reholdT = setTimeout(() => held.forEach((src, b) => { if (b.isConnected) measure(b, src); else held.delete(b); }), 120); }
+  window.addEventListener('resize', rehold); window.addEventListener('orientationchange', rehold);
+  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', rehold);   // a later subset of a font in (a glyph not seen before)
   // ---- a desk (2026-11-24, ruling 28): the flow 原田's window, the 観光案内所 and the フロント share — one customer after another: the
   // hero's greeting (after any line still being said), their words heard first (……; 🔊 again: the clock held till they are said in full),
   // then each step of what they came for — a reply picked, or the job's own taps (a station on the chart, a key on the board: D.right,

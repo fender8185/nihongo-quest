@@ -79,7 +79,7 @@ const RIDE = (() => {
       const w = q('.kb-wallet'); if (w) w.innerHTML = `${yenIcon()}${yenStr(yenBalance())} 円`;
       if (!t) { s.innerHTML = ''; return; }
       const mine = t.from === here && t.to;
-      const tip = !mine ? `<p class="kb-tip">${t.from === here ? '這張是以前的票，現在沒有它能搭的車了' : `這張是${esc(EKI.name(t.from))}出發的票，在這裡不能搭`}：按「払いもどし」退票，錢全部退回錢包，就能再買。</p>`
+      const tip = !mine ? `<p class="kb-tip">${t.from === here ? '這張是以前的票，現在已經沒有車可以搭了' : `這張是${esc(EKI.name(t.from))}出發的票，在這裡不能搭`}：按「払いもどし」退票，錢全部退回錢包，就能再買。</p>`
         : here === 'minato' ? '<p class="kb-tip">從剪票口上月台：1番線（往白鷺）的電車已經停著等你，上車就好，到白鷺換やまなみ線。</p>' : '';
       s.innerHTML = `<div class="kb-ticket" data-from="${t.from}" data-to="${t.to}">${faceOf(t)}</div>${tip}<div class="os-rides">${mine && here !== 'minato' ? rideBtn : ''}${backBtn()}</div>`;
     }
@@ -112,7 +112,7 @@ const RIDE = (() => {
   function board(yard, track, from = 'minato') {
     const t = ticket();
     if (!t || t.from !== from || !t.to) {
-      toast(!t ? (from === 'minato' ? '要先買票：車站門口的紅色券売機。' : '要先在券売機買票。') : t.from !== from ? `手上的票是從${EKI.name(t.from)}出發的（${named(t)}），在這裡不能搭。可以在券売機退票（払いもどし）。` : '這張是以前的票，現在沒有它能搭的車了：在券売機退票（払いもどし）就能再買。', 4200);
+      toast(!t ? (from === 'minato' ? '要先買票：車站門口的紅色券売機。' : '要先在券売機買票。') : t.from !== from ? `手上的票是從${EKI.name(t.from)}出發的（${named(t)}），在這裡不能搭。可以在券売機退票（払いもどし）。` : '這張是以前的票，現在已經沒有車可以搭了：在券売機退票（払いもどし）就能再買。', 4200);
       if (yard) yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), 'きっぷ…'); return false;
     }
     go(from, t.to); if (from === 'minato' && typeof PLATFORM === 'object') PLATFORM.away();   // みなと: his train away with him
