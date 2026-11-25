@@ -146,10 +146,12 @@ const NAKAI_RUN = (() => {
     const word = ([ja, zh], cls = '') => { if (!el('.nk-talk')) return Promise.resolve(); talk('chiyo', `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`, cls); return speakAs('chiyo', ja); };
     const sayWord = (l, cls) => JOBS.queue(() => word(l, cls), box);   // after any line being said (ruling 27)
     const me = ([ja, zh]) => { if (!el('.nk-talk')) return Promise.resolve(); talk('hero', `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`, 'nk-me'); return speakAs('hero', ja); };
-    const optsHtml = (task, off) => task.opts.map(([ja], i) => `<button type="button" class="btn nk-opt" data-o="${i}" lang="ja"${off ? ' disabled' : ''}><span>${ruby(ja)}</span></button>`).join('');
-    function opts(on, off) {
+    // later: not yet to be picked — each in its place, disabled, its words not yet shown (……) till 千代 asks (task 2, ruling 18: they
+    // showed from the room's entry, before she named the room), as the おみやげ屋's
+    const optsHtml = (task, later) => task.opts.map(([ja], i) => `<button type="button" class="btn nk-opt${later ? ' nk-later' : ''}" data-o="${i}" lang="ja"${later ? ' disabled' : ''}><span>${ruby(ja)}</span></button>`).join('');
+    function opts(on, later) {
       const o = el('.nk-opts'); if (!o) return;
-      o.innerHTML = on ? optsHtml(t, off) : '';
+      o.innerHTML = on ? optsHtml(t, later) : '';
     }
     // a task begun (fix round 2, ruling 8): its replies and the talk row held for the whole task, as tall as the most they will show —
     // 千代's word to each wrong reply with its why, or to a wrong tap, her 「いそいで！」 and her 「ありがとう」s; the hero's right reply (its 中文
@@ -285,7 +287,8 @@ const NAKAI_RUN = (() => {
     }
     const guestOff = () => { const c = el('.cls-card'); if (c) c.classList.remove('nk-guest'); };
     // a room's check laid out as the room comes, before 千代 says which room it is (fix round 3: laid out only after it, the room grew by
-    // up to 67 px under her word at 390×664 as the last guest's taller replies gave way to hers) — its replies not yet to be tapped
+    // up to 67 px under her word at 390×664 as the last guest's taller replies gave way to hers) — its replies not yet to be tapped, their
+    // words not yet shown (……: task 2) till she asks
     let laid = null;
     function lay(task) { t = task; miss = 0; hint = false; guestOff(); who('chiyo'); bub(false); opts(true, true); holdTask(); laid = task; }
     async function check(task) {

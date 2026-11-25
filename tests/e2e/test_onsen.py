@@ -1,7 +1,8 @@
 """2026-11-23 湯の花温泉 (docs/superpowers/specs/2026-11-23-onsen-work-design.md): the hot-spring town reached by train — やまなみ線 from 白鷺
 (森下, 湯の花), the ride with a change at 白鷺, 湯の花駅前 (its 足湯, 観光案内所, the way home through the station's 改札)."""
-import json, os, subprocess, sys, time
+import asyncio, json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
+import websockets
 from cdp import Browser
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PORT = 8836
@@ -1164,8 +1165,8 @@ def test_the_annai_card_fits_a_phone(b):
                   if ('""" + case + """' === 'right') { pick(t.opts.findIndex((o) => o[2])); await wait(1100); }
                   else { const w = t.opts.map((o, i) => (o[2] ? -1 : i)).filter((i) => i >= 0); pick(w[0]); await wait(300); pick(w[1]); await wait(500); }
                   const c = document.querySelector('.wk-annai .cls-card'), talk = c.querySelector('.an-talk'), shown = talk.querySelector(talk.dataset.who === 'me' ? '.wk-me' : '.wk-say');
-                  const cr = c.getBoundingClientRect(), top = cr.top + c.clientTop, sr = shown.getBoundingClientRect(), tall = innerHeight > 700;
-                  const out = { seed: Boolean(seed), even, on: sr.top >= top - 1 && sr.bottom <= top + c.clientHeight + 1 && (!tall || (c.scrollTop === 0 && c.scrollHeight <= c.clientHeight + 1)), text: shown.textContent.length > 0,
+                  const cr = c.getBoundingClientRect(), top = cr.top + c.clientTop, sr = shown.getBoundingClientRect(), tall = innerHeight > 700, under = Math.max(top, c.querySelector('.wk-head').getBoundingClientRect().bottom);   // in sight: under the sticky header (task 2, ruling 17)
+                  const out = { seed: Boolean(seed), even, on: sr.top >= under - 1 && sr.bottom <= top + c.clientHeight + 1 && (!tall || (c.scrollTop === 0 && c.scrollHeight <= c.clientHeight + 1)), text: shown.textContent.length > 0,
                     zh: '""" + case + """' !== 'right' || Boolean(talk.querySelector('.wk-me span')) };
                   if (!tall && '""" + case + """' === 'right') { out.scrolled = c.scrollTop > 0 || c.scrollHeight <= c.clientHeight + 1;   // scrolled, if it had to
                      await watch(() => ANNAI_RUN.now().k === fi + 1 && ANNAI_RUN.now().phase === 'ask', 12000); await wait(200); out.top = c.scrollTop === 0; }
@@ -1471,7 +1472,7 @@ def test_the_nakai_card_fits_a_phone(b):
           state.work.res[dateStr(TOWNEV.today())] = { place: 'nakai', done: g0, score: Object.fromEntries(Array.from({ length: g0 }, (_, k) => [k, 0])), keep: { seed } }; saveState();   // a first shift: the hero's 中文 shown
           await at('ryokan'); WORK.start(yard(), 'nakai'); await watch(() => nk() && nk().k === g0 && ready(), 12000); await wait(400);
           const c = document.querySelector('.wk-nakai .cls-card'), R = (e) => e.getBoundingClientRect();
-          const fit = () => { const q = R(c), top = q.top + c.clientTop, bot = top + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;
+          const fit = () => { const q = R(c), top = Math.max(q.top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = q.top + c.clientTop + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;   // in sight: under the sticky header (task 2, ruling 17)
             return [c.scrollHeight <= c.clientHeight + 1, [...c.querySelectorAll('.nk-opt')].every(inv), inv(c.querySelector('.nk-talk')), inv(c.querySelector('.nk-bub'))]; };
           const out = { n: c.querySelectorAll('.nk-opt').length, tall: Math.max(...[...c.querySelectorAll('.nk-opt')].map((o) => Math.round(R(o).height))), ask: fit() };
           opt(false).click(); await wait(500); out.wrong = fit();
@@ -1490,6 +1491,25 @@ def test_the_nakai_card_fits_a_phone(b):
       await solve(); await watch(() => nk() && nk().k === g0 + 1 && ready(), 12000); await wait(300); const check = h();
       CLASS.close(); return JSON.stringify({ guest, check }); })()""")])[-1])
     assert big['guest'] > 300 and big['check'] > 300, big   # at a guest as at a check
+
+# task 2, ruling 18 (review-4's Minor 3): a room's check is laid out as 千代 comes into the room, before she names it (fix round 3) — its
+# replies in their places, not yet to be tapped and their words not yet shown (……, as the おみやげ屋's) till she asks; then their words, and
+# nothing moving as they come in: the shift's first room (after her start word) and a later one, at 390×664
+def test_nakai_check_replies_wait_for_her_question(b):
+    r = json.loads(b.run([("metrics", (390, 664)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + NK + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm8';
+      window.speakAs = () => new Promise((ok) => setTimeout(ok, 800)); const sh = NAKAI.make(m8, 3), k2 = sh.tasks.findIndex((t, i) => i > 0 && t.kind === 'check');
+      const look = () => { const bs = [...document.querySelectorAll('.wk-nakai .nk-opt')];
+        return { phase: nk().phase, n: bs.length, later: bs.filter((x) => x.classList.contains('nk-later') && x.disabled && getComputedStyle(x.querySelector('span')).visibility === 'hidden' && getComputedStyle(x, '::after').content.includes('……')).length,
+          words: bs.filter((x) => !x.classList.contains('nk-later') && !x.disabled && getComputedStyle(x.querySelector('span')).visibility === 'visible').length, rects: bs.map((x) => { const q = x.getBoundingClientRect(); return [Math.round(q.top * 10) / 10, Math.round(q.height * 10) / 10]; }) }; };
+      const one = async (k) => { if (k) shiftAt(3, k, Object.fromEntries(Array.from({ length: k }, (_, i) => [i, 0]))); else { state.work.res[dateStr(TOWNEV.today())] = { place: 'nakai', done: 0, score: {}, keep: { seed: 3 } }; saveState(); }
+        await at('ryokan'); WORK.start(yard(), 'nakai'); for (let i = 0; i < 60 && !document.querySelector('.wk-nakai'); i++) { click('.talk'); await wait(150); }
+        await watch(() => nk() && nk().k === k && nk().task && nk().task.kind === 'check' && nk().phase !== 'ask' && document.querySelector('.wk-nakai .nk-opt'), 15000);
+        await watch(() => !document.querySelector('.cls.wk-nakai').getAnimations().some((a) => a.playState === 'running'), 3000); await wait(100); const before = look();   // she names the room (the card's own opening over: a shift taken up opens at the check)
+        await watch(() => nk().phase === 'ask', 8000); await wait(100); const asked = look(); CLASS.close(); await wait(300); return { k, before, asked }; };
+      return JSON.stringify([await one(0), await one(k2)]); })()""")], timeout=120)[-1])
+    for x in r:
+        assert x['before']['phase'] != 'ask' and x['before']['n'] >= 2 and x['before']['later'] == x['before']['n'] and x['before']['words'] == 0, x   # in their places, ……, not to be tapped
+        assert x['asked']['words'] == x['asked']['n'] == x['before']['n'] and x['asked']['later'] == 0 and x['asked']['rects'] == x['before']['rects'], x   # their words in; nothing moved
 
 # I-1, ruling 33 (fix round 1): over 6,000 shifts every room's guest says something true of the room as it stands when they come in —
 # with nothing done (the countdown beat the hero), with everything done, with some done — and never of a thing whose instruction this
@@ -1836,6 +1856,39 @@ def test_miyage_a_good_tapped_off_the_tray(b):
     assert r['one'] == [['tenugui'], False, True], r   # the one tapped off, the other stays
     assert r['two'] == [], r   # past the chips: the nearest
 
+# task 2, ruling 16 (review-4's out of scope 1: 金田's tray wrapped at his 5th good — at 390×664 the replies, the talk row and the card's
+# foot dropped 28 px, came back at the 6th, dropped 14 px at the 7th): the tray keeps one height through a customer at any count of goods
+# the player can put on it — at most every good on the shelves, nine (a good tapped again goes back) — at every width from 360 to 1280 and
+# any height. 金田 at his turn (seed 13), the screen turned through six sizes: the goods put one at a time up to all nine, one taken back by
+# a tap on the tray where it lies, one on its shelf; after each, the tray 46 px tall and where it was, and his face and bubble, the front,
+# どうぞ, the replies, the talk row and the shelves where they were (0.5 px); the chips one row inside the tray, 24 px or more, each at least
+# half in sight under the next (the one put last whole, on top)
+def test_the_miyage_tray_keeps_one_height(b):
+    sizes = ((360, 640), (375, 553), (390, 664), (414, 896), (768, 1024), (1280, 800))
+    begin = "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11'; window.speakAs = () => Promise.resolve();
+      JOBS.pat.scale = 100; const k = where(13, (c) => c.kind === 'all'); await begin(13, k); return my().c.kind; })()"""   # his patience long enough for six sizes
+    sweep = """(async () => { const wait = (ms) => new Promise((ok) => setTimeout(ok, ms)), my = () => MIYAGE_RUN.now(), good = (g) => document.querySelector(`.wk-miyage .om-good[data-g="${g}"]`);
+      const c = document.querySelector('.wk-miyage .cls-card'), q = (s) => c.querySelector(s), R = (e) => e.getBoundingClientRect(), t = q('.om-tray');
+      for (const g of my().tray.slice()) { good(g).click(); await wait(60); } await wait(500);   // the size before's goods back; the screen turned: the holds measured again
+      const PARTS = ['.wk-cust .kr-face', '.wk-cust .wk-bub', '.om-front', '.om-tray', '.om-give', '.om-opts', '.om-talk', '.om-shelves'];
+      const tops = () => PARTS.map((s) => { const e = q(s); return e ? [R(e).top, R(e).bottom] : null; }), base = tops(), out = { moved: [], tall: [], chips: [], most: 0, backs: [] };
+      const look = (what, lying = true) => { tops().forEach((x, i) => { if (x && base[i] && Math.max(Math.abs(x[0] - base[i][0]), Math.abs(x[1] - base[i][1])) > 0.5) out.moved.push([what, PARTS[i], base[i].map(Math.round), x.map(Math.round)]); });
+        const tr = R(t), ch = [...t.querySelectorAll('.om-chip')].map(R); out.tall.push(Math.round(tr.height * 10) / 10); out.most = Math.max(out.most, ch.length);
+        if (ch.length && lying) out.chips.push([ch.length, Math.round(ch[0].width * 10) / 10, new Set(ch.map((r) => Math.round(r.top))).size, ch.every((r) => r.left >= tr.left + 2 && r.right <= tr.right - 2 && r.top >= tr.top && r.bottom <= tr.bottom),
+          Math.round(Math.min(...ch.map((r, i) => (i < ch.length - 1 ? Math.min(r.right, ch[i + 1].left) - r.left : r.width) / r.width)) * 100) / 100]); };   // how many, their size, rows, inside, the least part of one in sight
+      const all = MIYAGE.goods().map((g) => g[0]), want = MIYAGE.answer(my().c), extra = all.find((g) => !want.includes(g));
+      const still = async () => { await wait(40); await Promise.all(t.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {}))); };   // a good put drops in (omIn): measured once it lies there
+      look('none'); for (const g of want.concat(extra)) { good(g).click(); look('+' + g, false); await still(); look('+' + g); }   // the layout at once, the chips once still
+      const r = R(t.querySelector(`.om-chip[data-t="${extra}"]`)); t.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: r.right - 4, clientY: r.top + r.height / 2 })); await still();
+      out.backs.push(!my().tray.includes(extra) && my().tray.length === all.length - 1); look('the tray took one back');
+      good(want[0]).click(); await still(); out.backs.push(!my().tray.includes(want[0])); look('the shelf took one back');
+      return JSON.stringify(Object.assign(out, { size: [innerWidth, innerHeight], goods: all.length })); })()"""
+    r = b.run([("metrics", sizes[0]), ("nav", URL), ("wait", READY), ("eval", begin)] + [x for wh in sizes for x in (("metrics", wh), ("eval", sweep))], timeout=120)
+    assert r[0] == 'all', r[0]
+    for x in map(json.loads, r[1:]):
+        assert x['goods'] == 9 and x['most'] == 9 and x['backs'] == [True, True] and x['moved'] == [] and set(x['tall']) == {46}, x   # every good on it at once: nine
+        assert all(rows == 1 and inside and size >= 23.9 and seen >= 0.5 for _, size, rows, inside, seen in x['chips']), x
+
 # fix round 1, M-1: each step its own clock and a fresh mood — a customer kept waiting through their pick (💦) starts their favour calm
 def test_miyage_a_second_step_starts_calm(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
@@ -1936,7 +1989,7 @@ def test_the_miyage_card_fits_a_phone(b):
             pieces: [...c.querySelectorAll('.om-good[data-g^="manju"] .om-tag b')].map((e) => { const rb = e.querySelector('ruby'); return rb ? [rb.firstChild.textContent, (rb.querySelector('rt') || {}).textContent] : [e.textContent]; }),
             bath: ['bath', 'manju12', 'manju6'].map((id) => { const g = c.querySelector(`.om-good[data-g="${id}"]`), t = R(g.querySelector('.om-tag')), n = R(g.querySelector('.om-tag rt')); return n.left >= t.left - 0.5 && n.right <= t.right + 0.5; }) };   // 入浴剤, and the tightest: じゅうにこいり (parked 6)
           put(MIYAGE.answer(my().c)); await wait(60); give(); await watch(() => my().phase === 'reply' && ready(), 8000); await wait(300);
-          const fit = () => { const qq = R(c), top = qq.top + c.clientTop, bot = top + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;
+          const fit = () => { const qq = R(c), top = Math.max(qq.top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = qq.top + c.clientTop + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;   // in sight: under the sticky header (task 2, ruling 17)
             const tapAt = (e) => { const r = R(e), x = r.left + r.width / 2, y = r.top + r.height / 2; if (y < Math.max(top, R(c.querySelector('.wk-head')).bottom) || y > bot) return false; const h = document.elementFromPoint(x, y); return Boolean(h && (h === e || e.contains(h))); };
             return [[...c.querySelectorAll('.om-opt')].every(inv), (c.scrollHeight - c.clientHeight > 1 ? tapAt : inv)(c.querySelector('.om-talk')), inv(c.querySelector('.wk-cust .wk-bub'))]; };   // the talk row whole where the card holds it all (ruling 13)
           const ask = fit(), btns2 = btns(); const w = opt(false); w.click(); await wait(500); const wrong = fit(); opt(true).click(); await wait(900); const right = fit();
@@ -1957,7 +2010,7 @@ def test_the_miyage_card_fits_a_phone(b):
           await at('yudori'); WORK.start(yard(), 'miyage'); for (let i = 0; i < 40 && !document.querySelector('.wk-miyage'); i++) { click('.talk'); await wait(120); }
           await watch(() => my() && my().k === 0 && ready(), 15000); await wait(200);
           put(['jam']); give(); await watch(() => ready(), 4000); await wait(200); put(['kokeshi']); give(); await watch(() => ready(), 4000); await wait(400);
-          const c = document.querySelector('.wk-miyage .cls-card'), R = (e) => e.getBoundingClientRect(), q = R(c), top = q.top + c.clientTop, bot = top + c.clientHeight, inv = (e) => R(e).top >= top - 1 && R(e).bottom <= bot + 1;
+          const c = document.querySelector('.wk-miyage .cls-card'), R = (e) => e.getBoundingClientRect(), q = R(c), top = Math.max(q.top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = q.top + c.clientTop + c.clientHeight, inv = (e) => R(e).top >= top - 1 && R(e).bottom <= bot + 1;
           const out = { open: Boolean(c.querySelector('.wk-bub.wk-open')), lit: c.querySelectorAll('.om-good.wk-hint').length, goods: [...c.querySelectorAll('.om-good')].every(inv), bub: inv(c.querySelector('.wk-cust .wk-bub')), talk: inv(c.querySelector('.om-talk')), miss: my().miss };
           CLASS.close(); return JSON.stringify(out); })()""")])[-1])
     assert all(x == {'open': True, 'lit': 2, 'goods': True, 'bub': True, 'talk': True, 'miss': 2} for x in reach.values()), reach
@@ -2249,7 +2302,7 @@ def test_the_front_card_fits_a_phone(b):
           clock(false); state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: k, score: upTo(k), keep: { seed, morning: false } }; saveState();   // a first shift: the hero's 中文 shown
           await at('ryokan'); WORK.start(yard(), 'front'); for (let i = 0; i < 40 && !fc(); i++) { click('.talk'); await wait(120); }
           await watch(() => fr() && fr().k === k && ready(), 12000); await wait(300);
-          const c = fc().querySelector('.cls-card'), R = (e) => e.getBoundingClientRect(), q = R(c), top = q.top + c.clientTop, bot = top + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;
+          const c = fc().querySelector('.cls-card'), R = (e) => e.getBoundingClientRect(), q = R(c), top = Math.max(q.top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = q.top + c.clientTop + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;   // in sight: under the sticky header (task 2, ruling 17)
           const btns = () => [...c.querySelectorAll('button')].filter((x) => x.offsetParent && !x.classList.contains('fr-out')).map((x) => [x.className, Math.round(R(x).width), Math.round(R(x).height)]).filter(([, ww, hh]) => ww < 40 || hh < 40);
           const txt = (e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
           const small = [...c.querySelectorAll('.fr-book *')].filter((e) => e.tagName !== 'RT' && txt(e) && parseFloat(getComputedStyle(e).fontSize) < 11).map((e) => e.className + ':' + e.textContent);
@@ -2591,6 +2644,21 @@ def test_the_mood_mark_stays_by_the_face_at_the_annai_and_the_miyage(b):
           const miyage = mark(document.querySelector('.wk-miyage')); CLASS.close(); return JSON.stringify({ annai, miyage }); })()""")])[-1])
     assert all(x == {'by': True, 'clear': True, 'tall': True} for v in out.values() for x in v.values()), out
 
+# task 2, ruling 18 (review-4's Minor 2): the おみやげ屋's customer kept waiting — their word popping up over them (JOBS.grr: again, cross)
+# while their words are not yet shown — whole inside the shop's front, which clips: under 700 px tall too, where the noren is 14 px (it
+# cut the word's top 4 px), on an iPhone and an SE, and on a tall screen; nothing moving for it
+def test_the_miyage_pop_up_word_is_whole(b):
+    out = {}
+    for w, h in ((390, 664), (375, 553), (390, 844)):
+        out[f'{w}x{h}'] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+          window.speakAs = () => Promise.resolve(); await begin(5, 0); await wait(200);
+          const c = document.querySelector('.wk-miyage .cls-card'), cu = c.querySelector('.wk-cust'), R = (e) => e.getBoundingClientRect(), PARTS = ['.wk-cust .kr-face', '.wk-cust .wk-bub', '.om-front', '.om-tray', '.om-opts', '.om-talk'];
+          const tops = () => PARTS.map((s) => { const e = c.querySelector(s); return e ? Math.round(R(e).top * 10) / 10 : null; }), t0 = tops();
+          JOBS.grr(cu, TOWN.WORK.say.waiter.cust.again[0]); await wait(700); const g = R(cu.querySelector('.wk-grr')), f = R(c.querySelector('.om-front'));
+          const o = { shut: !c.querySelector('.wk-bub.wk-open'), whole: g.top >= f.top && g.bottom <= f.bottom && g.left >= f.left && g.right <= f.right, room: Math.round((g.top - f.top) * 10) / 10, still: JSON.stringify(tops()) === JSON.stringify(t0) };
+          CLASS.close(); return JSON.stringify(o); })()""")])[-1])
+    assert all(x['shut'] and x['whole'] and x['still'] for x in out.values()), out
+
 # 2026-11-25 (the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」): in the onsen's four jobs a reply moves nothing — the card, what is read
 # (the board, the room, the shelves, the book), the customer's face and bubble, the replies and the talk row each keep their top from just
 # before a reply, watched every 50 ms until its line is up (right: the hero's line shown; wrong: the keeper's word and why — each said after
@@ -2652,72 +2720,97 @@ def test_a_reply_moves_nothing_in_the_onsen_jobs(b):
                     if r[moment]['moved'] or not r[moment]['said']: bad.append((job, 'first' if first else 'later', w, moment, r[moment]))
     assert bad == [], bad
 
-# fix rounds 2–3, rulings 8 and 12 (the user plays on an iPhone: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」): the onsen's four job
-# cards are columns no taller than the screen. Every customer of a first shift, in Safari on an iPhone (390×664) and on an SE (375×553):
-# a wrong reply, then the right one; the フロント's keys, the 仲居's things to set right and the おみやげ屋's goods, tray and どうぞ tapped at
-# their centres as a finger would (whatever is there takes the tap; the book or the shelves scrolled first, as the player would, should
-# they hide it). In the page, every painted frame (requestAnimationFrame) from each customer's draw till they leave — the last one till
-# the card shuts, its closing word said — the top and the foot of the card, its header and ✕, the reading block, the face, the bubble,
-# the replies and each reply, the talk row, and the job's own (the おみやげ屋's front and tray; the フロント's book and keys, as their desk
-# scrolls them) against the first frame: none moves more than 1 px (the face and the bubble as they leave aside), the card's scroll
-# never changes; the ✕ takes a tap in every frame; after each reply the bubble, the replies and the talk row take a tap at their centres
-# (390×664; on an SE what lies under the fold is the report's: IP_UNDER); every tap of a step's control lands; the shift's exact count
-IP_SET = {
-  'front': (10, FR + """ state.currentUnit = 'm15'; clock(false); state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: 0, score: {}, keep: { seed: 5, morning: false } }; saveState();
-    await at('ryokan'); WORK.start(yard(), 'front'); for (let i = 0; i < 60 && !document.querySelector('.wk-front'); i++) { click('.talk'); await wait(150); }
+# fix rounds 2–3 and task 2, rulings 8, 12 and 17 (the user plays on an iPhone: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」): the
+# onsen's four job cards are columns no taller than the screen. Whole first shifts in Safari on an iPhone (390×664) whose seeds between them
+# bring every kind of customer the job has — the kinds read from the job's own code as it runs (what its shifts bring over 300 seeds,
+# and the lists it keeps), so a kind added later fails here till a seed here brings it — and seed 5's on an SE (375×553): a wrong reply,
+# then the right one; the フロント's keys, the 仲居's things to set right, and the おみやげ屋's picks as a player makes them (a good not
+# wanted put on and taken back by a tap on the tray where it lies, the goods one at a time, that good again — every good on the tray for
+# 金田 — and taken back on its shelf, どうぞ). Every tap a real one (ip_drive: a trusted press and release) at the control's centre, once
+# that point is hit-tested to it (the book or the shelves scrolled first should they hide it, as the player would; on an SE a control
+# under the fold is reached by the player's own scroll of the card, noted). In the page from before the job opens, every painted frame
+# (requestAnimationFrame) from each customer's draw till they leave — the last one till the card shuts, its closing word said — the top
+# and the foot of the card, its header and ✕, the reading block, the face, the bubble, the replies and each reply, the talk row, and the
+# job's own (the おみやげ屋's front and tray; the フロント's book and keys, as their desk scrolls them) against the first frame: none moves
+# more than 1 px (the face and the bubble as they leave aside), the card's scroll never changes; the ✕ whole in every frame (its centre
+# and four points 2 px inside its round edge, on its diagonals, each take a tap); after each reply the bubble, the replies and the talk
+# row take a tap at their centres (390×664; on an SE what lies under the fold is the report's: IP_UNDER); every tap lands; each run's
+# exact count. IP_JOBS: job → (customers a shift, helpers, the 390×664 runs [(seed, morning)], its parts and steps, its first shift opened)
+IP_JOBS = {
+  'front': (10, FR, [(5, False), (14, False), (1, True)], """ const CARD = '.wk-front', READ = '.fr-desk', OPTS = '.fr-opts', OPT = '.fr-opt', TALK = '.fr-talk', BUB = '.wk-cust .wk-bub', FACE = '.wk-cust .kr-face', EXTRA = { lobby: '.fr-lobby', book: '.fr-book', board: '.fr-board' }, INNER = ['book', 'board'];
     const runNow = () => fr(), ask = () => ready() && fr().step !== 1 && Boolean(document.querySelector('.wk-front .fr-opt:not(:disabled)')), need = () => (ready() && fr().step === 1 ? 'key' : null);
-    const doStep = async () => [['key', tap(key(fr().task.room), '.fr-desk')]];
-    const CARD = '.wk-front', READ = '.fr-desk', OPTS = '.fr-opts', OPT = '.fr-opt', TALK = '.fr-talk', BUB = '.wk-cust .wk-bub', FACE = '.wk-cust .kr-face', EXTRA = { lobby: '.fr-lobby', book: '.fr-book', board: '.fr-board' }, INNER = ['book', 'board'];"""),
-  'annai': (10, """ const N = () => ANNAI_RUN.now(); state.currentUnit = 'm7'; saveState();
-    await at('onsen'); WORK.start(yard(), 'annai'); for (let i = 0; i < 60 && !document.querySelector('.wk-annai'); i++) { click('.talk'); await wait(150); }
-    const runNow = () => N(), ask = () => Boolean(N()) && N().phase === 'ask' && Boolean(document.querySelector('.wk-annai .an-opt:not(:disabled)')), need = () => null, doStep = async () => [];
+    const doStep = async () => [['key', await tap(key(fr().task.room), '.fr-desk')]];
+    const kindOf = (t) => t.fun || (t.bday ? 'bday' : t.kind === 'memo' ? 'memo:' + t.ask : t.kind);   // a book question by what it asks: tonight's shrimp, dinner's time
+    const KINDS = () => SEEDS.flatMap((s) => [false, true].flatMap((am) => FRONT.make(m15, am, s).tasks.map(kindOf))).concat(Object.keys(TOWN.ONSEN.front.fun));""",
+    """ state.currentUnit = 'm15'; clock(MORNING); state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: 0, score: {}, keep: { seed: SEED, morning: MORNING } }; saveState();
+    await at('ryokan'); WORK.start(yard(), 'front'); for (let i = 0; i < 60 && !document.querySelector('.wk-front'); i++) { click('.talk'); await wait(150); }"""),
+  'annai': (10, '', [(5, False), (6, False), (14, False)], """ const CARD = '.wk-annai', READ = '.an-board', OPTS = '.an-opts', OPT = '.an-opt', TALK = '.an-talk', BUB = '.wk-cust .wk-bub', FACE = '.wk-cust .kr-face', EXTRA = { glass: '.an-glass' }, INNER = [];
+    const N = () => ANNAI_RUN.now(), m7 = TOWNEV.unitIdx('m7'), runNow = () => N(), ask = () => Boolean(N()) && N().phase === 'ask' && Boolean(document.querySelector('.wk-annai .an-opt:not(:disabled)')), need = () => null, doStep = async () => [];
     const opt = (good) => document.querySelector(`.wk-annai .an-opt[data-o="${N().task.opts.findIndex((o) => (good ? o[2] : !o[2]))}"]`);
-    const CARD = '.wk-annai', READ = '.an-board', OPTS = '.an-opts', OPT = '.an-opt', TALK = '.an-talk', BUB = '.wk-cust .wk-bub', FACE = '.wk-cust .kr-face', EXTRA = { glass: '.an-glass' }, INNER = [];"""),
-  'nakai': (16, NK + """ state.currentUnit = 'm8'; state.work.res[dateStr(TOWNEV.today())] = { place: 'nakai', done: 0, score: {}, keep: { seed: 5 } }; saveState();
-    await at('ryokan'); WORK.start(yard(), 'nakai'); for (let i = 0; i < 60 && !document.querySelector('.wk-nakai'); i++) { click('.talk'); await wait(150); }
+    const kindOf = (t) => t.fun || t.kind, KINDS = () => SEEDS.flatMap((s) => ANNAI.make(m7, s).tasks.map(kindOf)).concat(ANNAI.FUN);""",
+    """ state.currentUnit = 'm7'; state.work.res[dateStr(TOWNEV.today())] = { place: 'annai', done: 0, score: {}, keep: { seed: SEED } }; saveState();
+    await at('onsen'); WORK.start(yard(), 'annai'); for (let i = 0; i < 60 && !document.querySelector('.wk-annai'); i++) { click('.talk'); await wait(150); }"""),
+  'nakai': (16, NK, [(3, False)],   # seed 3: the cat asleep in a room and 千代 finding a thing seen to, too
+    """ const CARD = '.wk-nakai', READ = '.nk-stage', OPTS = '.nk-opts', OPT = '.nk-opt', TALK = '.nk-talk', BUB = '.nk-bub', FACE = '.nk-task .kr-face', EXTRA = { top: '.nk-top' }, INNER = [];
     const runNow = () => nk(), ask = () => Boolean(nk()) && nk().phase === 'ask' && !nk().busy && Boolean(document.querySelector('.wk-nakai .nk-opt:not(:disabled)')), need = () => (Boolean(nk()) && nk().phase === 'do' && !nk().busy ? 'do' : null);
     const doStep = async () => { const n = nk(), [key] = n.task.target, many = Array.isArray(n.st[key]), i = many ? Math.max(0, empty(n, key)) : undefined;
-      return [['do ' + key, tap(document.querySelector(`.wk-nakai .nk-art [data-k="${key}"]` + (many ? `[data-i="${i}"]` : '')))]]; };
-    const CARD = '.wk-nakai', READ = '.nk-stage', OPTS = '.nk-opts', OPT = '.nk-opt', TALK = '.nk-talk', BUB = '.nk-bub', FACE = '.nk-task .kr-face', EXTRA = { top: '.nk-top' }, INNER = [];"""),
-  'miyage': (10, MY + """ state.currentUnit = 'm11'; state.work.res[dateStr(TOWNEV.today())] = { place: 'miyage', done: 0, score: {}, keep: { seed: 5 } }; saveState();
-    await at('yudori'); WORK.start(yard(), 'miyage'); for (let i = 0; i < 60 && !document.querySelector('.wk-miyage'); i++) { click('.talk'); await wait(150); }
+      return [['do ' + key, await tap(document.querySelector(`.wk-nakai .nk-art [data-k="${key}"]` + (many ? `[data-i="${i}"]` : '')))]]; };
+    const kindOf = (t) => t.kind, KINDS = () => SEEDS.flatMap((s) => NAKAI.make(m8, s).tasks.map(kindOf));""",
+    """ state.currentUnit = 'm8'; state.work.res[dateStr(TOWNEV.today())] = { place: 'nakai', done: 0, score: {}, keep: { seed: SEED } }; saveState();
+    await at('ryokan'); WORK.start(yard(), 'nakai'); for (let i = 0; i < 60 && !document.querySelector('.wk-nakai'); i++) { click('.talk'); await wait(150); }"""),
+  'miyage': (10, MY, [(13, False)], """ const CARD = '.wk-miyage', READ = '.om-shelves', OPTS = '.om-opts', OPT = '.om-opt', TALK = '.om-talk', BUB = '.wk-cust .wk-bub', FACE = '.wk-cust .kr-face', EXTRA = { front: '.om-front', tray: '.om-tray' }, INNER = [];
     const runNow = () => my(), ask = () => Boolean(my()) && my().phase === 'reply' && !my().busy && Boolean(document.querySelector('.wk-miyage .om-opt:not(:disabled)')), need = () => (Boolean(my()) && my().phase === 'pick' && !my().busy ? 'pick' : null);
-    const doStep = async () => { const out = [['tray', tap(document.querySelector('.wk-miyage .om-tray'))]]; await wait(80);   // the tray tapped at its centre first (a thing there taken back off: put again below)
-      const want = MIYAGE.answer(my().c);
-      for (const g of [...new Set([...my().tray, ...want])]) if (my().tray.includes(g) !== want.includes(g)) { out.push(['good ' + g, tap(good(g), '.om-shelves')]); await wait(80); }
-      out.push(['どうぞ', tap(document.querySelector('.wk-miyage .om-give'))]); return out; };
-    const CARD = '.wk-miyage', READ = '.om-shelves', OPTS = '.om-opts', OPT = '.om-opt', TALK = '.om-talk', BUB = '.wk-cust .wk-bub', FACE = '.wk-cust .kr-face', EXTRA = { front: '.om-front', tray: '.om-tray' }, INNER = [];""")}
+    const doStep = async () => { const out = [], n0 = my(), want = MIYAGE.answer(n0.c), extra = MIYAGE.goods().map((g) => g[0]).find((g) => !want.includes(g)), tr = document.querySelector('.wk-miyage .om-tray');
+      const put = async (g, what) => { out.push([what + ' ' + g, await tap(good(g), '.om-shelves')]); await wait(120); };
+      await put(extra, 'extra');
+      { const ch = tr.querySelector(`.om-chip[data-t="${extra}"]`), r = ch && RR(ch); out.push(['tray takes ' + extra, Boolean(r) && (await tapAt(tr, r.left + r.width / 2, r.top + r.height / 2)) && !my().tray.includes(extra)]); await wait(120); }
+      for (const g of want) await put(g, 'good');
+      await put(extra, 'extra again'); const most = my().tray.length; await put(extra, 'shelf takes');
+      PICKS.push([n0.k, n0.c.kind, most, my().tray.slice().sort().join() === want.slice().sort().join()]);   // the most on the tray at once; the tray as wanted at どうぞ
+      out.push(['どうぞ', await tap(document.querySelector('.wk-miyage .om-give'))]); return out; };
+    const kindOf = (c) => c.kind, KINDS = () => SEEDS.flatMap((s) => MIYAGE.make(m11, s).map(kindOf)).concat(MIYAGE.KINDS);""",
+    """ state.currentUnit = 'm11'; state.work.res[dateStr(TOWNEV.today())] = { place: 'miyage', done: 0, score: {}, keep: { seed: SEED } }; saveState();
+    await at('yudori'); WORK.start(yard(), 'miyage'); for (let i = 0; i < 60 && !document.querySelector('.wk-miyage'); i++) { click('.talk'); await wait(150); }""")}
 IP_UNDER = {}   # what lay under the fold on an SE after a reply (the report's), by job
-IP_KIT = """ const C = () => document.querySelector('.cls .cls-card'), RR = (e) => e.getBoundingClientRect(), shown = (e) => Boolean(e) && e.getClientRects().length > 0;
+IP_KIT = """ const SEEDS = Array.from({ length: 300 }, (_, i) => i + 1), PICKS = [], PLAYER = [];
+  const C = () => document.querySelector(CARD + ' .cls-card'), RR = (e) => e.getBoundingClientRect(), shown = (e) => Boolean(e) && e.getClientRects().length > 0;
   const win = () => { const c = C(), ct = RR(c).top + c.clientTop, h = c.querySelector('.wk-head'); return [Math.max(ct, h ? RR(h).bottom : ct, 0), Math.min(ct + c.clientHeight, innerHeight)]; };
   const hitOn = (e) => { if (!shown(e)) return false; const r = RR(e), x = r.left + r.width / 2, y = r.top + r.height / 2, [t, b] = win(); if (y < t || y > b) return false; const h = document.elementFromPoint(x, y); return Boolean(h && (h === e || e.contains(h))); };
-  const tap = (e, scroller) => { if (!shown(e)) return false; const c = C();
+  // a real tap: the test's driver (ip_drive) answers __nqTap with trusted input at the point — a press and a release (dy: a wheel turn)
+  let TAPS = 0; const TAPW = {}; window.__nqTapped = (id) => { const f = TAPW[id]; delete TAPW[id]; if (f) f(true); };
+  const press = (x, y, dy = 0) => new Promise((ok) => { const id = ++TAPS; TAPW[id] = ok; window.__nqTap(JSON.stringify({ id, x, y, dy })); });
+  const tapAt = async (e, x, y) => { const [t, b] = win(); if (y < t || y > b || x < 0 || x > innerWidth) return false; const h = document.elementFromPoint(x, y); if (!h || !(h === e || e.contains(h))) return false; await press(x, y); return true; };
+  const tap = async (e, scroller) => { if (!shown(e)) return false; const c = C();
     if (scroller) { const s = c.querySelector(scroller), [t, b] = win(), sr = RR(s), top = Math.max(t, sr.top), bot = Math.min(b, sr.bottom), r = RR(e); if (r.top < top) s.scrollTop -= top - r.top + 2; else if (r.bottom > bot) s.scrollTop += r.bottom - bot + 2; }
-    const r = RR(e), x = r.left + r.width / 2, y = r.top + r.height / 2, [t, b] = win(); if (y < t || y > b) return false;
-    const h = document.elementFromPoint(x, y); if (!h || !(h === e || e.contains(h))) return false;
-    h.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window })); return true; };"""
-IP_FLOW = r""" const SPEAK = 400; window.speakAs = () => new Promise((ok) => setTimeout(ok, SPEAK));
+    let r = RR(e), y = r.top + r.height / 2; const [t, b] = win();
+    if (SE && (y < t + 4 || y > b - 4)) { await playerScroll(y < t + 4 ? y - t - 24 : y - b + 24); r = RR(e); }   // an SE: under the fold — the player scrolls the card to it
+    return tapAt(e, r.left + r.width / 2, r.top + r.height / 2); };"""
+IP_SAMPLER = r""" const SPEAK = 400; window.speakAs = () => new Promise((ok) => setTimeout(ok, SPEAK));
   const PARTS = Object.assign({ card: '', head: '.wk-head', x: '.cls-x', read: READ, face: FACE, bub: BUB, opts: OPTS, talk: TALK }, EXTRA);
   const snap = () => { const c = C(); if (!c) return null; const o = { st: c.scrollTop }, rd = c.querySelector(READ), rs = rd ? rd.scrollTop : 0;
     for (const [n, q] of Object.entries(PARTS)) { const e = q ? c.querySelector(q) : c; if (!shown(e)) { o[n] = null; continue; } const r = RR(e), d = INNER.includes(n) ? rs : 0; o[n] = [r.top + d, r.bottom + d]; }
     [...c.querySelectorAll(OPT)].forEach((b, i) => { if (shown(b)) o['o' + i] = [RR(b).top, RR(b).bottom]; }); return o; };
-  const xHit = () => { const c = C(), x = c && c.querySelector('.cls-x'); if (!x) return false; const r = RR(x), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return Boolean(h && h.closest('.cls-x')); };
+  const xWhole = () => { const c = C(), x = c && c.querySelector('.cls-x'); if (!x) return false; const r = RR(x), cx = r.left + r.width / 2, cy = r.top + r.height / 2, d = (Math.min(r.width, r.height) / 2 - 2) / Math.SQRT2;
+    return [[0, 0], [-d, -d], [d, -d], [-d, d], [d, d]].every(([dx, dy]) => { const h = document.elementFromPoint(cx + dx, cy + dy); return Boolean(h && h.closest('.cls-x')); }); };   // the ✕ is round: its corners' points 2 px inside its edge
   const leaving = () => Boolean(document.querySelector(CARD + ' :is(.wk-cust.bye, .nk-task.nk-bye)'));
   const who = () => { const n = runNow(); return n ? (n.task || n.c || null) : null; };
-  const S = { cur: null, base: null, recs: [], xMiss: 0, frames: 0, stop: false };
+  const S = { cur: null, base: null, recs: [], xMiss: 0, frames: 0, stop: false, hold: false };
   function cmp(x) { const rec = S.recs[S.recs.length - 1], base = S.base, bye = leaving();
     for (const key of Object.keys(x)) { if (key === 'st' || (bye && (key === 'face' || key === 'bub'))) continue;
       if (x[key] && base[key] === undefined) { base[key] = x[key]; continue; }   // a part come on show (a reply): from then
       if (!x[key] || !base[key]) continue;
       const m = Math.max(Math.abs(x[key][0] - base[key][0]), Math.abs(x[key][1] - base[key][1])); if (m > (rec.max[key] || 0)) rec.max[key] = Math.round(m * 10) / 10; }
     rec.st = Math.max(rec.st, Math.abs(x.st - base.st)); }
-  function tick() { const c = C();   // (the card's own opening — talkIn, the whole card rising into place — waited out before a customer's first frame is taken)
-    if (c) { S.frames++; if (!xHit()) S.xMiss++; const w = who(), opening = c.closest('.cls').getAnimations().some((a) => a.playState === 'running');
-      if (w && w !== S.cur) { S.cur = w; S.base = null; S.recs.push({ k: runNow().k, max: {}, st: 0, read: null, start: null }); }
-      if (S.cur && !opening) { if (!S.base) { const rec = S.recs[S.recs.length - 1], rd = c.querySelector(READ); S.base = snap(); rec.read = rd ? Math.round(RR(rd).height) : null; rec.start = Math.round(c.scrollTop); } else cmp(snap()); } }
+  function tick() { const c = C();   // from before the job opens; (the card's own opening — talkIn, the whole card rising into place — waited out before a customer's first frame is taken)
+    if (c) { S.frames++; if (!xWhole()) S.xMiss++; const w = who(), opening = c.closest('.cls').getAnimations().some((a) => a.playState === 'running');
+      if (w && w !== S.cur) { S.cur = w; S.base = null; S.recs.push({ k: runNow().k, kind: kindOf(w), max: {}, st: 0, read: null, start: null }); }
+      if (S.cur && !opening && !S.hold) { if (!S.base) { const rec = S.recs[S.recs.length - 1], rd = c.querySelector(READ); S.base = snap(); if (rec.start === null) { rec.read = rd ? Math.round(RR(rd).height) : null; rec.start = Math.round(c.scrollTop); } } else cmp(snap()); } }
     if (!S.stop) requestAnimationFrame(tick); }
   requestAnimationFrame(tick);
-  const keeperSaid = () => [...document.querySelectorAll(CARD + ' .wk-say.bad')].some((e) => shown(e) && e.textContent.trim());
+  // the player's own scroll of the card (a wheel turn over its header): the customer's frames taken again from where it stops
+  const playerScroll = async (dy) => { const c = C(), h = c.querySelector('.wk-head'), hr = RR(h), n = runNow(); S.hold = true; await press(hr.left + hr.width / 3, hr.top + hr.height / 2, Math.round(dy)); await wait(500);
+    PLAYER.push([n ? n.k : null, Math.round(dy), Math.round(c.scrollTop)]); S.base = null; S.hold = false; };"""
+IP_FLOW = r""" const keeperSaid = () => [...document.querySelectorAll(CARD + ' .wk-say.bad')].some((e) => shown(e) && e.textContent.trim());
   const heroSaid = () => [...document.querySelectorAll(CARD + ' :is(.wk-say.nk-me, .wk-say.om-me)')].some(shown) || [...document.querySelectorAll(CARD + ' [data-who="me"] .wk-me')].some((e) => shown(e) && e.textContent.trim());
   const sees = () => { const c = C(), under = (q) => { const e = c.querySelector(q); return shown(e) ? Math.max(0, Math.round(RR(e).bottom - win()[1])) : 0; };
     return { bub: hitOn(c.querySelector(BUB)), opts: hitOn(c.querySelector(OPTS)), talk: hitOn(c.querySelector(TALK)), under: { bub: under(BUB), opts: under(OPTS), talk: under(TALK) } }; };
@@ -2729,41 +2822,103 @@ IP_FLOW = r""" const SPEAK = 400; window.speakAs = () => new Promise((ok) => set
     if (need()) { await wait(250); if (!need()) continue; const r = await doStep(); out.taps.push([n.k, r]); await wait(350); continue; }
     if (done.has(key)) { await wait(100); continue; } done.add(key);
     await wait(300); const w = opt(false);
-    if (w && !w.disabled) { w.click(); const s1 = Date.now(); while (C() && !keeperSaid() && Date.now() - s1 < 6000) await wait(50); await wait(SPEAK + 300); if (C()) out.after.push([n.k, 'wrong', sees()]); }
+    if (w && !w.disabled) { const ok = await tap(w); out.taps.push([n.k, [['wrong reply', ok]]]);
+      if (ok) { const s1 = Date.now(); while (C() && !keeperSaid() && Date.now() - s1 < 6000) await wait(50); await wait(SPEAK + 300); if (C()) out.after.push([n.k, 'wrong', sees()]); } }
     const s2 = Date.now(); while (C() && !ask() && Date.now() - s2 < 9000) await wait(60);
-    if (C() && ask()) { const r = opt(true); if (r && !r.disabled) { r.click(); const s3 = Date.now(); while (C() && !heroSaid() && Date.now() - s3 < 6000) await wait(50); await wait(250); if (C()) out.after.push([n.k, 'right', sees()]); } }
+    if (C() && ask()) { const r = opt(true); if (r && !r.disabled) { const ok = await tap(r); out.taps.push([n.k, [['right reply', ok]]]);
+      if (ok) { const s3 = Date.now(); while (C() && !heroSaid() && Date.now() - s3 < 6000) await wait(50); await wait(250); if (C()) out.after.push([n.k, 'right', sees()]); } } }
   }
   const e1 = Date.now(); while (C() && Date.now() - e1 < 30000) await wait(100); await wait(200); S.stop = true;
-  out.recs = S.recs; out.xMiss = S.xMiss; out.frames = S.frames; out.closed = !C(); return JSON.stringify(out);"""
+  Object.assign(out, { recs: S.recs, xMiss: S.xMiss, frames: S.frames, closed: !C(), player: PLAYER, picks: PICKS, kinds: [...new Set(KINDS())].sort() }); return JSON.stringify(out);"""
 
-def ip_run(b, job, w, h):
-    count, setup = IP_SET[job]
-    code = "(async () => { " + BEGIN + CALM + WORK4 + IP_KIT + " card(['S', 'S', 'S', 'S']);" + setup + IP_FLOW + " })()"
-    return count, json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", code)], timeout=420)[-1])
+def ip_drive(w, h, code, b, timeout=480):
+    """`code` (an async function's body's call, returning JSON) run in b's page at w×h as an iPhone has it (device scale 2, mobile), each
+    of its taps a real one: the page asks through the binding __nqTap({ id, x, y, dy }), the driver answers with trusted input at that
+    point — a mouse press and release (dy: a wheel turn of dy over it) — then calls __nqTapped(id)"""
+    async def go():
+        async with websockets.connect(b.ws_url, max_size=None) as ws:
+            seq, waits, asks = 0, {}, asyncio.Queue()
+            async def call(m, params=None):
+                nonlocal seq; seq += 1; i = seq; f = asyncio.get_running_loop().create_future(); waits[i] = f
+                await ws.send(json.dumps({"id": i, "method": m, "params": params or {}}))
+                r = await f
+                if "error" in r: raise RuntimeError(f"{m}: {r['error']}")
+                return r.get("result", {})
+            async def read():
+                async for raw in ws:
+                    r = json.loads(raw)
+                    if "id" in r:
+                        f = waits.pop(r["id"], None)
+                        if f and not f.done(): f.set_result(r)
+                    elif r.get("method") == "Runtime.bindingCalled" and r["params"].get("name") == "__nqTap": asks.put_nowait(json.loads(r["params"]["payload"]))
+            async def answer():
+                while True:
+                    a = await asks.get(); x, y = a["x"], a["y"]
+                    try:
+                        if a.get("dy"): await call("Input.dispatchMouseEvent", {"type": "mouseWheel", "x": x, "y": y, "deltaX": 0, "deltaY": a["dy"]})
+                        else:
+                            await call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x, "y": y})
+                            await call("Input.dispatchMouseEvent", {"type": "mousePressed", "x": x, "y": y, "button": "left", "buttons": 1, "clickCount": 1})
+                            await call("Input.dispatchMouseEvent", {"type": "mouseReleased", "x": x, "y": y, "button": "left", "buttons": 0, "clickCount": 1})
+                    finally:
+                        await call("Runtime.evaluate", {"expression": f"window.__nqTapped && window.__nqTapped({int(a['id'])})"})
+            async def ev(js):
+                r = await call("Runtime.evaluate", {"expression": js, "returnByValue": True, "awaitPromise": True})
+                if "exceptionDetails" in r: raise RuntimeError(r["exceptionDetails"].get("exception", {}).get("description", "eval error"))
+                return r["result"].get("value")
+            reader, answerer = asyncio.ensure_future(read()), asyncio.ensure_future(answer())
+            try:
+                await call("Page.enable"); await call("Page.addScriptToEvaluateOnNewDocument", {"source": "window.NQ_E2E = 1"})
+                await call("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 2, "mobile": True})
+                await call("Page.navigate", {"url": URL}); await asyncio.sleep(0.3)
+                deadline = time.time() + 90
+                while True:   # the app up (READY), as Browser.run's 'wait'
+                    try:
+                        if await ev(READY): break
+                    except Exception: pass
+                    if time.time() > deadline: raise TimeoutError("the page never got ready")
+                    await asyncio.sleep(0.2)
+                await call("Runtime.addBinding", {"name": "__nqTap"})
+                return await asyncio.wait_for(ev(code), timeout)
+            finally:
+                reader.cancel(); answerer.cancel()
+    return asyncio.run(go())
+
+def ip_run(b, job, w, h, seed, morning=False):
+    count, helper, _, kit, start = IP_JOBS[job]
+    code = ("(async () => { " + BEGIN + CALM + WORK4 + helper + " card(['S', 'S', 'S', 'S']);" + f" const SEED = {seed}, MORNING = {'true' if morning else 'false'}, SE = {'true' if h < 600 else 'false'};"
+            + kit + IP_KIT + IP_SAMPLER + start + IP_FLOW + " })()")
+    return count, json.loads(ip_drive(w, h, code, b))
 
 def ip_check(b, job):
-    bad, under, sums = [], [], {}
-    for (w, h), se in (((390, 664), False), ((375, 553), True)):
-        count, r = ip_run(b, job, w, h)
-        size = f'{w}x{h}'
+    count, _, runs, _, _ = IP_JOBS[job]
+    bad, under, sums, seen, kinds = [], [], [], set(), None
+    for (w, h), seed, morning in [((390, 664), s, m) for s, m in runs] + [((375, 553), 5, False)]:
+        _, r = ip_run(b, job, w, h, seed, morning)
+        se, run = h < 600, (job, f'{w}x{h}', seed) + (('morning',) if morning else ())
         moves = [(g['k'], q, v) for g in r['recs'] for q, v in g['max'].items() if v > 1]
-        if len(r['recs']) != count: bad.append((job, size, 'customers', len(r['recs']), count, r['stuck']))
-        if not r['closed']: bad.append((job, size, 'the card never shut', r['stuck']))
-        if moves: bad.append((job, size, 'moved', moves[:6]))
-        if any(g['st'] for g in r['recs']): bad.append((job, size, 'the card scrolled itself', [(g['k'], g['st']) for g in r['recs'] if g['st']]))
-        if r['xMiss']: bad.append((job, size, 'the ✕ missed in frames', r['xMiss'], r['frames']))
+        if len(r['recs']) != count: bad.append(run + ('customers', len(r['recs']), count, r['stuck']))
+        if not r['closed']: bad.append(run + ('the card never shut', r['stuck']))
+        if moves: bad.append(run + ('moved', [(g['k'], g['kind'], q, v) for g in r['recs'] for q, v in g['max'].items() if v > 1][:6]))
+        if any(g['st'] for g in r['recs']): bad.append(run + ('the card scrolled itself', [(g['k'], g['st']) for g in r['recs'] if g['st']]))
+        if r['xMiss']: bad.append(run + ('the ✕ not whole in frames', r['xMiss'], r['frames']))
         missed = [(k, t) for k, ts in r['taps'] for t in ts if not t[1]]
-        if missed: bad.append((job, size, 'a tap missed', missed[:6]))
+        if missed: bad.append(run + ('a tap missed', missed[:6]))
+        if [p for p in r['picks'] if not p[3]]: bad.append(run + ('a tray not as wanted at どうぞ', [p for p in r['picks'] if not p[3]]))
+        if r['player'] and not se: bad.append(run + ('the player had to scroll the card', r['player']))
         for k, m, v in r['after']:
             if se: (under.append((k, m, v['under'])) if any(v['under'].values()) else None)
-            elif not (v['bub'] and v['opts'] and v['talk']): bad.append((job, size, k, m, 'out of reach', v))
-        sums[size] = {'customers': len(r['recs']), 'moved': max([v for g in r['recs'] for v in g['max'].values()] or [0]), 'scrolled': max([g['st'] for g in r['recs']] or [0]),
-                      'start': sorted({g['start'] for g in r['recs']}), 'xMiss': r['xMiss'], 'frames': r['frames'], 'taps': [sum(len(ts) for _, ts in r['taps']), len(missed)],
-                      'read': [min(g['read'] for g in r['recs']), max(g['read'] for g in r['recs'])] if r['recs'] and r['recs'][0]['read'] is not None else None,
-                      'seen': [sum(1 for _, _, v in r['after'] if v['bub'] and v['opts'] and v['talk']), len(r['after'])]}
+            elif not (v['bub'] and v['opts'] and v['talk']): bad.append(run + (k, m, 'out of reach', v))
+        if not se: seen |= {g['kind'] for g in r['recs']}; kinds = r['kinds']
+        sums.append({'job': job, 'size': f'{w}x{h}', 'seed': seed, 'morning': morning, 'customers': len(r['recs']), 'kinds': sorted({g['kind'] for g in r['recs']}),
+                     'moved': max([v for g in r['recs'] for v in g['max'].values()] or [0]), 'scrolled': max([g['st'] for g in r['recs']] or [0]), 'start': sorted({g['start'] for g in r['recs']}),
+                     'xMiss': r['xMiss'], 'frames': r['frames'], 'taps': [sum(len(ts) for _, ts in r['taps']), len(missed)], 'player': r['player'], 'most': max([p[2] for p in r['picks']] or [0]),
+                     'read': [min(g['read'] for g in r['recs']), max(g['read'] for g in r['recs'])] if r['recs'] and r['recs'][0]['read'] is not None else None,
+                     'seen': [sum(1 for _, _, v in r['after'] if v['bub'] and v['opts'] and v['talk']), len(r['after'])]})
+    if sorted(seen) != kinds: bad.append((job, '390x664: the kinds seen', sorted(seen), 'not the job\'s', kinds))
     IP_UNDER[job] = under
-    if os.environ.get('NQ_IP_OUT'):   # the numbers for the report: each size's moves, scroll, ✕, taps, reading block heights; on an SE what lay under the fold
-        with open(os.environ['NQ_IP_OUT'], 'a', encoding='utf-8') as f: f.write(json.dumps({'job': job, 'sizes': sums, 'under': under}, ensure_ascii=False) + '\n')
+    if os.environ.get('NQ_IP_OUT'):   # the numbers for the report: each run's moves, scroll, ✕, taps, reading block heights, kinds; on an SE what lay under the fold
+        with open(os.environ['NQ_IP_OUT'], 'a', encoding='utf-8') as f: f.write(json.dumps({'job': job, 'runs': sums, 'under': under, 'kinds': kinds}, ensure_ascii=False) + '\n')
     assert bad == [], bad[:12]
 
 def test_a_reply_moves_nothing_on_an_iphone_front(b):

@@ -969,10 +969,14 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .om-hold { position: absolute; left: 30px; top: 27px; z-index: 1; display: block; pointer-events: none; } .om-hold svg { display: block; } .om-bags svg { width: 30px; height: 23px; } .om-coin svg { width: 28px; height: 28px; }   /* in their hands: bags, a coin */
 .om-counter { display: flex; align-items: center; gap: 6px; padding: 6px 8px 7px; background: linear-gradient(#cf9c62, #ad7844); box-shadow: inset 0 3px 0 #e6bc86, inset 0 -3px 0 #7a5232; }
 .om-plate { flex: none; display: block; width: 70px; height: 42px; } .om-plate svg { display: block; width: 100%; height: 100%; }
-.om-tray { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; align-content: center; min-height: 46px; padding: 3px 10px 3px 14px; border-radius: 14px; background: radial-gradient(ellipse at 50% 35%, #8e3a2a, #6a2418 75%); box-shadow: inset 0 0 0 2px #b0503a, inset 0 3px 7px rgba(0, 0, 0, .4), 0 2px 0 rgba(40, 20, 10, .35); }
-.om-chip { display: block; width: 34px; height: 34px; margin-left: -4px; pointer-events: none; } .om-chip .pic { width: 100%; height: 100%; --pic-disc: rgba(255, 246, 226, .85); }   /* on the tray: taken off again by a tap on the tray (the tray takes it: the chip under the tap, else the nearest) or on its place on the shelf */
+.om-tray { flex: 1; min-width: 0; display: flex; align-items: center; height: 46px; padding: 3px 10px 3px 14px; border-radius: 14px; background: radial-gradient(ellipse at 50% 35%, #8e3a2a, #6a2418 75%); box-shadow: inset 0 0 0 2px #b0503a, inset 0 3px 7px rgba(0, 0, 0, .4), 0 2px 0 rgba(40, 20, 10, .35); container-type: inline-size; }
+/* one height at any count (task 2, ruling 16: it wrapped at 金田's 5th good and moved the front 28 px): the chips one row, never wrapped —
+   34 px while they fit, then smaller as more come, down to 24 px, then each further over the one before (the last put always whole on
+   top); sized from the tray's own width (--om-n: how many, set by the run), so a turn of the phone sizes them again */
+.om-chip { --om-s: clamp(24px, (100cqw - 1px) / (var(--om-n, 1) * .88), 34px); display: block; flex: none; width: var(--om-s); height: var(--om-s); margin-left: calc(min(var(--om-s) * .88, (100cqw - 1px) / var(--om-n, 1)) - var(--om-s)); pointer-events: none; }
+@supports not (width: 1cqw) { .om-chip { --om-s: 24px; } }   /* no container units (Safari before 16): one size, the row never wrapping */
+.om-chip .pic { width: 100%; height: 100%; --pic-disc: rgba(255, 246, 226, .85); }   /* on the tray: taken off again by a tap on the tray (the tray takes it: the chip under the tap, else the nearest) or on its place on the shelf */
 .om-tray:has(.om-chip) { cursor: pointer; } @media (hover: hover) { .om-tray:has(.om-chip):hover { box-shadow: inset 0 0 0 2px #e8845e, inset 0 3px 7px rgba(0, 0, 0, .4), 0 2px 0 rgba(40, 20, 10, .35); } }   /* a tray with goods on it is tapped too: a desk's cue (2026-11-25, parked from Task 6) */
-.om-tray.om-full .om-chip { width: 27px; height: 27px; margin-left: -5px; }
 .om-chip.om-in { animation: omIn .28s ease-out; } @keyframes omIn { from { opacity: 0; transform: translateY(-12px) scale(.8); } }
 .om-tray.om-off .om-chip { animation: omOff .5s ease-in forwards; } @keyframes omOff { to { opacity: 0; transform: translateY(26px) scale(.8); } }
 .om-empty { font-size: 11.5px; line-height: 1.35; color: #f2dccc; }
@@ -1061,15 +1065,24 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
    its price tags included: 136), the front (the customer, their bubble, the tray and どうぞ) a fixed part of the column, never cut; the
    replies' place never blank: the buttons on show for the whole customer, their words not yet shown before the reply step (……) */
 .wk-miyage .cls-card > .om-shop { display: contents; }
-.wk-miyage .om-shelves { flex: 1 1 auto; min-height: 136px; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(5px + var(--wk-under, 0px)); margin: 4px -6px 0; border-radius: 10px 10px 0 0; box-shadow: 0 0 0 2px #6e5236; }
-.wk-miyage .om-front { flex: none; margin: 0 -6px; overflow: hidden; border-radius: 0 0 10px 10px; box-shadow: 0 0 0 2px #6e5236; }
-.om-opt.om-later { position: relative; } .om-opt.om-later > span { visibility: hidden; } .om-opt.om-later::after { content: '……'; position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #8a7a6e; letter-spacing: .1em; }
+.wk-miyage .om-shelves { flex: 1 1 auto; min-height: 138px; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(5px + var(--wk-under, 0px)); margin: 2px -8px 0; border: 2px solid #6e5236; border-bottom: 0; border-radius: 12px 12px 0 0; }
+/* the shelves' frame (task 2, ruling 18): a border inside their own box, in line with the front's frame (2 px outside it, on top at the
+   seam) — the fade (.wk-more) masks all a box paints and cut a frame drawn outside it at the top and sides; so the fade keeps the two
+   side borders whole, and never starts above the top row's foot (its price tags at full strength at the floor: the same 136 px of
+   shelves under the 2 px border; the fade's 26 px where the shelves are taller) */
+.wk-miyage .om-shelves.wk-more { --om-fade: max(calc(100% - 26px), calc(var(--om-pic) + 84px + var(--wk-under, 0px)));
+  -webkit-mask-image: linear-gradient(90deg, #000 2px, transparent 2px calc(100% - 2px), #000 calc(100% - 2px)), linear-gradient(#000 var(--om-fade), rgba(0, 0, 0, .2));
+  mask-image: linear-gradient(90deg, #000 2px, transparent 2px calc(100% - 2px), #000 calc(100% - 2px)), linear-gradient(#000 var(--om-fade), rgba(0, 0, 0, .2)); }
+.wk-miyage .om-front { position: relative; z-index: 1; flex: none; margin: 0 -6px; overflow: hidden; border-radius: 0 0 10px 10px; box-shadow: 0 0 0 2px #6e5236; }
+:is(.om-opt.om-later, .nk-opt.nk-later) { position: relative; } :is(.om-opt.om-later, .nk-opt.nk-later) > span { visibility: hidden; }   /* a reply not yet to be picked: in its place, its words not yet shown (the 仲居's too, till 千代 asks: task 2, ruling 18) */
+:is(.om-opt.om-later, .nk-opt.nk-later)::after { content: '……'; position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #8a7a6e; letter-spacing: .1em; }
 @media (max-height: 699px) {   /* every iPhone in Safari (fix round 3): the four cards nearer the screen's edges (8 px), their headers 8 px from the top (fix round 1's 8 px for the フロント, which lost to the shared rule: now it wins, for all four), the おみやげ屋's front a little closer set — more room for the reading blocks and the talk rows */
   .cls:is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) { padding-top: max(8px, env(safe-area-inset-top, 0px)); padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
   :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card { max-height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)) - max(8px, env(safe-area-inset-bottom, 0px)) - var(--wk-top)); }
   :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .wk-head { padding-top: 8px; } :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .wk-head b { font-size: 18px; }
-  :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card { padding-bottom: 6px; border-bottom-width: 6px; } .wk-miyage .om-shelves { margin-top: 2px; }
+  :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card { padding-bottom: 6px; border-bottom-width: 6px; } .wk-miyage .om-shelves { margin-top: 0; }
   .om-noren { height: 14px; padding-top: 3px; } .om-noren svg { height: 9px; } .om-door { padding-block: 2px 4px; } .om-counter { padding-block: 4px 5px; }
+  .wk-miyage .wk-grr { top: -14px; }   /* a customer's pop-up word under the 14 px noren: inside the front, which clips (task 2, ruling 18: −20 cut its top 4 px) */
   .wk-miyage .om-opts { gap: 4px; margin-top: 4px; } .wk-miyage .om-talk { margin-top: 3px; }
 }
 @media (prefers-reduced-motion: reduce) { :is(.fr-opt, .fr-key).wk-bad, .fr-bell.fr-ding .fr-cap, .fr-dn.fr-new { animation: none; } }

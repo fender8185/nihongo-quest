@@ -144,7 +144,7 @@ const MIYAGE_RUN = (() => {
       const picking = MIYAGE.steps(R.c)[R.step] === 'pick' && (R.phase === 'hi' || R.phase === 'pick');   // the hint only while a pick is to come (a taste's replies: none; fix round 1)
       t.innerHTML = R.tray.length ? R.tray.map((id) => { const g = MIYAGE.good(id); return `<span class="om-chip${id === added ? ' om-in' : ''}" data-t="${id}" role="img" aria-label="${esc(g[5])}">${pic(g)}</span>`; }).join('')
         : picking ? '<span class="om-empty">點架上的東西放上托盤<br>點托盤上的就放回去</span>' : '';   // a good taken back by a tap on the tray (I-2) or on the shelf
-      t.classList.toggle('om-full', R.tray.length > 5);
+      t.style.setProperty('--om-n', Math.max(1, R.tray.length));   // the chips sized to the count, one row: the tray one height at any (task 2, ruling 16)
       const d = el('.om-give'); if (d) d.disabled = !(R.phase === 'pick' && !R.busy && R.tray.length && R.gave !== trayKey());
     }
     const trayKey = () => R.tray.slice().sort().join();   // the tray as it stands (a tray handed over and not it: どうぞ off till this changes)
