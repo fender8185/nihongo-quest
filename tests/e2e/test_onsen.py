@@ -2659,6 +2659,44 @@ def test_the_miyage_pop_up_word_is_whole(b):
           CLASS.close(); return JSON.stringify(o); })()""")])[-1])
     assert all(x['shut'] and x['whole'] and x['still'] for x in out.values()), out
 
+# task 2, fix round 1, ruling 20 (iOS hides scrollbars, and at the shelves' floor the fade has no room): while the shelves have more below
+# what shows (.wk-more), a cue says so at their foot — the 目上 customer of seed 5 at his pick, the shelves at their floor, on an iPhone
+# and an SE: the cue in sight under the header, over no good and no price tag where they show, taking no tap (the noren under it takes
+# it); nothing moving as it goes and comes — the shelves scrolled to their end: gone; back to their top: there again
+def test_the_miyage_shelves_say_more_below(b):
+    out = {}
+    for w, h in ((390, 664), (375, 553)):
+        out[f'{w}x{h}'] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+          window.speakAs = () => Promise.resolve(); JOBS.pat.scale = 100; await begin(5, where(5, (c) => c.kind === 'elder')); await wait(400);
+          const c = document.querySelector('.wk-miyage .cls-card'), s = c.querySelector('.om-shelves'), m = c.querySelector('.om-more'), R = (e) => e.getBoundingClientRect(); if (!m) { CLASS.close(); return JSON.stringify({ cue: false }); }
+          const PARTS = ['.wk-head', '.om-shelves', '.om-front', '.wk-cust .kr-face', '.wk-cust .wk-bub', '.om-tray', '.om-give', '.om-opts', '.om-talk'];
+          const tops = () => JSON.stringify(PARTS.map((q) => { const r = R(c.querySelector(q)); return [Math.round(r.top * 10) / 10, Math.round(r.bottom * 10) / 10]; }).concat([c.scrollTop]));
+          const seen = () => Number(getComputedStyle(m).opacity), r = R(m), sr = R(s), top = sr.top + s.clientTop, bot = top + s.clientHeight;   // a good or tag where it shows: inside the shelves' window
+          const over = (x) => { const g = R(x), t = Math.max(g.top, top), bb = Math.min(g.bottom, bot); return t < bb && r.left < g.right && r.right > g.left && r.top < bb && r.bottom > t; };
+          const beneath = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2), head = R(c.querySelector('.wk-head')).bottom, fold = Math.min(R(c).top + c.clientTop + c.clientHeight, innerHeight);
+          const o = { floor: sr.height <= parseFloat(getComputedStyle(s).minHeight) + 0.5, more: s.classList.contains('wk-more'), seen: seen(), inSight: r.top >= head && r.bottom <= fold && r.width >= 30 && r.height >= 10,
+            covers: [...c.querySelectorAll('.om-good, .om-tag')].filter(over).map((x) => x.className), tap: Boolean(beneath && beneath.closest('.om-noren')) };
+          const t0 = tops(); s.scrollTop = s.scrollHeight; await wait(400); o.end = [s.classList.contains('wk-more'), seen()]; o.still = [tops() === t0];
+          s.scrollTop = 0; await wait(400); o.back = [s.classList.contains('wk-more'), seen()]; o.still.push(tops() === t0);
+          CLASS.close(); return JSON.stringify(o); })()""")])[-1])
+    assert all(x == {'floor': True, 'more': True, 'seen': 1, 'inSight': True, 'covers': [], 'tap': True, 'end': [False, 0], 'still': [True, True], 'back': [True, 1]} for x in out.values()), out
+
+# task 2, fix round 1, ruling 20: a good 竹内 lights (two misses, or as the customer goes) brought into sight inside the shelves — JOBS.inSight,
+# as the フロント's lit row and key; never the card's own scroll. Seed 13's 目上 customer (#4) at 390×664 wants 地酒, in the second row: at
+# his pick the shelves are at their floor and it lies out of sight below them; two wrong trays handed over, it is lit, its centre takes a
+# tap, the card's scroll as it was
+def test_a_lit_good_comes_into_sight_on_the_shelves(b):
+    r = json.loads(b.run([("metrics", (390, 664)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      window.speakAs = () => Promise.resolve(); JOBS.pat.scale = 100; const k = where(13, (c) => c.kind === 'elder'); await begin(13, k); await wait(400);
+      const c = document.querySelector('.wk-miyage .cls-card'), s = c.querySelector('.om-shelves'), R = (e) => e.getBoundingClientRect(), want = MIYAGE.answer(my().c), g = good(want[0]);
+      const tap = () => { const q = R(g), h = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); return Boolean(h && g.contains(h)); };
+      const out = { k, want, row2: g.parentNode === c.querySelectorAll('.om-shelf')[1], floor: R(s).height <= parseFloat(getComputedStyle(s).minHeight) + 0.5, before: tap(), st0: c.scrollTop };
+      const wrong = MIYAGE.goods().map((x) => x[0]).filter((x) => !want.includes(x));
+      put([wrong[0]]); give(); await watch(() => my().miss === 1 && !my().busy, 5000); await wait(200); put([wrong[1]]); give(); await watch(() => g.classList.contains('wk-hint'), 5000); await wait(300);
+      Object.assign(out, { lit: g.classList.contains('wk-hint'), miss: my().miss, after: tap(), st: c.scrollTop, shelves: s.scrollTop }); CLASS.close(); return JSON.stringify(out); })()""")])[-1])
+    assert r['k'] == 3 and r['want'] == ['sake'] and r['row2'] and r['floor'] and not r['before'], r   # 地酒: out of sight below the shelves at their floor
+    assert r['lit'] and r['miss'] == 2 and r['after'] and r['st'] == r['st0'] and r['shelves'] > 0, r   # lit and brought into sight inside the shelves; the card never scrolled
+
 # 2026-11-25 (the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」): in the onsen's four jobs a reply moves nothing — the card, what is read
 # (the board, the room, the shelves, the book), the customer's face and bubble, the replies and the talk row each keep their top from just
 # before a reply, watched every 50 ms until its line is up (right: the hero's line shown; wrong: the keeper's word and why — each said after

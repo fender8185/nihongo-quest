@@ -148,7 +148,9 @@ const MIYAGE_RUN = (() => {
       const d = el('.om-give'); if (d) d.disabled = !(R.phase === 'pick' && !R.busy && R.tray.length && R.gave !== trayKey());
     }
     const trayKey = () => R.tray.slice().sort().join();   // the tray as it stands (a tray handed over and not it: どうぞ off till this changes)
-    const hint = () => all('.om-good').forEach((b) => b.classList.toggle('wk-hint', R.c.lit.includes(b.dataset.g)));
+    // the right goods lit (two misses, or as they go) — the first of them brought into sight inside the shelves, never the card's scroll
+    // (task 2, fix round 1, ruling 20: at the shelves' floor a lit good in the second row stayed out of sight)
+    const hint = () => { all('.om-good').forEach((b) => b.classList.toggle('wk-hint', R.c.lit.includes(b.dataset.g))); JOBS.inSight(el('.om-shelves'), el('.om-good.wk-hint')); };
     const unhint = () => all('.om-good.wk-hint').forEach((b) => b.classList.remove('wk-hint'));
     const optsHtml = (c, later) => c.opts.map(([ja], i) => `<button type="button" class="btn om-opt${later ? ' om-later' : ''}" data-o="${i}" lang="ja"${later ? ' disabled' : ''}><span>${ruby(ja)}</span></button>`).join('');
     // the replies, on show for the whole customer who has any (fix round 3, ruling 11: no blank where they will be or were) — to pick at
@@ -309,7 +311,7 @@ const MIYAGE_RUN = (() => {
     const G = MIYAGE.goods();
     CLASS.card('wk-miyage', '伴手禮店', `<div class="wk-head"><b lang="ja">ゆのはな<ruby>堂<rt>どう</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
       <div class="om-shop"><div class="om-shelves">${shelf(G.slice(0, 5), true)}${shelf(G.slice(5))}</div>
-        <div class="om-front"><i class="om-noren" aria-hidden="true">${NOREN}</i><div class="om-door"><div class="wk-cust"></div></div>
+        <div class="om-front"><i class="om-more" aria-hidden="true"></i><i class="om-noren" aria-hidden="true">${NOREN}</i><div class="om-door"><div class="wk-cust"></div></div>
           <div class="om-counter"><span class="om-plate" aria-hidden="true"></span><div class="om-tray"></div><button type="button" class="btn btn-primary om-give" lang="ja" disabled>どうぞ</button></div></div></div>
       <div class="om-opts"></div><div class="om-talk" data-who="makoto"><span class="kr-face om-mini"></span><p class="wk-say"></p></div>`, (e) => {
       if (!R || !live()) return;
