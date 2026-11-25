@@ -218,6 +218,19 @@ def test_working_starts_with_the_rules_and_a_yes(b):
       return JSON.stringify(out); })()"""))
     assert r == {'said': True, 'card': True, 'ran': False, 'name': True, 'how': True, 'uses': True, 'pay': True, 'secs': True, 'yes': True, 'no': True, 'blue': 0, 'gone': True, 'ranNo': False, 'day': None, 'ranYes': True, 'shut': True, 'closed': True, 'zhOnly': 0}, r
 
+# the final review's I-1 (2026-11-25): はい shuts the rules card (CLASS.close), which draws the place anew at once when it is out of date
+# (an hour turned while the card was up) — the keeper's first word opens in the place as it is drawn now, never in the old one taken
+# off the page (nothing shown, the shift never begun); tapped through, 站櫃's card
+def test_yes_on_the_rules_begins_the_first_shift_after_a_redraw(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      location.hash = '#/chinadori'; route(); await wait(300); const old = yard();
+      WORK.intro(yard(), 'counter'); await wait(200); yard().dataset.sig = 'stale';   // the hour turned while the rules card was up
+      document.querySelector('.wk-rules [data-rules="yes"]').click(); await wait(300);
+      const t = document.querySelector('.talk'), out = { redrawn: yard() !== old, talk: Boolean(t) && t.textContent.includes('わたして') };
+      for (let i = 0; i < 40 && !document.querySelector('.wk-counter'); i++) { const k = document.querySelector('.talk'); if (k) k.click(); await wait(150); }
+      out.card = Boolean(document.querySelector('.wk-counter')); CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r == {'redrawn': True, 'talk': True, 'card': True}, r
+
 # 2026-11-15, the user: the thing asked for was printed in the bubble and on the counter both — matching the same kana, nothing
 # heard; now the word in the bubble is a blank to listen to (tap it to hear it again), shown once handed over or after two misses
 def test_the_customers_word_is_heard_not_read(b):
@@ -521,8 +534,8 @@ def test_a_card_shut_and_opened_again_follows_the_new_one(b):
 
 # ---- each line said to its end (2026-11-18, the user: in the jobs out on the street the voices were cut off by the next customer —
 # each line stops the one before): the next customer, the next thing, the card shut, only once the line before is over ----
-TALK = """window.__cut = []; let talking = null;   // a line cut short by the next one (or by the card shut)
-  const says = (ms) => (w, l) => { if (talking) __cut.push(talking); const me = talking = w + ':' + l; return new Promise((ok) => setTimeout(() => { if (talking === me) talking = null; ok(); }, ms)); };
+TALK = """window.__cut = []; window.__said = []; let talking = null;   // a line cut short by the next one (or by the card shut); every line begun, in order
+  const says = (ms) => (w, l) => { if (talking) __cut.push(talking); __said.push(w + ':' + l); const me = talking = w + ':' + l; return new Promise((ok) => setTimeout(() => { if (talking === me) talking = null; ok(); }, ms)); };
   const talk = (asMs, kanaMs) => { window.speakAs = says(asMs); window.speak = (t) => says(kanaMs)('', t); window.stopSpeaking = () => { if (talking) __cut.push(talking + '（停）'); talking = null; }; };
   const hush = async () => { for (let i = 0; i < 80 && talking; i++) await wait(50); };
   const upTo = (job, n) => { state.work.res['2026-11-10'] = { place: job, done: n, score: Object.fromEntries(Array.from({ length: n }, (_, k) => [k, 0])) }; };"""
@@ -531,18 +544,18 @@ def test_the_till_says_each_line_to_its_end(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + TILL + TALK + """ kana(46); vocab('いくら'); nums(); earlier('till'); talk(700, 400); upTo('till', 8);
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'till'); const R = Math.random; Math.random = () => 0.1;   // 張's word after each
       for (let k = 0; k < 2; k++) { await ready(); await hush(); const t = JOBS.till.now(); for (const p of t.parts) { tiles().find((x) => x.dataset.p === p && !x.disabled).click(); await wait(60); } await wait(200); }
-      for (let i = 0; i < 100 && !document.querySelector('.wk-result'); i++) await wait(100); Math.random = R;
-      return JSON.stringify({ cut: __cut, shut: !document.querySelector('.wk-till'), paid: state.work.res['2026-11-10'].yen > 0 }); })()"""))
-    assert r == {'cut': [], 'shut': True, 'paid': True}, r
+      for (let i = 0; i < 100 && !document.querySelector('.wk-result'); i++) await wait(100); Math.random = R; const S = TOWN.WORK.say.till;
+      return JSON.stringify({ cut: __cut, shut: !document.querySelector('.wk-till'), paid: state.work.res['2026-11-10'].yen > 0, end: __said[__said.length - 1] === S.who + ':' + S.end[0] }); })()"""))
+    assert r == {'cut': [], 'shut': True, 'paid': True, 'end': True}, r   # 張's last word the last line, heard to its end before the card shut (parked 4)
 
 def test_the_counter_says_each_line_to_its_end(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + TALK + """ kana(46); earlier('counter'); talk(700, 400); upTo('counter', 8);
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter'); const R = Math.random; Math.random = () => 0.1;   // 周's word after each
       for (let k = 0; k < 2; k++) { for (let i = 0; i < 60 && !document.querySelector('.wk-cust.on'); i++) await wait(100); await hush();
         const t = JOBS.counter.now(); document.querySelector(`.wk-good[data-good="${t.good[0]}"]`).click(); await wait(200); }
-      for (let i = 0; i < 80 && !document.querySelector('.wk-result'); i++) await wait(100); Math.random = R;
-      return JSON.stringify({ cut: __cut, shut: !document.querySelector('.wk-counter'), paid: state.work.res['2026-11-10'].yen > 0 }); })()"""))
-    assert r == {'cut': [], 'shut': True, 'paid': True}, r
+      for (let i = 0; i < 80 && !document.querySelector('.wk-result'); i++) await wait(100); Math.random = R; const S = TOWN.WORK.say.counter;
+      return JSON.stringify({ cut: __cut, shut: !document.querySelector('.wk-counter'), paid: state.work.res['2026-11-10'].yen > 0, end: __said[__said.length - 1] === S.who + ':' + S.end[0] }); })()"""))
+    assert r == {'cut': [], 'shut': True, 'paid': True, 'end': True}, r   # 周's last word the last line, heard to its end before the card shut (parked 4)
 
 # ruling 27 (Review Focus 5): at 周's counter (5 s of patience) a wrong thing handed as the customer's patience nears 0.6 — 周's word to
 # its end, the customer's clock held meanwhile, then the miss's cost and their 「あの、すみません！」 after her word; nothing cut, to the end
@@ -553,9 +566,9 @@ def test_the_counter_keepers_word_after_a_miss_is_said_to_its_end(b):
       for (let i = 0; i < 60 && !document.querySelector('.wk-cust.on'); i++) await wait(100); await hush();
       const t = JOBS.counter.now(), bar = () => parseFloat(document.querySelector('.wk-counter .wk-pat').style.getPropertyValue('--p'));
       for (let i = 0; i < 300 && bar() > 0.72; i++) await wait(20);
-      const from = __log.length; [...document.querySelectorAll('.wk-good')].find((g) => g.dataset.good !== t.good[0]).click(); await wait(350); const during = bar();
+      const from = __log.length, b0 = bar(); [...document.querySelectorAll('.wk-good')].find((g) => g.dataset.good !== t.good[0]).click(); await wait(350); const during = bar();   // read just before the tap (parked 5: a tick's drain between the wait and the tap is no flake)
       for (let i = 0; i < 100 && !__log.slice(from).some((l) => l === t.who + ':あの、すみません！'); i++) await wait(50); await hush();
-      const out = { order: __log.slice(from, from + 2), held: during > 0.7 };
+      const out = { order: __log.slice(from, from + 2), held: during >= b0, bars: [b0, during] };
       const g = document.querySelector(`.wk-good[data-good="${t.good[0]}"]`); g.click(); if (t.kind === 'two') { await wait(150); g.click(); }
       for (let i = 0; i < 60 && !(JOBS.counter.now() !== t && document.querySelector('.wk-cust.on')); i++) await wait(100); await hush(); await serve();
       for (let i = 0; i < 100 && !document.querySelector('.wk-result'); i++) await wait(100);

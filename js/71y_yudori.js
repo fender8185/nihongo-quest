@@ -456,7 +456,9 @@ const YUDORI = (() => {
   return { H, Y0, FAR, HALF0, K, END, scale, half, top, clamp, SHOPS, shop, pAt, door, BLOCKS, passWay, passFade, open, isOpen, shutSay, hoursSay, sig, html, shateki, prize, PRIZES, PRICE, played };
 })();
 DOWN.yudori = YUDORI;   // seen down its length (71a_yard.js)
-WALK_BLOCK.yudori = YUDORI.BLOCKS.map((x) => x.box);   // the pavement's things reaching into the street (YUDORI.BLOCKS)
+// the pavement's things reaching into the street (YUDORI.BLOCKS) — ゆのはな堂's price board only while it stands out there, the shop open
+// (2026-11-25, parked from Task 2's review: shut, nothing is drawn there to walk round)
+Object.defineProperty(WALK_BLOCK, 'yudori', { enumerable: true, configurable: true, get: () => YUDORI.BLOCKS.filter((x) => x.id !== 'board' || YUDORI.open()).map((x) => x.box) });
 function yudoriHtml() { return YUDORI.html(); }
 
 // ---- what can be tapped along the street: each shop (its sign and front), ゆのはな堂's steamers (its menu, or when it opens), the

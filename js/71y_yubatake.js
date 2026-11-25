@@ -216,7 +216,7 @@ const YUBATAKE = (() => {
       const c = e.target.closest('.yb-coin:not(:disabled)'), el = document.querySelector('.yb-stand'); if (!c || !el || busy) return;
       const n = Number(c.dataset.coin), said = el.querySelector('.yb-said'), hint = el.querySelector('.yb-hint');
       if (n !== it[3]) { const [ja, zh] = SAID[n] || ['', '']; said.innerHTML = ruby(ja); hint.textContent = zh; el.querySelector('.yb-sign').classList.remove('look'); void el.offsetWidth; el.querySelector('.yb-sign').classList.add('look'); return; }   // the wrong coin: back in his hand, the sign read again
-      busy = true; const pay = () => YEN.pay(yard, Object.assign({}, t, { open: null }), 'tamago', it[0]);
+      busy = true; const pay = () => YEN.pay(document.querySelector('#view .yard') || yard, Object.assign({}, t, { open: null }), 'tamago', it[0]);   // the square as drawn now (the card shut may have drawn it anew: the final review's I-1)
       if (YEN.left('f') <= 0 || calm()) { CLASS.close(); pay(); return; }   // full today: he says so, nothing paid
       el.querySelector('.yb-closeup').classList.add('paid');   // the coin into the box (paid as it drops in: YEN's coins), an egg up out of the basket
       setTimeout(() => { if (document.querySelector('.yb-stand') === el) pay(); }, 420); setTimeout(() => { if (document.querySelector('.yb-stand') === el) CLASS.close(); }, 1100);

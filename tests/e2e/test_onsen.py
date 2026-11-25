@@ -24,7 +24,14 @@ BEGIN = """state.storyV = 99; state.startChosen = true; state.introSeen = true; 
   const phases = RIDE.trace = [];
   const watch = async (done, ms = 15000) => { const t0 = Date.now(); while (!done() && Date.now() - t0 < ms) await wait(10); return done(); };
   const end = (st) => () => { const n = RIDE.now(); return Boolean(n && n.phase === 'end' && n.at === st); };
-  async function arrive(st, to) { await watch(end(st)); click('.rd-off'); await watch(() => location.hash === to, 5000); await wait(600); }"""
+  async function arrive(st, to) { await watch(end(st)); click('.rd-off'); await watch(() => location.hash === to, 5000); await wait(600); }
+  // the next 湯の花 drawn: its greeting's moment (ONSEN.mount's own timer) over, whether she greeted or not (the final review's Minor 2: waited on
+  // the event, not a fixed 1.5 s against its 900 ms) — called before the place is drawn, awaited after
+  const greeting = () => { let ok; const p = new Promise((q) => { ok = q; }), m0 = ONSEN.mount;
+    ONSEN.mount = (y, pl) => { if (pl !== 'onsen') return m0(y, pl); ONSEN.mount = m0; const st = window.setTimeout; let set = false;
+      window.setTimeout = (fn, ms, ...a) => { set = true; return st(() => { try { fn(...a); } finally { ok(); } }, ms); };
+      try { m0(y, pl); } finally { window.setTimeout = st; } if (!set) ok(); };
+    return p; };"""
 
 # やまなみ線 (spec §2.1): 森下 31 km and 湯の花 38 km from みなと港 as みなと線's stations are; two more bands (≤40 km 420, ≤50 km 480; a
 # child half, under 10 円 dropped); one train an hour each way at :05 from 白鷺 and :20 :50 from 湯の花 — :05 :35 from 白鷺 — from 6 to
@@ -116,16 +123,16 @@ def test_shirasagi_sells_both_lines(b):
 def test_foot_bath_and_first_greeting(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = [], said = []; window.toast = (m) => toasts.push(m); window.speakAs = (w, l) => { said.push([w, l]); return Promise.resolve(); };
       const greeted = () => said.filter(([w, l]) => w === 'akari' && /ようこそ/.test(l)).length, told = () => toasts.filter((m) => /ベテラン/.test(m)).length;
-      TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; await at('onsen'); await wait(1500); out.night = [greeted(), told(), JSON.stringify(state.town.arrived || {})];
+      TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; let g = greeting(); await at('onsen'); await g; out.night = [greeted(), told(), JSON.stringify(state.town.arrived || {})];
       click('.use-btn[data-use="annai"]'); await watch(() => toasts.some((m) => /観光案内所/.test(m)), 5000); out.shut = toasts.filter((m) => /観光案内所/.test(m)).join('|');
-      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; await at('onsen'); await wait(1500); out.akari = Boolean(document.querySelector('.npc-akari')); out.first = [greeted(), told(), state.town.arrived];
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; g = greeting(); await at('onsen'); await g; out.akari = Boolean(document.querySelector('.npc-akari')); out.first = [greeted(), told(), state.town.arrived];
       out.line = (said.find(([w]) => w === 'akari') || [])[1];
       click('.use-btn[data-use="ashiyu"]'); await watch(() => document.querySelector('.yhero.bench'), 6000); await wait(300);
       const h = document.querySelector('.yhero'); out.sat = h ? [...h.classList].filter((c) => ['bench', 'os-soak'].includes(c)) : [];
       out.pop = [...document.querySelectorAll('.ypop')].map((e) => e.textContent).join('|'); out.rings = document.querySelectorAll('.os-soakrings > *').length;
       await new Promise((q) => yHeroWalk(yard(), [-300, 60], q)); await wait(100);   // up again and away: shoes back on
       out.up = [Boolean(document.querySelector('.yhero.os-soak')), document.querySelectorAll('.os-soakrings > *').length, Boolean(yh.use)];
-      await at('platform'); await at('onsen'); await wait(1500); out.again = [greeted(), told()];
+      await at('platform'); g = greeting(); await at('onsen'); await g; out.again = [greeted(), told()];
       out.kept = normalizeState(JSON.parse(JSON.stringify(state))).town.arrived;
       return JSON.stringify(out); })()"""))
     assert r['night'] == [0, 0, '{}'], r   # nobody at the window by night: no greeting yet
@@ -741,17 +748,22 @@ def test_a_shut_annai_card_says_nothing_more(b):
     assert r['said'][:1] == ['akari'] and 'hero' in r['said'], r   # the new shift's start, then the hero's こんにちは, each whole
 
 # N-2 (fix round 2): a replay holds the tourist's clock till the question has been said again in full, counted from the replay's own
-# start — here it waits behind あかり's word after a miss (lines of 3 s: her word, then the question again, 6 s in all)
+# start — here it waits behind あかり's word after a miss (lines of 3 s: her word, then the question again, 6 s in all). Read on the lane's
+# own events (the final review's Minor 2: no fixed sleeps against the clips): the bar as her word ends (still paused, no cost yet), as the
+# question again begins (the cost landed after her word) and as it ends (held all through), then on once it is over
 def test_a_replay_holds_the_clock_till_it_is_said_again(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7';
       state.work.res['2026-10-20'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState();
-      window.speakAs = () => new Promise((ok) => setTimeout(ok, 3000)); window.speak = () => Promise.resolve(); await at('onsen'); WORK.start(yard(), 'annai');
-      const bar = () => parseFloat(document.querySelector('.wk-annai .wk-pat').style.getPropertyValue('--p'));
+      const bar = () => { const p = document.querySelector('.wk-annai .wk-pat'); return p ? parseFloat(p.style.getPropertyValue('--p')) : null; }, ev = [];
+      window.speakAs = (w, l) => { ev.push(['start', w, l, bar()]); return new Promise((ok) => setTimeout(() => { ev.push(['end', w, l, bar()]); ok(); }, 3000)); };
+      window.speak = () => Promise.resolve(); await at('onsen'); WORK.start(yard(), 'annai');
       await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && document.querySelector('.wk-annai .an-ear') && bar() < 0.995, 20000);
-      const t = ANNAI_RUN.now().task; document.querySelector(`.wk-annai .an-opt[data-o="${t.opts.findIndex((o) => !o[2])}"]`).click(); document.querySelector('.wk-annai .an-ear').click();
-      const b0 = bar(); await wait(3500); const b1 = bar(); await wait(2100); const b2 = bar(); await wait(1500); const b3 = bar(); CLASS.close();
-      return JSON.stringify({ cost: b0 - b1 > 0.12, held: b2 === b1, on: b3 < b2, bars: [b0, b1, b2, b3] }); })()"""))
-    assert [r['cost'], r['held'], r['on']] == [True, True, True], r   # the miss's cost after her word; held through the question again; then on
+      const t = ANNAI_RUN.now().task, from = ev.length; document.querySelector(`.wk-annai .an-opt[data-o="${t.opts.findIndex((o) => !o[2])}"]`).click(); document.querySelector('.wk-annai .an-ear').click();
+      const b0 = bar(), q = (kind, who) => ev.slice(from).find((x) => x[0] === kind && x[1] === who && (who !== t.who || x[2] === t.q[0]));
+      await watch(() => q('end', t.who), 15000); const b3a = bar(); await watch(() => bar() < b3a, 3000); const b3 = bar(); CLASS.close();
+      const word = q('end', 'akari'), again = q('start', t.who), over = q('end', t.who);
+      return JSON.stringify({ paused: Boolean(word) && word[3] === b0, cost: Boolean(again) && b0 - again[3] > 0.12, held: Boolean(over) && over[3] === again[3], on: b3 < over[3], bars: [b0, word && word[3], again && again[3], over && over[3], b3] }); })()"""))
+    assert [r['paused'], r['cost'], r['held'], r['on']] == [True, True, True, True], r   # paused through her word, its cost after it; held through the question again; then on
 
 def test_annai_says_each_line_to_its_end(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + SAYS + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; saveState(); const out = {};
@@ -925,7 +937,7 @@ def test_time_marks_read_every_hour(b):
 # place kept as arrived); the next ride up, no more
 def test_arriving_by_train_akari_greets_once(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); };
-      const ride = async () => { RIDE.keep({ from: 'minato', fare: 420, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); await arrive('yunohana', '#/onsen'); await wait(1500); };
+      const ride = async () => { RIDE.keep({ from: 'minato', fare: 420, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); const g = greeting(); await arrive('yunohana', '#/onsen'); await g; };
       await ride(); const once = said.filter((x) => x.startsWith('akari:')), first = [location.hash, state.town.arrived, Boolean(document.querySelector('.cls'))];
       await ride(); return JSON.stringify({ once, first, again: said.filter((x) => x.startsWith('akari:')).length }); })()"""))
     assert r['first'] == ['#/onsen', {'onsen': 1}, False] and r['once'] == ['akari:ようこそ、{湯の花|ゆのはな}{温泉|おんせん}へ！'] and r['again'] == 1, r
@@ -995,11 +1007,12 @@ def test_nakai_checks_follow_the_room(b):
     assert 'ようい' in r['live'][0][2] and 'あります' in r['live'][0][2] and 'いません' in r['live'][1][2], r   # the button that is right says it
 
 # dispatch ruling 1, spec §5.2 (客人): a guest comes in and remarks on the room — 「あれ、窓が 開いて いますね。」 — and the hero says what
-# was done beforehand: 「はい、開けて おきました。閉めましょうか。」. A 自動詞 never takes ておく: no right reply ever has one (開いて
-# おきました is a wrong one, offered beside 閉めて おきました — the other way, the wrong fact); every guest has two or three replies, one
+# was done beforehand: 「はい、開けて おきました。閉めましょうか。」. A 自動詞 never takes ておく: no right reply ever has one (あいて
+# おきました is a wrong one — in kana: with the furigana hidden 開いて reads ひらいて, a fair transitive (the final Japanese review, 3) —
+# offered beside 閉めて おきました — the other way, the wrong fact); every guest has two or three replies, one
 # right, each wrong one with its reason, in a voice the town has; what they say is true of the room as it stands when they come in
 def test_nakai_guest_reply_never_jidoushi_with_teoku(b):
-    r = json.loads(ev(b, """(() => { const m8 = TOWNEV.unitIdx('m8'), JI = /(\\{開\\|あ\\}いて|ついて|\\{閉\\|し\\}まって|\\{消\\|き\\}えて|\\{並\\|なら\\}んで) おき/, bad = [], gs = [];
+    r = json.loads(ev(b, """(() => { const m8 = TOWNEV.unitIdx('m8'), JI = /(\\{開\\|あ\\}いて|あいて|ついて|\\{閉\\|し\\}まって|\\{消\\|き\\}えて|\\{並\\|なら\\}んで) おき/, bad = [], gs = [];
       for (let s = 1; s <= 300; s++) NAKAI.make(m8, s).tasks.filter((t) => t.kind === 'guest').forEach((t) => gs.push(t));
       NAKAI.GUESTS.forEach((key) => gs.push(NAKAI.guest(NAKAI.readyState(key), key)));
       gs.forEach((g) => { const rt = g.opts.filter((o) => o[2]); if (rt.length !== 1 || g.opts.length < 2 || g.opts.length > 3 || g.opts.some((o) => !o[1]) || !g.who || !CAST_VOICE[g.who] || !g.after) bad.push(g.key); else if (JI.test(rt[0][0])) bad.push('ji:' + rt[0][0]); });
@@ -1008,7 +1021,7 @@ def test_nakai_guest_reply_never_jidoushi_with_teoku(b):
     assert r['n'] > 300 and r['bad'] == [] and len(r['keys']) >= 6, r
     w = r['win']
     assert w[0] == 'あれ、{窓|まど}が {開|あ}いて いますね。' and w[1] == 'はい、{開|あ}けて おきました。{閉|し}めましょうか。', r
-    assert any('{開|あ}いて おきました' in x for x in w[2]) and any('{閉|し}めて おきました' in x for x in w[2]), r
+    assert any('あいて おきました' in x for x in w[2]) and any('{閉|し}めて おきました' in x for x in w[2]), r
     assert r['fall'] == 'tea', r   # the window shut after all: they remark on what is so (the tea set out)
 
 # dispatch ruling 4, spec §5.2: the 「お客様 到着まで」 countdown (NAKAI.speed: the tests' hook, 30 times as fast) runs out with the first
@@ -1604,7 +1617,7 @@ def test_the_miyage_card_fits_a_phone(b):
             cust: Boolean(c.querySelector('.wk-cust .kr-face') && c.querySelector('.wk-cust .wk-pat')), btns: btns(), small: small.slice(0, 5),
             rt: Math.min(...[...c.querySelectorAll('.om-tag rt, .om-sign rt')].map((e) => parseFloat(getComputedStyle(e).fontSize))),
             pieces: [...c.querySelectorAll('.om-good[data-g^="manju"] .om-tag b')].map((e) => { const rb = e.querySelector('ruby'); return rb ? [rb.firstChild.textContent, (rb.querySelector('rt') || {}).textContent] : [e.textContent]; }),
-            bath: (() => { const g = c.querySelector('.om-good[data-g="bath"]'), t = R(g.querySelector('.om-tag')), n = R(g.querySelector('.om-tag rt')); return n.left >= t.left - 0.5 && n.right <= t.right + 0.5; })() };
+            bath: ['bath', 'manju12', 'manju6'].map((id) => { const g = c.querySelector(`.om-good[data-g="${id}"]`), t = R(g.querySelector('.om-tag')), n = R(g.querySelector('.om-tag rt')); return n.left >= t.left - 0.5 && n.right <= t.right + 0.5; }) };   // 入浴剤, and the tightest: じゅうにこいり (parked 6)
           put(MIYAGE.answer(my().c)); await wait(60); give(); await watch(() => my().phase === 'reply' && ready(), 8000); await wait(300);
           const fit = () => { const qq = R(c), top = qq.top + c.clientTop, bot = top + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;
             return [[...c.querySelectorAll('.om-opt')].every(inv), inv(c.querySelector('.om-talk')), inv(c.querySelector('.wk-cust .wk-bub'))]; };
@@ -1614,7 +1627,7 @@ def test_the_miyage_card_fits_a_phone(b):
         p = x['pick']
         assert p['inside'] and p['goods'] == 9 and p['parts'] and p['manju'] == ['manju6', 'manju12'] and p['plate'] and p['tray'] and p['give'] and p['cust'], (w, out)
         assert p['btns'] == [] and x['btns2'] == [] and p['small'] == [], (w, out)
-        assert p['rt'] >= 8.5 and p['bath'] and p['pieces'] == [['6個入', 'ろっこいり'], ['12個入', 'じゅうにこいり']], (w, out)   # M-4
+        assert p['rt'] >= 8.5 and p['bath'] == [True, True, True] and p['pieces'] == [['6個入', 'ろっこいり'], ['12個入', 'じゅうにこいり']], (w, out)   # M-4
         assert x['ask'] == [True, True, True] and x['wrong'] == [True, True, True] and x['right'][1], (w, out)
     # M-8 (fix round 1): a pick after two misses — their words opened, the right goods lit, 竹内's word with its reason — on a first shift
     # at 360×640 and 390×844: every good still inside the card's view, the words and the talk row too
@@ -2000,8 +2013,9 @@ def test_a_long_closing_word_is_said_whole(b):
       document.querySelectorAll('.wk-result').forEach((e) => e.remove()); return JSON.stringify(out); })()"""))
     assert r['front'] == {'cuts': [], 'said': True, 'whole': True} and r['annai'] == {'cuts': [], 'said': True, 'whole': True}, r
 
-# M-1: the book stays in sight while it is wanted — at 360×640 a guest asks of the book, their party in its first row: after a miss and
-# after two, the card's self-scroll (to show 佐藤's word, their opened words) never takes the book's title, its header or its first row out
+# M-1: the book stays in sight while it is wanted — at 360×640 a guest asks of the book, their party in its first row: after a miss the
+# card's self-scroll (to show 佐藤's word) never takes the book's title, its header or its first row out; after two (parked 7, Task 7's
+# re-review: their row lit, the right reply lit, the book wanted no more) it shows 佐藤's reason and the lit reply
 FR_BOOK = """const inView = (sel) => { const c = fc().querySelector('.cls-card'), R = (e) => e.getBoundingClientRect(), top = R(c).top + c.clientTop, bot = top + c.clientHeight, e = fc().querySelector(sel); return Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1; };
   const book = () => [inView('.fr-btitle'), inView('.fr-hd'), inView('.fr-row')];"""
 def test_the_front_book_stays_in_sight_at_a_book_question(b):
@@ -2010,9 +2024,9 @@ def test_the_front_book_stays_in_sight_at_a_book_question(b):
       const seed = seedWhere((sh) => sh.tasks.some((t, k) => k > 0 && t.kind === 'memo' && t.party === 0 && t.opts.every((o) => o[0].length > 18))), k = where(seed, false, (t) => t.kind === 'memo');
       await begin(seed, k); await wait(400); out.asked = book();
       const wrong = () => { const t = fr().task, i = t.opts.findIndex((o, j) => !o[2] && !fc().querySelector(`.fr-opt[data-o="${j}"]`).disabled); fc().querySelector(`.fr-opt[data-o="${i}"]`).click(); };
-      wrong(); await wait(900); out.one = book(); wrong(); await wait(900); out.two = book(); out.party = fr().task.party; out.lit = Boolean(fc().querySelector('.fr-row.fr-lit'));
+      wrong(); await wait(900); out.one = book(); wrong(); await wait(900); out.two = [inView('.fr-talk'), inView('.fr-opt.wk-hint')]; out.party = fr().task.party; out.lit = Boolean(fc().querySelector('.fr-row.fr-lit'));
       CLASS.close(); return JSON.stringify(out); })()""")], timeout=120)[-1])
-    assert r['party'] == 0 and r['asked'] == [True, True, True] and r['one'] == [True, True, True] and r['two'] == [True, True, True] and r['lit'], r
+    assert r['party'] == 0 and r['asked'] == [True, True, True] and r['one'] == [True, True, True] and r['two'] == [True, True] and r['lit'], r
 
 # M-2: the hero's greeting follows the hour, not the shift's half — a morning shift (kept so: its check-outs) taken up at 15:00 greets a
 # guest coming to the desk with 「はい、いかが なさいましたか。」; at 9:00 with おはようございます; one arriving always with いらっしゃいませ
@@ -2098,6 +2112,116 @@ def test_sato_and_the_wrestler_read_at_card_size(b):
         rikishi: [g.look.cheeks, face.includes('stroke="#d0574b" stroke-width="2.6"'), face.includes(`stroke="${g.tie}" stroke-width="2.6"`), HERO.OPTS.top.some(([c]) => c === g.tie)] }); })()"""))
     assert r['sato'] == ['none', True, []], r
     assert r['rikishi'] == ['none', False, True, True], r
+
+# ---- the final fix round (2026-11-25: the final reviews and the parked list, task-8c) ----
+# the final review's I-1: はい shuts the rules card (CLASS.close), which draws the place anew at once when it is out of date (an hour
+# turned while the card was up) — 佐藤's first word opens in the lobby as it is drawn now, never in the old one taken off the page; tapped
+# through, the フロント's card
+def test_yes_on_the_rules_begins_the_first_shift_after_a_redraw(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15'; saveState(); window.speakAs = () => Promise.resolve();
+      clock(false); await at('ryokan'); const old = yard();
+      WORK.intro(yard(), 'front'); await wait(200); yard().dataset.sig = 'stale';   // the hour turned while the rules card was up
+      click('.wk-rules [data-rules="yes"]'); await wait(300);
+      const t = document.querySelector('.talk'), out = { redrawn: yard() !== old, talk: Boolean(t) && t.textContent.length > 0 };
+      for (let i = 0; i < 40 && !fc(); i++) { click('.talk'); await wait(150); }
+      out.card = Boolean(fc()); CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r == {'redrawn': True, 'talk': True, 'card': True}, r
+
+# ruling 37 (the final review's I-2): 交通費 — the day's first onsen shift pays back what the ride up to 湯の花 cost that day (the
+# ticket and any 乗り越し精算, kept on arriving there, on this device): from みなと 420, once (a second shift that day: none); via 白鷺
+# 260; a short ticket and its 精算 the two together; no ride, none. Shown on the results as 交通費 (none of the card's +% on it); the day
+# kept as oneADay.koutsuhi, kept by a load and by a merge with a copy that has none, either way
+def test_the_fare_up_is_paid_back_once_with_the_days_first_shift(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm7'; state.purse.gift = 3000;
+      state.work.res['2026-10-21'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState(); localStorage.removeItem('nq_fare'); localStorage.setItem('nq_work_free', '1');
+      WORK.register('annai', { run: (ctx) => { window.__ctx = ctx; }, lines: () => {} });   // the shift done by hand (been there before: no first word)
+      const day = (d) => { TOWNEV.clock = { h: 10, day: new Date(2026, 10, d) }; };
+      const shift = async () => { window.__ctx = null; WORK.start(yard(), 'annai'); await watch(() => window.__ctx, 3000); for (let k = 0; k < 10; k++) __ctx.right(k, 0); __ctx.finish();
+        await watch(() => document.querySelector('.wk-result'), 3000); const res = document.querySelector('.wk-result'), row = res ? [...res.querySelectorAll('.crr-row')].find((x) => /交通費/.test(x.textContent)) : null;
+        const got = [WORK.today().yen, row ? row.textContent.replace(/\\s+/g, '') : '']; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); return got; };
+      const out = {};
+      day(10); await at('station'); RIDE.machine(yard(), 'minato'); await wait(100); click('.kb-fare[data-f="420"]'); await wait(60); click('.kb-pay'); await wait(200); CLASS.close();
+      await at('platform'); RIDE.board(yard(), 1); await arrive('yunohana', '#/onsen'); out.minato = await shift(); out.again = await shift(); out.day = (state.oneADay || {}).koutsuhi;
+      const T = (s, t) => Object.assign(JSON.parse(JSON.stringify(s)), { updatedAt: t }), mine = normalizeState(JSON.parse(JSON.stringify(state))), theirs = JSON.parse(JSON.stringify(mine)); delete theirs.oneADay;
+      out.kept = [mine.oneADay && mine.oneADay.koutsuhi].concat([['2026-11-25T10:00:00.000Z', '2026-11-25T11:00:00.000Z'], ['2026-11-25T12:00:00.000Z', '2026-11-25T11:00:00.000Z']]
+        .flatMap(([a, c]) => [SyncCore.mergeStates(T(mine, a), T(theirs, c)), SyncCore.mergeStates(T(theirs, c), T(mine, a))]).map((m) => (normalizeState(m).oneADay || {}).koutsuhi));
+      day(11); await at('castle'); RIDE.machine(yard(), 'shirasagi'); await wait(100); click('.kb-fare[data-f="260"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride[data-line="yama"]');
+      await arrive('yunohana', '#/onsen'); out.shirasagi = await shift();
+      day(12); await at('onsen'); out.none = await shift();
+      day(13); RIDE.keep({ from: 'minato', fare: 310, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); await watch(end('shirasagi')); click('.rd-card .os-on'); await arrive('yunohana', '#/onsen');
+      out.short = await shift(); localStorage.removeItem('nq_work_free'); return JSON.stringify(out); })()"""))
+    assert r['minato'][0] == 680 and '交通費' in r['minato'][1] and '+420円' in r['minato'][1], r   # 200 + S 50 + ベテラン's 4%, and the 420 back
+    assert r['again'] == [260, ''] and r['day'] == '2026-11-10', r   # once a day
+    assert r['kept'] == ['2026-11-10'] * 5, r   # a load, and a merge with a copy without it, either copy newer, either way round
+    assert r['shirasagi'][0] == 520 and '+260円' in r['shirasagi'][1], r
+    assert r['none'] == [260, ''], r
+    assert r['short'][0] == 680 and '+420円' in r['short'][1], r   # 310 and 110 at 湯の花
+
+# the final review's I-1, the egg stand's own case: full today, the right coin shuts its card (CLASS.close) — the square drawn anew at once
+# when it is out of date (an hour turned while the card was up) — and his 「まだ おなかが いっぱいです。」 opens on the square as drawn now
+def test_the_egg_stand_says_full_on_the_square_as_drawn_now(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const t = todayStr();
+      REG.vocab.filter((v) => jaPlain(v.w) === '卵').forEach((v) => { state.srs[v.key] = { b: 3, due: addDays(t, 9), n: 4, ok: 4, ng: 0, s: 9, d: 5, last: addDays(t, -2), intro: addDays(t, -20), lrn: addDays(t, -2) }; });
+      state.purse.today = { day: dateStr(TOWNEV.today()), f: 2, d: 0, b: 0, o: 0 }; saveState();
+      await at('yubatake'); const old = yard(); click('.yard .use-btn[data-use="tamago"]'); await watch(() => document.querySelector('.yb-stand'), 6000);
+      yard().dataset.sig = 'stale'; click('.yb-coin[data-coin="100"]'); await watch(() => document.querySelector('.talk-card'), 4000);
+      return JSON.stringify({ redrawn: yard() !== old, said: ((document.querySelector('.talk-ja') || {}).textContent || '').trim() }); })()"""))
+    assert r == {'redrawn': True, 'said': 'まだ おなかが いっぱいです。'}, r
+
+# parked 2 (Task 2): the shut ゆのはな堂 has no price board out on its pavement — nothing there to walk round; open, its board is
+def test_the_shut_manju_shop_has_no_board_to_walk_round(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + """ const board = () => (YUDORI.BLOCKS.find((x) => x.id === 'board') || {}).box;
+      const has = () => walkBlocks('yudori').some((bk) => bk.join() === board().join());
+      TOWNEV.clock = { h: 8, day: new Date(2026, 10, 10) }; await at('yudori'); const shut = [YUDORI.open(), has()];
+      TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; await at('yudori'); const open = [YUDORI.open(), has()];
+      return JSON.stringify({ shut, open }); })()"""))
+    assert r == {'shut': [False, False], 'open': [True, True]}, r
+
+# parked 6 (Task 6's re-review): while 竹内's word after a wrong tray is said the shelves and the tray stay live — a good tapped then
+# goes on the tray, one tapped off comes off it, never dropped without a sign; どうぞ waits only till the tray has changed
+def test_miyage_the_shelves_stay_live_while_the_miss_word_is_said(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
+      window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => sh[0].id === 'count10'); await begin(seed, 0);
+      window.speakAs = () => new Promise((ok) => setTimeout(ok, 2000));   // 竹内's word: two seconds
+      put(['manju6']); await wait(80); give(); await wait(200); const d = document.querySelector('.wk-miyage .om-give'), out = { off: d.disabled, miss: my().miss };
+      good('manju6').click(); await wait(60); good('manju12').click(); await wait(80); out.tray = my().tray; out.on = !d.disabled;   // still being said
+      give(); await watch(() => (WORK.today().score || {})[0] !== undefined, 8000); out.score = WORK.today().score[0];
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r == {'off': True, 'miss': 1, 'tray': ['manju12'], 'on': True, 'score': 1}, r
+
+# parked 7 (Task 7's re-review): two guests who left in a huff at their check-ins — the book question's and dinner's — are each made up
+# for by someone else (FRONT.instead, given the guests come so far): never the same want or where twice in a shift, never one speaker
+# twice running; over 1500 afternoon shifts where both are lost
+def test_two_huffs_never_bring_the_same_want_twice(b):
+    r = json.loads(ev(b, """(() => { const m15 = TOWNEV.unitIdx('m15'); let both = 0, swaps = 0; const bad = [];
+      for (let s = 1; s <= 1500; s++) { const sh = FRONT.make(m15, false, s), ci = (who) => sh.tasks.findIndex((x) => x.kind === 'checkin' && x.who === who);
+        const lost = sh.tasks.filter((x) => ['memo', 'dinner'].includes(x.kind) && ci(x.who) >= 0); if (lost.length < 2) continue; both++;
+        const sc = {}; lost.forEach((t) => { sc[ci(t.who)] = 3; });
+        const came = {}; for (let k = 0; k < 10; k++) { const t = sh.tasks[k], j = ['memo', 'dinner'].includes(t.kind) ? ci(t.who) : -1;
+          came[k] = j >= 0 && j < k && sc[j] >= 3 ? FRONT.instead(sh, k, sc, m15, came) : t; if (came[k] !== t) swaps++; }
+        const seq = Array.from({ length: 10 }, (_, k) => came[k]), ids = seq.map((t) => t.id);
+        if (new Set(ids).size !== ids.length) bad.push(s + ':twice:' + ids.join());
+        seq.forEach((t, k) => { if (k && t.who === seq[k - 1].who) bad.push(s + ':running:' + t.who); }); }
+      return JSON.stringify({ both, swaps, n: bad.length, bad: bad.slice(0, 4) }); })()"""))
+    assert r['both'] > 300 and r['swaps'] > 600 and r['n'] == 0, r
+
+# parked 8 (Task 7): the mood mark (💦／💢) sits on the face's top corner, clear of the bubble's edge, with the words opened (two misses):
+# the 観光案内所's 40 px face and the おみやげ屋's 44 px one, at 390×844 and 360×640
+def test_the_mood_mark_stays_by_the_face_at_the_annai_and_the_miyage(b):
+    out = {}
+    for w, h in ((390, 844), (360, 640)):
+        out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); window.speakAs = () => Promise.resolve();
+          const mark = (box) => { const cu = box.querySelector('.wk-cust'); cu.dataset.mood = 'mad'; cu.querySelector('.wk-emo').textContent = '💢';
+            const R = (e) => e.getBoundingClientRect(), e = R(cu.querySelector('.wk-emo')), f = R(cu.querySelector('.kr-face')), bub = R(cu.querySelector('.wk-bub'));
+            return { by: e.left <= f.right + 4 && e.right >= f.right - 24 && e.top <= f.top + 4 && e.bottom >= f.top + 8, clear: e.right <= bub.left + 0.5, tall: bub.height > f.height + 8 }; };
+          state.currentUnit = 'm7'; state.work.res['2026-10-21'] = { place: 'annai', done: 10, score: {}, yen: 1, grade: 'C' }; saveState(); await at('onsen'); WORK.start(yard(), 'annai');
+          await watch(() => ANNAI_RUN.now() && ANNAI_RUN.now().phase === 'ask' && document.querySelector('.wk-annai .an-opt'), 15000); await wait(200);
+          const wrongA = () => { const t = ANNAI_RUN.now().task, i = t.opts.findIndex((o, j) => !o[2] && !document.querySelector(`.wk-annai .an-opt[data-o="${j}"]`).disabled); document.querySelector(`.wk-annai .an-opt[data-o="${i}"]`).click(); };
+          wrongA(); await wait(300); wrongA(); await wait(500); const annai = mark(document.querySelector('.wk-annai')); CLASS.close();
+          state.currentUnit = 'm11'; const seed = seedWhere((sh) => sh[0].id === 'two1'); await begin(seed, 0);
+          put(['jam']); give(); await watch(() => ready(), 4000); await wait(100); put(['kokeshi']); give(); await watch(() => ready(), 4000); await wait(300);
+          const miyage = mark(document.querySelector('.wk-miyage')); CLASS.close(); return JSON.stringify({ annai, miyage }); })()""")])[-1])
+    assert all(x == {'by': True, 'clear': True, 'tall': True} for v in out.values() for x in v.values()), out
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

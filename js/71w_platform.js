@@ -253,7 +253,10 @@ const PLATFORM = (() => {
       g.classList.remove('open'); g.style.transition = 'none'; g.style.transform = `translateX(${from}px)`; void g.getBoundingClientRect();
       g.style.transition = quick ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.12, .62, .3, 1)`; g.style.transform = 'translateX(0px)';
       if (!quick) { play('train-in', { vol: track === 1 ? 1 : 0.5 }); await wait(6.2); }
-    } else if (coming && !quick) await wait(3);   // the timetable's own was on its way in: let it stop
+    } else if (coming && !quick) {   // the timetable's own was on its way in: let it stop — its glide over (its transition's end), not a flat 3 s that opened the doors mid-glide (2026-11-25, parked from the cruise's Task 3)
+      const seen = typeof g.getAnimations === 'function', glide = seen ? g.getAnimations().find((a) => a.transitionProperty === 'transform') : null;
+      if (glide) await Promise.race([glide.finished.catch(() => {}), wait(6.2)]); else if (!seen) await wait(3);   // none running: stopped already (a browser that cannot tell: the old 3 s)
+    }
     if (!here()) return;
     cur.phase = 'stop'; if (!g.classList.contains('open')) { g.classList.add('open'); if (!now) play('door-chime', { vol: track === 1 ? 1 : 0.5 }); }
   }

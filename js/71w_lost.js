@@ -152,7 +152,7 @@ const LOST_RUN = (() => {
     function next(lines) {
       const live2 = () => el('.lf-room') && (ctx.on() || k >= 10); k++;
       const bye = (async () => { await lines(live2); if (!live2()) return; if (k < 10) { show(); return; }
-        await said(word(!missed && !lost && ctx.done === 0 ? s.all : s.end, 'ok'), 800); if (el('.lf-room')) CLASS.close(); })();
+        await JOBS.whole(word(!missed && !lost && ctx.done === 0 ? s.all : s.end, 'ok'), 800); if (el('.lf-room')) CLASS.close(); })();   // said whole before the card shuts (the lane's cap, as the onsen's: a later long one never cut — 2026-11-25, parked from Task 7)
       if (k >= 10) ctx.finish({}, bye);
     }
     // a miss: the word that says why (小林's, or the customer's いいえ) said to its end with the clock held, its cost after it, so the

@@ -88,7 +88,8 @@ def test_a_new_version_puts_itself_on_untouched_at_once_else_at_a_calm_page_chan
     import shutil, tempfile
     site = tempfile.mkdtemp(prefix="nq-update-")
     shutil.copytree(ROOT, site, dirs_exist_ok=True, ignore=shutil.ignore_patterns(".git", ".venv", "tests", "curriculum", "docs", "scripts", "supabase", "music", "*.md"))
-    port = PORT + 7
+    from cdp import free_port
+    port = free_port()   # its own free port (the final review's Minor 4: PORT + 7 was 8803, test_levels_n3.py's)
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(port), "--bind", "127.0.0.1"], cwd=site, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         time.sleep(0.8)

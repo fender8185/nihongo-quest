@@ -189,11 +189,11 @@ const WORK = (() => {
     CLASS.card('wk-rules', P.name, `<div class="wk-rhead"><span class="kr-face">${TOWNEV.face(P.who)}</span><p><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span></p></div>
       <h4>玩法</h4><ul class="wk-how">${R.how.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
       <h4>需要的能力</h4><p class="wk-uses">${R.uses.map((u) => `<span lang="ja">${esc(u)}</span>`).join('')}</p>
-      <p class="wk-pay">${esc(typeof R.n === 'function' ? R.n() : R.n)}・底薪 ${p.base} 円＋評級加給最多 50 円${job === 'waiter' ? '＋店長紅包' : ''}${p.pct ? `・打工證加給 +${p.pct}%` : ''}</p>
+      <p class="wk-pay">${esc(typeof R.n === 'function' ? R.n() : R.n)}・底薪 ${p.base} 円＋評級加給最多 50 円${job === 'waiter' ? '＋店長紅包' : ''}${p.pct ? `・打工證加給 +${p.pct}%` : ''}${P.area === 'onsen' ? '・當天第一班另付搭車上來的車資（交通費）' : ''}</p>
       ${back ? `<p class="wk-back">今天做到 ${back}／${nOf(job)}，按「はい」接著做。</p>` : ''}
       <p class="wk-ask"><b lang="ja">はたらきますか？</b><span>要開始打工嗎？</span></p>
       <div class="wk-yn"><button type="button" class="btn" data-rules="yes" lang="ja">はい</button><button type="button" class="btn" data-rules="no" lang="ja">いいえ</button></div>`,
-    (e) => { const b = e.target.closest('[data-rules]'); if (!b) return; CLASS.close(); if (b.dataset.rules === 'yes') start(yard, job); });
+    (e) => { const b = e.target.closest('[data-rules]'); if (!b) return; CLASS.close(); if (b.dataset.rules === 'yes') start(document.querySelector('#view .yard') || yard, job); });   // the place as it is now: shutting the card may draw it anew (CLASS.close → sceneMinute: an hour turned meanwhile), the keeper's first word in it, not in the old one off the page (the final review's I-1)
     return true;
   }
   // the job a person takes beginners on for, where they are now, once its kana are seen (today taken elsewhere or closed: still
@@ -236,12 +236,18 @@ const WORK = (() => {
     if (!(k in r.score)) r.score[k] = Math.max(0, Math.floor(misses) || 0);
     r.done = Math.max(r.done || 0, Object.keys(r.score).length); saveState();
   }
+  // 交通費 (2026-11-25, ruling 37 — the final review's I-2: an onsen shift paid about what the train up cost): the day's first shift at
+  // 湯の花 pays back what the ride up there cost that day (the ticket and any 乗り越し精算: RIDE.fare, kept on arriving, on this device),
+  // as a real アルバイト's 実費 is — once a day (oneADay.koutsuhi, synced: ruling 9), none without a ride; in the shift's 円, on top of
+  // its pay (no card's +% on it)
+  const fareFor = (s) => (PLACES[s.job] || {}).area === 'onsen' && (state.oneADay || {}).koutsuhi !== s.day && typeof RIDE === 'object' ? RIDE.fare(s.day) : 0;
   // the last done: graded and paid at once (extra.tip: on top — 外場's 店長紅包, named by extra.tipName), the results shown ms later
   // (or once ms, a promise, is kept: the goodbye said) — the runner calls it at the tenth, not at the end of its card's goodbye,
   // so a card shut then is paid all the same (2026-11-15, the final review)
   function finish(s, extra = {}, ms = 0) {
     const r = W().res[s.day]; if (!r || fin(r)) return null;
     const was = { xp: xp(), rank: rank(), best: best(s.job) }, before = yenBalance(), g = grade(r.score, s.job), p = Object.assign(pay(s.job, g, extra.tip || 0), { tipName: extra.tipName });
+    const fare = fareFor(s); if (fare) { p.fare = fare; p.yen += fare; state.oneADay = Object.assign({}, state.oneADay, { koutsuhi: s.day }); }   // 交通費, the day kept with the pay
     Object.assign(r, { done: nOf(s.job), yen: p.yen, grade: g, tip: p.tip }); delete r.keep; saveState();
     if (S === s) S = null;
     const show = () => results(s.job, r, p, before, was, extra.html);
@@ -260,6 +266,7 @@ const WORK = (() => {
       ${p.bonus ? `<div class="crr-row"><span>評級加給（${g} 級）</span><b>+<i data-n="${p.bonus}" data-yen>0</i> 円</b></div>` : ''}
       ${p.tip ? `<div class="crr-row"><span>${esc(p.tipName || '小費')}</span><b>+<i data-n="${p.tip}" data-yen>0</i> 円</b></div>` : ''}
       ${p.raise ? `<div class="crr-row"><span>打工證加給（+${p.pct}%）</span><b>+<i data-n="${p.raise}" data-yen>0</i> 円</b></div>` : ''}
+      ${p.fare ? `<div class="crr-row crr-fare"><span lang="ja"><ruby>交通費<rt>こうつうひ</rt></ruby></span><b>+<i data-n="${p.fare}" data-yen>0</i> 円</b></div>` : ''}
       <div class="crr-row crr-sum"><span>錢包</span><b><i data-n="${before + p.yen}" data-from="${before}" data-yen>${yenStr(before)}</i> 円</b></div>${more}
       <div class="crr-stamp g${g}" aria-label="${g} 級"><b>${g}</b><span>級バイト</span></div>
       <p class="crr-rank">打工證：${esc(RANKS[lv][0])}・經驗 ${x}${gain ? `（+${gain}）` : ''}${up ? `　<em>升級！之後的薪水 +${Math.round(RAISE * 100 * lv)}%${opens.length ? `，${esc(opens.map((k) => AREAS[k].name).join('、'))}的打工開放了` : ''}</em>`

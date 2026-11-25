@@ -375,7 +375,12 @@ const USED = (() => {
     mark(place, id) { const s = all(), k = `${place}.${id}`; if (s[k]) return; s[k] = 1; try { localStorage.setItem('nq_used', JSON.stringify(s)); } catch (e) { /* no storage: this visit only */ } }
   };
 })();
-const useBtnsHtml = (place, only) => (PLACE_USE[place] || []).filter((t) => (!only || only(t)) && (!t.when || t.when())).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn${t.sign ? ' thing signed' : ''}${USED.has(place, t.id) ? ' tried' : ''}" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${INDOOR.includes(place) ? 1 : Math.round(150 - (370 - y1) / 4) + (t.over ? 60 : 0)}${t.signAt ? `;--tx:${t.signAt[0]}%;--ty:${t.signAt[1]}%` : ''}">${t.sign ? `<span class="tag">${ySign(t.sign, t.name)}</span>` : ''}</button>`; }).join('');   // only: those of them (the 朝市's stalls put up in place: ICHIBA.sync)
+// hit: where in its box a thing takes a tap, when not all of it — a polygon in the land's units (a wall's slanted board seen in the
+// room, its box the screen's square round it: みなと寿司's tags; 2026-11-25, parked from the cruise's Task 4: their box took the taps
+// beside 源さん's head under them) — the button itself none, its dot still shown
+const useHit = (t) => { if (!t.hit) return ''; const [x0, y0, x1, y1] = t.box, pc = (v, a, b) => `${(((v - a) / (b - a)) * 100).toFixed(1)}%`;
+  return `<i class="use-hit" aria-hidden="true" style="clip-path:polygon(${t.hit.map(([x, y]) => `${pc(x, x0, x1)} ${pc(y, y0, y1)}`).join(',')})"></i>`; };
+const useBtnsHtml = (place, only) => (PLACE_USE[place] || []).filter((t) => (!only || only(t)) && (!t.when || t.when())).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn${t.sign ? ' thing signed' : ''}${t.hit ? ' use-poly' : ''}${USED.has(place, t.id) ? ' tried' : ''}" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${INDOOR.includes(place) ? 1 : Math.round(150 - (370 - y1) / 4) + (t.over ? 60 : 0)}${t.signAt ? `;--tx:${t.signAt[0]}%;--ty:${t.signAt[1]}%` : ''}">${useHit(t)}${t.sign ? `<span class="tag">${ySign(t.sign, t.name)}</span>` : ''}</button>`; }).join('');   // only: those of them (the 朝市's stalls put up in place: ICHIBA.sync)
 // words popping up over a thing (x, y in the land's units), a burst of petals or leaves off a tree
 function yPop(yard, x, y, text) {
   const w = yard && yard.querySelector('.yworld'); if (!w) return;
@@ -418,11 +423,14 @@ function sceneUse(el) {
   if (t.buy) { YEN.open(yard, t); return; }   // one with a menu: bought first, then had (YEN)
   useThing(yard, t);
 }
+// a seat out of doors (a bench's, a bollard's, the 縁台's: its X) is free while no one sits within 30 px of it — the hero's and the
+// cruise's passengers' rule alike (CRUISE's benches; 2026-11-25, parked from the cruise's Task 1: the 30 was written in both)
+const BENCH_GAP = 30, benchFree = (x, taken) => taken.every((n) => Math.abs(n - x) >= BENCH_GAP);
 function useThing(yard, t) {   // the hero over to a thing of the place, and its doing
   const [x0, y0, x1] = t.box;
   if (t.kind === 'sit' || t.kind === 'ride') {
     const taken = [...yard.querySelectorAll('.npc.bench')].map(npcAt), tap = yard._at ? yard._at.x : (x0 + x1) / 2 - 600;
-    const seat = t.seats.filter((x) => taken.every((n) => !(Math.abs(n - x) < 30))).sort((a, b) => Math.abs(a - tap) - Math.abs(b - tap))[0];
+    const seat = t.seats.filter((x) => benchFree(x, taken)).sort((a, b) => Math.abs(a - tap) - Math.abs(b - tap))[0];
     if (seat === undefined) { yPop(yard, (x0 + x1) / 2, y0 - 4, '坐滿了'); return; }
     yHeroWalk(yard, t.go || [seat, t.front || Math.max(14, t.dep - 16)], () => ySit(yard, t, seat));   // front: up to it there first (湯の花's 足湯: its pool's rim)
   } else if (t.kind === 'seat') {   // in a room: [u, v, h, how he sits] — a free one nearest the tap

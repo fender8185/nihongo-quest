@@ -24,6 +24,11 @@ const RIDE = (() => {
   const ms = (s) => (s * 1000) / api.speed;
   const ticket = () => { try { return JSON.parse(localStorage.getItem(TK) || 'null'); } catch (e) { return null; } };
   const keep = (t) => { try { if (t) localStorage.setItem(TK, JSON.stringify(t)); else localStorage.removeItem(TK); } catch (e) { /* none kept */ } };
+  // what the ride up to 湯の花 cost (2026-11-25, ruling 37: 交通費, paid back by the day's first onsen shift — WORK): the ticket and any
+  // 乗り越し精算, kept on arriving there with the town's day, on this device (as the ticket is); a later ride up that day replaces it
+  const FARE = 'nq_fare';
+  const fareKeep = (yen) => { try { localStorage.setItem(FARE, JSON.stringify({ day: dateStr(TOWNEV.today()), yen })); } catch (e) { /* none kept */ } };
+  const fare = (day) => { try { const f = JSON.parse(localStorage.getItem(FARE) || 'null'); return f && f.day === day ? Math.max(0, Number(f.yen) || 0) : 0; } catch (e) { return 0; } };
   const spend = (n) => yenSpend(n);   // a ticket, the rest paid off the train (40_core.js)
   const st = (id) => ([...TOWN.EKI.LINE, ...((TOWN.EKI.YAMA || {}).LINE || [])].find((x) => x[0] === id) || [, id])[1];
   const fill = (l, o) => [l[0].replace(/\{S\}/g, o.S || '').replace('{P}', o.P || '').replace('{L}', o.L || ''), l[1].replace(/\{s\}/g, o.s || '').replace('{p}', o.p || '').replace('{l}', o.l || '')];
@@ -75,7 +80,7 @@ const RIDE = (() => {
       if (b) {   // aboard — unless this train wants more on board than there is: said here, in the card, the way home with it (白鷺: the other train still to hand)
         const t = ticket(), more = t && t.from === here ? Math.max(0, EKI.fare(here, dest(here, 0, b.dataset.line, t.fare)) - t.fare) : 0;
         if (more > yenBalance()) { playSfx('bad'); toast(`這張票只到 ${t.fare} 円的站，錢包也不夠補票（還要 ${more} 円）。可以按「‹ 書房」先回書房。`, 4600); homeHint(); return; }
-        CLASS.close(); board(yard, 0, here, b.dataset.line); return;
+        CLASS.close(); board(document.querySelector('#view .yard') || yard, 0, here, b.dataset.line); return;   // the station as drawn now (shutting the card may draw it anew: the final review's I-1)
       }
       if (e.target.closest('.os-home')) { CLASS.close(); window.go('#/today'); }   // (go: the ride's own, below)
     });
@@ -210,6 +215,7 @@ const RIDE = (() => {
       }
       if (!e.target.closest('.rd-off') || R.phase !== 'end') return;
       const r = rest(); if (r) spend(r);
+      if (R.at === 'yunohana') fareKeep(paid + r);   // up at 湯の花: what it cost, for the 交通費
       keep(null); mark('off'); CLASS.close(); SND.play('door-chime', { vol: 0.6 });
       const place = SCENE[R.at]; yh.arrive = { from: 'train', to: place }; window.go(PLACE_ROUTE[place]);
     });
@@ -276,5 +282,5 @@ const RIDE = (() => {
     ['morishita', 'yunohana'].forEach((id) => add('ann', fill(L().next, { S: st(id) })[0])); add('ann', fill(L().soon, { S: st('yunohana') })[0]); add('ann', fill(L().end, { S: st('yunohana') })[0]);
     ['yama', 'minato'].forEach((ln) => add('ann', fill(L().change, { S: st('shirasagi'), L: lineName(ln)[0] })[0]));
   };
-  return Object.assign(api, { ticket, keep, machine, board, go, signHtml, fromSign, lines, now: () => R, SCENE });
+  return Object.assign(api, { ticket, keep, fare, machine, board, go, signHtml, fromSign, lines, now: () => R, SCENE });
 })();

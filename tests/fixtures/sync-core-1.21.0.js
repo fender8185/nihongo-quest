@@ -1,0 +1,277 @@
+/* sync-core: pure helpers shared by the app (window.SyncCore) and Node tests (module.exports). No DOM, no network. */
+(function (root) {
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  // AI and TTS configs are device-local: they hold API keys and endpoints (e.g. a localhost Ollama URL),
+  // so they never go to the cloud and a pulled copy never replaces the local ones.
+  const LOCAL_ONLY = ['aiConfig', 'ttsConfig'];
+
+  function stripSecrets(state) {
+    const out = clone(state);
+    LOCAL_ONLY.forEach(f => { if (f in out) out[f] = null; });
+    return out;
+  }
+
+  // Returns a copy of `incoming` whose device-local configs are taken from `local` when `local` has them.
+  function keepLocalSecrets(incoming, local) {
+    const out = clone(incoming);
+    LOCAL_ONLY.forEach(f => {
+      if (local && local[f]) out[f] = clone(local[f]);
+      else if (out[f] === null) delete out[f];   // let normalizeState fill the default instead of an explicit null
+    });
+    return out;
+  }
+
+  // Two timestamps for the same instant, however they are spelled ('…Z' from JS, '…+00:00' from Postgres).
+  function sameStamp(a, b) {
+    if (!a || !b) return false;
+    const x = new Date(a).getTime(), y = new Date(b).getTime();
+    return Number.isFinite(x) && x === y;
+  }
+
+  // What pull should do with the cloud row (`cloud` is null when the user has no row yet).
+  //   push     – nothing in the cloud, or it is still the version this device last saw and local changes wait
+  //   idle     – cloud unchanged and nothing to upload
+  //   adopt    – another device moved the cloud and this one has no unsynced changes (or never synced)
+  //   conflict – another device moved the cloud AND this device has unsynced changes; the caller merges the
+  //              two record by record (mergeStates). Device clocks play no part in this.
+  function pullDecision(meta, local, cloud) {
+    meta = meta || {};
+    if (!cloud) return 'push';
+    if (!meta.everSynced) return (isEmptyProgress(cloud.state) && !isEmptyProgress(local)) ? 'push' : 'adopt';
+    const moved = !sameStamp(cloud.updated_at, meta.lastPulledUpdatedAt);
+    if (!moved) return meta.pendingSync ? 'push' : 'idle';
+    return meta.pendingSync ? 'conflict' : 'adopt';
+  }
+
+  // Record-level merge of two diverged copies (a conflict: both changed since the last common version).
+  //   srs           per item: the record answered later (`last`), then the one with more answers
+  //   dailyLogs     per day: the larger count of each kind
+  //   statsFmt      per format: the larger ok / ng
+  //   lists by id   (mistakes, custom cards, custom grammar/exam, exam history): union, the later copy's version
+  //   id sets       (completedUnits, hidden, lessonSeen): union
+  //   言靈          (koto): each count by day and device the larger, bonus days a union; owned (things bought): a union by id
+  //   town          (the town's events): done, seen, stops each a union by id; talks (chats with each person) the larger count
+  //   cruise        (the cruise ship's trips): done a union; the one under way: the later trip, further on, unless done on either
+  //   everything else (settings, currentUnit, today, placed, wear, …): from the copy saved later
+  function stampOf(s) { return (s && typeof s.updatedAt === 'string') ? s.updatedAt : ''; }
+  function pickRec(x, y) {
+    const lx = x.last || '', ly = y.last || '';
+    if (lx !== ly) return lx > ly ? x : y;
+    return (x.n || 0) >= (y.n || 0) ? x : y;
+  }
+  function mergeMistakes(olderList, newerList, mergedSrs) {
+    const map = new Map();
+    const keyOf = (x) => (x && (x.key || x.prompt || x.id !== undefined)) ? String(x.key || x.prompt || x.id) : JSON.stringify(x);
+    for (const x of (olderList || [])) {
+      const k = keyOf(x);
+      map.set(k, Object.assign({}, x));
+    }
+    for (const x of (newerList || [])) {
+      const k = keyOf(x);
+      const prev = map.get(k);
+      if (!prev) {
+        map.set(k, Object.assign({}, x));
+      } else {
+        const latest = (x.ts || 0) >= (prev.ts || 0) ? x : prev;
+        const merged = Object.assign({}, prev, latest);
+        if (prev.count !== undefined || x.count !== undefined) merged.count = Math.max(prev.count || 1, x.count || 1);
+        if (prev.ts !== undefined || x.ts !== undefined) merged.ts = Math.max(prev.ts || 0, x.ts || 0);
+        map.set(k, merged);
+      }
+    }
+    return [...map.values()].map(m => {
+      const r = m && m.key && mergedSrs && mergedSrs[m.key];
+      if (r && (r.known || (typeof r.rl !== 'number' && (r.b || 0) >= 1))) {
+        return Object.assign({}, m, { mastered: true });
+      }
+      return m;
+    });
+  }
+  function mergeStageTests(olderSt, newerSt) {
+    const out = {};
+    const keys = new Set([...Object.keys(olderSt || {}), ...Object.keys(newerSt || {})]);
+    keys.forEach(k => {
+      const seen = new Set();
+      const merged = [];
+      [...((newerSt && newerSt[k]) || []), ...((olderSt && olderSt[k]) || [])].forEach(item => {
+        if (!item || typeof item !== 'object') return;
+        const sig = `${item.date || ''}|${item.correct}|${item.total}|${item.passed ? 1 : 0}`;
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        merged.push(Object.assign({}, item));
+      });
+      merged.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+      out[k] = merged.slice(0, 10);
+    });
+    return out;
+  }
+  function mergeToday(olderT, newerT) {
+    if (!olderT || !newerT) return newerT || olderT;
+    if (olderT.date !== newerT.date) return String(newerT.date || '') >= String(olderT.date || '') ? newerT : olderT;
+    const out = Object.assign({}, olderT, newerT);
+    ['newV', 'newG', 'newK', 'newL', 'newR', 'newC', 'newA'].forEach(k => {
+      if (typeof olderT[k] === 'number' || typeof newerT[k] === 'number') {
+        out[k] = Math.max(olderT[k] || 0, newerT[k] || 0);
+      }
+    });
+    // items answered today on either device: the newer list first, then what only the older one has
+    if (Array.isArray(olderT.ans) || Array.isArray(newerT.ans)) {
+      const ans = (newerT.ans || []).slice();
+      (olderT.ans || []).forEach(k => { if (!ans.includes(k)) ans.push(k); });
+      out.ans = ans;
+    }
+    // today's list is the newer copy's; what the older copy answered from its own list joins it as kept, so that
+    // device's ring does not step back when it takes the merge (index.html redoes the list after a conflict)
+    const keysOf = (p) => (p && p.lists && typeof p.lists === 'object') ? Object.values(p.lists).flatMap(l => (Array.isArray(l) ? l : [])) : [];
+    if (out.plan && out.plan.lists && out.plan !== olderT.plan && out.ans) {
+      const have = new Set(keysOf(out.plan));
+      const extra = [...new Set(keysOf(olderT.plan))].filter(k => !have.has(k) && out.ans.includes(k));
+      if (extra.length) out.plan = Object.assign({}, out.plan, { lists: Object.assign({}, out.plan.lists, { kept: (Array.isArray(out.plan.lists.kept) ? out.plan.lists.kept : []).concat(extra) }) });
+    }
+    return out;
+  }
+  // 言靈 (1.2): counts only ever added to by one device, so the larger of two copies is right — sets and listens by day and
+  // device (daySets, listen), the first rule's sets per device (sets), what each letter brought (mail), what each find brought
+  // (found, 1.2.2: the Halloween witch) — the days that gave the day's bonus (a union: once a day however many devices
+  // finished it), the test site's gift (the larger)
+  function maxBy(o, n) {
+    const out = {};
+    new Set([...Object.keys(o || {}), ...Object.keys(n || {})]).forEach(k => { out[k] = Math.max(Number((o || {})[k]) || 0, Number((n || {})[k]) || 0); });
+    return out;
+  }
+  function maxByDay(o, n) {
+    const out = {};
+    new Set([...Object.keys(o || {}), ...Object.keys(n || {})]).forEach(d => { out[d] = maxBy((o || {})[d], (n || {})[d]); });
+    return out;
+  }
+  function mergeKoto(olderK, newerK) {
+    const o = olderK || {}, n = newerK || {};
+    return { daySets: maxByDay(o.daySets, n.daySets), days: [...new Set([...(o.days || []), ...(n.days || [])])], listen: maxByDay(o.listen, n.listen),
+      mail: maxBy(o.mail, n.mail), found: maxBy(o.found, n.found), sets: maxBy(o.sets, n.sets), gift: Math.max(o.gift || 0, n.gift || 0) };
+  }
+  function mergeCruise(olderC, newerC) {
+    const o = olderC || {}, n = newerC || {}, done = Object.assign({}, o.done, n.done), num = (x) => parseInt(String(x.trip).slice(1), 10) || 0;
+    let on = [n.on, o.on].filter((x) => x && typeof x === 'object' && !done[x.trip]).sort((x, y) => num(y) - num(x) || (y.step || 0) - (x.step || 0))[0] || null;
+    if (on) { const both = [n.on, o.on].filter((x) => x && x.trip === on.trip); on = Object.assign({}, on, { score: Object.assign({}, ...both.map((x) => x.score || {}).reverse()) }); }   // the replies answered on either device (both: the newer copy's)
+    const res = Object.assign({}, o.res);   // each trip's pay: once done, the better of two (finished on both)
+    Object.entries(n.res || {}).forEach(([t, r]) => { if (!res[t] || (Number(r && r.yen) || 0) >= (Number(res[t].yen) || 0)) res[t] = r; });
+    return { done, on, res };
+  }
+  // 中華街の打工 (2026-11-14): one record a day — a shift done beats one under way, then the more 円, then the further on (two
+  // devices that worked different places that day keep the one)
+  function mergeWork(olderW, newerW) {
+    const o = olderW || {}, n = newerW || {}, res = Object.assign({}, o.res), fin = (r) => r && r.yen !== undefined && r.yen !== null;
+    Object.entries(n.res || {}).forEach(([d, r]) => { const h = res[d]; if (!h || (fin(r) && !fin(h)) || (fin(r) && fin(h) && (Number(r.yen) || 0) >= (Number(h.yen) || 0)) || (!fin(r) && !fin(h) && (Number(r.done) || 0) >= (Number(h.done) || 0))) res[d] = r; });
+    if (!o.seenSteps && !n.seenSteps) return { res };
+    const seenSteps = Object.assign({}, o.seenSteps); Object.entries(n.seenSteps || {}).forEach(([k, v]) => { seenSteps[k] = Math.max(Number(seenSteps[k]) || 0, Number(v) || 0); });   // 包包子's steps answered right: the more of each
+    return { res, seenSteps };
+  }
+  function mergeStates(a, b) {
+    const [newer, older] = (stampOf(a) >= stampOf(b) ? [a, b] : [b, a]).map(clone);
+    const out = Object.assign({}, older, newer);
+    out.srs = {};
+    new Set([...Object.keys(older.srs || {}), ...Object.keys(newer.srs || {})]).forEach(k => {
+      const x = (newer.srs || {})[k], y = (older.srs || {})[k];
+      out.srs[k] = !y ? x : !x ? y : pickRec(x, y);
+    });
+    out.dailyLogs = {};
+    new Set([...Object.keys(older.dailyLogs || {}), ...Object.keys(newer.dailyLogs || {})]).forEach(d => {
+      const x = (newer.dailyLogs || {})[d] || {}, y = (older.dailyLogs || {})[d] || {}; const e = {};
+      new Set([...Object.keys(x), ...Object.keys(y)]).forEach(f => { e[f] = typeof x[f] === 'number' || typeof y[f] === 'number' ? Math.max(x[f] || 0, y[f] || 0) : (x[f] !== undefined ? x[f] : y[f]); });
+      out.dailyLogs[d] = e;
+    });
+    out.statsFmt = {};
+    new Set([...Object.keys(older.statsFmt || {}), ...Object.keys(newer.statsFmt || {})]).forEach(f => {
+      const x = (newer.statsFmt || {})[f] || {}, y = (older.statsFmt || {})[f] || {};
+      out.statsFmt[f] = { ok: Math.max(x.ok || 0, y.ok || 0), ng: Math.max(x.ng || 0, y.ng || 0) };
+    });
+    out.mistakes = mergeMistakes(older.mistakes, newer.mistakes, out.srs);
+    ['customGrammar', 'customExam', 'examHistory'].forEach(f => {
+      const by = new Map();
+      (older[f] || []).forEach(x => by.set(x && x.id !== undefined ? x.id : JSON.stringify(x), x));
+      (newer[f] || []).forEach(x => by.set(x && x.id !== undefined ? x.id : JSON.stringify(x), x));
+      out[f] = [...by.values()];
+    });
+    ['completedUnits', 'hidden', 'lessonSeen'].forEach(f => { out[f] = [...new Set([...(older[f] || []), ...(newer[f] || [])])]; });
+    if (older.stageTests || newer.stageTests) out.stageTests = mergeStageTests(older.stageTests, newer.stageTests);
+    if (older.unitAiNotes || newer.unitAiNotes) out.unitAiNotes = Object.assign({}, older.unitAiNotes, newer.unitAiNotes);
+    if (older.today || newer.today) out.today = mergeToday(older.today, newer.today);
+    if (older.koto || newer.koto) out.koto = mergeKoto(older.koto, newer.koto);
+    if (older.owned || newer.owned) out.owned = Object.assign({}, older.owned, newer.owned);   // each thing bought once, paid once
+    if (older.mail || newer.mail) {   // the mailbox (2026-11-11): a letter come or read on either device, for good
+      const o = older.mail || {}, n = newer.mail || {};
+      out.mail = { got: Object.assign({}, o.got, n.got), read: Object.assign({}, o.read, n.read) };
+    }
+    if (older.town || newer.town) {   // the town's events done, people met, bus stops opened: once on either device, for good
+      const o = older.town || {}, n = newer.town || {};
+      const talks = {}; [o.talks, n.talks].forEach((t) => Object.entries(t || {}).forEach(([id, k]) => { talks[id] = Math.max(talks[id] || 0, Number(k) || 0); }));   // the chats with each: the more (as numbers)
+      out.town = Object.assign({}, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops), talks });
+      if (o.traps || n.traps) out.town.traps = Object.assign({}, o.traps, n.traps);   // 中華街's 漢字陷阱 seen through (2026-11-14): once on either device, for good
+    }
+    if (older.cruise || newer.cruise) out.cruise = mergeCruise(older.cruise, newer.cruise);
+    if (older.work || newer.work) out.work = mergeWork(older.work, newer.work);
+    if (older.purse || newer.purse) {   // 円 spent: each device's sum only grows (the larger kept); 美食手帳: everything had, on the day first had
+      const o = older.purse || {}, n = newer.purse || {}, spent = Object.assign({}, o.spent), book = Object.assign({}, o.book);
+      Object.entries(n.spent || {}).forEach(([d, v]) => { spent[d] = Math.max(Number(spent[d]) || 0, Number(v) || 0); });
+      Object.entries(n.book || {}).forEach(([k, v]) => { if (!book[k] || v < book[k]) book[k] = v; });
+      out.purse = Object.assign({}, o, n, { spent, book });   // a key this build does not know: kept (the newer copy's)
+      const gifts = Object.assign({}, o.gifts); Object.entries(n.gifts || {}).forEach(([k, v]) => { if (!gifts[k] || v > gifts[k]) gifts[k] = v; });   // the gifts had (2026-11-22, once a day each): the later day of each
+      if (Object.keys(gifts).length) out.purse.gifts = gifts; else delete out.purse.gifts;
+      const gift = Math.max(Number(o.gift) || 0, Number(n.gift) || 0); if (gift) out.purse.gift = gift;   // the test site's 円: only grows
+      // the day's foods, drinks, bath, おみくじ: the later day's; the same day, the more of each — the foods and drinks counted since the
+      // bath if either copy has had it (out of the bath the hero is hungry again: YEN)
+      const td = [o.today, n.today].filter((x) => x && x.day).sort((x, y) => (x.day < y.day ? 1 : -1));
+      if (td.length) {
+        const same = td.filter((x) => x.day === td[0].day), b = Math.max(...same.map((x) => x.b || 0)), since = same.filter((x) => (x.b || 0) === b);
+        out.purse.today = { day: td[0].day, f: Math.max(...since.map((x) => x.f || 0)), d: Math.max(...since.map((x) => x.d || 0)), b, o: Math.max(...same.map((x) => x.o || 0)) };
+      }
+    }
+    out.updatedAt = new Date().toISOString();
+    return out;
+  }
+
+  function buildPushPayload(state, deviceId) {
+    return { state: state, updated_at: state.updatedAt, device_id: deviceId };
+  }
+
+  // A progress row holds its state packed, { nqz: 1, gz: '<gzip of the state's JSON, base64>' }: a tenth of the size, so a
+  // set's upload stays small as the records grow. Every version from 1.9.0 reads it (2026-11-11); uploads are packed since
+  // 1.14.0-test.2 (2026-11-12). Plain states (anything else) pass through.
+  function isPacked(s) { return Boolean(s && typeof s === 'object' && s.nqz === 1 && typeof s.gz === 'string'); }
+  async function streamBytes(bytes, stream) {
+    const out = await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer();
+    return new Uint8Array(out);
+  }
+  function toB64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+  function fromB64(b64) { const s = atob(b64), u8 = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i); return u8; }
+  // the fields a packed state shows outside the gzip; an app before 1.9.0 that pulled a packed row kept them in its own progress
+  const PACK_KEYS = ['nqz', 'gz', 'n', 'day'];
+  function withoutPack(state) { const s = Object.assign({}, state); PACK_KEYS.forEach(k => { delete s[k]; }); return s; }
+  async function packState(state) {
+    const s = withoutPack(state);
+    const gz = await streamBytes(new TextEncoder().encode(JSON.stringify(s)), new CompressionStream('gzip'));
+    // readable outside the gzip: n and resetAt for the cloud's guard (supabase/progress-guard.sql), day (the last day practised)
+    // and owned for supabase/admin-queries.sql
+    const days = Object.keys(s.dailyLogs || {}).sort();
+    return { nqz: 1, gz: toB64(gz), n: Object.keys(s.srs || {}).length, resetAt: s.resetAt || '', day: days[days.length - 1] || '', owned: s.owned || {} };
+  }
+  async function unpackState(s) {
+    if (!isPacked(s)) return s;
+    const raw = await streamBytes(fromB64(s.gz), new DecompressionStream('gzip'));
+    return JSON.parse(new TextDecoder().decode(raw));
+  }
+
+  function normalizeEmail(s) { return String(s || '').trim().toLowerCase(); }
+
+  // True when a state holds no learning progress worth protecting (fresh install or wiped account).
+  function isEmptyProgress(s) {
+    if (!s) return true;
+    const n = (x) => (Array.isArray(x) ? x.length : (x && typeof x === 'object') ? Object.keys(x).length : 0);
+    const hasStageTests = s.stageTests && typeof s.stageTests === 'object' && Object.values(s.stageTests).some(a => Array.isArray(a) && a.length > 0);
+    return !(n(s.srs) || n(s.dailyLogs) || n(s.examHistory) || hasStageTests);
+  }
+
+  const SyncCore = { stripSecrets, keepLocalSecrets, sameStamp, pullDecision, mergeStates, buildPushPayload, normalizeEmail, isEmptyProgress, isPacked, withoutPack, packState, unpackState };
+  if (typeof module !== 'undefined' && module.exports) module.exports = SyncCore; else root.SyncCore = SyncCore;
+})(typeof window !== 'undefined' ? window : globalThis);

@@ -103,11 +103,13 @@ const BENTO_RUN = (() => {
     const fresh = ctx.done === 0; let missed = 0, lost = 0, clock = null, belled = false;
     const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
     // one voice at a time (2026-11-21, the review: a window's すみません！ cut the order being heard): what is asked for and the hero's
-    // own words are said now (now); the calls, ハル's words, the thanks wait their turn after it (turn), dropped once 5 s stale
+    // own words are said now (now); the calls, ハル's words, the thanks wait their turn after it (turn), dropped once 5 s stale. The
+    // shift's last word (last: 2026-11-25, parked from Task 7 — the shift paid, no longer on, it was dropped unsaid): its turn after the
+    // train's going while the card is still up (up), never stale, whole (the lane's cap)
     let voice = Promise.resolve(), gen = 0;
     const now = (who, l) => { gen++; voice = said(speakAs(who, l), 0, 6000); return voice; };
-    const turn = (who, l) => { const g = gen, t0 = Date.now(); voice = voice.then(() => (live() && g === gen && Date.now() - t0 < 5000 ? said(speakAs(who, l), 0, 6000) : null)); return voice; };
-    const word = ([ja, zh], cls = '') => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return turn(s.who, ja); };
+    const turn = (who, l, last) => { const g = gen, t0 = Date.now(); voice = voice.then(() => (last ? last.up() : live() && g === gen && Date.now() - t0 < 5000) ? said(speakAs(who, l), 0, last ? JOBS.LINE_CAP : 6000) : null); return voice; };
+    const word = ([ja, zh], cls = '', last) => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return turn(s.who, ja, last); };
     const me = ([ja, zh], wait = false) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return wait ? turn('hero', ja) : now('hero', ja); };
     // the order now for one at a window: what was asked (an ask put right: what followed)
     const lineOf = (x) => (x.o.kind === 'have' && x.asked ? x.o.then : x.o.line);
@@ -177,7 +179,7 @@ const BENTO_RUN = (() => {
       })();
       if (!last) { if (await away) { t++; arrive(); } return; }
       B.phase = 'end';
-      ctx.finish({}, away.then((ok) => ok && said(word(fresh && !missed && !lost ? s.all : s.end, 'ok'), 900)).then(() => { if (on()) CLASS.close(); }));
+      ctx.finish({}, away.then((ok) => ok && JOBS.whole(word(fresh && !missed && !lost ? s.all : s.end, 'ok', { up: on }), 900)).then(() => { if (on()) CLASS.close(); }));   // ハル's last word said whole, then the card shut and the results
     }
     // a window tapped: its passenger now the one served (what was in the hands goes back), heard at once the first time
     async function pickWin(x) {

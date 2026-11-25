@@ -652,7 +652,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .wk-window .cls-card { background: #eef1ee; color: #2b2b33; border-bottom: 10px solid #3f9a8c; }
 /* the ticket window on one screen (2026-11-22, the user's phone): the customer's face smaller, the replay beside the question, the
    board's rows tighter, 原田's word and the hero's one line under the answers */
-.wk-window .cls-card { padding: 12px 12px 10px; } .wk-window .wk-cust { min-height: 0; gap: 4px 8px; } .wk-window .wk-cust .kr-face { width: 44px; height: 44px; }
+.wk-window .cls-card { padding: 12px 12px 10px; } .wk-window .wk-cust { min-height: 0; gap: 4px 8px; align-items: flex-start; } .wk-window .wk-cust .kr-face { width: 44px; height: 44px; } .wk-window .wk-emo { left: 20px; }   /* the face at the row's top, its mood mark on its corner, clear of the bubble however tall the words grow (2026-11-25, parked from Task 7: the shared 38 px put it half under the bubble) */
 .wk-window .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; padding: 6px 10px; font-size: 17px; } .wk-window .wk-bub .wk-ear { grid-row: span 2; } .wk-window .wk-bub > :not(.wk-ear) { grid-column: 2; }
 :is(.md-talk, .lf-talk) { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } :is(.md-talk, .lf-talk) .kr-face { width: 34px; height: 34px; flex: none; } :is(.md-talk, .lf-talk) .wk-say { font-size: 14px; }
 :is(.md-talk, .lf-talk)[data-who="me"] :is(.kr-face, .wk-say), :is(.md-talk, .lf-talk):not([data-who="me"]) .wk-me { display: none; } :is(.md-talk, .lf-talk) .wk-me { flex: 1; margin: 0; }
@@ -682,7 +682,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .wk-lost .cls-card { background: #f1efe8; color: #2b2b33; border-bottom: 10px solid #2b3350; }
 /* the lost-and-found on one screen (2026-11-22, as the ticket window): the shelf's top two boards, the face beside the bubble and
    the replay beside what they said, the two answers side by side, 小林's word or the hero's under them */
-.wk-lost .cls-card { padding: 12px 12px 10px; } .wk-lost .wk-cust { min-height: 0; gap: 4px 8px; } .wk-lost .wk-cust .kr-face { width: 44px; height: 44px; }
+.wk-lost .cls-card { padding: 12px 12px 10px; } .wk-lost .wk-cust { min-height: 0; gap: 4px 8px; align-items: flex-start; } .wk-lost .wk-cust .kr-face { width: 44px; height: 44px; } .wk-lost .wk-emo { left: 20px; }   /* as the window's */
 .wk-lost .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; padding: 6px 10px; font-size: 17px; } .wk-lost .wk-bub .wk-ear { grid-row: span 6; } .wk-lost .wk-bub > :not(.wk-ear) { grid-column: 2; }
 .lf-room { position: relative; margin: 6px -6px 4px; border-radius: 12px; overflow: hidden; background: #e8e4da; } .lf-shelf { display: block; width: 100%; height: 96px; opacity: .9; }
 .lf-counter { position: relative; margin-top: -22px; padding: 8px 8px 8px; background: linear-gradient(#a8774a, #8a5e3a); box-shadow: inset 0 4px 0 #d9b48a; } .lf-counter .wk-cust { margin: 0; }
@@ -793,8 +793,8 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
   font-family: 'Hiragino Maru Gothic ProN', 'Zen Maru Gothic', 'Yu Gothic', sans-serif; color: #2b2b33; line-height: 1.5; }
 .yb-sign b { font-size: 16px; letter-spacing: .04em; color: #c8322a; } .yb-sign span { font-size: 13.5px; font-weight: 700; white-space: nowrap; } .yb-sign i { font-style: normal; color: #c8322a; } .yb-sign rt { font-size: 8px; font-weight: 500; }
 .yb-sign.look { animation: ybLook .9s ease-in-out; } @keyframes ybLook { 20%, 60% { transform: rotate(-2.5deg) scale(1.08); box-shadow: 0 0 0 4px #f6e08a, 2px 3px 0 rgba(43, 28, 18, .25); } }
-.yb-said { min-height: 28px; margin: 8px 0 0; font-size: 18px; font-weight: 700; color: #6e5236; } .yb-hint { min-height: 18px; margin: 0 0 2px; font-size: 13px; color: #8a7a6e; }
-.yb-lock { margin: 4px 0 8px; font-size: 14px; color: #a8241c; } .yb-note { margin: 6px 0 0; font-size: 13px; color: #8a7a6e; }
+.yb-said { min-height: 28px; margin: 8px 0 0; font-size: 18px; font-weight: 700; color: #6e5236; } .yb-hint { min-height: 18px; margin: 0 0 2px; font-size: 13px; color: #6a5a4e; }   /* #6a5a4e: readable small (2026-11-25, parked from Task 2: #8a7a6e was about 3.5:1) */
+.yb-lock { margin: 4px 0 8px; font-size: 14px; color: #a8241c; } .yb-note { margin: 6px 0 0; font-size: 13px; color: #6a5a4e; }
 .yb-coins { display: flex; justify-content: center; gap: 18px; margin-top: 6px; }
 .yb-coin { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #9aa0a8; background: radial-gradient(circle at 35% 30%, #fbfcfd, #c9ced6 60%, #a8aeb8); color: #3a3e48; display: grid; place-content: center; line-height: 1; cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .18);
   position: relative; padding: 0; font-family: 'Hiragino Mincho ProN', 'Noto Serif JP', serif; }   /* faces in kanji as minted: 五十円, 百円, 五百円 */
@@ -817,7 +817,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 /* the 鹿威し: it fills slowly, tips, pours into its basin, swings back onto its stone — a turn every 17 s, each turn's end its コーン
    (RYOKAN.mount; motion reduced: it stands, and the lobby hears a faint one now and then instead, SND's NOW_MORE) */
 .sky .land .rk-shishi { transform-box: fill-box; transform-origin: 50% 50%; animation: rkShishi 17s ease-in-out infinite; }
-@keyframes rkShishi { 0% { transform: rotate(-20deg); } 1% { transform: rotate(-16deg); } 2.6% { transform: rotate(-20deg); } 89% { transform: rotate(-13deg); } 91.6% { transform: rotate(24deg); } 95.1% { transform: rotate(24deg); } 99% { transform: rotate(-21deg); } 100% { transform: rotate(-20deg); } }
+@keyframes rkShishi { 0% { transform: rotate(-20deg); } 1% { transform: rotate(-16deg); } 2.6% { transform: rotate(-20deg); } 89% { transform: rotate(-13deg); } 91.6% { transform: rotate(24deg); } 95.1% { transform: rotate(24deg); } 99.5% { transform: rotate(-21deg); } 100% { transform: rotate(-20deg); } }   /* the strike at 99.5%: its コーン (animationiteration) about 85 ms after it (2026-11-25, parked from Task 3: at 99% it was 170 ms late) */
 .sky .land .rk-pour { opacity: 0; animation: rkPour 17s linear infinite; } @keyframes rkPour { 0%, 91% { opacity: 0; } 92%, 95% { opacity: .9; } 97.5%, 100% { opacity: 0; } }
 .sky .land [data-fx="furin"].ring .fx-sway { animation-duration: .24s !important; }   /* the wind chime rung as the garden is looked at */
 .sky .land .rk-bellcap { transform-box: fill-box; transform-origin: 50% 100%; } .sky .land [data-fx="rkbell"].ding .rk-bellcap { animation: rkBell .14s ease-out 4 alternate; } @keyframes rkBell { to { transform: scale(1.08, .86); } }
@@ -853,7 +853,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .an-pane { position: relative; flex: 1; min-width: 0; padding: 8px 8px 7px; background: linear-gradient(color-mix(in srgb, #cfe6f2 calc(var(--day, 1) * 100%), #1d2650), color-mix(in srgb, #eef5f2 calc(var(--day, 1) * 100%), #2e3560)); }
 .an-acryl { position: absolute; inset: 4px 6px 0; border: 2px solid rgba(255, 255, 255, .75); border-bottom: 0; border-radius: 12px 12px 0 0; background: linear-gradient(115deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, 0) 34%, rgba(255, 255, 255, .12) 60%, rgba(255, 255, 255, 0)); pointer-events: none; }
 .an-acryl::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 34%; height: 9px; transform: translateX(-50%); border-radius: 10px 10px 0 0; background: rgba(40, 52, 66, .3); }
-.an-pane .wk-cust { margin: 0; min-height: 0; gap: 4px 8px; } .wk-annai .wk-cust .kr-face { width: 40px; height: 40px; }
+.an-pane .wk-cust { margin: 0; min-height: 0; gap: 4px 8px; align-items: flex-start; } .wk-annai .wk-cust .kr-face { width: 40px; height: 40px; } .wk-annai .wk-emo { left: 16px; }   /* the 40 px face's corner (as the window's) */
 .wk-annai .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; padding: 4px 8px; font-size: 16px; line-height: 1.45; } .wk-annai .wk-bub span { font-size: 12.5px; } .wk-annai .wk-bub .wk-ear { grid-row: span 2; } .wk-annai .wk-bub > :not(.wk-ear) { grid-column: 2; }
 .wk-annai .wk-ear { min-height: 40px; min-width: 44px; } .wk-annai .wk-grr { top: -2px; left: 44px; }   /* inside the glass (it clips) */
 /* the question shown (an open bubble, at 案内所 and 原田's window): a customer's word pops up below it, on the spent patience bar under
@@ -945,14 +945,15 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .om-noren { display: flex; gap: 3px; height: 23px; padding: 4px 3px 0; background: linear-gradient(#8a6a46 0 1px, #4a3424 1px 4px, transparent 4px); }   /* its pole, four panels hung from it, ♨ on the middle two */
 .om-noren b { flex: 1; display: grid; place-items: center; border-radius: 0 0 4px 4px; background: #26407a; box-shadow: inset 0 -2px 0 #3f5a96; } .om-noren svg { display: block; width: 17px; height: 14px; }
 .om-door { padding: 3px 8px 6px; background: radial-gradient(circle at 88% 16%, rgba(255, 196, 120, calc((1 - var(--day, 1)) * .5)), transparent 46%), linear-gradient(color-mix(in srgb, #dfe6e6 calc(var(--day, 1) * 100%), #1c2346), color-mix(in srgb, #efe7d8 calc(var(--day, 1) * 100%), #2b2e52)); }   /* the street outside, by day or night */
-.om-door .wk-cust { margin: 0; min-height: 0; gap: 4px 8px; } .wk-miyage .wk-cust .kr-face { width: 44px; height: 44px; }
+.om-door .wk-cust { margin: 0; min-height: 0; gap: 4px 8px; align-items: flex-start; } .wk-miyage .wk-cust .kr-face { width: 44px; height: 44px; } .wk-miyage .wk-emo { left: 20px; }   /* as the window's */
 .wk-miyage .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; padding: 4px 9px 4px 4px; font-size: 16px; line-height: 1.45; } .wk-miyage .wk-bub span { font-size: 12.5px; } .wk-miyage .wk-bub rt { font-size: 9px; }
 .wk-miyage .wk-bub .wk-ear { grid-row: span 2; min-height: 40px; min-width: 44px; } .wk-miyage .wk-bub > :not(.wk-ear) { grid-column: 2; } .om-dots { color: #8a7a6e; letter-spacing: .1em; }
 .om-hold { position: absolute; left: 30px; top: 27px; z-index: 1; display: block; pointer-events: none; } .om-hold svg { display: block; } .om-bags svg { width: 30px; height: 23px; } .om-coin svg { width: 28px; height: 28px; }   /* in their hands: bags, a coin */
 .om-counter { display: flex; align-items: center; gap: 6px; padding: 6px 8px 7px; background: linear-gradient(#cf9c62, #ad7844); box-shadow: inset 0 3px 0 #e6bc86, inset 0 -3px 0 #7a5232; }
 .om-plate { flex: none; display: block; width: 70px; height: 42px; } .om-plate svg { display: block; width: 100%; height: 100%; }
 .om-tray { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; align-content: center; min-height: 46px; padding: 3px 10px 3px 14px; border-radius: 14px; background: radial-gradient(ellipse at 50% 35%, #8e3a2a, #6a2418 75%); box-shadow: inset 0 0 0 2px #b0503a, inset 0 3px 7px rgba(0, 0, 0, .4), 0 2px 0 rgba(40, 20, 10, .35); }
-.om-chip { display: block; width: 34px; height: 34px; margin-left: -4px; pointer-events: none; } .om-chip .pic { width: 100%; height: 100%; --pic-disc: rgba(255, 246, 226, .85); }   /* on the tray: taken off again by tapping it on the shelf */
+.om-chip { display: block; width: 34px; height: 34px; margin-left: -4px; pointer-events: none; } .om-chip .pic { width: 100%; height: 100%; --pic-disc: rgba(255, 246, 226, .85); }   /* on the tray: taken off again by a tap on the tray (the tray takes it: the chip under the tap, else the nearest) or on its place on the shelf */
+.om-tray:has(.om-chip) { cursor: pointer; } @media (hover: hover) { .om-tray:has(.om-chip):hover { box-shadow: inset 0 0 0 2px #e8845e, inset 0 3px 7px rgba(0, 0, 0, .4), 0 2px 0 rgba(40, 20, 10, .35); } }   /* a tray with goods on it is tapped too: a desk's cue (2026-11-25, parked from Task 6) */
 .om-tray.om-full .om-chip { width: 27px; height: 27px; margin-left: -5px; }
 .om-chip.om-in { animation: omIn .28s ease-out; } @keyframes omIn { from { opacity: 0; transform: translateY(-12px) scale(.8); } }
 .om-tray.om-off .om-chip { animation: omOff .5s ease-in forwards; } @keyframes omOff { to { opacity: 0; transform: translateY(26px) scale(.8); } }
@@ -1008,6 +1009,9 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .fr-hold { position: absolute; left: -6px; top: 27px; z-index: 2; width: 30px; height: 23px; pointer-events: none; } .fr-hold svg { display: block; width: 100%; height: 100%; }   /* their luggage in hand, before them (clear of the bubble) */
 .fr-opts { display: grid; grid-auto-rows: 1fr; gap: 5px; margin-top: 6px; }   /* every reply as tall as the tallest: none stands out by its shape (Task 4's N-3) */
 .fr-opt { min-height: 44px; padding-block: 3px; font-size: 15.5px; line-height: 1.45; text-align: left; justify-content: flex-start; white-space: normal; } .fr-opt rt { font-size: 9px; }
+/* a reply wraps at its spaces (its phrases: 「…つけましょ／うか」 broke mid-word), a phrase longer than the line anywhere (2026-11-25, the
+   final review's Minor 3) */
+:is(.an-opt, .nk-opt, .om-opt, .fr-opt, .md-opt) { word-break: keep-all; overflow-wrap: anywhere; }
 .fr-opt.fr-right { box-shadow: 0 0 0 2px #3f9a6a; } .fr-opt:disabled:not(.fr-right):not(.wk-hint) { opacity: .5; }
 .fr-opt.wk-bad { animation: shake .3s ease; } .fr-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
 .fr-tip { margin: 2px 0; padding: 6px 10px; border-radius: 8px; background: #fbeee0; color: #6a3a1c; font-size: 13.5px; line-height: 1.5; }
@@ -1596,6 +1600,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 @media (prefers-reduced-motion: reduce) { .study .art :is(.mote, .cur) { animation: none; } }
 .yard .yhero.fading { opacity: 0; transition: opacity .75s ease-in; }   /* off toward the beach or the town: fading as he goes (yGo) */
 .sky .use-btn { position: absolute; left: 50%; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; -webkit-tap-highlight-color: transparent; }   /* PLACE_USE: a thing to tap */
+.sky .use-btn.use-poly { pointer-events: none; } .sky .use-btn .use-hit { position: absolute; inset: 0; pointer-events: auto; }   /* a thing taking a tap on part of its box only (PLACE_USE hit): its polygon, the dot still shown */
 .sky .use-btn::after { content: ''; position: absolute; left: 50%; top: -4px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: rgba(255, 255, 255, .9); box-shadow: 0 0 0 3px rgba(255, 255, 255, .28), 0 1px 3px rgba(0, 0, 0, .25); transition: opacity .5s; animation: useHint 2.4s ease-in-out infinite; }
 .yard.quiet .sky .use-btn::after { opacity: 0; } .sky .use-btn.tried::after, .sky .use-btn.signed::after { display: none; } .sky .use-btn.signed .tag { top: var(--ty, -6px); }   /* signed (日本語教室): a badge as in 書房, not a dot */
  .yard.edit .sky .use-btn, .yard.dressing .sky .use-btn { display: none; } @keyframes useHint { 50% { transform: scale(1.4); opacity: .55; } }

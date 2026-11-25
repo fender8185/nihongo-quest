@@ -249,10 +249,12 @@ const CRUISE = (() => {
   }
   // crowded together: now and then someone shuffles a step, then looks back at the hero (not those sitting down)
   // Out of doors between stops (2026-11-13, the user: always one clump looked odd) now and then one wanders off a little instead —
-  // over to something of the place to look at, or just about — and one who has wandered comes back on a later turn
+  // over to something of the place to look at, or just about — and one who has wandered comes back on a later turn. At a meal out of
+  // doors, those standing round shuffle about their own place in the ring (p.ring), never drifting off a step at a time (2026-11-25,
+  // parked from Task 1: the steps were a random walk with no pull back)
   function jostle() {
     if (!alive()) return;
-    S.jt = setTimeout(jostle, rnd(1400, 2800));
+    S.jt = setTimeout(jostle, paced(rnd(1400, 2800)));   // (paced: the tests' tours run it fast, CRUISE.setPace)
     if (TALK.on() || S.busy || calm()) return;
     const idle = [...S.ppl.values()].filter((p) => !p.walk && !p.seat && p.id !== 'takahashi' && !p.away); if (!idle.length) return;
     const p = pick(idle), [X, Y] = p.pos, mid = S.eat;   // at a meal out of doors: no wandering off from the ring, its middle looked at
@@ -262,7 +264,8 @@ const CRUISE = (() => {
       const out = [...S.ppl.values()].filter((q) => q.id !== 'takahashi' && (Math.abs(q.pos[0] - hx) > 70 || Math.abs(q.pos[1] - hy) > 20)).length;
       if (!off && out < 3 && Math.random() < 0.45) { const w = roam(hx, hy); if (w) { walkTo(p, w.to, { v: rnd(55, 75), done: () => { if (w.at !== undefined) turnTo(p, w.at); } }); return; } }
     }
-    const to = S.indoor ? isoClamp([X + rnd(-14, 14), Y + rnd(-5, 5)], 1) : [X + rnd(-14, 14), Math.max(14, Math.min(walkTop(S.place, X), Y + rnd(-5, 5)))];
+    const [bx, by] = mid && p.ring ? p.ring : [X, Y];   // a step from their place in the ring at a meal, else from where they stand
+    const to = S.indoor ? isoClamp([X + rnd(-14, 14), Y + rnd(-5, 5)], 1) : [bx + rnd(-14, 14), Math.max(14, Math.min(walkTop(S.place, bx), by + rnd(-5, 5)))];
     walkTo(p, to, { path: [p.pos, to], v: 45, done: () => turnTo(p, mid ? mid[0] : yh.X) });
   }
   // somewhere to wander to from the crowd at hx, hy: a thing of the place close by (its spot: PLACE_USE's go; at: where to look),
@@ -303,7 +306,7 @@ const CRUISE = (() => {
   // { t, X } that no one of the town sits on (as the hero finds them taken: useThing) nor a passenger
   function benches() {
     const taken = [...S.yard.querySelectorAll('.npc.bench:not(.tourist)')].map(npcAt).concat([...S.ppl.values()].map((p) => p.seat && p.seat.X).filter(Number.isFinite));
-    return (PLACE_USE[S.place] || []).filter((t) => t.kind === 'sit').flatMap((t) => t.seats.map((X) => ({ t, X }))).filter((q) => taken.every((x) => Math.abs(x - q.X) >= 30));
+    return (PLACE_USE[S.place] || []).filter((t) => t.kind === 'sit').flatMap((t) => t.seats.map((X) => ({ t, X }))).filter((q) => benchFree(q.X, taken));   // the hero's own rule (71b_places.js)
   }
   // those with no seat at a meal out of doors stand round in a loose ring about the crowd's spot (2026-11-23, spec §1.2): an
   // ellipse as the ground is seen, wider the more they are (by its depth) but clear of the hero, on the ground; turned by the
@@ -357,6 +360,8 @@ const CRUISE = (() => {
 
   // ---- the bar along the foot of the scene: which stop is next and where it is; on by 高橋's 「！」 (2026-11-13, the user: as the
   // story's events go on, no button) ----
+  // how they go further than next door (a stop's go: its sign, its words — the bar's and the travel screen's; one list, 2026-11-25), else on foot
+  const HOW = { bus: ['🚌', '搭公車去'], train: ['🚃', '搭電車去'] };
   function bar() {
     if (!alive()) return;
     let b = S.yard.querySelector('.cruise-bar');
@@ -364,7 +369,7 @@ const CRUISE = (() => {
     if (!t) { if (b) b.remove(); if (g) mark(g, false); return; }
     if (!b) { b = document.createElement('div'); b.className = 'cruise-bar'; b.setAttribute('role', 'status'); S.yard.appendChild(b); }
     const on = cs().on, i = nextStop(t, stepOf(t, on)), s = t.stops[i], n = t.stops.length, here = on.place === S.place;
-    const near = Boolean(WAYS[`${S.place}>${s.at}`]), ready = here && !S.busy && !S.quiet && !eating(), by = !near && { bus: '搭公車去', train: '搭電車去' }[s.go];
+    const near = Boolean(WAYS[`${S.place}>${s.at}`]), ready = here && !S.busy && !S.quiet && !eating(), by = !near && HOW[s.go] && HOW[s.go][1];
     const go = s.at === S.place ? (s.bye ? '送客人上船' : '') : `${by || '一起去'}${placeName(s.at)}`;
     b.innerHTML = !here ? `<span class="cb-t">遊客在${esc(placeName(on.place))}等你</span>`
       : `<span class="cb-n">${i + 1}/${n}</span><span class="cb-t">${esc(s.title)}</span>${go ? `<span class="cb-go">${esc(go)}</span>` : ''}<span class="cb-busy">${S.busy ? '導覽中…' : eating() ? '大家正在用餐…點遊客聊聊' : ready ? '點高橋頭上的「！」' : ''}</span>`;
@@ -396,10 +401,10 @@ const CRUISE = (() => {
     };
     left++; yHeroWalk(S.yard, heroAt(s), there);
     left++; walkTo(S.ppl.get('takahashi'), guideAt(s), { v: 120, done: there });
-    const m = spots(s, i, ids); S.eat = m.ring;   // after bringOut: a seat the stop's townsfolk stand at is taken
+    const m = spots(s, i, ids); S.eat = m.ring;   // after bringOut: a seat the stop's townsfolk stand at is taken (none stands on one: test_cruise's pin, for the walk-in below)
     ids.forEach((id, k) => {
       const p = S.ppl.get(id); if (!p) return;
-      const lost = s.lost && s.lost[0] === id, q = m.seat[id]; p.away = lost;
+      const lost = s.lost && s.lost[0] === id, q = m.seat[id]; p.away = lost; p.ring = m.ring && !lost && !q && !p.seat ? m.at[id] : null;   // their place in a meal's ring out of doors (jostle)
       if (m.meal && p.seat) return;   // sat down already
       left++; walkTo(p, lost ? s.lost[1] : q ? foot(q) : m.at[id], { delay: paced(k * 80 + rnd(0, 220)), v: id === 'umeko' ? 160 : id === 'michiyama' ? 75 : rnd(88, 115), done: () => { if (q) sit(p, q); there(); } });
     });
@@ -459,9 +464,8 @@ const CRUISE = (() => {
     const h = S.yard.querySelector('.yhero');   // a shop's door (食堂, 居酒屋), in or out
     yHeroWalk(S.yard, o, () => { if (h) h.classList.add('out'); setTimeout(() => { yh.arrive = { from: yPlace, to: s.at }; go(PLACE_ROUTE[s.at]); }, paced(260)); }, true);
   }
-  const HOW = { bus: '🚌 大家一起搭公車去', train: '🚃 大家一起搭電車去' };   // how they go (a stop's go), else on foot
   function travel(s) {
-    const words = (HOW[s.go] || '🚶 大家一起走去') + placeName(s.at);
+    const words = (HOW[s.go] ? `${HOW[s.go][0]} 大家一起${HOW[s.go][1]}` : '🚶 大家一起走去') + placeName(s.at);
     const v = document.createElement('div'); v.className = 'cruise-travel'; v.innerHTML = `<span>${esc(words)}</span>`; document.body.appendChild(v);
     pend = s.at; carry = HOW[s.go] ? s.go : 'walk'; S.busy = true; bar();
     requestAnimationFrame(() => v.classList.add('on'));
@@ -662,13 +666,13 @@ const CRUISE = (() => {
     if (follow && was.carry === 'bus' && BUS_PLACES.includes(place) && !busOpen(place)) { state.town.stops[place] = 1; saveState(); toast(`跟著導覽認識了${placeName(place)}，之後可以自己搭公車來`, 3600); }
     if (on.place === place) {
       const [s, k] = rest(t, stepOf(t, on), place), ids = party(t), m = spots(s, k, ids), at = m.at; S.home = S.indoor ? null : crowdAt(s); S.eat = m.ring;
-      if (follow && !calm()) {   // in behind him: by the way he came, or round him where the bus, the train or the walk brought him
+      if (follow && !calm()) {   // in behind him: by the way he came, or round him where the bus, the train or the walk brought him — seated as they come in, before the stop's townsfolk are brought out (run's bringOut): safe as no indoor meal stop has its townsfolk stand on a seat (pinned: test_no_indoor_meal_stops_townsfolk_stand_on_a_seat; 2026-11-25, parked from Task 1)
         const in0 = was.carry ? [yh.X, yh.Y] : way.in()[0], near = (d) => (S.indoor ? isoClamp([in0[0] + rnd(-d, d), in0[1] + rnd(-d / 4, d / 4)], 1) : [in0[0] + rnd(-d, d), Math.min(walkTop(place, in0[0]), in0[1] + rnd(-4, 4))]);
         walkTo(el('takahashi', near(20)), guideAt(s), { delay: paced(300), v: 130, free: true });
-        ids.forEach((id, j) => { const p = el(id, near(30)), q = m.seat[id]; p.el.classList.add('cr-in'); walkTo(p, q ? foot(q) : at[id], { delay: paced(400 + j * 160), v: rnd(100, 130), free: true, done: q && (() => sit(p, q)) }); });
+        ids.forEach((id, j) => { const p = el(id, near(30)), q = m.seat[id]; p.ring = m.ring && !q ? at[id] : null; p.el.classList.add('cr-in'); walkTo(p, q ? foot(q) : at[id], { delay: paced(400 + j * 160), v: rnd(100, 130), free: true, done: q && (() => sit(p, q)) }); });
       } else {   // there already: at a meal sat down (out of doors the rest round in their ring)
         el('takahashi', guideAt(s));
-        ids.forEach((id) => { const p = el(id, at[id]), q = m.seat[id]; if (q) sit(p, q); });
+        ids.forEach((id) => { const p = el(id, at[id]), q = m.seat[id]; p.ring = m.ring && !q ? at[id] : null; if (q) sit(p, q); });
         facing(s); round(); setTimeout(() => frameAll(s), 60);
       }
       if (follow && was.pend === place) {   // led here for the next stop: on to it once they are in

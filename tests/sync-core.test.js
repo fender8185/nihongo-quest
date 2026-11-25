@@ -326,19 +326,24 @@ test('mergeStates: a thing once a day (射的: oneADay.shateki) keeps the later 
   assert.deepEqual(C.mergeStates(at(1, { shateki: '2026-11-23' }), at(2)).oneADay, { shateki: '2026-11-23' });   // a copy without it (1.21.0's): kept
   assert.deepEqual(C.mergeStates(at(2, { manju: '2026-11-21' }), at(1, { shateki: '2026-11-20' })).oneADay, { manju: '2026-11-21', shateki: '2026-11-20' });   // each thing its own
   assert.equal(C.mergeStates(at(1), at(2)).oneADay, undefined);   // nothing invented
+  // 交通費 (2026-11-25, ruling 37: oneADay.koutsuhi, the day an onsen shift paid back the ride up): the later day, either copy, either way
+  assert.deepEqual(C.mergeStates(at(1, { koutsuhi: '2026-11-25', shateki: '2026-11-24' }), at(2, { shateki: '2026-11-25' })).oneADay, { koutsuhi: '2026-11-25', shateki: '2026-11-25' });
+  assert.deepEqual(C.mergeStates(at(2, { shateki: '2026-11-25' }), at(1, { koutsuhi: '2026-11-25', shateki: '2026-11-24' })).oneADay, { koutsuhi: '2026-11-25', shateki: '2026-11-25' });
+  assert.deepEqual(C.mergeStates(at(1, { koutsuhi: '2026-11-25' }), at(2, { koutsuhi: '2026-11-24' })).oneADay, { koutsuhi: '2026-11-25' });
+  assert.deepEqual(C.mergeStates(at(2, { koutsuhi: '2026-11-24' }), at(1, { koutsuhi: '2026-11-25' })).oneADay, { koutsuhi: '2026-11-25' });
 });
 
 // Review Focus 4 of the onsen plan (2026-11-24, ruling 5): a device still on 1.21.0 merges a save holding the onsen jobs' records
 // (annai, nakai, miyage, front — done, and one under way with what it keeps) and the once-a-day days (射的: oneADay.shateki; the welcome
-// まんじゅう: purse.gifts.kangei) with its own copy that has none of them — by 1.21.0's own mergeStates, read from its release commit
-// (892885c: the test means the same after main moves) — and drops nothing, whichever copy was saved later; this build's too
+// まんじゅう: purse.gifts.kangei; 交通費: oneADay.koutsuhi, 2026-11-25) with its own copy that has none of them — by 1.21.0's own
+// mergeStates (its release commit's file, 892885c, kept as a fixture: tests/fixtures/sync-core-1.21.0.js — the final review's Minor 5, a
+// shallow clone or an exported tree has no history to read it from) — and drops nothing, whichever copy was saved later; this build's too
 test('mergeStates of 1.21.0 (892885c) and of this build keep the onsen jobs\' records and the once-a-day days, merged either way (2026-11-24)', () => {
-  const src = require('node:child_process').execSync('git show 892885c:sync-core.js', { cwd: require('node:path').join(__dirname, '..'), encoding: 'utf8' });
-  const m = { exports: {} }; new Function('module', 'exports', src)(m, m.exports); const OLD = m.exports;
+  const OLD = require('./fixtures/sync-core-1.21.0.js');
   assert.equal(typeof OLD.mergeStates, 'function');
   const res = { '2026-11-01': { place: 'annai', done: 10, score: { 0: 0 }, yen: 260, grade: 'S', tip: 0 }, '2026-11-02': { place: 'nakai', done: 10, score: { 0: 1 }, yen: 240, grade: 'A', tip: 0 },
     '2026-11-03': { place: 'miyage', done: 10, score: {}, yen: 270, grade: 'B', tip: 5 }, '2026-11-04': { place: 'front', done: 3, score: { 0: 0, 1: 0, 2: 1 }, keep: { seed: 77 } } };
-  const mine = (t) => ({ v: 3, updatedAt: t, srs: { a: 1 }, work: { res }, oneADay: { shateki: '2026-11-04' }, purse: { spent: { d1: 300 }, book: { onsenmanju: '2026-11-01' }, gifts: { kangei: '2026-11-04' } } });
+  const mine = (t) => ({ v: 3, updatedAt: t, srs: { a: 1 }, work: { res }, oneADay: { shateki: '2026-11-04', koutsuhi: '2026-11-04' }, purse: { spent: { d1: 300 }, book: { onsenmanju: '2026-11-01' }, gifts: { kangei: '2026-11-04' } } });
   const theirs = (t) => ({ v: 3, updatedAt: t, srs: { b: 1 }, work: { res: { '2026-10-01': { place: 'buns', done: 10, score: {}, yen: 80, grade: 'B', tip: 0 } } }, purse: { spent: { d2: 100 }, book: {} } });   // 1.21.0's own: none of them
   for (const [name, merge] of [['1.21.0', OLD.mergeStates], ['this build', C.mergeStates]]) {
     for (const [a, b] of [[mine('2026-11-24T10:00:00.000Z'), theirs('2026-11-24T11:00:00.000Z')], [mine('2026-11-24T12:00:00.000Z'), theirs('2026-11-24T11:00:00.000Z')]]) {
@@ -346,7 +351,7 @@ test('mergeStates of 1.21.0 (892885c) and of this build keep the onsen jobs\' re
         const why = `${name}: mine ${a.updatedAt}`;
         assert.deepEqual(Object.values(out.work.res).map((r) => r.place).sort(), ['annai', 'buns', 'front', 'miyage', 'nakai'], why);
         ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04'].forEach((d) => assert.deepEqual(out.work.res[d], res[d], `${why} ${d}`));
-        assert.deepEqual(out.oneADay, { shateki: '2026-11-04' }, why);
+        assert.deepEqual(out.oneADay, { shateki: '2026-11-04', koutsuhi: '2026-11-04' }, why);
         assert.deepEqual(out.purse.gifts, { kangei: '2026-11-04' }, why);
       }
     }

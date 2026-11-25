@@ -37,16 +37,19 @@ const FRONT = (() => {
   // who comes at task k in place of a guest who left in a huff at their check-in (sc: the day's scores; 3 at it) — they do not come back
   // (fix round 1, M-12): their book question goes to another named party in by then (checked in before k and not left, or staying on;
   // never the one with dinner's time to tell), else — as their dinner time always — a want or a where not yet in the shift, its speaker not
-  // the guest before or after; none (never so far): they come back after all. Seeded by the shift and k: the same on a resume
-  function instead(sh, k, sc, u) {
-    const t = sh.tasks[k], R = rng((sh.seed ^ Math.imul(k + 1, 0x85ebca6b)) >>> 0), near = [sh.tasks[k - 1], sh.tasks[k + 1]].filter(Boolean).map((x) => x.who), free = (who) => !near.includes(who);
+  // the guest before or after; none (never so far): they come back after all. came: the tasks before k as they came (k → task; the run's,
+  // filled in order) — another made up for already counts as in the shift, the one just before as the guest before (2026-11-25, parked
+  // from Task 7's re-review: two huffs could bring the same want twice, or one speaker twice running). Seeded by the shift and k: the same
+  // on a resume
+  function instead(sh, k, sc, u, came = {}) {
+    const t = sh.tasks[k], R = rng((sh.seed ^ Math.imul(k + 1, 0x85ebca6b)) >>> 0), near = [came[k - 1] || sh.tasks[k - 1], sh.tasks[k + 1]].filter(Boolean).map((x) => x.who), free = (who) => !near.includes(who);
     if (t.kind === 'memo') {
       const dinW = (sh.tasks.find((x) => x.kind === 'dinner') || {}).who;
       const ok = sh.book.map((p, i) => [p, i]).filter(([p]) => p.who && p.who !== t.who && p.who !== dinW && p.dinner !== null && free(p.who)
         && (p.in || sh.tasks.some((x, j) => j < k && x.kind === 'checkin' && x.who === p.who && !(sc[j] >= 3))));
       if (ok.length) return memoTask(sh.book, pickR(ok, R)[1], t.ask, R);
     }
-    const used = new Set(sh.tasks.map((x) => x.id)), A = T().ask;
+    const used = new Set(sh.tasks.concat(Object.values(came)).map((x) => x.id)), A = T().ask;
     const ids = Object.keys(A).filter((id) => ['request', 'where'].includes(A[id].kind) && !used.has(id) && free(A[id].who) && (!A[id].at || A[id].at === (sh.morning ? 'am' : 'pm')));
     return ids.length ? plainTask(pickR(ids, R), u, R) : t;
   }
@@ -146,7 +149,7 @@ const FRONT_RUN = (() => {
     function taskAt(k) {
       if (swapped[k]) return swapped[k];
       const t = shift.tasks[k], sc = scores(), j = ['memo', 'dinner'].includes(t.kind) ? shift.tasks.findIndex((x) => x.kind === 'checkin' && x.who === t.who) : -1;
-      return (swapped[k] = j >= 0 && j < k && sc[j] >= 3 ? FRONT.instead(shift, k, sc, TOWNEV.reachedIdx()) : t);
+      return (swapped[k] = j >= 0 && j < k && sc[j] >= 3 ? FRONT.instead(shift, k, sc, TOWNEV.reachedIdx(), swapped) : t);   // swapped: each before it as it came (in order: show and the resume both go 0, 1, 2…)
     }
     // a shift taken up again: the book and the board as the guests before left them — each checked in, their key out; each dinner told
     { const sc = scores(); for (let k = 0; k < ctx.done; k++) { const t = taskAt(k); if (sc[k] >= 3) continue; if (t.kind === 'checkin') book[t.party].in = true; if (t.kind === 'dinner') book[t.party].dinner = t.time; } }
@@ -154,8 +157,10 @@ const FRONT_RUN = (() => {
     // own desk (D: never another run's)
     let box = null, D = null; const el = (q) => (box && box.isConnected ? box.querySelector(q) : null), all = (q) => (box && box.isConnected ? [...box.querySelectorAll(q)] : []);
     const live = () => mine === runs && Boolean(el('.fr-desk')) && ctx.on();
-    // the book wanted (a book question; a check-in's key): the card's self-scroll never takes it out of sight (fix round 1, M-1)
-    const wanted = () => { const R = D && D.now(); return Boolean(R) && R.phase !== 'done' && (R.task.kind === 'memo' || (Boolean(R.task.steps) && R.step === 1)); };
+    // the book wanted (a book question; a check-in's key): the card's self-scroll never takes it out of sight (fix round 1, M-1) — till two
+    // misses in the step have lit their row and the right reply: then 佐藤's reason and that reply come into sight (2026-11-25, parked
+    // from Task 7's re-review: at 360×640 they stayed under the fold)
+    const wanted = () => { const R = D && D.now(); return Boolean(R) && R.phase !== 'done' && R.miss2 < 2 && (R.task.kind === 'memo' || (Boolean(R.task.steps) && R.step === 1)); };
     // 佐藤 and the hero share the line under the replies (whoever spoke last; the hero's 中文 on the job's first shift only, under the
     // reply once said — ruling 23); a short phone: the card scrolls itself just far enough to show it, never past the book while it is
     // wanted, and is back at its top for each guest: JOBS.talkLine (M-10), every line awaited within the lane's cap (I-1)

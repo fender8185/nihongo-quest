@@ -146,8 +146,9 @@ const MIYAGE_RUN = (() => {
       t.innerHTML = R.tray.length ? R.tray.map((id) => { const g = MIYAGE.good(id); return `<span class="om-chip${id === added ? ' om-in' : ''}" data-t="${id}" role="img" aria-label="${esc(g[5])}">${pic(g)}</span>`; }).join('')
         : picking ? '<span class="om-empty">點架上的東西放上托盤<br>點托盤上的就放回去</span>' : '';   // a good taken back by a tap on the tray (I-2) or on the shelf
       t.classList.toggle('om-full', R.tray.length > 5);
-      const d = el('.om-give'); if (d) d.disabled = !(R.phase === 'pick' && !R.busy && R.tray.length);
+      const d = el('.om-give'); if (d) d.disabled = !(R.phase === 'pick' && !R.busy && R.tray.length && R.gave !== trayKey());
     }
+    const trayKey = () => R.tray.slice().sort().join();   // the tray as it stands (a tray handed over and not it: どうぞ off till this changes)
     const hint = () => all('.om-good').forEach((b) => b.classList.toggle('wk-hint', R.c.lit.includes(b.dataset.g)));
     const unhint = () => all('.om-good.wk-hint').forEach((b) => b.classList.remove('wk-hint'));
     function opts(on) {
@@ -167,7 +168,7 @@ const MIYAGE_RUN = (() => {
     // a step begun — a pick, a reply or a taste: its words heard first (none for a superior's gift: their words stay shown), their
     // patience from the end of them (a fresh clock each step: the step before pleased them)
     function begin(i) {
-      const c = R.c, st = MIYAGE.steps(c)[i], me0 = R; R.step = i; R.miss2 = 0;
+      const c = R.c, st = MIYAGE.steps(c)[i], me0 = R; R.step = i; R.miss2 = 0; R.gave = null;
       if (st === 'eat') { eat(me0); return; }
       const line = i === 0 ? c.line : c.kind === 'elder' ? null : c.then;
       R.line = line || c.line; R.phase = st; R.busy = false;
@@ -185,16 +186,17 @@ const MIYAGE_RUN = (() => {
     }
     // どうぞ: the tray against what they said — not it: their own word to it where they have one (a box too few, the big one for the
     // small, dearer than the coin, short of the eight), else 竹内's, the reason under it; said to its end, the clock held meanwhile and the
-    // miss's cost after it (ruling 27); two and their words are shown, the right goods lit. One どうぞ, one miss (fix round 1, I-1): busy
-    // while the word is to be said (a second tap, a tap on the tray: nothing), どうぞ off till the tray has changed (tray() turns it on)
+    // miss's cost after it (ruling 27); two and their words are shown, the right goods lit. One どうぞ, one miss (fix round 1, I-1): どうぞ
+    // off till the tray has changed (tray() turns it on; the same tray handed again: nothing) — the shelves and the tray live all the
+    // while, a tap while the word is said as at any time (2026-11-25, parked from Task 6's re-review: they were dropped without a sign)
     function give() {
-      if (!R || R.phase !== 'pick' || R.busy || !R.tray.length) return;
+      if (!R || R.phase !== 'pick' || R.busy || !R.tray.length || R.gave === trayKey()) return;
       const c = R.c, j = MIYAGE.judge(c, R.tray);
       if (j.ok) { rightPick(); return; }
-      const me0 = R; R.miss++; R.miss2++; missed++; R.busy = true; playSfx('bad');
+      R.miss++; R.miss2++; missed++; R.gave = trayKey(); playSfx('bad');
       const d = el('.om-give'); if (d) { d.classList.remove('wk-bad'); void d.offsetWidth; d.classList.add('wk-bad'); d.disabled = true; }
       const own = j.why === 'few' || j.why === 'small' ? c.no[R.tray[0]] : j.why === 'over' ? c.over : j.why === 'short' ? c.short : null, why = s.why[j.why] || s.why.other;
-      JOBS.missWord(P, () => (own ? theirs(c.who, own, why) : word([A.pick[0], why], 'bad')), MISS, box).then(() => { if (mineNow(me0) && R.phase === 'pick') R.busy = false; });
+      JOBS.missWord(P, () => (own ? theirs(c.who, own, why) : word([A.pick[0], why], 'bad')), MISS, box);
       if (R.miss2 >= 2) { bub(true); hint(); }
     }
     // a tap on the tray (fix round 1, I-2 — as 駅弁 taught: what is in hand is tapped to put it back): the good the tap is on goes back to

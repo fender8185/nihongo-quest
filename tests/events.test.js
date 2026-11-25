@@ -73,7 +73,7 @@ test('no event waits on one that only happens at night (a daytime player would n
 });
 test('events.js itself passes against data.js', () => {
   const D = require('../scripts/data-file').load();
-  assert.deepEqual(check(loadTown(), D, { chatMin: 10, wares: loadWares() }), []);
+  assert.deepEqual(check(loadTown(), D, { chatMin: 10, wares: loadWares(), shifts: true }), []);
 });
 // ---- 2026-11-12: the town comes alive (docs/superpowers/specs/2026-11-12-town-life-design.md) ----
 const said = (n, dots) => Array.from({ length: n }, (_, i) => ['miku', i < dots ? '……はい。' : 'はい。', '是。']);
@@ -312,4 +312,29 @@ test('フロント (fix round 1, M-5): 佐藤 has a word for each way a reply is
   assert.deepEqual(kinds(check(town2({ keyWhy: '' }), D15)), ['onsen']);
   assert.deepEqual(kinds(check(town2({ tipName: undefined }), D15)), ['onsen']);
   assert.deepEqual(kinds(check(town2({ rooms: [['sakura', '花', 'はな', '花', '花の間']] }), D15)), ['bare-kanji']);   // a room as said, its kanji marked
+});
+// the cruise plan's ruling 6 (parked 18 of the final fix; the user: no decoy may pass for the answer): with furigana hidden (全部隱藏) a
+// reply reads as its kanji — no wrong option may then read the same as a right one (m7-3's {来|き}られる and m9-2's {来|き}よう／{来|く}よう
+// were 来られる, 来よう: the answer's own look)
+test('no wrong reply reads the same as the right one with the furigana hidden: the events and the cruise trips', () => {
+  const T = loadTown(), shown = (s) => s.replace(/\{([^|}]+)\|[^}]+\}/g, '$1').replace(/\s+/g, ''), sets = [];
+  const of = (where, ls) => (ls || []).forEach((l) => { if (!Array.isArray(l) && l.opts) sets.push([where, l.opts]); });
+  T.EVENTS.forEach((e) => { of(e.id, e.lines); if (e.met) of(e.id + '.met', e.met.head); });
+  T.CRUISE.TRIPS.forEach((t) => t.stops.forEach((s) => of(`${t.id}.${s.id}`, s.lines)));
+  const bad = sets.filter(([, opts]) => { const right = opts.filter((o) => o[1]).map((o) => shown(o[0])); return opts.some((o) => !o[1] && right.includes(shown(o[0]))); }).map(([id]) => id);
+  assert.ok(sets.length > 300, String(sets.length));
+  assert.deepEqual(bad, []);
+});
+// parked 6 of the final fix (Task 6's re-review): the おみやげ屋's shift can always be made — check-events tries every mix of kinds a shift
+// may ask for (MIYAGE.make's PLAIN and ONCE, read from js/71y_miyage.js) against the customers: with no one unable to choose (taste),
+// or with every coin-spender one person, it says so
+test('おみやげ屋: every shift make() may ask for has ten customers of ten people (opts.shifts), else it is caught', () => {
+  const D = require('../scripts/data-file').load(), T = loadTown(), cust = T.ONSEN.miyage.cust;
+  const without = (f) => { const t = loadTown(); t.ONSEN.miyage.cust = Object.fromEntries(Object.entries(cust).filter(([id, c]) => !f(id, c))); return t; };
+  const shift = (t) => check(t, D, { shifts: true }).filter((p) => p.includes('miyage shift'));
+  assert.deepEqual(shift(T), []);
+  assert.ok(shift(without((id, c) => c.kind === 'taste')).length > 0);   // no one to taste first
+  const one = loadTown(), b = Object.values(one.ONSEN.miyage.cust).filter((c) => c.kind === 'budget'), r = Object.values(one.ONSEN.miyage.cust).filter((c) => c.kind === 'reply');
+  b.concat(r).forEach((c) => { c.who = b[0].who; });   // the coin's and the favour's customers all one person: never two of them in a shift
+  assert.ok(shift(one).length > 0);
 });

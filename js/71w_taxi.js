@@ -198,7 +198,7 @@ const TAXI_RUN = (() => {
         if (more) { await said(speakAs(r.ride.who, s.cust.keep[0]), 600); playSfx('coin', 2); }
         await said(speakAs(r.ride.who, s.cust.thanks[0]), 600); if (!live2()) return;
         if (k < 5) { begin(); return; }
-        await said(word(!missed && ctx.done === 0 ? s.all : s.end, 'ok'), 800); if (el('.tx-map')) CLASS.close();
+        await JOBS.whole(word(!missed && ctx.done === 0 ? s.all : s.end, 'ok'), 800); if (el('.tx-map')) CLASS.close();   // said whole before the card shuts (the lane's cap: 2026-11-25, parked from Task 7)
       })();
       if (k >= 5) ctx.finish({ tip, tipName: 'おつり' }, bye);
     }

@@ -605,6 +605,87 @@ def test_gifts_for_a_word_and_for_an_s(b):
     assert r['before'] and r['pick'] == 'おなかが すきました…' and r['ate'] and 'たまごやき' in r['what'] and r['book'] and not r['again'], r
     assert r['harada'] and r['ate2'] and 'まんじゅう' in r['what2'] and r['book2'] and 'もらったもの' in r['page'] and '非賣品' in r['page'], r
 
+# ---- the final fix round (2026-11-25, task-8c: the parked list) ----
+# lines that take 700 ms each (speakAs; 400 ms speak): a line begun while another is still being said, or the voices stopped while one is
+# (a card shut), is cut — __cut names it; __log keeps every line in order
+SAYS = """window.__cut = []; window.__log = []; window.talking = null;
+  const says = (ms) => (w, l) => { __log.push(w + ':' + l); if (talking) __cut.push(talking + ' ← ' + w + ':' + l); const me = talking = w + ':' + l; return new Promise((ok) => setTimeout(() => { if (talking === me) talking = null; ok(); }, ms)); };
+  window.speakAs = says(700); window.speak = (t) => says(400)('', t); window.voiceFx = () => Promise.resolve(); window.stopSpeaking = () => { if (talking) __cut.push(talking + '（停）'); talking = null; };"""
+
+# parked 4 (Task 4's re-review 2): a shift's end word is heard — 原田's at the window, 小林's at the lost and found: the last line before
+# the results, said to its end (never cut, never stopped by the card shutting)
+def test_the_window_and_the_lost_and_found_say_their_last_word_to_its_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + LOST_HELP + SAYS + """ state.currentUnit = 'm4'; const out = {}, S = TOWN.WORK.say, res = () => document.querySelector('.wk-result');
+      state.work.res['2026-10-21'] = { place: 'window', done: 10, score: {}, yen: 1, grade: 'C' };   // been to both before: no first word
+      const last = (job, d) => { TOWNEV.clock = { h: 10, day: new Date(2026, 10, d) }; state.work.res[dateStr(TOWNEV.today())] = { place: job, done: 9, score: Object.fromEntries(Array.from({ length: 9 }, (_, k) => [k, 0])) }; saveState(); };
+      const heard = async (job) => { for (let i = 0; i < 600 && !res(); i++) await wait(50); const end = S[job].who + ':' + S[job].end[0];
+        const o = { last: __log[__log.length - 1] === end, cut: __cut.filter((x) => x.includes(S[job].end[0])), shut: !document.querySelector('.wk-' + job), paid: Boolean(res()) }; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); return o; };
+      location.hash = '#/station'; route(); await wait(300);
+      last('window', 10); WORK.start(yard(), 'window'); for (let i = 0; i < 400 && !(MADO_RUN.now() && MADO_RUN.now().phase === 'ask' && MADO_RUN.now().k === 9); i++) await wait(30);
+      const t = MADO_RUN.now().task, w = document.querySelector('.wk-window'); if (t.kind === 'buy') { w.querySelector(`.md-st[data-st="${t.to}"]`).click(); await wait(80); } w.querySelector(`.md-opt[data-o="${t.right}"]`).click();
+      out.window = await heard('window');
+      last('lost', 11); WORK.start(yard(), 'lost'); await solve(9); out.lost = await heard('lost');
+      return JSON.stringify(out); })()"""))
+    assert r == {'window': {'last': True, 'cut': [], 'shut': True, 'paid': True}, 'lost': {'last': True, 'cut': [], 'shut': True, 'paid': True}}, r
+
+# lines as long as the test wants: LONG(ms, f) — a line f picks (who, line) takes ms, every other 300; a line begun while another is being
+# said is a cut, and so is the voices stopped while one is (a card shut: stopSpeaking); the log [ms from the start, who, line]
+LONG = """const t0 = Date.now(), log = [], cuts = []; let talking = null; const ms = () => Date.now() - t0;
+  const LONG = (len, f) => { window.speakAs = (w, l) => { if (talking) cuts.push(ms() + ' cut ' + talking + ' <- ' + w); const me = talking = w + ':' + l; log.push([ms(), w, l]);
+      return new Promise((ok) => setTimeout(() => { if (talking === me) talking = null; ok(); }, f(w, l) ? len : 300)); };
+    window.speak = (t) => window.speakAs('', t); window.voiceFx = () => Promise.resolve(); window.stopSpeaking = () => { if (talking) cuts.push(ms() + ' stop ' + talking); talking = null; }; };
+  const CLOSE = (job) => { const S = TOWN.WORK.say[job]; return (w, l) => w === S.who && [S.end[0], S.all[0]].includes(l); };
+  const WHOLE = async (job) => { const res = () => document.querySelector('.wk-result'); for (let i = 0; i < 600 && !res(); i++) await wait(50);
+    const S = TOWN.WORK.say[job], last = log.filter(([, w, l]) => CLOSE(job)(w, l)).pop(), mine = (x) => [S.end[0], S.all[0]].some((l) => x.includes(l));   // (the cuts of the closing word only: the jobs' own lines cut each other at the test's pace)
+    const o = { cuts: cuts.filter(mine), said: Boolean(last), whole: Boolean(last) && ms() - last[0] >= 5400, shut: !document.querySelector('.wk-' + job) };
+    document.querySelectorAll('.wk-result').forEach((e) => e.remove()); return o; };
+  const LAST = (job, n) => { state.work.res['2026-11-10'] = { place: job, done: n, score: Object.fromEntries(Array.from({ length: n }, (_, k) => [k, 0])) }; saveState(); };"""
+WHOLE_OK = {'cuts': [], 'said': True, 'whole': True, 'shut': True}
+
+# parked 9 (Task 7's re-review): 駅前's closing words are said whole, as the onsen's are (JOBS.whole: the lane's 12 s cap, not said()'s 5 s)
+# — a last word of 5.5 s from 小林 (落とし物), 鈴木 (タクシー) and ハル (駅弁) is never stopped by the card shutting; the results once it is over
+def test_the_lost_and_founds_closing_word_is_said_whole(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + LOST_HELP + LONG + """ state.currentUnit = 'm4'; LONG(5500, CLOSE('lost'));
+      location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; LAST('lost', 9);
+      WORK.start(yard(), 'lost'); await solve(9); return JSON.stringify(await WHOLE('lost')); })()"""))
+    assert r == WHOLE_OK, r
+
+def test_the_taxis_closing_word_is_said_whole(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TAXI_HELP + LONG + """ LONG(5500, CLOSE('taxi'));
+      location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; LAST('taxi', 4);
+      WORK.start(yard(), 'taxi'); await ride(4); const o = await WHOLE('taxi'); JOBS.pat.scale = 1; return JSON.stringify(o); })()"""))
+    assert r == WHOLE_OK, r
+
+def test_the_bento_stands_closing_word_is_said_whole(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + BENTO_HELP + LONG + """ LONG(5500, CLOSE('bento'));
+      location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; LAST('bento', 6);
+      WORK.start(yard(), 'bento'); for (let i = 0; i < 300 && !(BENTO_RUN.now() && BENTO_RUN.now().t === 2 && BENTO_RUN.now().phase === 'stop'); i++) await wait(30);
+      const want = BENTO_RUN.now().wins.length; let served = 0; for (let i = 0; i < 400 && served < want; i++) { const c = calling(); if (c.length) { await serve(c[0]); served++; } else await wait(30); }
+      const o = await WHOLE('bento'); JOBS.pat.scale = 1; return JSON.stringify(Object.assign(o, { want })); })()"""))
+    assert r == dict(WHOLE_OK, want=4), r
+
+# parked 8 (Task 7): the mood mark (💦／💢) sits on the face's top corner, clear of the bubble's edge — at 原田's window (the words opened
+# after two misses) and at 小林's lost and found (all told: the bubble at its tallest), both 44 px faces, at 390×844 and 360×640
+def test_the_mood_mark_stays_by_the_face_at_the_window_and_the_lost_and_found(b):
+    out = {}
+    for w, h in ((390, 844), (360, 640)):
+        out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + LOST_HELP + """ state.currentUnit = 'm4'; window.speakAs = () => Promise.resolve();
+          const mark = (box) => { const cu = box.querySelector('.wk-cust'); cu.dataset.mood = 'mad'; cu.querySelector('.wk-emo').textContent = '💢';
+            const R = (e) => e.getBoundingClientRect(), e = R(cu.querySelector('.wk-emo')), f = R(cu.querySelector('.kr-face')), bub = R(cu.querySelector('.wk-bub'));
+            return { by: e.left <= f.right + 4 && e.right >= f.right - 24 && e.top <= f.top + 4 && e.bottom >= f.top + 8, clear: e.right <= bub.left + 0.5, tall: bub.height > f.height + 8 }; };
+          location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+          state.work.res['2026-10-21'] = { place: 'window', done: 10, score: {}, yen: 1, grade: 'C' }; saveState();
+          WORK.start(yard(), 'window'); for (let i = 0; i < 300 && !(MADO_RUN.now() && MADO_RUN.now().phase === 'ask' && document.querySelector('.wk-window .md-opt')); i++) await wait(30);
+          const t = MADO_RUN.now().task, bad = [0, 1, 2].filter((i) => i !== t.right && i < t.opts.length), win = document.querySelector('.wk-window');
+          win.querySelector(`.md-opt[data-o="${bad[0]}"]`).click(); await wait(100); win.querySelector(`.md-opt[data-o="${bad[1] === undefined ? bad[0] : bad[1]}"]`).click(); await wait(400);
+          const window_ = mark(win); CLASS.close();
+          const realMake = LOST.make; LOST.make = () => { const ts = realMake(); ts[0] = LOST.task('wallet', 'plain', 'both'); return ts; };   // a wallet: four to choose from
+          TOWNEV.clock = { h: 10, day: new Date(2026, 10, 11) }; WORK.start(yard(), 'lost'); for (let i = 0; i < 300 && !(LOST_RUN.now() && LOST_RUN.now().phase === 'ask'); i++) await wait(30);
+          const lt = LOST_RUN.now().task; await asks(); for (let i = 0; i < 200 && LOST_RUN.now().phase !== 'find'; i++) await wait(30);
+          const wc = lt.cands.findIndex((x) => !(x.color === lt.color && x.dim === lt.dim)); for (let n = 0; n < 2; n++) { click(`.lf-cand[data-c="${wc}"]`); await wait(60); click('.lf-give'); await wait(400); }   // two misses: all they said shown
+          LOST.make = realMake; const lost = mark(card()); CLASS.close(); return JSON.stringify({ window: window_, lost }); })()""")])[-1])
+    assert all(x == {'by': True, 'clear': True, 'tall': True} for v in out.values() for x in v.values()), out
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

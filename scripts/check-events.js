@@ -27,6 +27,9 @@ const CRIES = new Set([...((/const VOICE_FX = \{([^}]*)\}/.exec(fs.readFileSync(
 const NAKAI_SRC = fs.readFileSync(path.join(ROOT, 'js', '71y_nakai.js'), 'utf8');
 const listIn = (src, name) => [...((new RegExp(`const ${name} = \\[([^\\]]*)\\]`).exec(src) || ['', ''])[1]).matchAll(/'(\w+)'/g)].map((m) => m[1]);
 const NAKAI_KEYS = listIn(NAKAI_SRC, 'KEYS'), NAKAI_SELF = listIn(NAKAI_SRC, 'SELF');
+// the おみやげ屋's shift (js/71y_miyage.js, MIYAGE.make — its kinds read from there): five plain picks (each PLAIN kind once or twice, 金田's
+// 'all' now and then in a twice-kind's place) and one of each ONCE kind, ten customers of ten people (opts.shifts: the whole data only)
+const MIYAGE_SRC = fs.readFileSync(path.join(ROOT, 'js', '71y_miyage.js'), 'utf8'), MY_PLAIN = listIn(MIYAGE_SRC, 'PLAIN'), MY_ONCE = listIn(MIYAGE_SRC, 'ONCE');
 const NAKAI_SLOTS = Object.fromEntries([...((/const SLOTS = \{([^}]*)\}/.exec(NAKAI_SRC) || ['', ''])[1]).matchAll(/(\w+): (\d+)/g)].map((m) => [m[1], Number(m[2])]));
 const JOB_IDS = new Set([...fs.readFileSync(path.join(ROOT, 'js', '71r_work.js'), 'utf8').matchAll(/^ {4}(\w+): \{ area: '/gm)].map((m) => m[1]));
 // who has a voice (js/80_tts.js, CAST_VOICE — read from there, its comments left out): an おみやげ屋 customer speaks in their own
@@ -348,6 +351,18 @@ function check(T, D, opts = {}) {
       const ms = M.say || {}; person(ms.who, 'miyage say'); voiced(ms.who, 'miyage say');
       Object.entries(ms).filter(([k]) => k !== 'who').forEach(([k, l]) => (Array.isArray(l[0]) ? l : [l]).forEach((x, i) => pair(x, U11, `miyage say ${k}#${i}`)));
       ['hi', 'give', 'thanks'].forEach((k) => { if (M[k]) pair(M[k], U11, `miyage ${k}`); });
+      // every shift make() can be asked for has its ten (2026-11-25, parked from Task 6's re-review: make() throws when it cannot, and
+      // nothing checked that the data always could): each mix of kinds, a customer each — no customer twice, no person twice
+      if (opts.shifts) {
+        if (!MY_PLAIN.length || !MY_ONCE.length) bad('onsen', 'miyage shift', 'PLAIN and ONCE not found in js/71y_miyage.js');
+        const cs = Object.entries(M.cust || {}), all = cs.some(([, c]) => c.kind === 'all'), mixes = [];
+        MY_PLAIN.forEach((one) => { const a = MY_PLAIN.flatMap((k) => (k === one ? [k] : [k, k])); mixes.push(a); if (all) MY_PLAIN.filter((k) => k !== one).forEach((k) => { const b = a.slice(); b[b.indexOf(k)] = 'all'; mixes.push(b); }); });
+        mixes.forEach((plain) => {
+          const kinds = plain.concat(MY_ONCE), pools = kinds.map((k) => cs.filter(([, c]) => c.kind === k)), used = new Set(), who = new Set();
+          const fit = (n) => n === kinds.length || pools[n].some(([id, c]) => { if (used.has(id) || who.has(c.who)) return false; used.add(id); who.add(c.who); const ok = fit(n + 1); used.delete(id); who.delete(c.who); return ok; });
+          if (!fit(0)) bad('onsen', 'miyage shift', `no ten customers of ten people for ${kinds.join(',')}`);
+        });
+      }
     }
     // フロント (2026-11-24, spec §5.4): 佐藤's desk at its unit (m15) — each guest someone with a voice (the town's, the cruise's, a job's own:
     // GUESTS); a named guest's name as the book has it, their lines, the time they want one the book shows; the other guests one of the kinds
@@ -403,7 +418,7 @@ function check(T, D, opts = {}) {
 module.exports = { check, loadTown, loadWares, PLACES };
 
 if (require.main === module) {
-  const probs = check(loadTown(), require('./data-file').load(), { chatMin: 10, wares: loadWares(), pics: loadPics() });
+  const probs = check(loadTown(), require('./data-file').load(), { chatMin: 10, wares: loadWares(), pics: loadPics(), shifts: true });
   probs.forEach(p => console.log(p));
   const T = loadTown();
   console.log(probs.length ? `${probs.length} problems` : `events ok: ${(T.EVENTS || []).length} events, ${Object.keys(T.CAST).length} people`);

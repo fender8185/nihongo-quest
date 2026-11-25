@@ -248,14 +248,15 @@ const ICHIBA = (() => {
 // when it opens — the glass case, the 魚拓) and on the harbour (the shop's door; the market's stalls while they stand) ----
 WALK_BLOCK.sushi = [[1.8, 22, 0, 3.95], [3.9, 17.7, 3.95, 5.15], [19.5, 22, 3.95, 9.7], ...SUSHI.TABLES.map(([u0, u1, v0, v1]) => [u0 - 0.1, u1 + 0.1, v0 - 1.25, v1 + 0.1])];
 PLACE_USE.sushi = (() => {
-  const [l0, l1] = SUSHI.LONG, shut = () => !SUSHI.open();
+  const [l0, l1] = SUSHI.LONG, shut = () => !SUSHI.open(), TAGS_HIT = [[2.2, 6.7], [15.4, 6.7], [15.4, 3.9], [2.2, 3.9]].map(([u, h]) => isoPt(u, 0.05, h));
   return [
     // the stools, the one before 源さん first (where one sits down to what was ordered: YEN; the tour fills them out from him), each its own
     ...SUSHI.STOOLS.map(([u, v, how], i) => ({ id: 'stool' + i, name: '吧台座位', box: isoBBox(u - 0.48, u + 0.48, v - 0.45, v + 0.45, 0, 1.2), kind: 'seat', say: 'わくわく…！', seats: [[u, v, 0.2, how]] }))
       .sort((a, b) => Math.hypot(a.seats[0][0] - SUSHI.spot()[0] - 1.6, a.seats[0][1] - SUSHI.spot()[1]) - Math.hypot(b.seats[0][0] - SUSHI.spot()[0] - 1.6, b.seats[0][1] - SUSHI.spot()[1])),
     ...SUSHI.TABLES.map(([u0, u1, v0, v1], i) => ({ id: 'table' + i, name: '小桌', box: isoBBox(u0, u1, v0, v1, 1.3, 1.5), kind: 'seat', say: 'いただきます！', seats: [[u0 + 0.5, v0 - 0.75, 0, 'bench turn flip'], [u1 - 0.5, v0 - 0.75, 0, 'bench turn flip']] })),
-    { id: 'menu', name: '木牌菜單', box: isoBBox(2.2, 15.4, 0, 0.1, 3.9, 6.7), kind: 'do', go: isoXY(7.6, 5.7), face: 'back turn', pose: 'look', buy: 'sushi', when: () => !shut() },
-    { id: 'fuda', name: '木牌菜單', box: isoBBox(2.2, 15.4, 0, 0.1, 3.9, 6.7), kind: 'do', go: isoXY(7.6, 5.7), face: 'back turn', pose: 'look', when: shut, pick: () => ['じゅんびちゅう…', SUSHI.shutSay()] },
+    // the tags take a tap on the wall they hang on (hit: its slanted strip), not the whole square round it — never beside 源さん's head under them
+    { id: 'menu', name: '木牌菜單', box: isoBBox(2.2, 15.4, 0, 0.1, 3.9, 6.7), hit: TAGS_HIT, kind: 'do', go: isoXY(7.6, 5.7), face: 'back turn', pose: 'look', buy: 'sushi', when: () => !shut() },
+    { id: 'fuda', name: '木牌菜單', box: isoBBox(2.2, 15.4, 0, 0.1, 3.9, 6.7), hit: TAGS_HIT, kind: 'do', go: isoXY(7.6, 5.7), face: 'back turn', pose: 'look', when: shut, pick: () => ['じゅんびちゅう…', SUSHI.shutSay()] },
     // the glass cases, each its own: the one by 源さん's hands (its tap stopping short of him: he is tapped, not the case), the far one
     ...SUSHI.CASES.map(([u0, u1], i) => ({ id: 'case' + i, name: '冷藏櫃', box: isoBBox(u0, i ? u1 : u1 - 1.2, 2.95, 3.45, 1.95, 2.6), kind: 'do', go: isoXY([6.8, 14.8][i], 5.7), face: 'back turn', pose: 'look',
       pick: () => [['つやつや…！', 'ネタケース（冷藏玻璃櫃）：源先生手邊這一櫃，是他正在捏的料：まぐろ（鮪魚）、サーモン（鮭魚）、えび（蝦）、いか（花枝）。'],

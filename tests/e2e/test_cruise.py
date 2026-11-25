@@ -753,6 +753,56 @@ def test_each_trip_keeps_to_its_units_grammar(b):
       return JSON.stringify({ m7, m6 }); })()"""))
     assert r['m7'] == [] and r['m6'] == [], r
 
+# ---- the final fix round (2026-11-25, task-8c: the cruise plan's parked list, by its ruling 4) ----
+# parked 11 (Task 1): the group following the hero into a room for a meal sits down as it walks in (mount), before the stop's townsfolk
+# are brought out to their spots (run's bringOut) — safe while no indoor meal stop has its townsfolk stand on a seat of its room: pinned
+# here for every trip (within 14 px: the room's rule for a seat taken, seats())
+def test_no_indoor_meal_stops_townsfolk_stand_on_a_seat(b):
+    r = json.loads(ev(b, """(() => { const bad = [], n = [0, 0];
+      TOWN.CRUISE.TRIPS.forEach((t) => t.stops.forEach((s) => { if (!s.seat || !s.room || !s.cast) return; n[0]++;
+        const seats = (PLACE_USE[s.at] || []).filter((q) => q.kind === 'seat').flatMap((q) => q.seats);
+        Object.entries(s.cast).forEach(([id, q]) => { n[1]++; const [X, Y] = isoXY(q[0], q[1]);
+          seats.forEach((st) => { const [sx, sy] = isoXY(st[0], st[1], st[2]); if (Math.hypot(sx - X, sy - Y) <= 14) bad.push(`${t.id}.${s.id}:${id}@${st.join()}`); }); }); }));
+      return JSON.stringify({ n, bad }); })()"""))
+    assert r['n'] == [7, 7] and r['bad'] == [], r
+
+# parked 12 (Task 1): at a meal out of doors those standing round in the ring shuffle a step now and then — about their own place in it,
+# never wandering off a step at a time (the jostle pulls them back): on the beach (nowhere to sit: all eight round), a hundred shuffles
+def test_at_a_meal_out_of_doors_the_ring_holds_together(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40]), stop('pic', 'beach', [-200, 60], [-320, 70], { eat: true, ask: 1 }), stop('bye', 'harbor', [180, 56], [40, 40], { bye: true })];
+      at('pic', 'beach'); await go('beach'); await drive(() => state.cruise.on.stop === 'bye', 30000); await wait(150);
+      const ring = () => tourists().filter((e) => !e.matches('.cr-takahashi')), at0 = Object.fromEntries(ring().map((e) => [e.dataset.who, XY(e)]));
+      window.matchMedia = mm; fast();   // real motion; the tour's waits — its shuffles among them — a twentieth: many in a few seconds
+      let fx = 0, fy = 0, moved = 0; const t0 = Date.now();
+      while (Date.now() - t0 < 12000) { ring().forEach((e) => { const [x, y0] = XY(e), [a, c] = at0[e.dataset.who], dx = Math.abs(x - a), dy = Math.abs(y0 - c); if (dx + dy > 2) moved++; fx = Math.max(fx, dx); fy = Math.max(fy, dy); }); await wait(80); }
+      return JSON.stringify({ n: ring().length, moved: moved > 20, fx: Math.round(fx), fy: Math.round(fy) }); })()"""))
+    assert r['n'] == 8 and r['moved'] and r['fx'] <= 20 and r['fy'] <= 9, r
+
+# parked 14 (Task 3): the group's train berthed while the timetable's own is still gliding in at its track — its doors open once it has
+# stopped (its glide over), never while it still moves (the flat 3 s it waited opened them mid-glide on a late berth)
+def test_a_train_berthed_while_it_comes_in_opens_its_doors_once_it_has_stopped(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ window.matchMedia = mm; TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; PLATFORM.speed = 4;   // real motion: the trains glide
+      location.hash = '#/platform'; document.getElementById('view').innerHTML = ''; route(); await wait(300); const pf = y();
+      for (let i = 0; i < 1500 && !(PLATFORM.now() && PLATFORM.now().track === 2 && PLATFORM.now().phase === 'in'); i++) await wait(20);   // the timetable's 二番線 train on its way in
+      const g = pf.querySelector('.pf-train[data-track="2"]'), moving = () => g.getAnimations().some((a) => a.transitionProperty === 'transform' && a.playState === 'running');
+      await wait(150); const was = moving(); PLATFORM.berth(pf, 'minatoko');
+      for (let i = 0; i < 600 && !g.classList.contains('open'); i++) await wait(5);
+      const out = { was, open: g.classList.contains('open'), still: moving() }; PLATFORM.speed = 1; return JSON.stringify(out); })()"""))
+    assert r == {'was': True, 'open': True, 'still': False}, r
+
+# parked 16 (Task 4): 源さん behind his counter is tapped, not the menu's tags hung over him — of 25 points over him none takes the tags'
+# tap, at 390×844 and 1280×800
+def test_the_menu_tags_take_no_tap_over_gensan(b):
+    out = {}
+    for w, h in ((390, 844), (1280, 800)):
+        out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + FRESH + """ TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) };
+          location.hash = '#/sushi'; document.getElementById('view').innerHTML = ''; route(); await wait(500);
+          const g = document.querySelector('#view .npc[data-npc="gen"]'), r = g.getBoundingClientRect(), hits = { menu: 0, gen: 0, other: 0 };
+          for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) { const e = document.elementFromPoint(r.left + r.width * (i + 0.5) / 5, r.top + r.height * (j + 0.5) / 5);
+            if (e && e.closest('[data-use="menu"], [data-use="fuda"]')) hits.menu++; else if (e && e.closest('[data-npc="gen"]')) hits.gen++; else hits.other++; }
+          return JSON.stringify(Object.assign(hits, { rect: [r.left, r.top, r.width, r.height].map(Math.round), inView: r.right > 0 && r.left < innerWidth })); })()""")])[-1])
+    assert all(x['menu'] == 0 and x['inView'] and x['gen'] >= 17 for x in out.values()), out
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":
