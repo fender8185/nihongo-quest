@@ -325,7 +325,7 @@ function courseCardHtml() {
     const txt = (q, y) => `<text x="${q.c.toFixed(1)}" y="${y}" text-anchor="middle">${q.text}</text>`;
     const below = exRow ? txt(dl, dlRow) + txt(ex, exRow) : txt(place((dl.c + ex.c) / 2, `${dl.text}・${ex.text}`, B), dlRow);
     const mark = (d, cls) => { const x = X(d).toFixed(1); return `<line class="mark ${cls}" x1="${x}" y1="20" x2="${x}" y2="36"></line>`; };
-    line = `<svg class="course-line${big ? ' big' : ''}" viewBox="0 0 400 ${big ? 80 : 76}" role="img" aria-label="從今天到考試的時間軸">
+    line = `<svg class="course-line${big ? ' course-big' : ''}" viewBox="0 0 400 ${big ? 80 : 76}" role="img" aria-label="從今天到考試的時間軸">
         <line class="axis" x1="8" y1="28" x2="392" y2="28"></line><circle class="start" cx="8" cy="28" r="4"></circle><text x="4" y="${Y1}">今天</text>
         ${mark(daysBetween(t, p.deadline), 'deadline')}${mark(examD, 'exam')}${dots}${labels}${below}</svg>`;
     rows = shown.map((L) => {
@@ -402,6 +402,9 @@ function attachChartTips(root) {
     el.addEventListener('blur', hide);
   });
 }
+// a turn across the phone line (600 px) draws the page again: the gauges' level names and the course chart's words are placed
+// for one or the other as it is drawn (2026-11-26, test.4's fix round re-review, Minor 1), as practice does (js/60_session.js)
+if (PHONE_MQ && PHONE_MQ.addEventListener) PHONE_MQ.addEventListener('change', () => { if (currentRoute().name === 'stats') route(); });
 
 Object.assign(ACTIONS, {
   'stats-scope': (el) => { statsScope = el.dataset.scope; animForce = true; route(); },

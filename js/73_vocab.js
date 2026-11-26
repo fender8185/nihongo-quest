@@ -223,7 +223,7 @@ function renderVocab(view, tab, params) {
 }
 function nextIntervalText(key, grade) {
   const d = srsPreview(key, grade);
-  return d <= 1 ? '明天' : d < 60 ? `${d} 天後` : `${Math.round(d / 30)} 個月後`;
+  return d <= 1 ? '明天' : d < 60 ? `${d} 天後` : `${Math.round(d / 30)} 個月後`;   // the number kept with its 天後 when a rating hint wraps (test.4, keep-all)
 }
 function flashKey(ev) {
   const k = ev.key;

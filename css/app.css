@@ -2875,7 +2875,7 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .gauge .tick-l { font-size: 18px; }   /* N5／N4／N3 by their ticks: 12 px or more on the screen (gaugeHtml sets them further out on a phone) */
   .gauges { row-gap: 22px; padding-top: 6px; }   /* the names over a ring clear of the tabs above and of the 單字／文法 under the gauge above */
   .heat-months, .legend { font-size: var(--fs-label); }   /* a month's name at most every third 12-px column: 11月 at 13 still clear of the next */
-  .course-line.big text, .course-line.big text.lvl { font-size: 17px; }   /* the course chart's dates and levels on a phone (its rows set apart for them: courseHtml) */
+  .course-line.course-big text, .course-line.course-big text.lvl { font-size: 17px; }   /* the course chart's dates and levels on a phone (its rows set apart for them: courseHtml) */
   .course-advice { font-size: var(--fs-read); }
   .table th { font-size: var(--fs-label); }
   .listen.compact .listen-count, .listen-seg .n, .lopt, .lopt-scope span { font-size: var(--fs-label); }   /* 聽一輪's count, its tabs' counts, its round pills */

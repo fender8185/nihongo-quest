@@ -236,6 +236,19 @@ def test_stats_and_exam_pages_fit_a_phone(b):   # Review Focus 4
                  ("eval", "location.hash = '#/exam'; route(); document.documentElement.scrollWidth")])
     assert out[-2] <= 390 and out[-1] <= 390, out
 
+# a turn across the phone line (600 px) draws the page again, so the gauges' names and the course chart's words are placed for the
+# width they are drawn at; a resize on one side of it leaves the page be (2026-11-26, test.4's fix round re-review, Minor 1)
+def test_a_turn_across_the_phone_line_draws_the_stats_again(b):
+    mark = "(() => { document.getElementById('progressCard').dataset.was = '1'; return 1; })()"
+    kept = "Boolean(document.getElementById('progressCard').dataset.was)"
+    rest = ("eval", "new Promise((r) => setTimeout(r, 400))")
+    out = b.run([("metrics", (844, 390)), ("nav", URL), ("wait", READY), ("eval", FRESH + " location.hash = '#/stats'; route(); 1"), ("eval", mark),
+                 ("metrics", (900, 420)), rest, ("eval", kept),          # wide to wide: the same page
+                 ("metrics", (390, 664)), ("wait", "!" + kept), ("eval", mark),   # turned upright: drawn again
+                 ("metrics", (375, 553)), rest, ("eval", kept),          # phone to phone: the same page
+                 ("metrics", (844, 390)), ("wait", "!" + kept)])   # turned sideways: drawn again
+    assert out[3] is True and out[6] is True, out
+
 # ---- final review fixes ----
 def test_only_course_items_count_toward_the_pace(b):   # listening, reading and drills come on their own, outside the new count
     js = "(() => { " + FRESH + """ const t = todayStr(); delete state.dailyLogs[t]; const pick = (list) => (list || []).find(x => !state.srs[x.key]);
