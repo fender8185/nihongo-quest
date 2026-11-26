@@ -598,6 +598,10 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .wk-pay, .wk-back { margin: 12px 0 0; font-size: 13px; color: #6a5a4e; } .wk-back { color: #a8241c; font-weight: 600; }
 .wk-ask { display: grid; justify-items: center; margin: 14px 0 8px; } .wk-ask b { font-size: 18px; } .wk-ask span { font-size: 12px; color: #8a7a6e; }
 .wk-yn { display: flex; justify-content: center; gap: 10px; } .wk-yn .btn { min-width: 96px; font-size: 16px; }
+/* by night the card is the night's navy (--bg-elev): its reds and its notes lighter, 4.5:1 or more against it — ①②③, the headings and
+   「今天做到…」 a light red, the pay line and the notes a light grey (test.4's fix round); by day as they were */
+[data-theme="dark"] .wk-rules :is(.wk-sn, h4, .wk-back) { color: #ff8f80; }
+[data-theme="dark"] .wk-rules .wk-pay { color: var(--fg-2); } [data-theme="dark"] .wk-rules :is(.wk-rhead p span, .wk-ask span) { color: var(--fg-3); }
 /* a price spelled (2026-11-19): the pieces tapped so far, a blank for each to come; a tile used: greyed */
 /* 收銀 (2026-11-19): the customer's things on the counter, one to three with their tags; the sum spelled in pieces */
 .wk-till .cls-card { background: #f4f1e2; color: #2b2b33; border-bottom: 10px solid #2f6a4a; }
@@ -2260,10 +2264,14 @@ body.reading { overflow: hidden; }
   @keyframes sheetUp { from { transform: translateY(100%); } }
 }
 .fb-opts { display: grid; gap: 2px; margin: 0 0 8px; font-size: 15px; }
-.fb-opt { display: flex; align-items: baseline; gap: 6px; color: var(--fg-2); }
+.fb-opt { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; color: var(--fg-2); }
 .fb-opt .fb-mark { flex: none; width: 1.1em; text-align: center; color: var(--fg-3); }
 .fb-opt.ok { color: var(--fg); } .fb-opt.ok .fb-mark { color: var(--ok); } .fb-opt.bad .fb-mark { color: var(--bad); }
 .fb-opt-zh { color: var(--fg-3); font-size: 13px; }
+/* the option whole on its line, broken only where it alone is wider than the row (2026-11-26, test.4's fix round: よろしくお願いしま／す
+   broke once the speaker came); the aside takes what is left beside it and wraps in it, or goes under with 你選的 and the speaker when
+   less than four characters' room is left */
+.fb-opt > .fb-mark + span { max-width: calc(100% - 1.1em - 6px); } .fb-opt > .fb-opt-zh { flex: 1 1 0; min-width: 4em; }
 .fb-you { margin-left: auto; flex: none; padding-left: 8px; font-size: 13px; color: var(--bad); }
 /* a word's speaker at the end of its row (optWord, 2026-11-26, test.4): 40 px to tap, after 你選的; the row's words wrap before it */
 .fb-opt-say { flex: none; width: 40px; height: 40px; min-height: 40px; margin-left: auto; } .fb-you + .fb-opt-say { margin-left: 0; } .fb-opt-say svg { width: 18px; height: 18px; }
@@ -2940,6 +2948,7 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .mc-price small { font-size: 11px; }
   .mc-lock, .mc-item.full .mc-price::after { font-size: var(--fs-sec); }
   .mc-had { font-size: var(--fs-label); }
+  .mc-zh { font-size: var(--fs-sec); }   /* a dish's Chinese under its name, as an example's (test.4's fix round): the town's menus and らいらいけん's */
   .fb-item small { font-size: var(--fs-label); } .fb-item .fb-name + small { font-size: var(--fs-sec); }
   /* the ride: 払いもどし's 中文, the car's つぎは; 湯けむり通り's buttons' price and its reading */
   .kb-back small { font-size: var(--fs-sec); }

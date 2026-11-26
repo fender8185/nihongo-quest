@@ -437,7 +437,11 @@ function handleKey(ev) {
   if (r.name === 'practice' && SESSION) {
     const e = currentEntry();
     if (e && e.preview && !e.previewDone) {
-      if (k === 'Enter' || k === ' ') { ev.preventDefault(); previewMain(); }   // the main button: a lesson section's examples first (test.4)
+      if (k === 'Enter' || k === ' ') {   // the main button: a lesson section's examples first (test.4) — but another button with the focus (‹ 上一頁, 看完整講義) does its own (test.4's fix round)
+        const own = ev.target && ev.target.closest && ev.target.closest('button, a[href], [role="button"]');
+        if (own && own.id !== 'btnNext') return;
+        ev.preventDefault(); previewMain();
+      }
       else if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); }
       else if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFurigana(); }
       else if (k === 'Escape') { ev.preventDefault(); exitPractice(); }

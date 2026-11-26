@@ -1,6 +1,6 @@
 """2026-11-15 らいらいけん (docs/superpowers/specs/2026-11-15-work-redesign-design.md §5–§6): 大通り's 中華料理店 walked into —
 a room at 45° (round tables, the register, the kitchen's pass with 黄, the toilet door) — and the 外場 job there in place of 外送."""
-import json, os, subprocess, sys, time
+import json, os, re, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -591,17 +591,25 @@ def test_the_wall_menu_opens_a_card_to_read(b):
     assert r['zh1'] == ['煎餃', '拉麵', '炒飯', '燒賣', '春捲', '麻婆豆腐'] and r['btn1'] == '收起中文' and r['pressed'] == 'true' and r['zh2'] == [] and r['btn2'] == '中文', r
     assert r['pops'] == ['ぎょうざ、ラーメン…'] and r['toast'] == '' and not r['shown'] and not r['open'] and r['errs'] == [], r   # his line as before, no toast; shut
 
-# the last strip (マーボーどうふ) clear of the 「福」 lantern by it at either end of its sway; the menu's tap box still over all six strips
+# the last strip (マーボーどうふ) clear of the 「福」 lantern by it at either end of its sway; the menu's tap box still over all six strips.
+# Each lantern held at each end of its sway (test.4's fix round: a seek to 0 and duration − 1 read the last 福 at ±1.7°, each lantern's
+# negative delay moving its ends): its animation off, the end's transform from the sway's own keyframes on (the origin the CSS's)
 def test_the_last_menu_strip_is_clear_of_the_lantern(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ await into(); await wait(300);
       const land = document.querySelector('.rairai-land'), box = (el) => { const q = el.getBoundingClientRect(); return [q.left, q.top, q.right, q.bottom]; };
       const strips = [...land.querySelectorAll('rect[width=".86"][height="2.9"]')].map(box).sort((a, b) => a[0] - b[0]), last = strips[strips.length - 1];
-      const lanterns = [...land.querySelectorAll('.fx-sway')].filter((g) => /[福来]/.test(g.textContent)), anims = lanterns.flatMap((g) => g.getAnimations()); anims.forEach((a) => a.pause());
-      const apart = (p, q) => p[2] <= q[0] || q[2] <= p[0] || p[3] <= q[1] || q[3] <= p[1], out = { strips: strips.length, lanterns: lanterns.length, clear: [] };
-      for (const end of [0, 1]) { anims.forEach((a) => { a.currentTime = end ? a.effect.getComputedTiming().duration - 1 : 0; }); await wait(30); out.clear.push(lanterns.every((g) => apart(last, box(g)))); }
+      const lanterns = [...land.querySelectorAll('.fx-sway')].filter((g) => /[福来]/.test(g.textContent));
+      const ends = lanterns.map((g) => { const kf = g.getAnimations()[0].effect.getKeyframes(); return [kf[0].transform, kf[kf.length - 1].transform]; });
+      const apart = (p, q) => p[2] <= q[0] || q[2] <= p[0] || p[3] <= q[1] || q[3] <= p[1], out = { strips: strips.length, lanterns: lanterns.length, ends: [...new Set(ends.map((e) => e.join(' ')))], clear: [], moved: [] };
+      const near = lanterns[lanterns.map((g) => Math.abs(box(g)[0] - last[2])).reduce((k, d, i, ds) => (d < ds[k] ? i : k), 0)];   // the one by the last strip, its box at rest
+      const rest = box(near);
+      for (const end of [0, 1]) { lanterns.forEach((g, i) => { g.style.animation = 'none'; g.style.transform = ends[i][end]; }); await wait(30);
+        out.clear.push(lanterns.every((g) => apart(last, box(g)))); out.moved.push(Math.round(Math.abs(box(near)[0] - rest[0]))); }
+      lanterns.forEach((g) => { g.style.animation = ''; g.style.transform = ''; });
       const tap = box(document.querySelector('.use-btn[data-use="menu"]')); out.over = strips.every((s) => s[0] >= tap[0] - 1 && s[2] <= tap[2] + 1 && s[1] >= tap[1] - 1 && s[3] <= tap[3] + 1);
-      anims.forEach((a) => a.play()); return JSON.stringify(out); })()"""))
-    assert r == {'strips': 6, 'lanterns': 5, 'clear': [True, True], 'over': True}, r
+      return JSON.stringify(out); })()"""))
+    assert r['strips'] == 6 and r['lanterns'] == 5 and r['clear'] == [True, True] and r['over'], r
+    assert len(r['ends']) == 1 and re.fullmatch(r'rotate\(-\d+(\.\d+)?deg\) rotate\(\d+(\.\d+)?deg\)', r['ends'][0]) and all(m >= 1 for m in r['moved']), r   # a real swing, each end held
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

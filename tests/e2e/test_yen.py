@@ -289,6 +289,24 @@ def test_sushi_and_scallops_are_bought_and_eaten(b):
     assert all(150 <= i[1] <= 1500 and i[3] >= 3 and i[4] >= 5 and i[5] for i in r['items']) and {i[0]: i[1] for i in r['items']}['hotate'] == 300, r['items']
     assert {i[0]: i[6] for i in r['items']} == {'nigiri': '寿司', 'tekka': '寿司', 'tamagozushi': '卵', 'agari': 'お茶', 'hotate': ''}, r['items']
 
+# test.4's fix round (review Minor 8): a dish's Chinese under its name read at the scale's secondary level on a phone (14, as an example's
+# Chinese is), and every menu with its Chinese out — the town's and らいらいけん's — whole at 360×640 and 375×553: nothing past its row or the
+# card, nothing cut
+def test_every_menus_chinese_reads_whole_on_a_phone(b):
+    js = """(async () => { localStorage.setItem('nq_menu_all', '1'); const wait = (ms) => new Promise((q) => setTimeout(q, ms)), bad = [], sizes = new Set(); let n = 0;
+      const check = (name) => { const body = document.querySelector('#modalRoot .modal-body'), bb = body.getBoundingClientRect(), m = document.querySelector('#modalRoot .modal').getBoundingClientRect(); n++;
+        if (body.scrollWidth > body.clientWidth + 1 || m.left < -1 || m.right > innerWidth + 1) bad.push(name + ': past the screen');
+        document.querySelectorAll('#modalRoot .mc-item').forEach((it, i) => { const r = it.getBoundingClientRect(); if (r.left < bb.left - 1 || r.right > bb.right + 1) bad.push(name + ':' + i + ' item');
+          it.querySelectorAll('.mc-zh, .mc-name, .mc-price b, .mc-price small, .mc-lock').forEach((x) => { if (getComputedStyle(x).display === 'none') return; const q = x.getBoundingClientRect();
+            if (x.classList.contains('mc-zh')) sizes.add(getComputedStyle(x).fontSize);
+            if (x.scrollWidth > x.clientWidth + 1 || q.right > r.right + 1 || q.left < r.left - 1) bad.push(`${name}:${i} ${x.className} «${x.textContent}»`); }); }); };
+      for (const m of Object.keys(TOWN.MENU)) { YEN.open(null, { buy: m }); await wait(20); YEN.toggleZh(); await wait(20); check(m); closeModal(); }
+      RAIRAI.card(); await wait(20); RAIRAI.zh(document.querySelector('[data-act="rairai-zh"]')); await wait(20); check('rairai'); closeModal();
+      localStorage.removeItem('nq_menu_all'); return JSON.stringify({ n, menus: Object.keys(TOWN.MENU).length + 1, bad, sizes: [...sizes] }); })()"""
+    for w, h in ((360, 640), (375, 553)):
+        r = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=90)[-1])
+        assert r['n'] == r['menus'] and r['n'] > 20 and r['bad'] == [] and r['sizes'] == ['14px'], (w, r)
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":

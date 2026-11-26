@@ -774,6 +774,7 @@ def test_every_rules_card_has_three_steps_and_its_rules_folded(b):
         assert len(x.get('steps', [])) == 3 and all(0 < len(s) <= 22 for s in x['steps']) and x['nums'] == '①②③' and x['head'] == '玩法', (job, x)
         assert x['open'] is False and re.fullmatch(r'詳細規則（[^（）]+…）', x['sum']), (job, x)   # shut at first, naming what is in it
         assert x['how'] == HOW_BEFORE[job] and x['kept'] == [], (job, x)   # every rule as it was; the face, 需要的能力, the pay, はたらきますか？ はい／いいえ kept
+    assert r['nakai']['steps'][2] == '客人進房時，選你要回的那句' and r['window']['steps'][2] == '從下面選你要回答的那句', r   # fix round: not 「回進房」; the 快速 question has two replies
 
 # on a phone: shut, the whole card in sight at 390×664 with nothing to scroll, はい／いいえ in it; open at 375×553, the card scrolls in itself
 # and はい／いいえ are reached at its foot (a tap there lands on them)
@@ -823,6 +824,23 @@ def test_the_licence_page_folds_its_rules(b):
     assert r['notes'] == ['總共打過 4 班・打工證加給 +2%'] and r['sum'] == '規則' and r['open'] is False and r['last'], r   # 17 經驗: 一人前, one step up
     assert r['lines'] == ['一天只能在一個地方打一班。'] + r['want'] and len(r['want']) == 3, r
     assert r['lic'] == RULE_TEXT, r   # the card's own rule line as it was
+
+# test.4's fix round (review Minor 7): by night the rules card is the night's navy — ①②③, the headings, 「今天做到…」, the pay line and the
+# notes (the place's name, 要開始打工嗎？) read 4.5:1 or more against it; by day their colours as before
+def test_the_rules_card_reads_by_night(b):
+    js = "(async () => { " + BEGIN + ALL12 + """ location.hash = '#/chinadori'; route(); await wait(300); const out = {};
+      const lum = (c) => { const v = c.match(/\\d+(\\.\\d+)?/g).slice(0, 3).map(Number).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+      const ratio = (p, q) => { const x = lum(p), y = lum(q); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+      const parts = { steps: '.wk-sn', heads: 'h4', back: '.wk-back', pay: '.wk-pay', place: '.wk-rhead p span', ask: '.wk-ask span' };
+      for (const theme of ['night', 'day']) { state.settings.theme = theme; applyTheme(); state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: 3, score: { 0: 0, 1: 0, 2: 0 } };
+        WORK.intro(yard(), 'front'); await wait(30); const card = document.querySelector('.wk-rules .cls-card'), bg = getComputedStyle(card).backgroundColor;
+        out[theme] = { mode: document.documentElement.dataset.theme, bg, parts: Object.fromEntries(Object.entries(parts).map(([k, q]) => { const c = getComputedStyle(card.querySelector(q)).color; return [k, [c, Math.round(ratio(c, bg) * 100) / 100]]; })) };
+        CLASS.close(); delete state.work.res[dateStr(TOWNEV.today())]; }
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['night']['mode'] == 'dark' and all(v[1] >= 4.5 for v in r['night']['parts'].values()), r
+    day = {k: v[0] for k, v in r['day']['parts'].items()}
+    assert r['day']['mode'] == 'light' and day == {'steps': 'rgb(168, 36, 28)', 'heads': 'rgb(168, 36, 28)', 'back': 'rgb(168, 36, 28)', 'pay': 'rgb(106, 90, 78)', 'place': 'rgb(138, 122, 110)', 'ask': 'rgb(138, 122, 110)'}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

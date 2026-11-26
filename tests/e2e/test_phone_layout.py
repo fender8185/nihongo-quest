@@ -1,6 +1,7 @@
 """2026-11-05 (1.0.42–1.0.43): 手機作答畫面——選項貼在螢幕下方、上方的 ✕ 和進度條往下滑也固定、作答結果從底部升起的面板（選項不動）；電腦版不變。"""
-import json, os, subprocess, sys, time
+import asyncio, json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
+import websockets
 from cdp import Browser
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PORT = 8805
@@ -312,6 +313,84 @@ def test_no_lesson_page_scrolls_but_for_one_tall_block(b):
       location.hash = '#/course'; await wait(100); return JSON.stringify({ bad, pages, heads: heads.filter((x) => x !== true) }); })()"""
     r = json.loads(ev(b, js, [("metrics", (375, 553))]))
     assert r['bad'] == [] and r['heads'] == [] and r['pages'] > 600, r
+
+# test.4's fix round (review Minor 4): with the speaker at a row's end, よろしくお願いしま／す broke inside the word — the option stays whole
+# on its line unless it alone is wider than the row, the aside beside it wrapping first (or going under); a long option (a grammar
+# question's Chinese sentences) still wraps inside its row; no row runs past the panel. At 390×664 and 375×553, the word the review
+# found broken chosen wrong (its aside, 你選的 and the speaker beside it)
+def test_a_long_word_option_stays_whole_in_its_row(b):
+    js = "(async () => { " + FRESH + """ const wait = (ms) => new Promise((r) => setTimeout(r, ms)), out = {};
+      const lines = (el) => { const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), bottoms = new Set(); while (tw.nextNode()) { const n = tw.currentNode; if (!n.textContent.trim() || n.parentElement.closest('rt')) continue;
+        const rg = document.createRange(); rg.selectNodeContents(n); [...rg.getClientRects()].forEach((q) => bottoms.add(Math.round(q.bottom))); } return bottoms.size; };
+      const inside = () => [...document.querySelectorAll('.fb-sheet .fb-opt')].every((row) => { const R = row.getBoundingClientRect(); return row.scrollWidth <= row.clientWidth + 1 && [...row.children].every((c) => { const q = c.getBoundingClientRect(); return q.left >= R.left - 1 && q.right <= R.right + 1; }); });
+      const body = () => { const x = document.querySelector('.fb-sheet-body'); return x.scrollWidth <= x.clientWidth + 1; };
+      const target = REG.vocab.find((x) => x.builtin && jaPlain(x.w) === 'よろしくお願いします'), peers = REG.vocab.filter((x) => x.builtin && x.p === target.p && x.key !== target.key);
+      let v = null, q = null; for (let n = 0; n < 600 && !q; n++) { const c = peers[n % peers.length], t = makeVocabQuestion(c, { forceFmt: 'v-recall', kana: false }); if (t && t.fmt === 'v-recall' && t.options.some((o) => o.text === target.w)) { v = c; q = t; } }
+      startSession('items', { items: [v, v, v] }); route(); let e = currentEntry(); e.preview = false; e.q = q; renderPractice(); answerCurrent(q.options.findIndex((o) => o.text === target.w)); await wait(50);
+      const row = [...document.querySelectorAll('.fb-sheet .fb-opt')].find((r) => r.querySelector('.fb-mark + span').textContent.includes('よろしく'));
+      out.word = { lines: lines(row.querySelector('.fb-mark + span')), aside: Boolean(row.querySelector('.fb-opt-zh')), you: Boolean(row.querySelector('.fb-you')), say: Boolean(row.querySelector('.fb-opt-say')), inside: inside(), body: body() };
+      // a grammar question's long options (句意: Chinese sentences up to 30 characters), answered wrong: each wraps inside its row
+      const g = REG.grammar.filter((x) => x.t === 'meaning').map((x) => [x, makeQuestion(x, {})]).filter(([, t]) => t && !t.custom).sort((a, c) => Math.max(...c[1].options.map((o) => o.text.length)) - Math.max(...a[1].options.map((o) => o.text.length)))[0];
+      startSession('items', { items: [g[0], g[0]] }); route(); e = currentEntry(); e.preview = false; e.q = g[1]; renderPractice(); answerCurrent((g[1].answer + 1) % g[1].options.length); await wait(50);
+      const spans = [...document.querySelectorAll('.fb-sheet .fb-opt .fb-mark + span')];
+      out.grammar = { rows: spans.length, wrapped: Math.max(...spans.map(lines)) > 1, inside: inside(), body: body() };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    for w, h in ((390, 664), (375, 553)):
+        r = json.loads(ev(b, js, [("metrics", (w, h))]))
+        assert r['word'] == {'lines': 1, 'aside': True, 'you': True, 'say': True, 'inside': True, 'body': True}, (w, r)
+        assert r['grammar'] == {'rows': 4, 'wrapped': True, 'inside': True, 'body': True}, (w, r)
+
+# test.4's fix round (review Minor 6): on a lesson section's card a focused button other than the main one does its own on Enter (as a
+# keyboard does it: trusted keys) — ‹ 上一頁 turns back to page 1, 看完整講義 opens the lesson, and the card is not put away; the main button
+# and nothing focused as before (page 2, then 看完了)
+def keyed(b, w, h, steps):
+    """steps ('eval', js) | ('enter',): run in b's page at w×h in one session, Enter pressed as a real keyboard presses it; the evals' values"""
+    async def go():
+        async with websockets.connect(b.ws_url, max_size=None) as ws:
+            n = 0
+            async def call(m, p=None):
+                nonlocal n; n += 1; k = n
+                await ws.send(json.dumps({"id": k, "method": m, "params": p or {}}))
+                while True:
+                    r = json.loads(await ws.recv())
+                    if r.get("id") == k:
+                        if "error" in r: raise RuntimeError(f"{m}: {r['error']}")
+                        return r.get("result", {})
+            async def ev_(js):
+                r = await call("Runtime.evaluate", {"expression": js, "returnByValue": True, "awaitPromise": True})
+                if "exceptionDetails" in r: raise RuntimeError(r["exceptionDetails"].get("exception", {}).get("description", "eval error"))
+                return r["result"].get("value")
+            await call("Page.enable"); await call("Page.addScriptToEvaluateOnNewDocument", {"source": "window.NQ_E2E = 1"})
+            await call("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 1, "mobile": False})
+            await call("Page.navigate", {"url": URL})
+            for _ in range(300):
+                try:
+                    if await ev_(READY): break
+                except Exception: pass
+                await asyncio.sleep(0.1)
+            out = []
+            for st in steps:
+                if st[0] == 'eval': out.append(await ev_(st[1]))
+                else:
+                    key = {"key": "Enter", "code": "Enter", "windowsVirtualKeyCode": 13, "nativeVirtualKeyCode": 13}
+                    await call("Input.dispatchKeyEvent", dict(key, type="keyDown", text="\r", unmodifiedText="\r"))
+                    await call("Input.dispatchKeyEvent", dict(key, type="keyUp")); await asyncio.sleep(0.2)
+            return out
+    return asyncio.run(go())
+
+def test_a_focused_button_on_the_grammar_preview_keeps_its_own_key(b):
+    setup = "(async () => { " + FRESH + GP + """ const g = REG.grammar.find((x) => x.u === 'm1' && x.sec === 0); window.__e = show(g); window.__page = () => JSON.stringify({ page: document.querySelector('.preview.grammar') ? Number(document.querySelector('.preview.grammar').dataset.page) : 0, done: Boolean(__e.previewDone), hash: location.hash });
+      previewMain(); await wait(30); document.querySelector('.gp-foot .gp-back').focus(); return document.activeElement.textContent.trim(); })()"""
+    r = keyed(b, 1280, 800, [('eval', setup), ('enter',), ('eval', "__page()"),                                   # ‹ 上一頁 focused: back to page 1
+        ('eval', "(document.activeElement && document.activeElement.blur(), 1)"), ('enter',), ('eval', "__page()"),   # nothing focused: the main one, page 2
+        ('eval', "((document.querySelector('.gp-foot .left [data-route]') || document.body).focus(), 1)"), ('enter',), ('eval', "__page()"),   # 看完整講義 focused: the lesson
+        ('eval', "(location.hash = '#/practice', new Promise((r) => setTimeout(r, 300)).then(() => { previewPage(2); (document.getElementById('btnNext') || document.body).focus(); return document.activeElement.textContent.trim(); }))"),
+        ('enter',), ('eval', "__page()")])                                                                                   # 看完了 focused: as before
+    focused, back, main, lesson, done_btn, done = r[0], json.loads(r[1]), json.loads(r[3]), json.loads(r[5]), r[6], json.loads(r[7])   # an eval's value each (the keys give none)
+    assert focused == '‹ 上一頁' and back == {'page': 1, 'done': False, 'hash': '#/practice'}, r
+    assert main == {'page': 2, 'done': False, 'hash': '#/practice'}, r
+    assert lesson['done'] is False and lesson['hash'].startswith('#/course/m1'), r
+    assert done_btn.startswith('看完了') and done['done'] is True, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
