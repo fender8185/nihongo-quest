@@ -1,6 +1,6 @@
 """2026-11-14 中華街の打工 (docs/superpowers/specs/2026-11-14-chinatown-work-design.md §4–§7): four workplaces opening by the
 kana seen (收銀: the numbers learned, 2026-11-19), at most one a day, a shift of ten left halfway waiting for its day, pay by the job and the grade (2% more a step up an area's 打工證), into the wallet."""
-import json, os, subprocess, sys, time
+import json, os, re, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -674,6 +674,155 @@ def test_a_replay_at_the_counter_holds_the_clock(b):
 def test_a_new_bun_cell_is_never_a_twin_of_another(b):
     r = json.loads(ev(b, """JSON.stringify([JOBS.buns.boardNew(['あ', 'い', 'う', 'え'], ['あ', 'い', 'う', 'え', 'イ'], 'あ'), JOBS.buns.boardNew(['あ', 'い', 'う', 'え'], ['あ', 'い', 'う', 'え', 'ア'], 'あ')])"""))
     assert r == ['あ', 'ア'], r
+
+# ---- the text round (2026-11-26, test.4; the user: 「整面板都是字，字體太小」) ----
+# the user's pick 「精簡＋折疊（建議）」: every job's rules card — three steps (①②③, 22 characters at most) under 玩法, then 「詳細規則
+# （…）」 shut at first, holding every rule as it was: today's bullets kept here word for word (ruling 8: nothing lost)
+HOW_BEFORE = {
+  'counter': [
+    '客人用日文說要買什麼（用聽的），從櫃台上把那樣東西拿給他。',
+    '學過「ふたつ」：有客人會要兩個，就拿兩次。',
+    '客人底下那條是耐心：客人說完要什麼，你有 5 秒，拿錯也會少一截；沒了客人就走人，這位算失敗。',
+  ],
+  'waiter': [
+    '有「！」的就是在等你：客人頭上，或要帶位時的空桌子。點它走過去。',
+    '聽客人說什麼，從下面三句選你要回的那句。帶位、點菜、端菜、結帳都靠你。',
+    '客人頭上那條是耐心，越等越短；沒了客人就走人，店裡少一顆星。客滿時有人進門，先道歉請他等。',
+  ],
+  'buns': [
+    '聽到哪個音，就在假名板上按哪個字；按對了包子就往下包一步。假名板上是你學過的平假名和片假名，發音像、字形像的會放在一起。',
+    '按 30 下、包好 5 顆包子。每顆有 15 秒，喇叭旁邊那條就是；時間到還沒包好，這顆就變成醜包子進蒸籠、算失敗，接著包下一顆。全部按對又沒超時，王老闆會很激動。',
+  ],
+  'bento': [
+    '電車停下來，車窗會一扇扇打開，乘客喊「すみません！」。點那扇窗，聽他要什麼、要幾個（先用聽的，按錯兩次字才會出來；喇叭可以再聽）。',
+    '從箱子拿東西：點一下拿一個，點手上的放回去；拿好按「どうぞ」交給他。',
+    '數東西：一般的東西用「つ」（ひとつ、ふたつ、みっつ），瓶子用「本」（いっぽん、にほん、さんぼん）；「A と B」是兩樣都要。學到形容詞以後，茶分熱的（あたたかい，橘色瓶蓋）和冷的（つめたい，藍色瓶蓋）。',
+    '乘客問「〇〇、ありますか。」：箱子裡有就回「はい、あります。」，沒有就回「すみません、ありません。」。',
+    '電車不等人：發車鈴響了就只剩 10 秒，車一開走，還沒拿到的乘客算失敗；全部遞完，車會提早開走。',
+  ],
+  'taxi': [
+    '你坐在鈴木的副駕駛座，腿上是鎮上的地圖。前三位乘客會一路告訴你怎麼走：「つぎの 角を 右に 曲がって ください」「二つ目の 角を…」「まっすぐ 行って ください」「あの 〜の 前で 止めて ください」。',
+    '左右是照車頭的方向：車子往地圖下面開的時候，「右」是地圖的左邊。到路口前按「左」「まっすぐ」「右」，到了按「止めて」。',
+    '後兩位只說要去哪裡（〜まで お願いします），自己在地圖上找到那個地方、選路開過去；繞太遠客人會唸。',
+    '每個路口有幾秒可以決定，沒選鈴木就直走；走錯客人會叫停，算一次失誤。到了以後看跳表，說出車資。沒失誤的話，客人有時會說「おつりは いいです」給你小費。',
+  ],
+  'lost': [
+    '來的人會說把東西忘了：有時說了是什麼、忘在哪裡（電車に 財布を 忘れました），有時只說其中一樣。從「何を 忘れましたか」「どこに 忘れましたか」「どんな〜ですか」裡問他還沒說的；問已經說過的算一次失誤。',
+    '「どんな〜ですか」問到的是兩個特徵，用「くて」「で」連起來：「黒くて、小さい 財布です」＝黑色的、小的錢包。顏色、大小、新舊、圓的方的都會出現。東西、地點、樣子都知道了，小林才會拿出東西。',
+    '小林會從後面拿出四個同種類的東西，只有兩個特徵都對的才是。點它拿起來，按「これですか」交給客人。',
+    '錢包和包包可能有兩個長得一樣：小林會說「同じのが 二つ…」，這時要問「中に 何が ありますか」，聽客人說裡面有什麼（中に カードと 写真が あります），點起來看裡面。四個都不是就按「すみません、ありません」。',
+    '客人說完特徵才開始算耐心（25 秒），按錯會少一截。',
+  ],
+  'window': [
+    '客人在窗口問一個問題：到哪一站多少錢、下一班往哪裡的車幾點、在幾號月台、快速車停不停某一站，或是要買票（先用聽的，答對或錯兩次才出現字）。',
+    '答案都在窗口上面：路線圖上每一站的票價（上面大人、下面小孩，● 是快速車會停的站）、時鐘、發車標。看好了，從下面三句選你要回答的那句。',
+    '買票：先在路線圖點客人要去的站，車票印出來，再說價錢：一張就說「…円です」，大人加小孩兩張就說「ぜんぶで …円です」。',
+    '答案用假名寫，要自己把板子上的數字念出來：10:25 是「じゅうじ にじゅうごふん」，10 分、40 分是「じゅっぷん、よんじゅっぷん」，4 點「よじ」、7 點「しちじ」、9 點「くじ」、14 點「じゅうよじ」。',
+    '客人說完話開始算耐心（20 秒），按錯也會少一截；按喇叭重聽時耐心會暫停。',
+  ],
+  'till': [
+    '客人把要買的東西放上櫃台，每樣都有價格牌。只有一樣就問「これ、いくらですか。」，用字卡依序拼出價格的念法，例如 198円 → ひゃく｜きゅう｜じゅう｜はち｜えん。',
+    '兩樣（或同一樣要「ふたつ」）就問「ぜんぶで いくらですか。」：自己加起來，拼出全部的錢，例如 248＋150 → さん｜びゃく｜きゅう｜じゅう｜はち｜えん。',
+    '前 4 位買一樣，後 6 位買兩樣，不會更多。按錯一塊算一次失誤，錯兩次下一塊會亮。',
+    '客人底下那條是耐心：買一樣 30 秒、兩樣 45 秒，按錯也會少一截；沒了客人就走人，這位算失敗。',
+  ],
+  'annai': [
+    '遊客在窗口外問問題（先用聽的，答對或錯兩次才出現字；喇叭可以再聽）：幾點到幾點、多少錢、可不可以帶狗、小孩能不能玩、哪裡買得到毛巾、晚上看不看得到……',
+    '答案都在頭上的「湯の花温泉 ごあんない」看板：六個地方的時間、價錢和規則（狗、小孩能不能進去，哪裡買得到毛巾）。看板每天都會換，要讀看板，背不起來。',
+    '從下面三句選你要回答的那句：要跟看板上寫的一樣，說法也要對——「入れます」「買えます」「借りられます」「できます」「見られます」這些「可以…」的說法。',
+    '看板上是 24 小時制：21:00 要說「夜九時（よる くじ）」，17:00 是「夕方五時」，10:00 是「午前十時」。',
+    '遊客說完話開始算耐心（25 秒），按錯也會少一截；按喇叭重聽時耐心會暫停。',
+  ],
+  'nakai': [
+    '跟女將千代一起準備三間客房：桜の間、菊の間、松の間。每間一開始，千代會先問房間現在的樣子（「お茶は 用意して ありますか」「電気は ついて いますか」）：看圖，從下面選你要回的那句。',
+    '接著她會交代客人來之前要先做好的事（先用聽的，按喇叭可以再聽一次；做對或錯兩次才出現字）：「エアコンを つけて おいて ください」就點冷氣，「お布団を 二組 敷いて おいて ください」就在兩個地方鋪棉被。點錯東西算一次失誤，那樣東西會回到原樣。',
+    '上面「お客様 到着まで」是客人到達前的倒數，千代說話、按喇叭重聽時會暫停；時間到了還沒做好的事算失敗。最後 10 秒會變紅。',
+    '客人進房會說一句話（「あれ、窓が 開いて いますね」），選你要回的那句：事先做好的是「開けて おきました」——自動詞（開く、つく）不能加「ておく」。',
+    '睡在要鋪棉被的地方的貓，點牠就會走開，不算失誤。',
+  ],
+  'miyage': [
+    '客人在櫃台前說要買什麼（先用聽的，按喇叭可以再聽一次；拿對、錯兩次或客人走了才出現字）：要送誰、送幾個人、收到過什麼、手上有多少錢……',
+    '點背後貨架上的東西放上托盤（每樣一個；點托盤上的、或再點一次架上的，就放回去），放好按「どうぞ」交給客人。饅頭有 6 個裝和 12 個裝，看客人說幾個人。',
+    '有的客人還會拜託你（「包んで もらえますか」）、兩手拿滿了，或是要送給長輩（さしあげる）：從下面選你要回的那句——看清楚是誰為誰做的（あげる・くれる・もらう）。',
+    '拿不定主意的客人，可以請他試吃櫃台上的饅頭：「よかったら、食べて みて ください」。一位客人有兩步的話，兩步的失誤算在同一件裡。',
+    '客人說完話開始算耐心（30 秒，回話 20 秒），拿錯、回錯會少一截；按喇叭重聽時耐心會暫停。',
+  ],
+  'front': [
+    '客人走到櫃台說話（先用聽的，按喇叭可以再聽一次；答對、錯兩次或客人走了才出現字）：入住、行李、晚餐時間、要東西、問地方、問台帳上的事；早上的班還有退房。',
+    '從下面選你要回的那句。先想「這是誰的動作」：客人的動作用尊敬語（なさる、いらっしゃる、お〜に なる），我們（旅館這一方）的動作用謙讓語（お〜する、おる、伺う）；東西、地方要說「ございます」——不能用「いらっしゃる」「おる」。',
+    '入住：先打招呼，再在左邊的「予約台帳」找到客人的名字（名字上面有念法），看他住哪一間，點右邊那間的鑰匙。',
+    '台帳上還有人數、晚餐時間和備註（お誕生日、えびが だめ……）：客人問的事，答案常常就在台帳上。',
+    '佐藤先生站在你旁邊：選錯了，他會提醒你那是誰的動作。客人說完話開始算耐心（25 秒），選錯也會少一截；按喇叭重聽時耐心會暫停。退房只有早上的班（7–11 點）才有，下午的班（14–22 點）入住比較多。',
+  ],
+}
+# every job open at once: the test site's switches (any place again, 駅前 and 湯の花 without their step and units, 收銀 without its numbers),
+# a learner past 入門, 15:00 on a weekday (every keeper at their place)
+ALL12 = """['nq_work_free', 'nq_work_eki', 'nq_work_onsen', 'nq_work_nums'].forEach((k) => localStorage.setItem(k, '1'));
+  state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.currentUnit = 'm1'; TOWNEV.clock = { h: 15, day: new Date(2026, 10, 10) }; saveState();
+  const JOBS12 = Object.keys(WORK.PLACES);"""
+
+def test_every_rules_card_has_three_steps_and_its_rules_folded(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + ALL12 + """ location.hash = '#/chinadori'; route(); await wait(300); const out = {};
+      for (const job of JOBS12) { const shown = WORK.intro(yard(), job); await wait(30); const c = document.querySelector('.wk-rules'), f = c && c.querySelector('details.wk-fold');
+        out[job] = !c ? { shown } : { steps: [...c.querySelectorAll('.wk-steps li')].map((li) => li.textContent.slice(1)), nums: [...c.querySelectorAll('.wk-steps .wk-sn')].map((x) => x.textContent).join(''),
+          head: c.querySelector('h4').textContent, sum: f ? f.querySelector('summary').textContent : '', open: f ? f.open : null, how: f ? [...f.querySelectorAll('.wk-how li')].map((li) => li.textContent) : [],
+          kept: ['.wk-rhead .kr-face', '.wk-uses span', '.wk-pay', '.wk-ask', '[data-rules="yes"]', '[data-rules="no"]'].filter((q) => !c.querySelector(q)) };
+        CLASS.close(); }
+      return JSON.stringify(out); })()"""))
+    assert sorted(r) == sorted(HOW_BEFORE), r
+    for job, x in r.items():
+        assert len(x.get('steps', [])) == 3 and all(0 < len(s) <= 22 for s in x['steps']) and x['nums'] == '①②③' and x['head'] == '玩法', (job, x)
+        assert x['open'] is False and re.fullmatch(r'詳細規則（[^（）]+…）', x['sum']), (job, x)   # shut at first, naming what is in it
+        assert x['how'] == HOW_BEFORE[job] and x['kept'] == [], (job, x)   # every rule as it was; the face, 需要的能力, the pay, はたらきますか？ はい／いいえ kept
+
+# on a phone: shut, the whole card in sight at 390×664 with nothing to scroll, はい／いいえ in it; open at 375×553, the card scrolls in itself
+# and はい／いいえ are reached at its foot (a tap there lands on them)
+def test_the_rules_cards_fit_a_phone(b):
+    probe = "(async () => { " + BEGIN + ALL12 + """ location.hash = '#/chinadori'; route(); await wait(300); const out = {}, open = %s;
+      const hit = (el) => { const q = el.getBoundingClientRect(), x = (q.left + q.right) / 2, y = (q.top + q.bottom) / 2; return q.top >= 0 && q.bottom <= innerHeight && document.elementFromPoint(x, y) === el; };
+      for (const job of JOBS12) { WORK.intro(yard(), job); await wait(30); const card = document.querySelector('.wk-rules .cls-card'), f = card.querySelector('details.wk-fold');
+        if (open) { f.querySelector('summary').click(); await wait(30); card.scrollTop = card.scrollHeight; await wait(30); }
+        const c = card.getBoundingClientRect();
+        out[job] = { fold: f.open, inside: card.scrollHeight <= card.clientHeight + 1, onScreen: c.top >= 0 && c.bottom <= innerHeight, yes: hit(card.querySelector('[data-rules="yes"]')), no: hit(card.querySelector('[data-rules="no"]')),
+          read: getComputedStyle(card.querySelector('.wk-steps li')).fontSize, how: getComputedStyle(card.querySelector('.wk-how li')).fontSize };
+        CLASS.close(); }
+      return JSON.stringify(out); })()"""
+    shut = json.loads(b.run([("metrics", (390, 664)), ("nav", URL), ("wait", READY), ("eval", probe % 'false')])[-1])
+    for job, x in shut.items():
+        assert x == {'fold': False, 'inside': True, 'onScreen': True, 'yes': True, 'no': True, 'read': '16px', 'how': '16px'}, (job, x)
+    opened = json.loads(b.run([("metrics", (375, 553)), ("nav", URL), ("wait", READY), ("eval", probe % 'true')])[-1])
+    for job, x in opened.items():
+        assert x['fold'] and x['onScreen'] and x['yes'] and x['no'], (job, x)   # the card stays on the screen, scrolled in itself to its foot
+    assert sum(not x['inside'] for x in opened.values()) >= 10, opened   # (open, nearly all run past the screen: it is the card that scrolls)
+
+# the user's pick 「每份一句＋規則折起來（建議）」: each area's 求人看板 says each job in one line (25 characters at most); under the jobs only
+# the 打工證's line, the scoring (RULE), the area's hours and how to ask folded shut in 「規則」 (today's line and 「今天還沒打工」 as they were)
+RULE_TEXT = '每份工作算最好的一次：S 5・A 4・B 3・C 2・D 1 點；每 10 點升一級，之後的薪水 +2%。'
+def test_each_board_says_a_job_in_a_line_and_folds_its_rules(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + ALL12 + """ location.hash = '#/chinadori'; route(); await wait(300); const out = {};
+      for (const area of ['chinatown', 'ekimae', 'onsen']) { WORK.board(area); await wait(30); const c = document.querySelector('.wk-board'), f = c.querySelector('details.wk-nfold');
+        out[area] = { jobs: [...c.querySelectorAll('.wk-job')].map((x) => x.dataset.job), does: [...c.querySelectorAll('.wk-does')].map((x) => x.textContent), notes: [...c.querySelectorAll('.wk-note')].map((x) => x.textContent),
+          today: (c.querySelector('.wk-today') || {}).textContent, sum: f && f.querySelector('summary').textContent, open: f && f.open, lines: f ? [...f.querySelectorAll('p')].map((p) => p.textContent) : [], hours: WORK.AREAS[area].hours,
+          size: getComputedStyle(c.querySelector('.wk-does')).fontSize };
+        CLASS.close(); }
+      return JSON.stringify(out); })()"""))
+    for area, x in r.items():
+        assert len(x['does']) == len(x['jobs']) == 4 and all(10 < len(d) <= 25 for d in x['does']), (area, x)
+        assert x['notes'] == ['打工證：新人・經驗 0（再 10 點升「一人前」）'] and x['today'] == '今天還沒打工。一天只能選一個地方打一班。', (area, x)
+        assert x['sum'] == '規則' and x['open'] is False and x['lines'] == [RULE_TEXT, x['hours'], '點老闆，選要來打工的那句回話。'], (area, x)
+    assert r['onsen']['does'][0] == '看頭上的看板，回答遊客的問題', r   # the user's own example
+
+# the 打工證 page (町の手帳) folds its foot the same way: in sight the shifts done and the raise; the one-a-day rule and every area's hours
+# in 「規則」, shut; the card over it keeps its RULE line
+def test_the_licence_page_folds_its_rules(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ [['buns', 'S'], ['counter', 'S'], ['till', 'A'], ['waiter', 'B']].forEach(([job, g], i) => { state.work.res['2026-11-0' + (i + 1)] = { place: job, done: 10, score: {}, yen: 1, grade: g }; }); saveState();
+      location.hash = '#/chinatown'; route(); await wait(300); DIARY.open('work'); await wait(150); const p = document.querySelector('.wk-book'), f = p.querySelector('details.wk-nfold');
+      const out = { notes: [...p.querySelectorAll(':scope > .wk-note')].map((x) => x.textContent), sum: f.querySelector('summary').textContent, open: f.open, lines: [...f.querySelectorAll('p')].map((x) => x.textContent),
+        want: Object.values(WORK.AREAS).map((A) => `${A.name}：${A.hours}`), lic: p.querySelector('.wk-lic small').textContent, last: p.lastElementChild === f };
+      DIARY.close(); return JSON.stringify(out); })()"""))
+    assert r['notes'] == ['總共打過 4 班・打工證加給 +2%'] and r['sum'] == '規則' and r['open'] is False and r['last'], r   # 17 經驗: 一人前, one step up
+    assert r['lines'] == ['一天只能在一個地方打一班。'] + r['want'] and len(r['want']) == 3, r
+    assert r['lic'] == RULE_TEXT, r   # the card's own rule line as it was
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

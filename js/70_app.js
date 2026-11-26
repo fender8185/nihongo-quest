@@ -266,6 +266,7 @@ const ACTIONS = {
   'hall-cust': (el) => HALL.tap(el),   // a customer in らいらいけん (外場, 2026-11-15)
   'purse': () => purseToggle(),   // the button up top: 言靈 ↔ 円
   'yen-buy': (el) => YEN.buy(el.dataset.item), 'yen-zh': () => YEN.toggleZh(),   // a menu (YEN): bought, its Chinese
+  'rairai-zh': (el) => RAIRAI.zh(el),   // らいらいけん's menu card (test.4): its Chinese shown or put away
   'cruise-call': () => CRUISE.call(),   // test: the cruise ship far out, tapped: asked first (a long one)
   'cruise-start': () => CRUISE.start(),   // …and in it comes
   'cruise-next': () => CRUISE.next(),   // the tour's next stop
@@ -282,6 +283,7 @@ const ACTIONS = {
   answer: (el) => answerCurrent(Number(el.dataset.i)),
   next: () => nextQuestion(),
   'preview-go': () => dismissPreview(),
+  'preview-page': (el) => previewPage(Number(el.dataset.page)),   // a lesson section's card: its other page (test.4)
   slip: () => {   // 「手滑，不算」: the answer was a mis-tap, not a gap — schedule, notebook and stats go back to before it
     const e = currentEntry(); if (!e || !e.done || e.slip || !e.undo) return;
     const q = e.q, u = e.undo;
@@ -435,7 +437,7 @@ function handleKey(ev) {
   if (r.name === 'practice' && SESSION) {
     const e = currentEntry();
     if (e && e.preview && !e.previewDone) {
-      if (k === 'Enter' || k === ' ') { ev.preventDefault(); dismissPreview(); }
+      if (k === 'Enter' || k === ' ') { ev.preventDefault(); previewMain(); }   // the main button: a lesson section's examples first (test.4)
       else if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); }
       else if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFurigana(); }
       else if (k === 'Escape') { ev.preventDefault(); exitPractice(); }

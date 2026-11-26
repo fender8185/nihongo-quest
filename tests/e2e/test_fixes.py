@@ -607,7 +607,7 @@ def test_pressing_see_results_after_the_last_question_shows_the_summary(b):
       if (first.preview) dismissPreview();
       if (first.q && first.q.custom) finishCustom(first, true, ''); else answerCurrent(0);
       SESSION.entries.length = SESSION.idx + 1; renderPractice();   // answering may queue an encore; make this the last question
-      let btn = document.getElementById('btnNext'); for (let i = 0; i < 3 && btn && /看完了/.test(btn.textContent); i++) { ACTIONS['preview-go'](btn); btn = document.getElementById('btnNext'); }   // a lesson-section intro may sit in front
+      let btn = document.getElementById('btnNext'); for (let i = 0; i < 3 && btn && /看完了|下一頁/.test(btn.textContent); i++) { ACTIONS['preview-go'](btn); btn = document.getElementById('btnNext'); }   // a lesson-section intro may sit in front (on its first page since test.4: 下一頁：例句)
       const label = btn ? btn.textContent.trim() : null;
       let err = null; try { nextQuestion(); } catch (e) { err = String(e); }
       const v = document.querySelector('.view.active') || document.body; const title = v.querySelector('.page-title'); const ring = v.querySelector('.ring-txt');
@@ -1347,8 +1347,8 @@ def test_first_new_question_of_a_lesson_section_shows_that_section_once(b):
       const previews = SESSION.entries.filter(x => x.preview && x.item && x.item.kind === 'g'); const secs = previews.map(x => x.item.sec);
       const out = { previews: previews.length, onePerSection: new Set(secs).size === secs.length && secs.every(s => Number.isInteger(s) && s >= 0) };
       const i = SESSION.entries.findIndex(x => x.preview && x.item && x.item.kind === 'g'); SESSION.idx = i; const e = currentEntry(); const g = e.item; const sec = DATA.LESSONS.m1.sections[g.sec]; renderPractice();
-      const txt = document.getElementById('view').textContent; const spoken = [...document.querySelectorAll('.preview.grammar .example [data-act=speak]')].map(x => x.dataset.text);
-      Object.assign(out, { card: !!document.querySelector('.preview.grammar'), heading: txt.includes(sec.h.replace(/\\[[^\\]]*\\]/g, '')), rule: txt.includes(sec.rule.slice(0, 8)), point: txt.includes(sec.points[0].replace(/\\[[^\\]]*\\]/g, '').slice(0, 8)), examples: sec.ex.length > 1 && sec.ex.every(x => spoken.includes(x.jp)), lesson: !!document.querySelector('[data-route="#/course/m1?tab=lesson"]') });
+      const txt = document.getElementById('view').textContent; previewMain(); const spoken = [...document.querySelectorAll('.preview.grammar .example [data-act=speak]')].map(x => x.dataset.text);   // its examples on its second page (test.4)
+      Object.assign(out, { card: !!document.querySelector('.preview.grammar'), heading: txt.includes(sec.h.replace(/\\[[^\\]]*\\]/g, '')), rule: txt.includes(sec.rule.split('｜')[0].trim().slice(0, 8)), point: txt.includes(sec.points[0].replace(/\\[[^\\]]*\\]/g, '').slice(0, 8)), examples: sec.ex.length > 1 && sec.ex.every(x => spoken.includes(x.jp)), lesson: !!document.querySelector('[data-route="#/course/m1?tab=lesson"]') });
       ACTIONS['preview-go'](); out.movedAway = currentEntry().item.key !== g.key; out.seen = state.lessonSeen.includes('m1:' + g.sec);
       SESSION = null; document.body.classList.remove('practicing');
       startSession('unit', { unit: 'm1' }); out.noSecondCard = !SESSION.entries.some(x => x.preview && x.item && x.item.kind === 'g' && x.item.sec === g.sec);
@@ -1926,7 +1926,7 @@ def test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_onli
       startSession('daily', {}); const e = currentEntry(); if (e.preview) dismissPreview();
       if (e.q && e.q.custom) finishCustom(e, true, ''); else answerCurrent(0);
       SESSION.entries.length = SESSION.idx + 1; renderPractice();
-      let btn = document.getElementById('btnNext'); for (let i = 0; i < 3 && btn && /看完了/.test(btn.textContent); i++) { ACTIONS['preview-go'](btn); btn = document.getElementById('btnNext'); }
+      let btn = document.getElementById('btnNext'); for (let i = 0; i < 3 && btn && /看完了|下一頁/.test(btn.textContent); i++) { ACTIONS['preview-go'](btn); btn = document.getElementById('btnNext'); }
       clearTimeout(AUDIO_PREFETCH.timer); AUDIO_PREFETCH.timer = null; nextQuestion(); const afterSession = AUDIO_PREFETCH.timer !== null;
       SESSION = null; document.body.classList.remove('practicing');
       return JSON.stringify({ first, n, again, soon, later, afterSession }); })()"""

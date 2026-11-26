@@ -571,6 +571,38 @@ def test_a_dish_called_twice_is_said_once(b):
       await answer(true); await goTo('pass'); const out = { pass: ask() && ask().kind }; ends[held](); await wait(200); out.n = said.filter((x) => x === up).length; return JSON.stringify(out); })()"""))
     assert r == {'pass': 'pass', 'n': 1}, r
 
+# ---- the wall menu (2026-11-26, test.4; the user's pick 「改成菜單卡（建議）」): tapped, the hero says his line as before and a card opens,
+# as the town's menus look — each dish's drawing, its name (17 px), its price — the Chinese on 中文; nothing to buy (ruling 7: no purse, no
+# locks), shut by the player; no toast. The dishes are RAIRAI.MENU's, the 外場's own list
+def test_the_wall_menu_opens_a_card_to_read(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ window.__errs = []; window.addEventListener('error', (e) => __errs.push(String(e.message))); await into();
+      const toast = document.getElementById('toast'); toast.textContent = ''; toast.classList.remove('show'); const pops = [];
+      new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.classList && n.classList.contains('ypop')) pops.push(n.textContent); }))).observe(document.querySelector('.yworld'), { childList: true });
+      document.querySelector('.use-btn[data-use="menu"]').click(); for (let i = 0; i < 60 && !document.querySelector('#modalRoot .rr-menu'); i++) await wait(100); await wait(200);
+      const m = document.querySelector('#modalRoot .rr-menu'), zh = () => [...m.querySelectorAll('.mc-zh')].filter((x) => getComputedStyle(x).display !== 'none').map((x) => x.textContent), btn = () => document.querySelector('#modalRoot [data-act="rairai-zh"]');
+      const out = { title: document.querySelector('#modalRoot .modal-title').textContent, rows: [...m.querySelectorAll('.mc-item')].map((x) => [x.querySelector('.mc-name').textContent, x.querySelector('.mc-price b').textContent, Boolean(x.querySelector('.mc-pic svg.pic')), getComputedStyle(x.querySelector('.mc-name')).fontSize]),
+        menu: RAIRAI.MENU.map(([n, p]) => [n, `${p}円`]), buy: m.querySelectorAll('button, [data-act="yen-buy"], .mc-lock').length + document.querySelectorAll('#modalRoot .mc-purse').length, zh0: zh(), btn0: btn().textContent, pops, toast: toast.textContent, shown: toast.classList.contains('show') };
+      btn().click(); await wait(50); Object.assign(out, { zh1: zh(), btn1: btn().textContent, pressed: btn().getAttribute('aria-pressed') });
+      btn().click(); await wait(50); Object.assign(out, { zh2: zh(), btn2: btn().textContent });
+      document.querySelector('#modalRoot .modal-head [data-act="close-modal"]').click(); await wait(100); Object.assign(out, { open: modalOpen(), errs: __errs });
+      return JSON.stringify(out); })()"""))
+    assert r['title'] == 'らいらいけん' and [x[:2] for x in r['rows']] == r['menu'] and len(r['rows']) == 6 and all(x[2] and x[3] == '17px' for x in r['rows']), r
+    assert r['buy'] == 0 and r['zh0'] == [] and r['btn0'] == '中文', r   # to read only; the Chinese put away at first
+    assert r['zh1'] == ['煎餃', '拉麵', '炒飯', '燒賣', '春捲', '麻婆豆腐'] and r['btn1'] == '收起中文' and r['pressed'] == 'true' and r['zh2'] == [] and r['btn2'] == '中文', r
+    assert r['pops'] == ['ぎょうざ、ラーメン…'] and r['toast'] == '' and not r['shown'] and not r['open'] and r['errs'] == [], r   # his line as before, no toast; shut
+
+# the last strip (マーボーどうふ) clear of the 「福」 lantern by it at either end of its sway; the menu's tap box still over all six strips
+def test_the_last_menu_strip_is_clear_of_the_lantern(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ await into(); await wait(300);
+      const land = document.querySelector('.rairai-land'), box = (el) => { const q = el.getBoundingClientRect(); return [q.left, q.top, q.right, q.bottom]; };
+      const strips = [...land.querySelectorAll('rect[width=".86"][height="2.9"]')].map(box).sort((a, b) => a[0] - b[0]), last = strips[strips.length - 1];
+      const lanterns = [...land.querySelectorAll('.fx-sway')].filter((g) => /[福来]/.test(g.textContent)), anims = lanterns.flatMap((g) => g.getAnimations()); anims.forEach((a) => a.pause());
+      const apart = (p, q) => p[2] <= q[0] || q[2] <= p[0] || p[3] <= q[1] || q[3] <= p[1], out = { strips: strips.length, lanterns: lanterns.length, clear: [] };
+      for (const end of [0, 1]) { anims.forEach((a) => { a.currentTime = end ? a.effect.getComputedTiming().duration - 1 : 0; }); await wait(30); out.clear.push(lanterns.every((g) => apart(last, box(g)))); }
+      const tap = box(document.querySelector('.use-btn[data-use="menu"]')); out.over = strips.every((s) => s[0] >= tap[0] - 1 && s[2] <= tap[2] + 1 && s[1] >= tap[1] - 1 && s[3] <= tap[3] + 1);
+      anims.forEach((a) => a.play()); return JSON.stringify(out); })()"""))
+    assert r == {'strips': 6, 'lanterns': 5, 'clear': [True, True], 'over': True}, r
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

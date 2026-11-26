@@ -827,6 +827,17 @@ function dismissPreview() {
   }
   renderPractice(); window.scrollTo({ top: 0 });
 }
+// a lesson section's card turned to its page n (2026-11-26, test.4: the patterns and points, then the examples; grammarPreviewHtml)
+function previewPage(n) {
+  const e = currentEntry(); if (!e || !e.preview || e.previewDone || e.item.kind !== 'g') return;
+  e.gpPage = n === 2 && grammarPreviewPages(e) === 2 ? 2 : 1;
+  renderPractice(); window.scrollTo({ top: 0 });
+}
+// what Enter (and the main button) does on a preview: a lesson section's first page turns to its examples, else 看完了
+function previewMain() {
+  const e = currentEntry();
+  if (e && e.preview && !e.previewDone && e.item.kind === 'g' && e.gpPage !== 2 && grammarPreviewPages(e) === 2) previewPage(2); else dismissPreview();
+}
 // The counter and the bar count every question the set asks (2026-11-10, the user: the encores stay, but the bar must not fill
 // before they come): what is queued — planned items, encores, 再練一次 copies — and the one more each new item not answered yet
 // will bring (its encore, or its 再練一次 when missed; encoreEstimate's rule). Only a miss makes the total grow (a 階段測驗 has neither).
@@ -1138,6 +1149,25 @@ function optAside(q, o) {
   const zh = q.optZh && q.optZh[o.text]; if (zh) return [zh, false];
   const ja = q.optJa && q.optJa[o.text]; return ja ? [ja, true] : ['', false];
 }
+// the word of the word list an option stands for, heard from a speaker at the end of its row in a phone's result panel once answered,
+// right or wrong (2026-11-26, test.4; the user: 「選項是真的單字才加」): a word as the option (中翻日, 看圖選字; 例句填空 and 漢字寫法
+// where the option is the word as listed), a meaning by its word (意思, 聽力: the right one the word asked, the others each the word
+// its meaning is — what the row shows beside it), and in 讀音 the right reading only, the word's own; never a made-up reading or
+// kanji, a form of a word, a phrase, kana or a picture (other kinds of question: none)
+function optWord(q, i) {
+  if (q.kind !== 'v' || q.custom || !q.item) return null;
+  const o = q.options[i], v = q.item, right = i === q.answer, listed = (w, m) => REG.vocab.find(x => jaPlain(x.w) === w && x.m === m) || null;
+  if (q.fmt === 'v-meaning' || q.fmt === 'v-listen') { if (right) return v; const w = q.optJa && q.optJa[o.text]; return w ? listed(w, o.text) : null; }
+  if (q.fmt === 'v-reading') return right && o.text === v.r ? v : null;
+  if (['v-recall', 'v-pic', 'v-cloze', 'v-kanji'].includes(q.fmt)) { const t = jaPlain(o.text); if (right) return t === jaPlain(v.w) ? v : null; const m = q.optZh && q.optZh[o.text]; return m ? listed(t, m) : null; }
+  return null;
+}
+// its speaker: the word's own clip, as the word list's 發音 button plays it (its text, its reading pinned) — nothing new to make
+function optSayHtml(v) {
+  if (!v) return '';
+  const w = jaPlain(v.w), r = v.r && !HAS_KANJI.test(v.r) && v.r !== w ? v.r : '';
+  return `<button type="button" class="btn btn-ghost btn-icon fb-opt-say" data-act="speak" data-text="${esc(w)}" data-reading="${esc(r)}" aria-label="發音：${esc(w)}">${icon('speaker')}</button>`;
+}
 // the last two kana of a sentence and its closing marks stay on one line, so it never ends on a line of just 「い。」
 // (not text-wrap: pretty: on iPhone Safari it broke an example that fitted into three lines, and Chrome skips a blank with furigana)
 function keepTail(html) { return String(html || '').replace(/([ぁ-ゖァ-ヺー]{2}[。、？！」）]+)$/, '<span class="nowrap">$1</span>'); }
@@ -1153,7 +1183,7 @@ function feedbackHtml(e, sheet = false) {
   const order = q.options.map((o, i) => i).sort((a, b) => (b === q.answer) - (a === q.answer) || (b === e.chosen) - (a === e.chosen));
   const list = sheet && !q.custom && (!ok || q.options.some((o, i) => i !== q.answer && optAside(q, o)[0]));
   const chosen = list ? `<div class="fb-opts">${order.map(i => { const o = q.options[i]; const [zh, ja] = i !== q.answer ? optAside(q, o) : ['', false];
-    return `<div class="fb-opt${i === q.answer ? ' ok' : i === e.chosen ? ' bad' : ''}"><span class="fb-mark">${i === q.answer ? '✓' : i === e.chosen ? '✗' : '・'}</span><span class="${optClass(o)}">${optionHtml(q, o)}</span>${zh ? `<span class="fb-opt-zh${ja ? ' jp' : ''}">（${esc(zh)}）</span>` : ''}${i === e.chosen && !ok ? '<span class="fb-you">你選的</span>' : ''}</div>`; }).join('')}</div>` : '';
+    return `<div class="fb-opt${i === q.answer ? ' ok' : i === e.chosen ? ' bad' : ''}"><span class="fb-mark">${i === q.answer ? '✓' : i === e.chosen ? '✗' : '・'}</span><span class="${optClass(o)}">${optionHtml(q, o)}</span>${zh ? `<span class="fb-opt-zh${ja ? ' jp' : ''}">（${esc(zh)}）</span>` : ''}${i === e.chosen && !ok ? '<span class="fb-you">你選的</span>' : ''}${optSayHtml(optWord(q, i))}</div>`; }).join('')}</div>` : '';
   const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${q.kind === 'v' && q.exMarked && q.item && homographReadings(q.item).length ? exampleJpHtml(q.exMarked, q.item) : keepTail(furi(q.fullJp))} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
   // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text);
   // 配對 has none: the sentence would be one word's of six

@@ -546,6 +546,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .mc-had { margin-left: 6px; padding: 0 4px; border: 1.5px solid #c8392f; border-radius: 50%; font-style: normal; font-size: 11px; color: #c8392f; vertical-align: 3px; }
 .mc-top { margin-left: auto; display: flex; align-items: center; gap: 10px; } .mc-purse { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-variant-numeric: tabular-nums; } .mc-purse .yen-i { width: 20px; height: 20px; }
 .mc-none { margin: 0 0 8px; font-size: 13px; color: var(--fg-3); }
+/* らいらいけん's wall menu on a card (RAIRAI.card, 2026-11-26, test.4): a menu to read, nothing to buy — its rows no buttons */
+.rr-menu .mc-item { cursor: default; } .rr-menu .mc-item:hover { border-color: #e6dac4; }
 .yen-stamp { position: fixed; z-index: 76; top: calc(64px + env(safe-area-inset-top, 0px)); left: 50%; display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 16px; border-radius: 14px; background: #fffaf0; color: #3a2c24; box-shadow: 0 6px 20px rgba(0, 0, 0, .25); transform: translateX(-50%); transition: opacity .4s; }
 .yen-stamp b { font-size: 13px; color: #8a6a52; } .yen-stamp span { font-size: 16px; font-weight: 700; }
 .yen-stamp i { display: grid; place-items: center; width: 34px; height: 34px; border: 3px solid #c8392f; border-radius: 50%; font: 900 17px/1 'Hiragino Mincho ProN', 'Noto Serif JP', serif; color: #c8392f; transform: rotate(-12deg); animation: crrStamp .34s cubic-bezier(.3, 1.6, .5, 1) .15s backwards; }
@@ -587,6 +589,11 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 /* the rules before a shift (WORK.intro, 2026-11-19): who and where, how it goes, the abilities it takes, the pay, はい／いいえ */
 .wk-rules .cls-card { text-align: left; } .wk-rhead { display: flex; align-items: center; gap: 10px; } .wk-rhead p { display: grid; margin: 0; } .wk-rhead b { font-size: 18px; } .wk-rhead span { font-size: 13px; color: #8a7a6e; }
 .wk-rules h4 { margin: 12px 0 4px; font-size: 13px; color: #a8241c; } .wk-how { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.55; } .wk-how li + li { margin-top: 3px; }
+/* its three steps (2026-11-26, test.4; the user's pick 「精簡＋折疊」): ①②③ hung before each, read at the read level; every rule in full
+   under them in 「詳細規則（…）」, shut at first (wk-fold: a disclose of the card's) */
+.wk-steps { margin: 0; padding: 0; list-style: none; font-size: var(--fs-read); line-height: 1.5; } .wk-steps li { display: flex; gap: 6px; } .wk-steps li + li { margin-top: 3px; }
+.wk-sn { flex: none; color: #a8241c; font-weight: 700; }
+.wk-fold { margin-top: 8px; } .wk-fold.disclose > summary { padding: 6px 0; } .wk-fold > .wk-how { margin-top: 2px; }
 .wk-uses { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; } .wk-uses span { padding: 2px 10px; border-radius: 99px; background: #fbeee0; color: #8a3a1c; font-size: 13px; font-weight: 600; }
 .wk-pay, .wk-back { margin: 12px 0 0; font-size: 13px; color: #6a5a4e; } .wk-back { color: #a8241c; font-weight: 600; }
 .wk-ask { display: grid; justify-items: center; margin: 14px 0 8px; } .wk-ask b { font-size: 18px; } .wk-ask span { font-size: 12px; color: #8a7a6e; }
@@ -1108,6 +1115,10 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .wk-jobs { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 6px; } .wk-job { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(138, 122, 110, .1); color: #6a5a4e; } .wk-job.ok { background: rgba(47, 122, 106, .12); color: #2b2b33; }
 .wk-job p { margin: 0; } .wk-jtop { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; } .wk-jtop b { font-size: 16px; color: #2b2b33; } .wk-jtop small { font-size: 12px; color: #8a7a6e; } .wk-jtop em { margin-left: auto; font-style: normal; font-size: 13px; font-weight: 700; color: #b0602a; }
 .wk-does { font-size: 13px; line-height: 1.5; } .wk-need { font-size: 12.5px; color: #8a7a6e; } .wk-job.ok .wk-need { color: #2f7a6a; font-weight: 700; }   /* each job what it is (2026-11-20) */ .wk-today { margin: 6px 0 4px; font-weight: 700; }
+/* the board's foot and the 打工證 page's (2026-11-26, test.4; the user's pick 「每份一句＋規則折起來」): the 打工證's line, and under it
+   the rules (the scoring, the hours, how to ask) folded shut in 「規則」, a note's size and colour on the paper */
+.wk-nw { white-space: nowrap; }   /* how far to the next step, whole on its line (「バイトリーダー」 not broken) */
+.wk-fold.wk-nfold { margin-top: 2px; } .wk-book > .wk-fold.wk-nfold { margin-top: -8px; }   /* in the page's grid: under its line, not a gap away */ .wk-nfold.disclose > summary { font-size: 13px; color: #8a7a6e; } .wk-nfold.disclose > summary::before { color: #a8946e; } .wk-nfold p { margin: 2px 0 0; font-size: 12.5px; color: #8a7a6e; }
 .wk-book { display: grid; gap: 12px; max-height: min(62vh, 560px); overflow-y: auto; overscroll-behavior: contain; align-content: start; }   /* as 町の手帳: scrolls inside the book (2026-11-22, the user's phone: one card and two areas ran past the screen) */ .wk-card { display: grid; gap: 2px; justify-items: start; padding: 12px 14px; border: 1.5px dashed #a8946e; border-radius: 12px; background: rgba(255, 250, 236, .5); }
 .wk-title { font-size: 13px; color: #8a7a6e; } .wk-rank { font-size: 24px; } .wk-tbl { width: 100%; border-collapse: collapse; font-size: 14px; } .wk-tbl th, .wk-tbl td { padding: 5px 4px; border-bottom: 1px solid rgba(138, 122, 110, .3); text-align: left; } .wk-tbl th { font-size: 12px; color: #8a7a6e; font-weight: 600; } .wk-note { margin: 0; font-size: 12.5px; color: #8a7a6e; }
 .crr-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px dashed #e6d9c4; font-size: 15px; }
@@ -2254,6 +2265,8 @@ body.reading { overflow: hidden; }
 .fb-opt.ok { color: var(--fg); } .fb-opt.ok .fb-mark { color: var(--ok); } .fb-opt.bad .fb-mark { color: var(--bad); }
 .fb-opt-zh { color: var(--fg-3); font-size: 13px; }
 .fb-you { margin-left: auto; flex: none; padding-left: 8px; font-size: 13px; color: var(--bad); }
+/* a word's speaker at the end of its row (optWord, 2026-11-26, test.4): 40 px to tap, after 你選的; the row's words wrap before it */
+.fb-opt-say { flex: none; width: 40px; height: 40px; min-height: 40px; margin-left: auto; } .fb-you + .fb-opt-say { margin-left: 0; } .fb-opt-say svg { width: 18px; height: 18px; }
 .speak-big { display: inline-flex; align-items: center; gap: 10px; margin: 8px auto; padding: 14px 22px; border-radius: 99px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); cursor: pointer; font-size: 16px; }
 .speak-big svg { width: 22px; height: 22px; }
 .speech-prog { max-width: 320px; margin: 2px auto 0; }
@@ -2301,6 +2314,11 @@ button.order-slot:hover { background: var(--bg-hover); }
 .preview.grammar .rule { display: inline-block; text-align: left; font-size: 14px; color: var(--fg-2); background: var(--bg-sunken); border: 1px solid var(--line); padding: 6px 12px; border-radius: 8px; }
 .preview.grammar .points { text-align: left; max-width: 560px; margin: 14px auto 0; padding-left: 20px; color: var(--fg-2); line-height: 1.7; }
 .preview.grammar .points li + li { margin-top: 4px; }
+/* a section's patterns one a line (rulePatsHtml, 2026-11-26, test.4): the box as wide as its widest, each pattern whole where the
+   screen has the room, one longer going on at a joint (its <wbr>s), not inside a word; the preview's second page (its examples)
+   under a 例句 of its own */
+.rule > .rule-pat { display: block; padding-left: 1em; text-indent: -1em; word-break: keep-all; overflow-wrap: anywhere; }   /* a pattern's second line set in */ .rule > .rule-pat + .rule-pat { margin-top: 2px; }
+.preview.grammar .gp-ex-title { margin-top: 14px; text-align: left; }
 .mlist { padding: 0; } .mlist.card { padding: 4px 16px; }
 details.mrow { border-bottom: 1px solid var(--line); } details.mrow:last-child { border-bottom: none; }
 details.mrow > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 0; }
@@ -2844,6 +2862,12 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .q-instr, .blank .small { font-size: var(--fs-read); }
   .q-label { font-size: var(--fs-label); }
   .example .zh, .fb-opt-zh { font-size: var(--fs-sec); }
+  /* a lesson section's card (test.4): its patterns and points read; its foot at the foot of the screen whatever the page's length, as
+     the answer's 下一題 (.pr-next) — on a solid strip across the gutters, its main button big, 看完整講義 and ‹ 上一頁 beside it */
+  .preview.grammar .rule, .preview.grammar .points { font-size: var(--fs-read); }
+  .gp-foot { position: sticky; bottom: 0; z-index: 5; flex-wrap: nowrap; margin: 12px -16px 0; padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); background: var(--bg); }
+  .gp-foot .right { flex: 1 1 auto; flex-wrap: nowrap; justify-content: flex-end; } .gp-foot .right .btn-primary { flex: 1 1 auto; min-height: 48px; font-size: 16px; }
+  body.practicing .content:has(> .gp-foot) { padding-bottom: 0; }   /* the strip carries the bottom padding: the page ends under the button */
   /* the labels of every day's screens at the label level (2026-11-26, test.4's fix round): the chips (目前單元 and 新 on every
      question — ruling 10; a glossary chip keeps its row's size, chips set larger keep theirs), 說明, the 目前單元 card's label, a
      unit's weeks, a set's harvest, a letter's state and date, the notebook's tabs; a toast is read, the 學習紀錄 and 變化表 empty
@@ -2865,9 +2889,11 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .tb-who, .tb-lines b, .tb-lines small { font-size: var(--fs-label); }
   .tb-name ruby, .tb-name span { font-size: var(--fs-sec); }
   .tb-talk summary small, .tb-ev small { font-size: 12.5px; } .tb-talk summary small { white-space: nowrap; }   /* the day whole: on the next line if the title leaves no room */
-  /* the 打工證 (its foot is the rules' round's) and the cruise's card: the note under the rank, the tables' heads and places */
+  /* the 打工證 and the cruise's card: the note under the rank, the tables' heads and places; the page's foot (its line, its rules
+     folded: wk-nfold) a note */
   .wk-lic small { font-size: var(--fs-sec); }
   .wk-tbl th, .wk-jobs-tbl td:first-child small { font-size: var(--fs-label); }
+  .wk-note, .wk-nfold.disclose > summary, .wk-nfold p { font-size: var(--fs-sec); }
   /* 學習分析's 今天 card, its week, its gauges; the tables' heads; 聽一輪's count; 錯題本's label; the course's spines */
   .plan-line, .plan-topics { font-size: var(--fs-read); } .plan-topics b { font-size: var(--fs-label); }
   .week-stat-l, .week-axis { font-size: 12px; }
@@ -2884,6 +2910,7 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .day-cal .left, .day-cal .stamp { font-size: 12px; }   /* 考試's tear-off calendar: 試験まで…日 and the streak's stamp, each on one line in its 104 px */
   .rd-sheet .kana-cell .kata { font-size: 12px; }   /* 講義's 五十音 table: a cell's カタカナ (its rōmaji beside it, a reading, stays 11) */
   .lp-title { font-size: var(--fs-sec); }   /* 講義's section titles (這個單元, 例句): the survey's 14 */
+  .lesson .rule { font-size: var(--fs-read); }   /* 講義's patterns, one a line (test.4) */
   /* 設定: each setting's name read, its note a label's size at full strength */
   .setting-row .label { font-size: var(--fs-read); }
   .setting-row .hint { font-size: var(--fs-label); opacity: 1; }
@@ -2893,8 +2920,14 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .talk-card.asking .talk-name span { display: block; margin: 2px 0 0; font-size: var(--fs-read); }
   .talk-why { font-size: var(--fs-read); }
   .zh-btn { font-size: var(--fs-label); opacity: .8; }
-  /* the 求人看板's head and each job's place, pay and whether it is open (its descriptions and foot are the rules' round's) */
+  /* the 求人看板's head and each job's place, pay and whether it is open; what each job is (a line, test.4) read */
   .wk-bhead span, .wk-jtop small, .wk-jtop em, .wk-need { font-size: var(--fs-sec); }
+  .wk-does { font-size: var(--fs-read); }
+  /* the 打工 rules card (test.4): its steps read at every width (.wk-steps), and the rules in full under 詳細規則 too; the fold's title,
+     the pay, the shift left halfway and the Chinese under はたらきますか？ a note's size (the headings and the abilities' chips labels,
+     13 already; the place's name is Japanese) */
+  .wk-how { font-size: var(--fs-read); } .wk-fold.disclose > summary { font-size: var(--fs-sec); }
+  .wk-pay, .wk-back, .wk-ask span { font-size: var(--fs-sec); }
   /* the ticket machine and 窓口: the fares and the key 12.5, the tags 12, a station's reading 10 (in a sixth of the chart at 360);
      the departure board a little larger; the machine's Chinese */
   .md-st small, .md-key { font-size: 12.5px; }

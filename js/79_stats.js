@@ -355,8 +355,16 @@ function lessonSecKey(g) {
   return L && Number.isInteger(g.sec) && g.sec >= 0 && L.sections[g.sec] ? `${g.u}:${g.sec}` : null;
 }
 // First new question from a lesson section: the section itself (heading, rule, points and its examples) before the question. Shown once per section.
+// 2026-11-26 (test.4; the user's pick 「分兩頁＋按鈕固定底部」): in two pages — the patterns (one a line) and the points, then the
+// examples (e.gpPage: the page shown) — the button at its foot 「下一頁：例句」, then 「看完了」 with a way back; a section without
+// examples one page. On a phone the foot stays at the foot of the screen (.gp-foot), as the answer's 下一題 does
+function grammarPreviewPages(e) { const sec = DATA.LESSONS[e.item.u].sections[e.item.sec]; return (sec.ex || []).length ? 2 : 1; }
 function grammarPreviewHtml(e, pct) {
   const g = e.item; const u = unitById(g.u); const sec = DATA.LESSONS[g.u].sections[g.sec];
+  const two = grammarPreviewPages(e) === 2, page = two && e.gpPage === 2 ? 2 : 1;
+  const kbd = '<span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span>';
+  const main = page === 1 && two ? `<button type="button" class="btn btn-primary" data-act="preview-page" data-page="2" id="btnNext">下一頁：例句 ${kbd}</button>`
+    : `${page === 2 ? '<button type="button" class="btn btn-sm btn-ghost gp-back" data-act="preview-page" data-page="1">‹ 上一頁</button>' : ''}${previewGoBtn()}`;
   return `
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
@@ -367,16 +375,16 @@ function grammarPreviewHtml(e, pct) {
     <div class="q-card">
       <div class="q-label"><span>${e.relearn ? '常錯的文法' : '新文法'} · ${esc(u.short)}</span>${e.relearn ? '<span class="chip chip-bad">再看一次</span>' : '<span class="chip chip-accent">新</span>'}</div>
       <div class="q-instr">${e.relearn ? '這一段的題目錯過好幾次，先再看一遍講義，等一下再考。' : '先看這一段講義，接下來的題目會考這裡的用法。'}</div>
-      <div class="preview grammar">
+      <div class="preview grammar" data-page="${page}">
         <div class="word">${bracketRuby(sec.h)}</div>
-        ${sec.rule ? `<div class="rule jp mt-2">${bracketRuby(sec.rule)}</div>` : ''}
-        ${(sec.points || []).length ? `<ul class="points small">${sec.points.map(p => `<li>${bracketRuby(p)}</li>`).join('')}</ul>` : ''}
-        ${(sec.ex || []).map((x, i) => `<div class="example ${i ? 'mt-2' : 'mt-3'}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(x.jp)}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(x.jp)}</div><div class="zh">${esc(x.zh || '')}</div></div></div>`).join('')}
+        ${page === 1 ? `${sec.rule ? `<div class="rule jp mt-2">${rulePatsHtml(sec.rule)}</div>` : ''}
+        ${(sec.points || []).length ? `<ul class="points small">${sec.points.map(p => `<li>${bracketRuby(p)}</li>`).join('')}</ul>` : ''}`
+        : `<div class="lp-title gp-ex-title">例句</div>${(sec.ex || []).map((x) => `<div class="example mt-2"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(x.jp)}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(x.jp)}</div><div class="zh">${esc(x.zh || '')}</div></div></div>`).join('')}`}
       </div>
     </div>
-    <div class="pr-actions pr-next-sticky">
+    <div class="pr-actions pr-next-sticky gp-foot">
       <div class="left"><button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/course/${esc(g.u)}?tab=lesson">看完整講義</button></div>
-      <div class="right">${previewGoBtn()}</div>
+      <div class="right">${main}</div>
     </div>`;
 }
 

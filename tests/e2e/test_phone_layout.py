@@ -205,6 +205,114 @@ def test_the_phone_type_scale(b):
     assert wide['vars'] == ['15px', '13px', '12px'], wide
     assert wide['px'] == {'small': '13px', 'tiny': '12px', 'hint': '12px', 'stat-l': '12px', 'zh-btn': '11px', 'chip': '12px'}, wide
 
+# ---- the text round (2026-11-26, test.4) ----
+# the user: 「希望這些選項解答後（無論對錯）右側也可以有個喇叭符號能夠聽看看這些字詞」, the pick 「選項是真的單字才加（建議）」: in a phone's result
+# panel every option that stands for a word of the word list has a speaker at the end of its row, right or wrong — 意思 (the right one the
+# word asked, the others the word each meaning belongs to), 看圖選字 (each word) — playing the word's own clip as the word list's 發音
+# button does (its text, its reading pinned); in 讀音 only the right reading (ruling 6); a grammar question none. 40 px to tap; a long row
+# wraps inside the panel
+def test_the_options_words_have_speakers_after_an_answer(b):
+    js = "(async () => { " + FRESH + VOCAB_Q + """ const e = currentEntry(), out = {}, wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const word = (w) => REG.vocab.find((x) => x.builtin && jaPlain(x.w) === w), pin = (v) => (v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '');
+      const ask = async (item, fmt, right, opt) => { e.item = item; e.done = false; e.q = makeVocabQuestion(item, Object.assign({ forceFmt: fmt }, opt || {})); if (!e.q || e.q.fmt !== fmt) return null;
+        renderPractice(); const q = e.q, pick = right ? q.answer : (q.answer + 1) % 4; answerCurrent(pick); await wait(30);
+        const order = q.options.map((o, i) => i).sort((a, c) => (c === q.answer) - (a === q.answer) || (c === pick) - (a === pick));
+        const want = (i) => { const o = q.options[i]; if (fmt === 'v-meaning') return i === q.answer ? jaPlain(item.w) : q.optJa[o.text]; if (fmt === 'v-pic') return jaPlain(o.text); return i === q.answer ? jaPlain(item.w) : null; };
+        const rows = [...document.querySelectorAll('.fb-sheet .fb-opt')], says = rows.map((r) => r.querySelector('.fb-opt-say'));
+        return { n: rows.length, got: says.map((s) => (s ? s.dataset.text : null)), want: order.map(want), rightPin: says[0] ? says[0].dataset.reading === pin(item) : null,
+          sizes: says.filter(Boolean).map((s) => { const q2 = s.getBoundingClientRect(); return q2.width >= 40 && q2.height >= 40; }), kana: Boolean(q.kanaOptions) }; };
+      out.meaningWrong = await ask(word('座る'), 'v-meaning', false); out.meaningRight = await ask(word('座る'), 'v-meaning', true);
+      out.picWrong = await ask(word('傘'), 'v-pic', false, { kana: false }); out.picRight = await ask(word('傘'), 'v-pic', true, { kana: true });
+      out.reading = await ask(word('学校'), 'v-reading', false);
+      // tapped: the word said as the word list's button says it
+      await ask(word('座る'), 'v-meaning', false); const said = [], s0 = speak; speak = (t, o) => { said.push([t, (o && o.reading) || '']); return Promise.resolve(); };
+      const tap = document.querySelectorAll('.fb-sheet .fb-opt-say')[1]; tap.click(); out.tap = [said, [tap.dataset.text, tap.dataset.reading]]; speak = s0;
+      // a long row wraps inside the panel, its speaker still at its end in sight
+      const row = document.querySelectorAll('.fb-sheet .fb-opt')[2], h0 = row.offsetHeight; row.querySelector('.fb-mark + span').textContent = '很長的意思很長的意思很長的意思很長的意思很長的意思'; await wait(30);
+      const body = document.querySelector('.fb-sheet-body'), sp = row.querySelector('.fb-opt-say').getBoundingClientRect(), bd = body.getBoundingClientRect();
+      out.wrap = { taller: row.offsetHeight > h0, wide: body.scrollWidth <= body.clientWidth, inside: sp.right <= bd.right + 1, tall: document.querySelector('.fb-sheet').getBoundingClientRect().height / innerHeight <= 0.701 };
+      const all = SESSION.entries; all.forEach((x, i) => prepareEntry(i)); const gi = all.findIndex((x) => x.q && x.q.kind === 'g' && !x.q.custom && !x.done);
+      SESSION.idx = gi; renderPractice(); answerCurrent((all[gi].q.answer + 1) % all[gi].q.options.length); await wait(30);
+      out.grammar = [document.querySelectorAll('.fb-sheet .fb-opt').length, document.querySelectorAll('.fb-sheet .fb-opt-say').length];
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("metrics", (390, 664))]))
+    for k in ('meaningWrong', 'meaningRight', 'picWrong', 'picRight'):
+        x = r[k]
+        assert x and x['n'] == 4 and x['got'] == x['want'] and all(x['got']) and x['rightPin'] and x['sizes'] == [True] * 4, (k, x)   # one speaker a word, each its own
+    assert r['picRight']['kana'], r   # the options set in kana: still each its word
+    x = r['reading']
+    assert x['n'] == 4 and x['got'] == [x['want'][0], None, None, None] and x['got'][0] == '学校' and x['rightPin'], x   # the made-up readings: none
+    assert r['tap'][0] == [r['tap'][1]] and r['tap'][1][0], r   # played as the word list's 發音 button plays it
+    assert r['wrap'] == {'taller': True, 'wide': True, 'inside': True, 'tall': True}, r
+    assert r['grammar'][0] == 4 and r['grammar'][1] == 0, r
+
+# 2026-11-26 (test.4; the user's pick 「分兩頁＋按鈕固定底部」, ruling 4): a lesson section's card in two pages — its patterns (one a line)
+# and points, then its examples — its main button 「下一頁：例句」, then 「看完了」 with ‹ 上一頁 beside it, on a phone fixed at the foot of
+# the screen however long the page (every section of data.js and data-n3.js); Enter does the main button; a section without examples a
+# page; 看完了 as before (the section seen, its question a few later); the 常錯的文法 card the same; a wide screen the same pages, the foot
+# under the card
+GP = """const wait = (ms) => new Promise((r) => setTimeout(r, ms)), enter = () => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  const btn = () => document.getElementById('btnNext'), seen = (el) => { const q = el.getBoundingClientRect(); return q.top >= 0 && q.bottom <= innerHeight; };
+  const show = (g, relearn) => { startSession('items', { items: [g].concat(REG.grammar.filter((x) => x.u === g.u && x.key !== g.key).slice(0, 6)) }); route(); const e = currentEntry(); e.preview = true; e.relearn = Boolean(relearn); renderPractice(); window.scrollTo(0, 0); return e; };
+  const page = () => ({ n: Number(document.querySelector('.preview.grammar').dataset.page), pats: [...document.querySelectorAll('.preview.grammar .rule .rule-pat')].map((p) => p.textContent), points: document.querySelectorAll('.preview.grammar .points li').length,
+    ex: [...document.querySelectorAll('.preview.grammar .example [data-act="speak"]')].map((x) => x.dataset.text), main: btn().textContent.replace('Enter', '').trim(), seen: seen(btn()), back: Boolean(document.querySelector('.gp-foot .gp-back')),
+    lesson: Boolean(document.querySelector('.gp-foot .left [data-route$="?tab=lesson"]')), label: document.querySelector('.q-label').textContent });"""
+def test_the_grammar_preview_comes_in_two_pages(b):
+    js = "(async () => { " + FRESH + GP + """ const g = REG.grammar.find((x) => x.u === 'm1' && x.sec === 0), sec = DATA.LESSONS.m1.sections[0], out = { sec: [sec.rule.split('｜').map((p) => p.trim()), sec.points.length, sec.ex.map((x) => x.jp)] };
+      const e = show(g); out.p1 = page(); out.foot = getComputedStyle(document.querySelector('.gp-foot')).position;
+      enter(); await wait(30); out.p2 = page(); document.querySelector('.gp-foot .gp-back').click(); await wait(30); out.back = page().n;
+      enter(); await wait(30); enter(); await wait(30); out.done = { done: e.previewDone, seen: (state.lessonSeen || []).includes('m1:0'), next: currentEntry() !== e, later: SESSION.entries.indexOf(e) >= 4 };
+      // every section with a question, on both its pages: the main button in sight at 390×664
+      const off = []; let n = 0;
+      for (const [u, L] of Object.entries(DATA.LESSONS)) for (let i = 0; i < L.sections.length; i++) { const it = REG.grammar.find((x) => x.u === u && x.sec === i); if (!it) continue; n++;
+        const e2 = show(it); if (!seen(btn())) off.push(u + ':' + i + ':1'); if (grammarPreviewPages(e2) === 2) { previewMain(); window.scrollTo(0, 0); if (!seen(btn())) off.push(u + ':' + i + ':2'); } }
+      Object.assign(out, { n, off });
+      // a section without examples: one page, 看完了 at once
+      const keep = sec.ex; sec.ex = []; const e3 = show(g); out.one = page(); enter(); await wait(30); out.oneDone = e3.previewDone; sec.ex = keep;
+      show(g, true); out.relearn = page();
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("metrics", (390, 664))]))
+    pats, npoints, ex = r['sec']
+    assert r['p1'] == {'n': 1, 'pats': pats, 'points': npoints, 'ex': [], 'main': '下一頁：例句', 'seen': True, 'back': False, 'lesson': True, 'label': r['p1']['label']} and '新文法' in r['p1']['label'] and r['foot'] == 'sticky', r
+    assert r['p2'] == {'n': 2, 'pats': [], 'points': 0, 'ex': ex, 'main': '看完了', 'seen': True, 'back': True, 'lesson': True, 'label': r['p1']['label']} and len(ex) >= 1, r
+    assert r['back'] == 1 and r['done'] == {'done': True, 'seen': True, 'next': True, 'later': True}, r   # Enter, Enter: 看完了 as before
+    assert r['n'] >= 130 and r['off'] == [], r   # every section (the longest, m27's 比喻 at 1,300 px, too): in sight on both pages
+    assert r['one']['main'] == '看完了' and not r['one']['back'] and r['one']['ex'] == [] and r['oneDone'], r
+    assert '常錯的文法' in r['relearn']['label'] and r['relearn']['main'] == '下一頁：例句', r
+    wide = json.loads(ev(b, "(async () => { " + FRESH + GP + """ const g = REG.grammar.find((x) => x.u === 'm1' && x.sec === 0); show(g); const f = document.querySelector('.gp-foot'), c = document.querySelector('.q-card');
+      const out = { p1: page().main, pos: getComputedStyle(f).position, under: f.getBoundingClientRect().top >= c.getBoundingClientRect().bottom }; previewMain(); out.p2 = page().main;
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""", [("metrics", (1280, 800, False))]))
+    assert wide == {'p1': '下一頁：例句', 'pos': 'static', 'under': True, 'p2': '看完了'}, wide
+
+# 講義 (test.4): a section's patterns one a line, as the preview's — split at 「｜」, each on its own line, read at 16 px on a phone (13 on a
+# wide screen, as before)
+def test_a_lesson_rule_shows_one_pattern_a_line(b):
+    js = "(async () => { " + FRESH + """ const wait = (ms) => new Promise((r) => setTimeout(r, ms)); location.hash = '#/course/m3/read?s=0'; route(); await wait(400);
+      const rd = document.querySelector('#view .reader'), tr = rd.querySelector('.rd-track'), sh = rd.querySelectorAll('.rd-sheet')[Math.round(tr.scrollLeft / tr.clientWidth)], rule = sh.querySelector('.rule');
+      const pats = [...rule.querySelectorAll('.rule-pat')], box = pats.map((p) => p.getBoundingClientRect());
+      const out = { want: DATA.LESSONS.m3.sections[0].rule.split('｜').map((p) => p.trim()), pats: pats.map((p) => p.textContent), size: getComputedStyle(rule).fontSize, lines: box.every((q, i) => !i || q.top >= box[i - 1].bottom - 1) };
+      location.hash = '#/course'; await wait(100); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("metrics", (390, 664))]))
+    assert len(r['want']) == 4 and r['want'][2] == '来[く]る→来[き]て' and r['pats'] == ['一段：去る＋て', 'する→して', '来くる→来きて', '五段：依字尾變化'] and r['lines'] and r['size'] == '16px', r
+    w = json.loads(ev(b, js, [("metrics", (1280, 800, False))]))
+    assert w['pats'] == r['pats'] and w['lines'] and w['size'] == '13px', w
+
+# 講義's pages (test.4): with a section's patterns one a line at 16 px, a heading with its patterns and its first point ran past a 375×553
+# page and the page scrolled — a block that does not fit with the ones it goes along with goes on to the next page alone, so no page
+# scrolls but one holding a single block taller than a page (五十音's table); every section still begins a page
+def test_no_lesson_page_scrolls_but_for_one_tall_block(b):
+    js = "(async () => { " + FRESH + """ const wait = (ms) => new Promise((r) => setTimeout(r, ms)), bad = [], heads = []; let pages = 0;
+      for (const u of Object.keys(DATA.LESSONS)) { location.hash = `#/course/${u === 'm0' ? 'intro' : u}/read`; route(); await wait(150); if (document.fonts) await document.fonts.ready; await wait(50);
+        const probe = () => [...document.querySelectorAll('#view .rd-sheet')].filter((sh) => sh.scrollHeight > sh.clientHeight + 1 && sh.querySelectorAll(':scope > [data-b]').length > 1);
+        if (probe().length) { window.dispatchEvent(new Event('resize')); await wait(400); }   // a web font come late: drawn again
+        const sheets = [...document.querySelectorAll('#view .rd-sheet')]; pages += sheets.length;
+        probe().forEach((sh) => bad.push(u + ':' + sheets.indexOf(sh)));
+        const starts = sheets.map((sh) => sh.querySelector(':scope > [data-b]')).filter((el) => el.querySelector(':scope > h3')).length;
+        heads.push(starts === DATA.LESSONS[u].sections.length || u + ':' + starts); }
+      location.hash = '#/course'; await wait(100); return JSON.stringify({ bad, pages, heads: heads.filter((x) => x !== true) }); })()"""
+    r = json.loads(ev(b, js, [("metrics", (375, 553))]))
+    assert r['bad'] == [] and r['heads'] == [] and r['pages'] > 600, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -212,6 +212,13 @@ function lessonTocHtml(uid) {
   return `<div class="card"><div class="card-head"><div class="card-title">講義${state.koto.found['book-' + uid] ? ' <span class="chip chip-ok">翻完過</span>' : ''}</div><button type="button" class="btn btn-primary" data-act="nav" data-route="${to}">${uid in LESSON_AT ? '繼續看講義' : '翻開講義'}</button></div>
     <div class="list">${L.formula || L.overview ? row('這個單元', 'top') : ''}${(L.sections || []).map((x, i) => row(`${i + 1}. ${bracketRuby(x.h)}`, i)).join('')}${row('重點整理', 'end')}</div></div>`;
 }
+// a section's patterns (its rule, split at 「｜」), one a line (2026-11-26, test.4; the survey: 「来る→来／て」 broken anywhere): the
+// lesson's and the grammar preview's. One too long for the line goes on at a joint (after ＋ ／ 、 →, before （; .rule-pat keeps the
+// rest whole), never inside a word
+function rulePatsHtml(rule) {
+  return String(rule || '').split('｜').map(p => p.trim()).filter(Boolean)
+    .map(p => `<span class="rule-pat">${bracketRuby(p).replace(/([＋／、→])/g, '$1<wbr>').replace(/(.)（/g, '$1<wbr>（')}</span>`).join('');
+}
 // the lesson as blocks to flow into pages: page — begins a page; keep — goes along with the block after it; sec — where ?s= opens
 function lessonBlocks(uid, L) {
   const out = [], add = (html, o = {}) => out.push(Object.assign({ html }, o));
@@ -221,7 +228,7 @@ function lessonBlocks(uid, L) {
     if (L.overview) add(`<p>${bracketRuby(L.overview)}</p>`);
   }
   (L.sections || []).forEach((x, i) => {
-    add(`<div><h3>${bracketRuby(x.h)}</h3>${x.rule ? `<div class="rule jp">${bracketRuby(x.rule)}</div>` : ''}</div>`, { page: true, keep: true, sec: String(i) });
+    add(`<div><h3>${bracketRuby(x.h)}</h3>${x.rule ? `<div class="rule jp">${rulePatsHtml(x.rule)}</div>` : ''}</div>`, { page: true, keep: true, sec: String(i) });
     (x.points || []).forEach(p => add(`<ul><li>${bracketRuby(p)}</li></ul>`));
     if (x.kana) add(kanaGridHtml());
     if ((x.ex || []).length) {
@@ -250,13 +257,17 @@ function renderLessonReader(view, uid, at) {
   const flow = () => {
     track.innerHTML = ''; pages = []; let sheet = null;
     const open = () => { const pg = document.createElement('section'); pg.className = 'rd-page'; sheet = document.createElement('div'); sheet.className = 'rd-sheet'; pg.appendChild(sheet); track.appendChild(pg); pages.push(pg); };
+    const fits = () => sheet.scrollHeight <= sheet.clientHeight + 1;
     blocks.forEach((b, i) => {
       if (!sheet || b.page) open();
       const el = toEl(b.html); el.dataset.b = i; if (b.keep) el.dataset.keep = '1'; sheet.appendChild(el);
-      if (sheet.scrollHeight <= sheet.clientHeight + 1) return;
+      if (fits()) return;
       const moving = [el]; let p = el.previousElementSibling;
       while (p && p.dataset.keep) { moving.unshift(p); p = p.previousElementSibling; }
       if (p) { open(); moving.forEach(m => sheet.appendChild(m)); }   // nothing before them: taller than a page, it scrolls in its own
+      // the blocks it goes along with fill a page of their own: it goes on alone to the next (2026-11-26, test.4: a section's heading
+      // with its patterns one a line, then a long first point, ran past a 375×553 page and the page scrolled)
+      if (!fits() && moving.length > 1) { open(); sheet.appendChild(el); }
     });
   };
   const first = (i) => Number(pages[i].querySelector('[data-b]').dataset.b);
