@@ -340,11 +340,13 @@ def test_a_long_word_option_stays_whole_in_its_row(b):
         assert r['word'] == {'lines': 1, 'aside': True, 'you': True, 'say': True, 'inside': True, 'body': True}, (w, r)
         assert r['grammar'] == {'rows': 4, 'wrapped': True, 'inside': True, 'body': True}, (w, r)
 
-# test.4's fix round (review Minor 6): on a lesson section's card a focused button other than the main one does its own on Enter (as a
-# keyboard does it: trusted keys) — ‹ 上一頁 turns back to page 1, 看完整講義 opens the lesson, and the card is not put away; the main button
-# and nothing focused as before (page 2, then 看完了)
+# test.4's fix rounds 1 and 2 (review Minor 6, Ruling 19): on a preview a button the keyboard focused (Tab: it shows :focus-visible) does
+# its own on Enter — ‹ 上一頁 turns back to page 1, 看完整講義 opens the lesson, and the card is not put away; one a mouse click focused
+# (Chrome and Firefox focus a clicked button) leaves Enter to the main button, as before fix round 1; the main button and nothing
+# focused as before. Real input through CDP (a synthetic event skips the browser's focus rules)
 def keyed(b, w, h, steps):
-    """steps ('eval', js) | ('enter',): run in b's page at w×h in one session, Enter pressed as a real keyboard presses it; the evals' values"""
+    """steps ('eval', js) | ('enter',) | ('tabto', css): Tab pressed until the focus is on css (True once there) | ('click', css): a mouse
+    click at its middle — run in b's page at w×h in one session, as a real keyboard and mouse would; the evals' and tabtos' values"""
     async def go():
         async with websockets.connect(b.ws_url, max_size=None) as ws:
             n = 0
@@ -360,6 +362,11 @@ def keyed(b, w, h, steps):
                 r = await call("Runtime.evaluate", {"expression": js, "returnByValue": True, "awaitPromise": True})
                 if "exceptionDetails" in r: raise RuntimeError(r["exceptionDetails"].get("exception", {}).get("description", "eval error"))
                 return r["result"].get("value")
+            async def key(name, code, text=None):
+                k = {"key": name, "code": code, "windowsVirtualKeyCode": code_of[name], "nativeVirtualKeyCode": code_of[name]}
+                await call("Input.dispatchKeyEvent", dict(k, type="keyDown", **({"text": text, "unmodifiedText": text} if text else {})))
+                await call("Input.dispatchKeyEvent", dict(k, type="keyUp"))
+            code_of = {"Enter": 13, "Tab": 9}
             await call("Page.enable"); await call("Page.addScriptToEvaluateOnNewDocument", {"source": "window.NQ_E2E = 1"})
             await call("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 1, "mobile": False})
             await call("Page.navigate", {"url": URL})
@@ -371,26 +378,45 @@ def keyed(b, w, h, steps):
             out = []
             for st in steps:
                 if st[0] == 'eval': out.append(await ev_(st[1]))
-                else:
-                    key = {"key": "Enter", "code": "Enter", "windowsVirtualKeyCode": 13, "nativeVirtualKeyCode": 13}
-                    await call("Input.dispatchKeyEvent", dict(key, type="keyDown", text="\r", unmodifiedText="\r"))
-                    await call("Input.dispatchKeyEvent", dict(key, type="keyUp")); await asyncio.sleep(0.2)
+                elif st[0] == 'enter': await key("Enter", "Enter", "\r"); await asyncio.sleep(0.2)
+                elif st[0] == 'tabto':
+                    there = False
+                    for _ in range(40):
+                        if await ev_(f"Boolean(document.activeElement && document.activeElement.matches({json.dumps(st[1])}))"): there = True; break
+                        await key("Tab", "Tab"); await asyncio.sleep(0.03)
+                    out.append(there)
+                elif st[0] == 'click':
+                    x, y = json.loads(await ev_(f"(() => {{ const q = document.querySelector({json.dumps(st[1])}).getBoundingClientRect(); return JSON.stringify([q.left + q.width / 2, q.top + q.height / 2]); }})()"))
+                    await call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x, "y": y})
+                    await call("Input.dispatchMouseEvent", {"type": "mousePressed", "x": x, "y": y, "button": "left", "buttons": 1, "clickCount": 1})
+                    await call("Input.dispatchMouseEvent", {"type": "mouseReleased", "x": x, "y": y, "button": "left", "buttons": 0, "clickCount": 1}); await asyncio.sleep(0.2)
             return out
     return asyncio.run(go())
 
 def test_a_focused_button_on_the_grammar_preview_keeps_its_own_key(b):
     setup = "(async () => { " + FRESH + GP + """ const g = REG.grammar.find((x) => x.u === 'm1' && x.sec === 0); window.__e = show(g); window.__page = () => JSON.stringify({ page: document.querySelector('.preview.grammar') ? Number(document.querySelector('.preview.grammar').dataset.page) : 0, done: Boolean(__e.previewDone), hash: location.hash });
-      previewMain(); await wait(30); document.querySelector('.gp-foot .gp-back').focus(); return document.activeElement.textContent.trim(); })()"""
-    r = keyed(b, 1280, 800, [('eval', setup), ('enter',), ('eval', "__page()"),                                   # ‹ 上一頁 focused: back to page 1
-        ('eval', "(document.activeElement && document.activeElement.blur(), 1)"), ('enter',), ('eval', "__page()"),   # nothing focused: the main one, page 2
-        ('eval', "((document.querySelector('.gp-foot .left [data-route]') || document.body).focus(), 1)"), ('enter',), ('eval', "__page()"),   # 看完整講義 focused: the lesson
-        ('eval', "(location.hash = '#/practice', new Promise((r) => setTimeout(r, 300)).then(() => { previewPage(2); (document.getElementById('btnNext') || document.body).focus(); return document.activeElement.textContent.trim(); }))"),
-        ('enter',), ('eval', "__page()")])                                                                                   # 看完了 focused: as before
-    focused, back, main, lesson, done_btn, done = r[0], json.loads(r[1]), json.loads(r[3]), json.loads(r[5]), r[6], json.loads(r[7])   # an eval's value each (the keys give none)
-    assert focused == '‹ 上一頁' and back == {'page': 1, 'done': False, 'hash': '#/practice'}, r
+      previewMain(); await wait(30); return 1; })()"""
+    shown = "JSON.stringify({ text: document.activeElement.textContent.trim(), keyboard: document.activeElement.matches(':focus-visible') })"
+    r = keyed(b, 1280, 800, [('eval', setup), ('tabto', '.gp-foot .gp-back'), ('eval', shown), ('enter',), ('eval', "__page()"),   # ‹ 上一頁 reached by Tab: back to page 1
+        ('eval', "(document.activeElement && document.activeElement.blur(), 1)"), ('enter',), ('eval', "__page()"),                    # nothing focused: the main one, page 2
+        ('tabto', '.gp-foot .left [data-route]'), ('enter',), ('eval', "__page()"),                                                      # 看完整講義 reached by Tab: the lesson
+        ('eval', "(location.hash = '#/practice', new Promise((r) => setTimeout(r, 300)).then(() => { previewPage(2); return 1; }))"),
+        ('tabto', '#btnNext'), ('enter',), ('eval', "__page()")])                                                                          # 看完了 reached by Tab: as before
+    tabbed, focus, back, main, tab2, lesson, tab3, done = r[1], json.loads(r[2]), json.loads(r[3]), json.loads(r[5]), r[6], json.loads(r[7]), r[9], json.loads(r[10])   # an eval's or a tabto's value each
+    assert tabbed and focus == {'text': '‹ 上一頁', 'keyboard': True} and back == {'page': 1, 'done': False, 'hash': '#/practice'}, r
     assert main == {'page': 2, 'done': False, 'hash': '#/practice'}, r
-    assert lesson['done'] is False and lesson['hash'].startswith('#/course/m1'), r
-    assert done_btn.startswith('看完了') and done['done'] is True, r
+    assert tab2 and lesson['done'] is False and lesson['hash'].startswith('#/course/m1'), r
+    assert tab3 and done['done'] is True, r
+
+def test_a_clicked_button_on_a_word_preview_leaves_enter_to_the_main_one(b):
+    setup = "(async () => { " + FRESH + """ const wait = (ms) => new Promise((r) => setTimeout(r, ms)), v = REG.vocab.find((x) => x.builtin && jaPlain(x.w) === '座る');
+      startSession('items', { items: [v, v, v] }); route(); window.__e = currentEntry(); __e.preview = true; __e.previewDone = false; renderPractice(); await wait(300);
+      speak = () => Promise.resolve(); window.__replays = 0; const r0 = ACTIONS.replay; ACTIONS.replay = (...a) => { __replays++; return r0(...a); }; return Boolean(document.querySelector('.preview')); })()"""
+    state = "JSON.stringify({ act: (document.activeElement.dataset || {}).act || '', keyboard: document.activeElement.matches(':focus-visible'), replays: __replays, done: Boolean(__e.previewDone), on: currentEntry() !== __e })"
+    r = keyed(b, 1280, 800, [('eval', setup), ('click', '.pr-actions [data-act="replay"]'), ('eval', state), ('enter',), ('eval', state)])
+    clicked, after = json.loads(r[1]), json.loads(r[2])
+    assert r[0] and clicked == {'act': 'replay', 'keyboard': False, 'replays': 1, 'done': False, 'on': False}, r   # the click: 發音 played and focused (not as the keyboard's)
+    assert after['replays'] == 1 and after['done'] and after['on'], r   # Enter: the preview goes on, no replay
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

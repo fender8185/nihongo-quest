@@ -419,6 +419,11 @@ function handleChange(ev) {
 }
 
 // ---------- keyboard ----------
+// the element the keyboard put the focus on: it showed keyboard focus (:focus-visible) as it got it — a click's focus does not (Chrome
+// and Firefox focus a clicked button). Read as the focus comes, not at the key: the key pressed after a click makes the clicked button
+// :focus-visible at once (2026-11-26, test.4's fix round 2; Ruling 19)
+let keyFocus = null;
+document.addEventListener('focusin', (ev) => { let kb = false; try { kb = ev.target.matches(':focus-visible'); } catch (err) { kb = false; } keyFocus = kb ? ev.target : null; }, true);
 function handleKey(ev) {
   if (ev.key === 'Enter' && ev.target && ev.target.classList && ev.target.classList.contains('conj-in')) {
     if (ev.isComposing || ev.keyCode === 229) return;   // the Enter that commits an IME conversion (Japanese keyboard) is not a submit
@@ -437,9 +442,9 @@ function handleKey(ev) {
   if (r.name === 'practice' && SESSION) {
     const e = currentEntry();
     if (e && e.preview && !e.previewDone) {
-      if (k === 'Enter' || k === ' ') {   // the main button: a lesson section's examples first (test.4) — but another button with the focus (‹ 上一頁, 看完整講義) does its own (test.4's fix round)
+      if (k === 'Enter' || k === ' ') {   // the main button: a lesson section's examples first (test.4) — but another button the keyboard focused (‹ 上一頁, 看完整講義, 發音) does its own; one a click focused leaves the key to the main button (test.4's fix rounds 1 and 2)
         const own = ev.target && ev.target.closest && ev.target.closest('button, a[href], [role="button"]');
-        if (own && own.id !== 'btnNext') return;
+        if (own && own.id !== 'btnNext' && own === keyFocus) return;
         ev.preventDefault(); previewMain();
       }
       else if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); }
