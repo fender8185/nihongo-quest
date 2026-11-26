@@ -387,6 +387,7 @@ const ACTIONS = {
   },
   speak: (el) => speak(el.dataset.text, el.dataset.reading ? { reading: el.dataset.reading } : undefined),
   'ai-explain': (el) => aiExplainCurrent(el),
+  'ai-ask': () => aiAskCurrent(),   // a question of one's own under AI 解析 (2026-11-26)
   'start-zero': () => chooseStart('zero'),
   'start-kana': () => chooseStart('kana'),
   'start-basics': () => chooseStart('basics'),
@@ -420,6 +421,10 @@ function handleKey(ev) {
   if (ev.key === 'Enter' && ev.target && ev.target.classList && ev.target.classList.contains('conj-in')) {
     if (ev.isComposing || ev.keyCode === 229) return;   // the Enter that commits an IME conversion (Japanese keyboard) is not a submit
     ev.preventDefault(); ACTIONS['conj-submit'](); return;
+  }
+  if (ev.key === 'Enter' && ev.target && ev.target.classList && ev.target.classList.contains('aiq-in')) {   // a question to the AI under AI 解析: Enter sends it
+    if (ev.isComposing || ev.keyCode === 229) return;
+    ev.preventDefault(); aiAskCurrent(); return;
   }
   const tag = (ev.target && ev.target.tagName || '').toUpperCase();
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (ev.target && ev.target.isContentEditable)) return;

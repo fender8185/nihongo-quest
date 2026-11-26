@@ -783,6 +783,36 @@ function sheetFit(view) {
   view.style.setProperty('--sheet-h', sh.offsetHeight + 'px');
   if (SHEET_RO) SHEET_RO.observe(sh);
 }
+// something brought into sight (2026-11-26): in a phone's result panel by scrolling the panel alone, as little as it takes (the
+// page under it stays put: scrollIntoView moved that too), elsewhere as the page scrolls
+function sheetReveal(el) {
+  if (!el) return;
+  const sc = el.closest('.fb-sheet-body');
+  if (!sc) { if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest' }); return; }
+  const r = el.getBoundingClientRect(), p = sc.getBoundingClientRect();
+  if (r.top < p.top) sc.scrollTop -= p.top - r.top;
+  else if (r.bottom > p.bottom) sc.scrollTop += Math.min(r.bottom - p.bottom, r.top - p.top);   // its foot up to the panel's, never its top past the panel's
+}
+// 2026-11-26: an input in the panel (a question to the AI under AI 解析) stays in sight while it has the focus: scrolled into the
+// panel's view, and where a phone's keyboard covers the foot of the screen without the page being moved up over it (the visual
+// viewport ends above the layout's foot), the panel stands on the keyboard, no taller than the room left above it
+let sheetKbOff = null;
+document.addEventListener('focusin', (ev) => {
+  const t = ev.target, sh = t && t.closest && t.closest('.fb-sheet');
+  if (!sh || !t.matches('input, textarea')) return;
+  if (sheetKbOff) sheetKbOff();
+  const vv = window.visualViewport;
+  const off = () => { if (vv) { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); } t.removeEventListener('blur', off); sh.style.bottom = ''; sh.style.maxHeight = ''; sheetKbOff = null; };
+  const fit = () => {
+    if (!sh.isConnected || document.activeElement !== t) { off(); return; }
+    const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+    sh.style.bottom = kb ? kb + 'px' : ''; sh.style.maxHeight = kb ? Math.round(vv.height * 0.9) + 'px' : '';
+    sheetReveal(t);
+  };
+  if (vv) { vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); }
+  t.addEventListener('blur', off); sheetKbOff = off;
+  setTimeout(fit, 300);   // once the keyboard is up
+});
 
 // New word: show it before asking. Enter/Space (or the button) goes on to the question.
 // After a preview the question is asked 4–6 items later, so it is a recall and not a copy of what was just shown.
@@ -1152,7 +1182,7 @@ function feedbackHtml(e, sheet = false) {
       ${chosen}${sheet && q.revealHtml ? q.revealHtml : ''}${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
       <div class="fb-meta">${q.point && q.kind === 'g' ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}</div>
-      <div id="aiExplainBox"></div>
+      <div id="aiExplainBox">${aiBoxHtml(e)}</div>
     </div>`;
 }
 

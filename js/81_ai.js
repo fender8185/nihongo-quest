@@ -12,7 +12,8 @@ try { ['nq_gemini_cool', 'nq_gemini_models', 'nq_gemini_models2'].forEach(k => l
 // small on-device cache for AI answers (explanations are asked for the same question again and again)
 function aiCacheGet(k) { try { return JSON.parse(localStorage.getItem('nq_ai_cache') || '[]').find(x => x.k === k) || null; } catch (e) { return null; } }
 function aiCacheSet(k, text, model) { try { const a = JSON.parse(localStorage.getItem('nq_ai_cache') || '[]').filter(x => x.k !== k); a.unshift({ k, text, model, t: Date.now() }); localStorage.setItem('nq_ai_cache', JSON.stringify(a.slice(0, 300))); } catch (e) { /* ignore */ } }
-function aiCaption(model, cached) { return model ? `<div class="tiny muted mt-1">由 ${esc(model)} 產生${cached ? '・已儲存，不再重問' : AI_LAST.cap ? `・今天第 ${AI_LAST.mine}／${AI_LAST.cap} 次` : ''}</div>` : ''; }
+// n: the count as it was when that answer came ({ mine, cap }; practice keeps its answers and draws them again), else AI_LAST's
+function aiCaption(model, cached, n = AI_LAST) { return model ? `<div class="tiny muted mt-1">由 ${esc(model)} 產生${cached ? '・已儲存，不再重問' : n.cap ? `・今天第 ${n.mine}／${n.cap} 次` : ''}</div>` : ''; }
 
 function aiReady() { return Boolean(Sync.client && Sync.session); }
 
@@ -81,27 +82,90 @@ function htmlToPlain(html) {
 }
 
 // ---------- practice: explain the current question ----------
-// btn: the one tapped (a phone also draws a hidden copy of the tool row under the options, first in the page)
+// the question as the AI is told it (AI 解析 and a question of one's own): its type, stem, options, the right answer and the one picked
+function aiItemStem(q) { return htmlToPlain(String(q.stemHtml || '').replace(/<span class="uline">([\s\S]*?)<\/span>/g, '【$1】')) || q.mistakePrompt || ''; }   // the underlined part (讀音, 換句話說) in 【】
+function aiItemText(e) {
+  const q = e.q;
+  return `題型：${q.label}
+題目：${aiItemStem(q)}${q.zhText ? `\n中文：${q.zhText}` : ''}
+選項：${q.options.map(o => jaPlain(o.text)).join('／')}
+正確答案：${jaPlain(q.options[q.answer].text)}
+我的答案：${jaPlain(q.options[e.chosen].text)}`;
+}
+// btn: the one tapped (a phone also draws a hidden copy of the tool row under the options, first in the page). The explanation is
+// kept on the question's entry (e.ai: text, model, cached, mine, cap) with the questions asked under it (asks), so the card drawn
+// again (振假名 F, 手滑，不算, a sync) still shows them: each one counted in the learner's 50 a day
 async function aiExplainCurrent(btn) {
   const e = currentEntry();
   if (!e || !e.q || needAi()) return;
   const q = e.q;
-  const box = document.getElementById('aiExplainBox');
-  const stem = htmlToPlain(String(q.stemHtml || '').replace(/<span class="uline">([\s\S]*?)<\/span>/g, '【$1】')) || q.mistakePrompt || '';   // the underlined part (讀音, 換句話說) in 【】
-  const prompt = `請解析這一題（150 字內）：先用一句話說明考點，再說明正確答案為什麼對，最後簡短說明我選的答案錯在哪裡。
-題型：${q.label}
-題目：${stem}${q.zhText ? `\n中文：${q.zhText}` : ''}
-選項：${q.options.map(o => jaPlain(o.text)).join('／')}
-正確答案：${jaPlain(q.options[q.answer].text)}
-我的答案：${jaPlain(q.options[e.chosen].text)}`;
-  const ck = `explain|${q.key || stem}|${q.fmt}|${jaPlain(q.options[e.chosen].text)}`;
+  const prompt = `請解析這一題（150 字內）：先用一句話說明考點，再說明正確答案為什麼對，最後簡短說明我選的答案錯在哪裡。\n${aiItemText(e)}`;
+  const ck = `explain|${q.key || aiItemStem(q)}|${q.fmt}|${jaPlain(q.options[e.chosen].text)}`;
   const hit = aiCacheGet(ck);
-  if (hit) { if (box) box.innerHTML = `<div class="panel mt-3">${md(hit.text)}${aiCaption(hit.model, true)}</div>`; return; }
+  if (hit) { aiShowExplain(e, { text: hit.text, model: hit.model, cached: true }); return; }
   await withBusy(btn, 'AI 解析中', async () => {
     const out = await callAi(prompt);
     aiCacheSet(ck, out, AI_LAST.model);
-    if (box && box.isConnected) box.innerHTML = `<div class="panel mt-3">${md(out)}${aiCaption(AI_LAST.model, false)}</div>`;
+    aiShowExplain(e, { text: out, model: AI_LAST.model, cached: false, mine: AI_LAST.mine, cap: AI_LAST.cap });
   });
+}
+function aiShowExplain(e, x) {
+  e.ai = Object.assign({ asks: [], err: '' }, e.ai, x);
+  const box = document.getElementById('aiExplainBox');
+  if (!box || currentEntry() !== e) return;   // moved on meanwhile
+  const draft = box.querySelector('.aiq-in'); const kept = draft ? draft.value : '';
+  box.innerHTML = aiBoxHtml(e);
+  if (kept) box.querySelector('.aiq-in').value = kept;
+}
+// 2026-11-26 (a tester: AI 不能自己加問問題了): under the explanation, a box for a question of one's own about this question, sent with
+// it (and with what was asked before) — each answer under its question, the next below the last; an error (the day's 50 used,
+// offline, logged out) shows there in the function's own words. The row of buttons after an answer stays as it was
+const aiAskHtml = (x) => `<div class="aiq-item"><div class="aiq-q"><b>問</b><span>${esc(x.q)}</span></div><div class="panel aiq-a">${md(x.text)}${aiCaption(x.model, false, x)}</div></div>`;
+function aiBoxHtml(e) {
+  const a = e && e.ai; if (!a) return '';
+  return `<div class="panel mt-3">${md(a.text)}${aiCaption(a.model, a.cached, a)}</div>
+    <div class="aiq"><div class="aiq-list">${a.asks.map(aiAskHtml).join('')}</div>
+      <div class="row-wrap aiq-row"><input class="input grow aiq-in" maxlength="200" enterkeyhint="send" autocomplete="off" placeholder="想多了解什麼？例如：還有別的說法嗎？" aria-label="問 AI 這一題" /><button type="button" class="btn" data-act="ai-ask"${a.busy ? ' disabled' : ''}>${a.busy ? '<span class="spinner"></span> AI 思考中' : '問 AI'}</button></div>
+      <div class="aiq-err" role="alert">${esc(a.err || '')}</div></div>`;
+}
+async function aiAskCurrent() {
+  const e = currentEntry(), box = document.getElementById('aiExplainBox'), input = box && box.querySelector('.aiq-in');
+  if (!e || !e.q || !e.ai || !input || e.ai.busy) return;
+  const question = input.value.trim();
+  if (!question) { input.focus(); return; }
+  const before = e.ai.asks.slice(-3).map(x => `問：${x.q}\n答：${x.text.trim()}`).join('\n\n');
+  const prompt = `這一題：
+${aiItemText(e)}
+
+剛才的解析：
+${e.ai.text.trim()}
+${before ? `\n之前問過：\n${before}\n` : ''}
+我的問題：${question}
+請針對我的問題回答，需要時附 1～2 個簡短例句（日文後面附中文），全部 200 字內。`;
+  if (phoneLayout()) input.blur();   // the keyboard down, the answer in sight
+  e.ai.busy = true; e.ai.err = '';
+  const btn = () => document.querySelector('#aiExplainBox [data-act="ai-ask"]'), err = (t) => { const el = document.querySelector('#aiExplainBox .aiq-err'); if (el && currentEntry() === e) el.textContent = t; };
+  err(''); input.readOnly = true;
+  if (btn()) { btn().disabled = true; btn().innerHTML = '<span class="spinner"></span> AI 思考中'; }
+  let item = null;
+  try {
+    const text = await callAi(prompt);
+    item = { q: question, text, model: AI_LAST.model, mine: AI_LAST.mine, cap: AI_LAST.cap };
+    e.ai.asks.push(item);
+  } catch (x) {
+    console.warn(x);
+    e.ai.err = x.message && x.message.length < 140 ? x.message : 'AI 請求失敗，請稍後再試。';   // as AI 解析 words it, in place
+  } finally { e.ai.busy = false; }
+  const now = document.getElementById('aiExplainBox');
+  if (!now || currentEntry() !== e) return;   // moved on: kept on the entry all the same
+  const b = btn(), inp = now.querySelector('.aiq-in');
+  if (b) { b.disabled = false; b.innerHTML = '問 AI'; }
+  if (inp) inp.readOnly = false;
+  err(e.ai.err);
+  if (!item) return;
+  if (inp && inp.value.trim() === question) inp.value = '';
+  const list = now.querySelector('.aiq-list'); list.insertAdjacentHTML('beforeend', aiAskHtml(item));
+  sheetReveal(now.querySelector('.aiq-row')); sheetReveal(list.lastElementChild);   // in sight: the box for the next one, and the answer's start before it
 }
 
 // ---------- course: unit note and new items ----------

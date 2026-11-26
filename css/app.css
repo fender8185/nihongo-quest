@@ -2195,6 +2195,17 @@ body.reading { overflow: hidden; }
 .fb-why { color: var(--fg-2); font-size: 15px; }
 .fb-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 13px; color: var(--fg-3); }
 .fb-meta .chip { font-size: 13px; }
+/* 2026-11-26: a question of one's own under AI 解析 (aiBoxHtml): each question, its answer under it, the box under the last one */
+.aiq-item { margin-top: 10px; }
+.aiq-q { display: flex; gap: 6px; align-items: baseline; font-size: 15px; color: var(--fg); }
+.aiq-q b { flex: none; padding: 1px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 600; }
+.aiq-q span { white-space: pre-wrap; overflow-wrap: anywhere; }
+.aiq-a { margin-top: 6px; }
+.aiq-row { margin-top: 10px; flex-wrap: nowrap; }
+.aiq-row .input { min-width: 0; min-height: 40px; font-size: 15px; }
+.aiq-row .btn { flex: none; min-height: 40px; }
+.aiq-err { margin-top: 6px; font-size: 13px; color: var(--bad); }
+.aiq-err:empty { display: none; }
 .pr-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .pr-actions .left, .pr-actions .right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 @media (hover: none) and (pointer: coarse) { .kbd-hint, .opt .kbd, .opt-pick .kbd { display: none !important; } }   /* touch screens: no keyboard, no key hints (2026-11-11, the user: nor the options' 1–4) */

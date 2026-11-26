@@ -1697,6 +1697,70 @@ def test_ai_explanations_are_cached_per_question_and_show_the_model(b):
     r = json.loads(out[-1])
     assert r['first'] == 1 and r['second'] == 0 and r['hasModel'] and r['hasAnswer'] and r['count'] and r['saved'], r
 
+# ---- 2026-11-26 (a tester: AI 不能自己加問問題了): under practice's AI 解析, a box for a question of one's own, sent with the item ----
+# a word's meaning question answered wrong; row(): the after-answer row as the learner sees it; ask(text): typed and sent, till answered
+ASK = """const wait = (ms) => new Promise(q => setTimeout(q, ms)), v = REG.vocab.find(x => x.builtin && meaningOptions(x)); srsAnswer(v.key, true);
+  startSession('items', { items: [v] }); await wait(100); const e = currentEntry();   /* its #/practice drawn first, as a learner sees it */
+  e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent((e.q.answer + 1) % 4);
+  const box = () => document.getElementById('aiExplainBox'), btn = () => box().querySelector('[data-act="ai-ask"]');
+  const row = () => [...document.querySelectorAll('.pr-actions:not(.pr-ghost) .left [data-act]')].map(b => b.dataset.act + ':' + b.textContent.trim());
+  const items = () => [...box().querySelectorAll('.aiq-item')].map(x => [x.querySelector('.aiq-q').textContent, x.querySelector('.aiq-a').textContent]);
+  const ask = async (text, how) => { box().querySelector('.aiq-in').value = text; if (how === 'enter') box().querySelector('.aiq-in').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); else btn().click();
+    for (let k = 0; k < 100 && btn().disabled; k++) await wait(20); await wait(30); };"""
+
+def test_a_question_of_ones_own_goes_with_the_item_under_ai_explain(b):
+    js = "(async () => { " + ASK + """ const q = e.q, out = { before: { row: row(), box: !!document.querySelector('.aiq-in, [data-act="ai-ask"]') } };
+      await aiExplainCurrent(); const n0 = __calls.length;
+      out.shown = { input: !!box().querySelector('.aiq-in') && box().querySelector('.aiq-in').offsetHeight > 0, under: !!box().querySelector('.panel + .aiq .aiq-in'), row: row() };
+      await ask('為什麼不是另一個意思？'); const p = __calls[__calls.length - 1].opt.body.prompt;
+      out.first = { calls: __calls.length - n0, fn: __calls[__calls.length - 1].name, question: p.includes('我的問題：為什麼不是另一個意思？'), type: p.includes('題型：' + q.label), stem: p.includes('題目：' + aiItemStem(q)),
+        options: p.includes('選項：' + q.options.map(o => jaPlain(o.text)).join('／')), right: p.includes('正確答案：' + jaPlain(q.options[q.answer].text)), mine: p.includes('我的答案：' + jaPlain(q.options[e.chosen].text)),
+        explained: p.includes('剛才的解析：\\nanswer from the site'), items: items(), caption: box().querySelector('.aiq-a .tiny').textContent, cleared: box().querySelector('.aiq-in').value };
+      __reply = () => ({ data: { text: '也可以說「八百屋さん」。', model: 'gemini-3.1-flash-lite', mine: 9, cap: 50 }, error: null });
+      await ask('還有別的說法嗎？', 'enter'); const p2 = __calls[__calls.length - 1].opt.body.prompt;
+      out.second = { calls: __calls.length - n0, items: items().map(x => x[0]), last: items()[1][1], before: p2.includes('之前問過：\\n問：為什麼不是另一個意思？\\n答：answer from the site') };
+      __reply = () => ({ data: null, error: Object.assign(new Error('x'), { name: 'FunctionsHttpError', context: new Response(JSON.stringify({ error: '今天的 AI 次數（50 次）用完了，台灣時間 16 點後恢復', cap: true }), { status: 429, headers: { 'Content-Type': 'application/json' } }) }) });
+      await ask('最後一個問題');
+      out.error = { calls: __calls.length - n0, err: box().querySelector('.aiq-err').textContent, items: items().length, kept: box().querySelector('.aiq-in').value, toast: [...document.querySelectorAll('.toast')].some(t => /用完/.test(t.textContent)) };
+      renderPractice();   /* 振假名, 手滑，不算, a sync: the card drawn again */
+      out.again = { items: items().length, err: box().querySelector('.aiq-err').textContent, explain: /今天第 3／50 次/.test(box().querySelector('.panel').textContent), row: row() };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", AI_MOCK), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    row = r['before']['row']
+    assert row == ['replay:發音', 'speak-example:例句', 'slip:手滑，不算', 'ai-explain:AI 解析'] and not r['before']['box'], r   # no box before AI 解析; the row as it was
+    assert r['shown'] == {'input': True, 'under': True, 'row': row}, r   # the box under the explanation, the row unchanged
+    f = r['first']
+    assert f['calls'] == 1 and f['fn'] == 'swift-api' and all(f[k] for k in ('question', 'type', 'stem', 'options', 'right', 'mine', 'explained')), r   # one call: the question with the item and the explanation
+    assert f['items'] == [['問為什麼不是另一個意思？', 'answer from the site由 gemini-3.5-flash-lite 產生・今天第 4／50 次']] and f['cleared'] == '', r   # the answer under its question, with its caption
+    s = r['second']
+    assert s['calls'] == 2 and s['items'] == ['問為什麼不是另一個意思？', '問還有別的說法嗎？'] and s['last'].startswith('也可以說') and '今天第 9／50 次' in s['last'] and s['before'], r   # Enter sends; each below the last
+    assert r['error'] == {'calls': 3, 'err': '今天的 AI 次數（50 次）用完了，台灣時間 16 點後恢復', 'items': 2, 'kept': '最後一個問題', 'toast': False}, r   # the function's own words, in place
+    assert r['again'] == {'items': 2, 'err': '今天的 AI 次數（50 次）用完了，台灣時間 16 點後恢復', 'explain': True, 'row': row}, r   # drawn again: all still there, each with its own count
+
+# on a phone (390 × 664, Safari's height) the box and its answer are in the result panel, scrolled to; focused, the box is never left
+# under the panel's edge, nor under a keyboard that covers the foot of the screen (a stand-in visualViewport 300 px short)
+def test_on_a_phone_the_ai_question_box_stays_in_sight_in_the_result_panel(b):
+    js = "(async () => { " + ASK + """ await aiExplainCurrent(); const sh = document.querySelector('.fb-sheet'), body = sh.querySelector('.fb-sheet-body'), inp = () => sh.querySelector('.aiq-in');
+      const seen = (el) => { const r = el.getBoundingClientRect(), p = body.getBoundingClientRect(); return r.top >= p.top - 1 && r.bottom <= p.bottom + 1; };
+      const out = { inSheet: !!inp() && !!sh.querySelector('.fb-sheet-body #aiExplainBox .aiq-in'), scrolls: body.scrollHeight > body.clientHeight };
+      body.scrollTop = 0; await wait(50); out.offAtFirst = !seen(inp()); const y0 = scrollY;
+      const vv = Object.assign(new EventTarget(), { width: innerWidth, height: innerHeight, offsetTop: 0, offsetLeft: 0, scale: 1 });
+      Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => vv });
+      inp().focus(); await wait(450); out.focused = { active: document.activeElement === inp(), seen: seen(inp()), still: scrollY === y0 };
+      vv.height = innerHeight - 300; vv.dispatchEvent(new Event('resize')); await wait(100);
+      out.keyboard = { foot: Math.round(sh.getBoundingClientRect().bottom), top: Math.round(innerHeight - 300), seen: seen(inp()), below: Math.round(inp().getBoundingClientRect().bottom) <= innerHeight - 300 };
+      inp().value = '可以再舉一個例子嗎？'; btn().click(); for (let k = 0; k < 100 && btn().disabled; k++) await wait(20); await wait(50);
+      out.asked = { blurred: document.activeElement !== inp(), foot: Math.round(sh.getBoundingClientRect().bottom), still: scrollY === y0, answer: (() => { const a = sh.querySelector('.aiq-item:last-child .aiq-a').getBoundingClientRect(), p = body.getBoundingClientRect(); return a.top >= p.top - 1 && a.top < p.bottom; })() };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    out = b.run([("metrics", (390, 664)), ("nav", URL), ("wait", READY), ("eval", AI_MOCK), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['inSheet'] and r['scrolls'] and r['offAtFirst'], r   # in the panel, below what shows at first
+    assert r['focused'] == {'active': True, 'seen': True, 'still': True}, r   # focused: scrolled into the panel's view, the page under it left be
+    k = r['keyboard']
+    assert abs(k['foot'] - k['top']) <= 1 and k['seen'] and k['below'], r   # the panel stands on the keyboard, the box above it
+    assert r['asked']['blurred'] and r['asked']['answer'] and r['asked']['still'] and abs(r['asked']['foot'] - 664) <= 1, r   # sent: the keyboard down, the panel back at the foot, the answer in sight in it
+
 # ---- 2026-10-28: 聽一輪 keeps the shared player busy between lines (iOS lock screen) and pauses on a refused clip ----
 def test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip(b):
     js = """(() => { LISTEN = null; setListenPref({ source: 'theme', theme: vocabThemes()[0].c }); location.hash = '#/vocab/listen'; route();
@@ -2061,7 +2125,7 @@ if __name__ == "__main__":
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_wrong_order_marks_the_misplaced_pieces_red, test_a_retry_copy_of_an_order_item_grades_the_right_order_as_right, test_a_kanji_question_reads_its_example_word_once_answered, test_options_of_one_question_share_one_font_size, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_ai_asks_the_site_function_and_keeps_todays_count, test_ai_shows_the_functions_own_message_when_it_refuses, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
+             test_ai_asks_the_site_function_and_keeps_todays_count, test_ai_shows_the_functions_own_message_when_it_refuses, test_ai_explanations_are_cached_per_question_and_show_the_model, test_a_question_of_ones_own_goes_with_the_item_under_ai_explain, test_on_a_phone_the_ai_question_box_stays_in_sight_in_the_result_panel, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
              test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore,
              test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off, test_sets_hold_twenty_mixed_even_when_an_old_copy_saved_another_size_or_order,
              test_offline_audio_keeps_the_japanese_clips_of_todays_practice, test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline,
