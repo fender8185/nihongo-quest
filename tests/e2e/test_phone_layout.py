@@ -190,6 +190,21 @@ def test_touch_screens_hide_the_answers_number_keys(b):
     r = json.loads(ev(b, js))
     assert r == {'opt': True, 'pick': True, 'none': True}, r
 
+# the phone type scale (2026-11-26, test.4; the user's pick 「16／14／13」): on a phone (390 wide) the three levels are 16／14／13 and the
+# shared classes read them — .small 14, .tiny .hint .stat-l .zh-btn .chip 13 (.chip the label level too, ruling 10); on a wide
+# screen (1280) the variables and every one of those classes keep their sizes of before (15／13／12; 13, 12, 12, 12, 11, 12)
+def test_the_phone_type_scale(b):
+    js = """(() => { const r = getComputedStyle(document.documentElement), v = (n) => r.getPropertyValue(n).trim();
+      const box = document.createElement('div'); box.innerHTML = '<span class="small">字</span><span class="tiny">字</span><span class="hint">字</span><span class="stat-l">字</span><button type="button" class="zh-btn">中文</button><span class="chip">新</span>';
+      document.body.appendChild(box); const px = Object.fromEntries([...box.children].map((e) => [e.className, getComputedStyle(e).fontSize])); box.remove();
+      return JSON.stringify({ vars: [v('--fs-read'), v('--fs-sec'), v('--fs-label')], px }); })()"""
+    phone = json.loads(ev(b, js, [("metrics", (390, 664))]))
+    wide = json.loads(ev(b, js, [("metrics", (1280, 800, False))]))
+    assert phone['vars'] == ['16px', '14px', '13px'], phone
+    assert phone['px'] == {'small': '14px', 'tiny': '13px', 'hint': '13px', 'stat-l': '13px', 'zh-btn': '13px', 'chip': '13px'}, phone
+    assert wide['vars'] == ['15px', '13px', '12px'], wide
+    assert wide['px'] == {'small': '13px', 'tiny': '12px', 'hint': '12px', 'stat-l': '12px', 'zh-btn': '11px', 'chip': '12px'}, wide
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -2844,9 +2844,17 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .q-instr, .blank .small { font-size: var(--fs-read); }
   .q-label { font-size: var(--fs-label); }
   .example .zh, .fb-opt-zh { font-size: var(--fs-sec); }
+  /* the labels of every day's screens at the label level (2026-11-26, test.4's fix round): the chips (目前單元 and 新 on every
+     question — ruling 10; a glossary chip keeps its row's size, chips set larger keep theirs), 說明, the 目前單元 card's label, a
+     unit's weeks, a set's harvest, a letter's state and date, the notebook's tabs; a toast is read, the 學習紀錄 and 變化表 empty
+     states that say what to do read, the others a note (not the empty 五十音 cells nor 外場's empty plates, which hold no words) */
+  .chip, .day-help summary, .now-card .label, .unit-weeks, .harvest-l, .letter-row .lr-state, .letter-row .lr-title small, .diary-tabs button { font-size: var(--fs-label); } .chip-link { font-size: inherit; }
+  .toast, .empty.empty-act { font-size: var(--fs-read); }
+  :is(div, td).empty { font-size: var(--fs-sec); }
   /* 書房, 古道具屋, the letters */
   .room-hint, .fuku-say small { font-size: var(--fs-sec); }
-  .shop-item .nm { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: var(--fs-label); line-height: 1.3; white-space: normal; text-overflow: clip; }   /* a long name on two lines, not cut (唱片〈喫茶しずく〉) */
+  .shop-item .nm { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: var(--fs-label); line-height: 1.3; white-space: normal; text-overflow: clip; word-break: keep-all; overflow-wrap: anywhere; }   /* a long name on two lines, not cut, broken between words (唱片／〈喫茶しずく〉); one with nowhere to break still never runs out */
+  .shop-item .buy .btn, .shop-item .buy .chip { font-size: var(--fs-label); }   /* 買下, 還差, and where an owned thing is (在書房…) */
   .shop-item .ds { font-size: var(--fs-read); }
   .ltr-sheet { line-height: 30px; background: var(--lamp), repeating-linear-gradient(transparent 0 29px, var(--rule) 29px 30px) 0 16px / 100% calc(100% - 66px) no-repeat, var(--pp); }   /* the words still on the lines: 30 px apart */
   .letter-title { line-height: 30px; } .letter-body { font-size: var(--fs-read); line-height: 30px; } .letter-body .letter-sign { height: 30px; }
@@ -2864,10 +2872,17 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .plan-line, .plan-topics { font-size: var(--fs-read); } .plan-topics b { font-size: var(--fs-label); }
   .week-stat-l, .week-axis { font-size: 12px; }
   .gauge svg { overflow: visible; } .gauge .hero-l { font-size: 17.5px; transform: translateY(4px); }   /* 13 px on the screen (the gauge drawn at ~.74), clear of the 0% over it */
+  .gauge .tick-l { font-size: 18px; }   /* N5／N4／N3 by their ticks: 12 px or more on the screen (gaugeHtml sets them further out on a phone) */
+  .gauges { row-gap: 22px; padding-top: 6px; }   /* the names over a ring clear of the tabs above and of the 單字／文法 under the gauge above */
+  .heat-months, .legend { font-size: var(--fs-label); }   /* a month's name at most every third 12-px column: 11月 at 13 still clear of the next */
+  .course-line.big text, .course-line.big text.lvl { font-size: 17px; }   /* the course chart's dates and levels on a phone (its rows set apart for them: courseHtml) */
+  .course-advice { font-size: var(--fs-read); }
   .table th { font-size: var(--fs-label); }
-  .listen.compact .listen-count { font-size: 12.5px; }
+  .listen.compact .listen-count, .listen-seg .n, .lopt, .lopt-scope span { font-size: var(--fs-label); }   /* 聽一輪's count, its tabs' counts, its round pills */
   .nb-label span { font-size: var(--fs-label); }
   .spine .lab.v { font-size: 12px; }
+  .day-cal .left, .day-cal .stamp { font-size: 12px; }   /* 考試's tear-off calendar: 試験まで…日 and the streak's stamp, each on one line in its 104 px */
+  .rd-sheet .kana-cell .kata { font-size: 12px; }   /* 講義's 五十音 table: a cell's カタカナ (its rōmaji beside it, a reading, stays 11) */
   .lp-title { font-size: var(--fs-sec); }   /* 講義's section titles (這個單元, 例句): the survey's 14 */
   /* 設定: each setting's name read, its note a label's size at full strength */
   .setting-row .label { font-size: var(--fs-read); }
@@ -2887,25 +2902,38 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .md-rd { font-size: 10px; }
   .md-board p { font-size: 13.5px; }
   .kb-screen span { font-size: var(--fs-sec); }
-  /* the menus: a price's reading, why a dish cannot be had yet */
+  /* the menus: a price's reading, why a dish cannot be had yet, why no more (吃不下了…), the 済 of one had; the food book: under a
+     food's name its Chinese, then its price, 非賣品, the day */
   .mc-price small { font-size: 11px; }
-  .mc-lock { font-size: var(--fs-sec); }
+  .mc-lock, .mc-item.full .mc-price::after { font-size: var(--fs-sec); }
+  .mc-had { font-size: var(--fs-label); }
+  .fb-item small { font-size: var(--fs-label); } .fb-item .fb-name + small { font-size: var(--fs-sec); }
+  /* the ride: 払いもどし's 中文, the car's つぎは; 湯けむり通り's buttons' price and its reading */
+  .kb-back small { font-size: var(--fs-sec); }
+  .rd-led small, .yd-go small, .yd-buy small { font-size: var(--fs-label); }
+  /* the wardrobe's names, the 收納箱 (its things, their piles, its tabs and counts), 五十音's 我的標記 and ▶ buttons, a word card's
+     rating hints (on two lines where the four in a row leave no room), the blackboard's rōmaji (a reading: 10), the writing pad's
+     credit, a talk's ▼ */
+  .dress-opt, .tray-it, .tray-it .tray-n, .tray-tab, .tray-tab b, .mark-btn.mark-sm, .kana-row-btn, .talk-next { font-size: var(--fs-label); }
+  .rate .btn { padding-inline: 6px; } .rate .btn small { font-size: var(--fs-label); white-space: normal; word-break: keep-all; line-height: 1.3; }   /* 1・／稍後再看 where it must break */
+  .cb-k small { font-size: 10px; }
+  .wr-credit { font-size: var(--fs-sec); }
   /* the twelve jobs: the Chinese under a customer's, the keeper's and the hero's lines 13.5 and stronger; the keeper's Japanese 15;
      外場's question read; the taxi's meter; a 駅弁 good's name never broken inside the word; the result's note */
   .cls :is(.wk-bub, .nk-bub, .wk-say, .wk-me) span { font-size: 13.5px; opacity: .8; }
   .bt-bub small, .tx-bub span { font-size: 13.5px; }
   .cls .wk-say b { font-size: 15px; }
-  .cls .nk-talk .wk-say b { font-size: 14px; }   /* the 仲居's talk row as it was: its tallest line (furigana over it) came out 2 px shorter once a web font's subset arrived mid-guest, its held height measured again (JOBS.hold) — a 2-px jump (test_onsen's iPhone frames: 1 at most); at 14 it stays within 1 */
   .hl-q { font-size: var(--fs-read); }
   .tx-meter span, .tx-meter i { font-size: 12px; }
   /* the taxi's map: each name on a label of its own, 12.5 px on the screen at any map size (TAXI_RUN's fitMap); no reading on it, a
      place's shown over it as it is tapped; one who only says where tells how */
   .tx-map .tx-wide { display: none; } .tx-map .tx-narrow { display: inline; }
-  .tx-bub .tx-tapnote { display: block; }
+  .tx-bub .tx-tapnote { display: block; font-size: var(--fs-sec); }
   .tx-read { position: absolute; z-index: 3; display: block; padding: 1px 9px 2px; border-radius: 8px; background: #2b2b33; color: #fff; font-size: 15px; font-style: normal; font-weight: 700; line-height: 1.4; white-space: nowrap;
     transform: translate(-50%, calc(-100% - 3px)); box-shadow: 0 2px 6px rgba(0, 0, 0, .25); pointer-events: none; opacity: 0; transition: opacity .15s; }
   .tx-read.on { opacity: 1; }
   .bt-good { padding-inline: 0; } .bt-good b { word-break: keep-all; letter-spacing: -.05em; }   /* サンドイッチ whole in a quarter of the box at 360 */
+  .bt-empty { font-size: var(--fs-sec); }   /* 手上還沒有東西: a note */
   .crr-rank small { font-size: var(--fs-sec); }
   /* the onsen cards (each customer's heights held, JOBS.hold): only what was under 12 px — the ledger's heads, date, 様 and note, the
      tray's hint, the key ring's tag — and the people and dinner times, which fit their columns at 13 */
@@ -2915,8 +2943,10 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .om-tray:has(> .om-empty) { padding-inline: 8px 6px; }   /* the tray's two lines of hint (ten characters at most) whole on one line each: as large as the tray holds, 12–13 px (12.5 at 360) */
   .om-empty { font-size: 12px; font-size: clamp(12px, calc((100cqw - 2px) / 10), 13px); white-space: nowrap; }
   .om-good[data-g="keyring"] .om-tag b { font-size: 12px; letter-spacing: -.05em; }
-  /* a scene's words popping up (yPop): as large on the screen as the scene's own size, a room drawn smaller (--yz < 1) or not */
-  .sky .ypop { font-size: max(13px, calc(13px / var(--yz, 1))); }
 }
 /* 書房's hint steps aside while a toast says something in its place (the first visit's 有人在敲門) */
 body:has(> #toast.show) .room-hint.on { opacity: 0; }
+/* a room drawn smaller than its scene's own size (--yz .75: on any screen held upright, a phone's or an iPad's): its words popping up
+   (yPop) and its signs (出去…) as large on the screen as elsewhere — 13 px at the least; at --yz 1 and over, their sizes of before */
+.sky .ypop { font-size: max(13px, calc(13px / var(--yz, 1))); }
+.sky .thing:not(.primary) .tag { font-size: max(12.5px, calc(13px / var(--yz, 1) - 2px * (var(--yz, 1) - .75))); }   /* 12.5 at 1, 13 on the screen at .75 */

@@ -2329,12 +2329,15 @@ def test_the_front_card_fits_a_phone(b):
 
 # fix round 1 (the review's Minor 3): a held bubble is measured again, its customer's own, when the screen changes — the フロント's guest's
 # bubble held at 390×844, held again on a turn to 360×640 (on every screen since fix round 2, ruling 8: at least as tall, the card
-# narrower), as before back at 390×844; the 案内所's tourist's bubble held taller on a narrower screen
+# narrower), as before back at 390×844; the 案内所's tourist's bubble held taller on a narrower screen. The first height is read with the
+# web fonts in and the screen changed once (2026-11-26, test.4's fix round: a font in only lets a hold grow, so a height held before the
+# fonts came could stay a px taller than one measured after — the three readings all fresh measures, whenever the fonts arrive)
 def test_a_held_bubble_is_measured_again_on_a_resize(b):
     pre = "(async () => { " + BEGIN + CALM + WORK4 + FR + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm15'; clock(false); window.speakAs = () => new Promise((ok) => setTimeout(ok, 200));
       state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: 0, score: {}, keep: { seed: 5, morning: false } }; saveState();
       await at('ryokan'); WORK.start(yard(), 'front'); for (let i = 0; i < 40 && !fc(); i++) { click('.talk'); await wait(120); }
-      await watch(() => ready() && fr().k === 0, 12000); await wait(600); return fc().querySelector('.wk-cust .wk-bub').style.minHeight; })()"""
+      await watch(() => ready() && fr().k === 0, 12000); await wait(600); await document.fonts.ready; window.dispatchEvent(new Event('resize')); await wait(400);
+      return fc().querySelector('.wk-cust .wk-bub').style.minHeight; })()"""
     look = "(async () => { await new Promise((r) => setTimeout(r, 600)); const b = document.querySelector('.wk-front .wk-cust .wk-bub'); return b ? b.style.minHeight : 'gone'; })()"
     m1 = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", pre)], timeout=120)[-1]
     m2 = b.run([("metrics", (360, 640)), ("eval", look)], timeout=30)[-1]

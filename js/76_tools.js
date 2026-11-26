@@ -188,7 +188,7 @@ Object.assign(ACTIONS, {
   'conj-show': () => {
     TOOLS_STATE.conjWord = document.getElementById('conjWord').value.trim();
     TOOLS_STATE.conjKind = document.getElementById('conjKind').value;
-    document.getElementById('conjOut').innerHTML = conjTableHtml(TOOLS_STATE.conjWord, TOOLS_STATE.conjKind) || '<div class="empty">請輸入單字</div>';
+    document.getElementById('conjOut').innerHTML = conjTableHtml(TOOLS_STATE.conjWord, TOOLS_STATE.conjKind) || '<div class="empty empty-act">請輸入單字</div>';
   },
   'gen-items': (el) => {
     const u = document.getElementById('genUnit').value;

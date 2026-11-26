@@ -128,24 +128,29 @@ const JOBS = (() => {
   // attributes for it: a talk row's data-who) — or a function giving them, asked each time it is measured; each measured in a hidden copy
   // of it the same width; its min-height the tallest (none: let go). The onsen's four jobs call it as each customer (each task) comes —
   // for the bubble, the replies and the talk row (fix round 2, ruling 8). Measured again, the customer's own, on a resize or a turn of
-  // the phone, and once the web fonts (Noto Sans JP/TC, display=swap) are in (fix round 1, the review's Minor 3)
+  // the phone, and once the web fonts (Noto Sans JP/TC, display=swap) are in (fix round 1, the review's Minor 3) — a font in mid-customer
+  // only ever lets it grow (grow: 2026-11-26, test.4's fix round: a font's subset arriving mid-guest measured a talk row 1–2 px shorter
+  // and everything under it moved up); a resize, a turn and each customer's own hold() measure it afresh
   const held = new Map();   // each element held → what it may hold (its customer's, the latest)
-  function measure(b, src) {
-    const list = typeof src === 'function' ? src() : src, w = b.getBoundingClientRect().width; if (!w || !list || !list.length) { b.style.minHeight = ''; return; }
+  function measure(b, src, grow) {
+    const list = typeof src === 'function' ? src() : src, w = b.getBoundingClientRect().width; if (!w || !list || !list.length) { if (!grow) b.style.minHeight = ''; return; }
     // all measured in the copy, what it shows now too: the element itself never let go meanwhile (a card scrolled to it would be pulled
     // back to its top as the browser clamps its scroll to a content gone shorter for a moment — fix round 2)
     const c = b.cloneNode(false); c.style.cssText = `position:absolute;left:0;top:0;width:${w}px;min-height:0;visibility:hidden;pointer-events:none`;
     b.parentNode.appendChild(c); c.innerHTML = b.innerHTML; let h = c.getBoundingClientRect().height;
     list.forEach((x) => { const [html, attrs] = Array.isArray(x) ? x : [x, null]; c.innerHTML = html; if (attrs) Object.entries(attrs).forEach(([k, v]) => c.setAttribute(k, v)); h = Math.max(h, c.getBoundingClientRect().height); });
-    c.remove(); b.style.minHeight = `${Math.ceil(h)}px`;
+    c.remove(); b.style.minHeight = `${grow ? Math.max(parseFloat(b.style.minHeight) || 0, Math.ceil(h)) : Math.ceil(h)}px`;
   }
   function hold(b, htmls) {
     if (!b || !b.isConnected) return;
     held.forEach((_, e) => { if (!e.isConnected) held.delete(e); }); held.set(b, htmls); measure(b, htmls);
-    if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(rehold);
+    if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(() => rehold(true));
   }
-  let reholdT = 0;
-  function rehold() { clearTimeout(reholdT); reholdT = setTimeout(() => { held.forEach((src, b) => { if (b.isConnected) measure(b, src); else held.delete(b); }); reads.forEach((f, e) => { if (e.isConnected) f(); else reads.delete(e); }); }, 120); }
+  let reholdT = 0, reholdAll = false;   // reholdAll: a resize or a turn among the calls waited on — then every hold measured afresh
+  function rehold(grow) {
+    if (!grow) reholdAll = true;
+    clearTimeout(reholdT); reholdT = setTimeout(() => { const g = !reholdAll; reholdAll = false; held.forEach((src, b) => { if (b.isConnected) measure(b, src, g); else held.delete(b); }); reads.forEach((f, e) => { if (e.isConnected) f(); else reads.delete(e); }); }, 120);
+  }
   // a card's reading block (fix round 2, ruling 8: the フロント's book and keys, the 案内所's board, the おみやげ屋's shelves) takes what the
   // card has left and scrolls inside itself: while there is more below what shows, its foot fades (wk-more; iOS hides scrollbars). once:
   // its listeners, top(): back at its top as a customer starts
@@ -165,8 +170,8 @@ const JOBS = (() => {
     const ct = card ? card.getBoundingClientRect().top + card.clientTop : b.top, top = Math.max(b.top, ct, head ? head.getBoundingClientRect().bottom : -Infinity), bot = Math.min(b.bottom, card ? ct + card.clientHeight : b.bottom);
     if (r.top < top) block.scrollTop -= top - r.top + 4; else if (r.bottom > bot) block.scrollTop += Math.min(r.bottom - bot + 4, r.top - top);
   }
-  window.addEventListener('resize', rehold); window.addEventListener('orientationchange', rehold);
-  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', rehold);   // a later subset of a font in (a glyph not seen before)
+  window.addEventListener('resize', () => rehold(false)); window.addEventListener('orientationchange', () => rehold(false));
+  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => rehold(true));   // a later subset of a font in (a glyph not seen before): grow only
   // ---- a desk (2026-11-24, ruling 28): the flow 原田's window, the 観光案内所 and the フロント share — one customer after another: the
   // hero's greeting (after any line still being said), their words heard first (……; 🔊 again: the clock held till they are said in full),
   // then each step of what they came for — a reply picked, or the job's own taps (a station on the chart, a key on the board: D.right,

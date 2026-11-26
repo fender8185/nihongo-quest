@@ -125,11 +125,19 @@ const TAXI_RUN = (() => {
       b.innerHTML = `<button type="button" class="wk-ear tx-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="bt-dots">……</b>'}${!open && !R.ride.guided ? '<span class="tx-tapnote">點地圖上的地名，看它的讀音</span>' : ''}`;   // one who only says where: on a phone, how to find a place's reading (shown there alone: readOut)
     }
     // a phone's map labels (tx-narrow) at 12.5 px on the screen, the map drawn at whatever size the card leaves it (scale k), never
-    // smaller than drawn; again as the card's size changes
+    // smaller than drawn; again as the card's size changes. A label grown onto another place's dot slides sideways off it (2026-11-26,
+    // test.4's fix round: 図書館's over 郵便局's on an SE), 2 units clear
     function fitMap() {
       const svg = el('.tx-map'); if (!svg) return; const r = svg.getBoundingClientRect(), k = Math.min(r.width / 380, r.height / 510); if (!(k > 0)) return;
-      const z = Math.min(2.2, Math.max(1, 12.5 / 13 / k)).toFixed(3);
-      svg.querySelectorAll('.tx-narrow').forEach((g) => { const [ox, oy] = g.dataset.o.split(' ').map(Number); g.setAttribute('transform', `translate(${ox} ${oy}) scale(${z}) translate(${-ox} ${-oy})`); });
+      const z = Math.min(2.2, Math.max(1, 12.5 / 13 / k));
+      const dots = [...svg.querySelectorAll('.tx-place')].map((p) => { const c = p.querySelector('circle'); return [p, Number(c.getAttribute('cx')), Number(c.getAttribute('cy')), Number(c.getAttribute('r'))]; });
+      svg.querySelectorAll('.tx-narrow').forEach((g) => {
+        const [ox, oy] = g.dataset.o.split(' ').map(Number), rc = g.querySelector('rect'), hw = Number(rc.getAttribute('width')) * z / 2, h = Number(rc.getAttribute('height')) * z, own = g.closest('.tx-place');
+        let dx = 0;
+        dots.forEach(([p, cx, cy, rad]) => { if (p === own || cy + rad < oy || cy - rad > oy + h) return;
+          if (cx >= ox) dx = Math.min(dx, cx - rad - 2 - (ox + hw)); else dx = Math.max(dx, cx + rad + 2 - (ox - hw)); });
+        g.setAttribute('transform', `translate(${(ox + dx).toFixed(1)} ${oy}) scale(${z.toFixed(3)}) translate(${-ox} ${-oy})`);
+      });
     }
     // a place tapped on a phone's map: its reading over it a moment (the phone's labels have none: 〜まで is heard, the place read here)
     let readT = 0;

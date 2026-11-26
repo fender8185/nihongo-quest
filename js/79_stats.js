@@ -112,10 +112,23 @@ function gaugeHtml(t, title) {
     end = Math.max(end, a1);
     paths.push(`<path class="arc ${cls}" d="${arc(a0, a1)}" stroke-width="${W}" tabindex="0" data-tip-title="${esc(label)}：${n}" data-tip-body="占 ${Math.round(n / t.total * 100)}%"></path>`);
   });
-  // faint ticks where each level's items end, with the level names on either side just outside the ring
-  const lab = (ang, txt) => `<text class="tick-l" x="${(C + (R + W / 2 + 9) * Math.cos(ang)).toFixed(1)}" y="${(C - (R + W / 2 + 9) * Math.sin(ang) + 3).toFixed(1)}" text-anchor="middle">${txt}</text>`;
+  // faint ticks where each level's items end, with the level names on either side just outside the ring. On a phone (2026-11-26,
+  // test.4's fix round: N5／N4／N3 were 5.9 px) the names are 18 units — 12 px or more on the screen, the gauge drawn at about .67 on
+  // a 360-px phone — further from their tick, each name's box (Noto Sans TC: 20.4 units over the baseline, 5.4 under) pushed out
+  // along its angle till it is 2 units clear of the ring, kept inside the gauge's own width (never over the next one); a name that
+  // can't clear the ring there (a level's end near either foot) sits under that foot, clear of the 0% between the feet
+  const big = window.matchMedia && matchMedia('(max-width: 600px)').matches, LR = R + W / 2 + 9, feet = new Set();
+  const spot = (ang, txt) => {
+    if (!big) return [C + LR * Math.cos(ang), C - LR * Math.sin(ang) + 3];
+    const w = [...txt].reduce((a, ch) => a + (ch.charCodeAt(0) >= 0x2000 ? 18 : 11.5), 0), up = 20.4, down = 5.4, lo = -6 + w / 2, hi = 206 - w / 2, out = R + W / 2 + 2;
+    const clear = (x, y) => y - up >= C + 1 || Math.hypot(Math.min(Math.max(C, x - w / 2), x + w / 2) - C, Math.min(Math.max(C, y - up), y + down) - C) >= out;
+    for (let d = out; d <= out + 30; d++) { const x = Math.max(lo, Math.min(hi, C + d * Math.cos(ang))), y = C - d * Math.sin(ang) + (up - down) / 2; if (clear(x, y)) return [x, y]; }
+    const side = Math.cos(ang) < 0 ? -1 : 1; if (feet.has(side)) return [Math.max(lo, Math.min(hi, C + (out + 12) * Math.cos(ang))), C - (out + 12) * Math.sin(ang) + 7.5];
+    feet.add(side); return [Math.max(lo, Math.min(hi, C + side * R)), C + 3 + up];
+  };
+  const lab = (ang, txt) => { const [x, y] = spot(ang, txt); return `<text class="tick-l" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle">${txt}</text>`; };
   const tick = (t.marks || []).filter(([, n]) => t.total && n > 0 && n < t.total).map(([L, n, next], i) => { const tf = n / t.total; const a = Math.PI * (1 - tf); const rr = (r2) => [C + r2 * Math.cos(a), C - r2 * Math.sin(a)];
-    const [x0, y0] = rr(R - W / 2 - 3), [x1, y1] = rr(R + W / 2 + 3); const off = 0.09; const al = Math.PI * (1 - tf + off), ar = Math.PI * (1 - tf - off);
+    const [x0, y0] = rr(R - W / 2 - 3), [x1, y1] = rr(R + W / 2 + 3); const off = big ? 0.15 : 0.09; const al = Math.PI * (1 - tf + off), ar = Math.PI * (1 - tf - off);
     return `<line class="tick" data-f="${tf.toFixed(4)}" x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}"></line>${i === 0 ? lab(al, L) : ''}${lab(ar, next)}`; }).join('');
   const [nx, ny] = (() => { const a = Math.PI * (1 - t.pct / 100); return [C + (R - W / 2 - 4) * Math.cos(a), C - (R - W / 2 - 4) * Math.sin(a)]; })();   // ends just inside the ring
   const left = t.total - t.seen - t.learned - t.mastered;
@@ -289,7 +302,10 @@ function courseCardHtml() {
     const X = (d) => 8 + 384 * Math.min(d, max) / max;
     const dots = lv.map(L => `<circle class="course-dot ${tone(L)}" data-level="${L}" cx="${X(p.days[L]).toFixed(1)}" cy="28" r="5"></circle>`).join('');
     // labels: about 1em a CJK character (and 、・→), 0.6em the rest; each centred on its point but kept inside the box. Dates
-    // that would touch share one label; a mark's label that would touch 「今天」 or the other mark's drops a row, or they share one
+    // that would touch share one label; a mark's label that would touch 「今天」 or the other mark's drops a row, or they share one.
+    // On a phone (2026-11-26, test.4's fix round) every word 17 units — 12 px or more on the screen down to a 360-px phone, where the
+    // chart is drawn at about .73 — its rows below a little further apart (big)
+    const big = window.matchMedia && matchMedia('(max-width: 600px)').matches, T = big ? 17 : 12, B = big ? 17 : 11, Y1 = big ? 56 : 52, Y2 = big ? 74 : 68;
     const width = (str, size) => [...str].reduce((w, ch) => w + (ch.charCodeAt(0) >= 0x2000 ? size : size * 0.6), 0);
     const place = (x, text, size) => { const w = width(text, size); const c = clamp(x, 2 + w / 2, 398 - w / 2); return { c, a: c - w / 2, b: c + w / 2, text }; };
     const touch = (m, n) => m.a < n.b + 6 && n.a < m.b + 6;
@@ -298,19 +314,19 @@ function courseCardHtml() {
     const top = near.map(L => ({ x: X(p.days[L]), text: tag(L), cls: tone(L) }));
     if (far.length) top.push({ x: 392, text: `${far.join('、')} →`, cls: far.includes(p.level) ? tone(p.level) : 'other' });
     for (let i = 0; i + 1 < top.length;) {   // neighbours that would touch share one label, again until none touch (three levels)
-      if (!touch(place(top[i].x, top[i].text, 12), place(top[i + 1].x, top[i + 1].text, 12))) { i++; continue; }
+      if (!touch(place(top[i].x, top[i].text, T), place(top[i + 1].x, top[i + 1].text, T))) { i++; continue; }
       top.splice(i, 2, { x: (top[i].x + top[i + 1].x) / 2, text: `${top[i].text}・${top[i + 1].text}`, cls: '' }); i = Math.max(0, i - 1);
     }
-    const labels = top.map(l => `<text class="lvl ${l.cls}" x="${place(l.x, l.text, 12).c.toFixed(1)}" y="14" text-anchor="middle">${l.text}</text>`).join('');
-    const today = { a: 4, b: 4 + width('今天', 11) };
-    const dl = place(X(daysBetween(t, p.deadline)), `${sl(p.deadline).slice(5)} 期限`, 11), ex = place(X(examD), `${sl(p.exam).slice(5)} 考試`, 11);
-    const dlRow = touch(dl, today) ? 68 : 52;
-    const exRow = dlRow === 68 && touch(ex, dl) ? (touch(ex, today) ? 0 : 52) : 68;   // 0: no room of its own, it joins the deadline's
+    const labels = top.map(l => `<text class="lvl ${l.cls}" x="${place(l.x, l.text, T).c.toFixed(1)}" y="${big ? 15 : 14}" text-anchor="middle">${l.text}</text>`).join('');
+    const today = { a: 4, b: 4 + width('今天', B) };
+    const dl = place(X(daysBetween(t, p.deadline)), `${sl(p.deadline).slice(5)} 期限`, B), ex = place(X(examD), `${sl(p.exam).slice(5)} 考試`, B);
+    const dlRow = touch(dl, today) ? Y2 : Y1;
+    const exRow = dlRow === Y2 && touch(ex, dl) ? (touch(ex, today) ? 0 : Y1) : Y2;   // 0: no room of its own, it joins the deadline's
     const txt = (q, y) => `<text x="${q.c.toFixed(1)}" y="${y}" text-anchor="middle">${q.text}</text>`;
-    const below = exRow ? txt(dl, dlRow) + txt(ex, exRow) : txt(place((dl.c + ex.c) / 2, `${dl.text}・${ex.text}`, 11), dlRow);
+    const below = exRow ? txt(dl, dlRow) + txt(ex, exRow) : txt(place((dl.c + ex.c) / 2, `${dl.text}・${ex.text}`, B), dlRow);
     const mark = (d, cls) => { const x = X(d).toFixed(1); return `<line class="mark ${cls}" x1="${x}" y1="20" x2="${x}" y2="36"></line>`; };
-    line = `<svg class="course-line" viewBox="0 0 400 76" role="img" aria-label="從今天到考試的時間軸">
-        <line class="axis" x1="8" y1="28" x2="392" y2="28"></line><circle class="start" cx="8" cy="28" r="4"></circle><text x="4" y="52">今天</text>
+    line = `<svg class="course-line${big ? ' big' : ''}" viewBox="0 0 400 ${big ? 80 : 76}" role="img" aria-label="從今天到考試的時間軸">
+        <line class="axis" x1="8" y1="28" x2="392" y2="28"></line><circle class="start" cx="8" cy="28" r="4"></circle><text x="4" y="${Y1}">今天</text>
         ${mark(daysBetween(t, p.deadline), 'deadline')}${mark(examD, 'exam')}${dots}${labels}${below}</svg>`;
     rows = shown.map((L) => {
       const target = L === p.level;

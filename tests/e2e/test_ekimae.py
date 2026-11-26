@@ -702,6 +702,50 @@ def test_the_mood_mark_stays_by_the_face_at_the_window_and_the_lost_and_found(b)
           LOST.make = realMake; const lost = mark(card()); CLASS.close(); return JSON.stringify({ window: window_, lost }); })()""")])[-1])
     assert all(x == {'by': True, 'clear': True, 'tall': True} for v in out.values() for x in v.values()), out
 
+# the taxi's map on a phone (2026-11-26, test.4): each place on a label of its own, 12 px or more on the screen at 390×664 and
+# 375×553 and as the screen changes with the card open (the wide labels, readings and all, hidden); one who only says 〜まで (the
+# 4th) is told to tap a place for its reading, one who tells the way (the 1st) is not; a tap shows the place's kana over its dot and
+# changes nothing of the ride (phase, choice, fare); no label over another place's dot or label; on a wide screen none of it shows
+TAXI_MAP = """ const at = async (k) => { JOBS.pat.scale = 1000; state.work.res[dateStr(TOWNEV.today())] = { place: 'taxi', done: k, score: Object.fromEntries([...Array(k)].map((_, i) => [i, 0])), keep: {} }; saveState();
+    WORK.start(yard(), 'taxi'); for (let i = 0; i < 300 && !(now() && now().k === k && now().phase === 'drive'); i++) await wait(20); await wait(300); };
+  window.__txLook = () => { const c = card(), svg = c.querySelector('.tx-map'), R = (e) => e.getBoundingClientRect(), shown = (e) => Boolean(e) && getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0;
+    const px = [...svg.querySelectorAll('.tx-narrow text')].filter(shown).map((t) => { const m = t.getScreenCTM(); return Math.round(parseFloat(getComputedStyle(t).fontSize) * Math.hypot(m.a, m.b) * 10) / 10; });
+    const labs = [...svg.querySelectorAll('.tx-narrow')].filter(shown).map((g) => [(g.closest('.tx-place') || { dataset: { place: 'station' } }).dataset.place, R(g.querySelector('rect'))]);
+    const dots = [...svg.querySelectorAll('.tx-place')].map((p) => { const r = R(p.querySelector('circle')); return [p.dataset.place, r.left + r.width / 2, r.top + r.height / 2, r.width / 2]; });
+    const hit = [];
+    labs.forEach(([p, r]) => { dots.forEach(([q, x, y, rad]) => { if (q === p) return; const dx = x - Math.max(r.left, Math.min(x, r.right)), dy = y - Math.max(r.top, Math.min(y, r.bottom)); if (Math.hypot(dx, dy) < rad - 0.5) hit.push(p + ' over ' + q + "'s dot"); });
+      labs.forEach(([q, s]) => { if (q !== p && Math.min(r.right, s.right) - Math.max(r.left, s.left) > 0.5 && Math.min(r.bottom, s.bottom) - Math.max(r.top, s.top) > 0.5) hit.push(p + ' over ' + q + "'s label"); }); });
+    return { n: px.length, min: Math.min(...px), wide: [...svg.querySelectorAll('.tx-wide')].some(shown), note: shown(c.querySelector('.tx-tapnote')), hit: [...new Set(hit)] }; };"""
+
+def test_the_taxi_map_reads_on_a_phone(b):
+    open3 = "(async () => { " + BEGIN + TAXI_HELP + TAXI_MAP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      await at(3); return JSON.stringify(Object.assign(__txLook(), { k: now().k, guided: now().ride.guided })); })()"""
+    look = "(async () => { await new Promise((r) => setTimeout(r, 500)); return JSON.stringify(__txLook()); })()"
+    sizes = {}
+    sizes['390x664'] = json.loads(b.run([("metrics", (390, 664)), ("nav", URL), ("wait", READY), ("eval", open3)])[-1])
+    for w, h in ((375, 553), (360, 640), (390, 664)):   # the card left open as the screen changes
+        sizes[f'{w}x{h} after'] = json.loads(b.run([("metrics", (w, h)), ("eval", look)])[-1])
+    tap = json.loads(b.run([("metrics", (390, 664)), ("eval", """(async () => { await new Promise((r) => setTimeout(r, 400)); const n = TAXI_RUN.now(), before = [n.phase, n.choice, n.fare], c = document.querySelector('.wk-taxi'), p = c.querySelector('.tx-place[data-place="post"]');
+      p.querySelector('circle').dispatchEvent(new MouseEvent('click', { bubbles: true })); await new Promise((r) => setTimeout(r, 300));
+      const o = c.querySelector('.tx-read'), d = p.querySelector('circle').getBoundingClientRect(), r = o && o.getBoundingClientRect(), m = TAXI_RUN.now();
+      return JSON.stringify({ text: o && o.textContent, shown: Boolean(o) && getComputedStyle(o).display !== 'none' && getComputedStyle(o).opacity === '1', dx: r ? Math.round(r.left + r.width / 2 - (d.left + d.width / 2)) : null,
+        above: r ? r.bottom <= d.top + 1 : null, same: JSON.stringify([m.phase, m.choice, m.fare]) === JSON.stringify(before), k: m.k }); })()""")])[-1])
+    sizes['375x553'] = json.loads(b.run([("metrics", (375, 553)), ("nav", URL), ("wait", READY), ("eval", open3)])[-1])
+    for s, x in sizes.items():
+        assert x['n'] == 10 and x['min'] >= 12 and not x['wide'], (s, x)   # nine places and the station, each 12 px or more on the screen
+        assert x['hit'] == [], (s, x['hit'])   # no label over another place's dot or label
+        assert x['note'], (s, x)   # the 4th passenger only says where: how to read a place
+    assert sizes['390x664']['k'] == 3 and sizes['390x664']['guided'] is False, sizes['390x664']
+    assert tap['text'] == 'ゆうびんきょく' and tap['shown'] and abs(tap['dx']) <= 1 and tap['above'] and tap['same'] and tap['k'] == 3, tap   # its kana over its dot; the ride as it was
+    first = json.loads(ev(b, "(async () => { " + BEGIN + TAXI_HELP + TAXI_MAP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      await at(0); return JSON.stringify(Object.assign(__txLook(), { k: now().k, guided: now().ride.guided })); })()""", [("metrics", (390, 664))]))
+    assert first['k'] == 0 and first['guided'] and not first['note'], first   # one who tells the way: no note
+    wide = json.loads(b.run([("metrics", (1280, 800, False)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + TAXI_HELP + TAXI_MAP + """ location.hash = '#/station'; route(); await wait(300);
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; await at(3); const c = card(), d = (q) => [...c.querySelectorAll(q)].some((e) => getComputedStyle(e).display !== 'none');
+      c.querySelector('.tx-place[data-place="post"] circle').dispatchEvent(new MouseEvent('click', { bubbles: true })); await wait(300);
+      return JSON.stringify({ narrow: d('.tx-narrow'), note: d('.tx-tapnote'), read: d('.tx-read'), wide: d('.tx-wide') }); })()""")])[-1])
+    assert wide == {'narrow': False, 'note': False, 'read': False, 'wide': True}, wide
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

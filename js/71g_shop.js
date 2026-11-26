@@ -529,7 +529,7 @@ function heatmapHtml() {
 }
 function recentLogsHtml() {
   const days = Object.keys(state.dailyLogs).filter(d => dayActive(state.dailyLogs[d])).sort().reverse().slice(0, 14);
-  if (!days.length) return '<div class="empty">還沒有紀錄，完成第一組練習後就會出現。</div>';
+  if (!days.length) return '<div class="empty empty-act">還沒有紀錄，完成第一組練習後就會出現。</div>';   // empty-act: an empty state that says what to do (read; 2026-11-26)
   const tally = tallySrsByDay();
   return `<div class="list mt-2">${days.map(d => {
     const e = state.dailyLogs[d];
