@@ -1168,13 +1168,15 @@ function optSayHtml(v) {
   const w = jaPlain(v.w), r = v.r && !HAS_KANJI.test(v.r) && v.r !== w ? v.r : '';
   return `<button type="button" class="btn btn-ghost btn-icon fb-opt-say" data-act="speak" data-text="${esc(w)}" data-reading="${esc(r)}" aria-label="發音：${esc(w)}">${icon('speaker')}</button>`;
 }
-// how wide a Chinese text must be to fit two lines, in em (2026-11-26, test.4's fix round 3): each character 1em (a Latin letter or a
-// digit about half), a line never starting with a closing mark (、。）…) or ending on an opening one (（「…) and never inside a Latin
+// how wide a Chinese text must be to fit two lines, in em (2026-11-26, test.4's fix round 3): each character 1em (a Latin capital ¾,
+// another Latin letter or a digit about half; …, ‥, — and the other marks of U+2000–U+2E7F 1em: test.4's final fix — 給…看 was
+// 6.5 px short), a line never starting with a closing mark (、。）…) or ending on an opening one (（「…) and never inside a Latin
 // word — the narrowest of its two-line splits. A row's Chinese part asks this much room beside a Japanese one (see .fb-opt in
 // app.css), so it either sits beside in two lines or gives the Japanese, or the group at the row's end, the line
 const ZH_CLOSE = '、。，．；：？！）」』》〉】…‥・', ZH_OPEN = '（「『《〈【';
 function twoLinesEm(text) {
-  const ch = [...String(text || '')], w = ch.map(c => (c.codePointAt(0) < 0x2E80 ? 0.55 : 1)), all = w.reduce((a, b) => a + b, 0);
+  const em = (c) => { const n = c.codePointAt(0); return n >= 0x2000 && n <= 0x2E7F ? 1 : c >= 'A' && c <= 'Z' ? 0.75 : n < 0x2E80 ? 0.55 : 1; };
+  const ch = [...String(text || '')], w = ch.map(em), all = w.reduce((a, b) => a + b, 0);
   let best = all, left = 0;
   for (let p = 1; p < ch.length; p++) {
     left += w[p - 1];

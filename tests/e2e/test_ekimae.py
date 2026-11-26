@@ -746,6 +746,92 @@ def test_the_taxi_map_reads_on_a_phone(b):
       return JSON.stringify({ narrow: d('.tx-narrow'), note: d('.tx-tapnote'), read: d('.tx-read'), wide: d('.tx-wide') }); })()""")])[-1])
     assert wide == {'narrow': False, 'note': False, 'read': False, 'wide': True}, wide
 
+# the final fix of test.4 (2026-11-26; the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」, Important 1 of the final review): in the
+# older jobs too — 原田's window, 小林's lost and found, 鈴木's taxi (here) and 張's till (test_work) — a reply moves nothing. The jobs' own
+# dice seeded (MOVES_SEED: one stream for the calls whose stack runs through the jobs' files, from the job's start), so every tree gets the
+# same customers; each played as a player would (a wrong reply or tap, then the right ones; lines 400 ms each), at 390×664 and 375×553 (a
+# phone: device scale 2). Every painted frame from the frame they are asked till they go — their leaving (.bye) and the card's opening
+# skipped, as the onsen's tests do: the card's top and foot and each of its rows' (its children but ✕) against the frame of the ask: none
+# moves more than 1 px, the card's scroll never changes. MOVES: CARD, KEY() (the customer now), ASKED(), PHASE(), PLAY() (one played), N.
+MOVES_SEED = """ { const orig = Math.random.bind(Math); let sd = 424242; const seeded = () => { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; };
+    Math.random = function () { return /71w_|71s_jobs/.test((new Error()).stack || '') ? seeded() : orig(); }; }"""
+MOVES = r""" window.speakAs = () => new Promise((ok) => setTimeout(ok, 400));
+  const C = () => document.querySelector(CARD + ' .cls-card'), until = async (f, ms) => { const t0 = Date.now(); while (!f() && Date.now() - t0 < ms) await wait(50); return f(); };
+  const box = (e) => { if (!e || !e.isConnected || !e.getClientRects().length) return null; const r = e.getBoundingClientRect(); return [r.top, r.bottom]; };
+  const parts = (c) => [['card', c], ...[...c.children].filter((x) => !x.classList.contains('cls-x')).map((x) => [String(x.className).split(' ')[0], x])];
+  const F = { cur: null, base: null, recs: [], stop: false };
+  const tick = () => { if (F.stop) return; const c = C();
+    if (c) { const k = KEY(); if (k && k !== F.cur) { F.cur = k; F.base = null; F.recs.push({ max: {}, st: 0, frames: 0, at: {} }); }
+      const rec = F.recs[F.recs.length - 1];
+      if (rec && k === F.cur && !c.querySelector('.bye') && !c.closest('.cls').getAnimations().some((a) => a.playState === 'running')) {
+        if (!F.base) { if (ASKED()) F.base = { st: c.scrollTop, p: parts(c).map(([n, e]) => [n, e, box(e)]) }; }
+        else { rec.frames++; rec.st = Math.max(rec.st, Math.round(Math.abs(c.scrollTop - F.base.st)));
+          F.base.p.forEach(([n, e, b0]) => { const b1 = box(e); if (!b0 || !b1) return; const m = Math.round(Math.max(Math.abs(b1[0] - b0[0]), Math.abs(b1[1] - b0[1])) * 10) / 10;
+            if (m > (rec.max[n] || 0)) { rec.max[n] = m; if (m > 1 && !rec.at[n]) rec.at[n] = PHASE(); } }); } } }
+    requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+  for (let i = 0; i < N; i++) { if (!(await until(() => C() && ASKED(), 30000))) { F.recs.push({ err: 'no ask ' + i }); break; } await wait(500); await PLAY(i); }
+  F.stop = true; return JSON.stringify(F.recs.slice(0, N).map((r) => (r.err ? r : { max: Object.fromEntries(Object.entries(r.max).filter(([, v]) => v > 1)), most: Math.max(0, ...Object.values(r.max)), st: r.st, frames: r.frames, at: r.at })));"""
+def moves_at(b, url, ready, setup, card, key, asked, phase, play, n, sizes=((390, 664), (375, 553))):
+    """each size: the job set up (setup, with the jobs' dice seeded once it is in), its customers' frames; what moved (or a frameless one)"""
+    bad = []
+    for w, h in sizes:
+        recs = json.loads(b.run([("metrics", (w, h)), ("nav", url), ("wait", ready), ("eval", "(async () => { " + setup.replace('SEED;', MOVES_SEED + ';')
+            + f"\n const CARD = '{card}', N = {n}, KEY = () => {key}, ASKED = () => {asked}, PHASE = () => {phase}, PLAY = async (i) => {{ {play} }};" + MOVES + " })()")], timeout=420)[-1])
+        if len(recs) < n: bad.append((w, h, 'customers', len(recs), recs))
+        for i, r in enumerate(recs):
+            if 'err' in r or r['max'] or r['st'] or r['frames'] < 10: bad.append((w, h, i, r))
+    return bad
+
+def test_a_reply_moves_nothing_at_the_window(b):
+    setup = BEGIN + WIN_HELP + """ JOBS.pat.scale = 30; location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      state.work.res[dateStr(TOWNEV.today())] = { place: 'window', done: 2, score: { 0: 0, 1: 0 } }; saveState(); SEED; WORK.start(yard(), 'window');   // the 3rd to the 8th: next, stop, buy, fare, buy, track"""
+    play = """ const n = () => MADO_RUN.now(), t0 = n().task, c = card(), opt = (good) => [...c.querySelectorAll('.md-opt')].find((x) => (Number(x.dataset.o) === t0.right) === good && !x.disabled);
+      if (!n().printed) { const st = [...c.querySelectorAll('.md-st[data-st]')].find((x) => x.dataset.st !== t0.to); if (st) st.click(); await wait(1500); click(`.md-st[data-st="${t0.to}"]`); await wait(900); }
+      for (let m = 0; m < (i % 2 ? 2 : 1); m++) { await until(() => n().task !== t0 || (n().phase === 'ask' && opt(false)), 9000); const x = opt(false); if (x && n().task === t0) { x.click(); await wait(1800); } }
+      await until(() => n().task !== t0 || (n().phase === 'ask' && opt(true)), 9000); if (n().task === t0 && opt(true)) opt(true).click();
+      await until(() => !n() || n().task !== t0, 15000);"""
+    bad = moves_at(b, URL, READY, setup, '.wk-window', "(MADO_RUN.now() ? MADO_RUN.now().task : null)",
+                   "Boolean(MADO_RUN.now()) && MADO_RUN.now().phase === 'ask' && Boolean(document.querySelector('.wk-window :is(.md-opt, .md-tip)'))",
+                   "MADO_RUN.now() ? MADO_RUN.now().task.kind + ':' + MADO_RUN.now().phase + (MADO_RUN.now().printed ? '+printed' : '') : '-'", play, 6)
+    assert bad == [], bad
+
+def test_a_reply_moves_nothing_in_the_lost_and_found(b):
+    setup = BEGIN + LOST_HELP + """ JOBS.pat.scale = 30; location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      state.work.res[dateStr(TOWNEV.today())] = { place: 'lost', done: 4, score: { 0: 0, 1: 0, 2: 0, 3: 0 } }; saveState(); SEED; WORK.start(yard(), 'lost');   // the 5th to the 8th: where only, two alike, none of the four, 源三's"""
+    play = """ const n = () => LOST_RUN.now(), t0 = n().task, c = card(), q = (k) => c.querySelector(`.lf-q[data-q="${k}"]:not(:disabled)`);
+      let wrongQ = true;
+      for (let g = 0; g < 14 && n() && n().task === t0; g++) {
+        const ph = n().phase;
+        if (ph === 'ask' || ph === 'ask2') { const qs = [...c.querySelectorAll('.lf-q')].map((x) => x.dataset.q), known = qs.find((k) => n().know[k]), next = qs.find((k) => !n().know[k]);
+          if (wrongQ && known && q(known)) { wrongQ = false; q(known).click(); await wait(1500); continue; }
+          if (next && q(next)) { q(next).click(); await until(() => !n() || n().task !== t0 || !['tell'].includes(n().phase), 9000); await wait(300); continue; } }
+        if (ph === 'find') { const t = n().task, ok = t.cands.findIndex((x) => x.color === t.color && x.dim === t.dim && x.inside.join() === t.inside.join()), no = t.cands.findIndex((x, j) => j !== ok);
+          const give = async (j) => { click(`.lf-cand[data-c="${j}"]`); await wait(300); click('.lf-give'); await wait(1800); };
+          if (no >= 0 && g < 12) await give(no); if (n() && n().task === t0 && n().phase === 'find') { if (ok >= 0 && t.type !== 'gag' && t.type !== 'none') await give(ok); else { click('.lf-none'); await wait(1800); } } continue; }
+        await wait(300); }
+      await until(() => !n() || n().task !== t0, 15000);"""
+    bad = moves_at(b, URL, READY, setup, '.wk-lost', "(LOST_RUN.now() ? LOST_RUN.now().task : null)",
+                   "Boolean(LOST_RUN.now()) && LOST_RUN.now().phase === 'ask' && Boolean(document.querySelector('.wk-lost .lf-q'))",
+                   "LOST_RUN.now() ? LOST_RUN.now().task.type + ':' + LOST_RUN.now().phase : '-'", play, 4)
+    assert bad == [], bad
+
+def test_a_reply_moves_nothing_in_the_taxi(b):
+    setup = BEGIN + TAXI_HELP + """ JOBS.pat.scale = 0.5; location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      state.work.res[dateStr(TOWNEV.today())] = { place: 'taxi', done: 2, score: { 0: 0, 1: 0 } }; saveState(); SEED; WORK.start(yard(), 'taxi');   // the 3rd to the 5th: told the way, then only where to (the last, its closing word)"""
+    play = """ const r0 = now().ride; let wrong = i !== 1;   // a wrong turn or a wrong fare: the 1st and 3rd rides a wrong turn told, every ride a wrong fare
+      for (let g = 0; g < 400 && now() && now().ride === r0; g++) { const n = now();
+        if (n.phase === 'drive' && n.choosing) { const right = n.ride.guided ? n.want : TAXI.route(n.at, n.h, TAXI.where(n.ride.to))[0];
+          const other = n.ride.guided && wrong ? ['left', 'right', 'straight'].find((ch) => ch !== right && TAXI.can(n.at, n.h, ch)) : null;
+          if (other) { wrong = false; click(`.tx-go[data-ch="${other}"]`); await wait(1500); continue; }
+          click(`.tx-go[data-ch="${right}"]`); await wait(400); continue; }
+        if (n.phase === 'pay') { const ps = [...card().querySelectorAll('.tx-pay:not(:disabled)')], w = ps.find((p) => Number(p.dataset.o) !== n.payRight);
+          if (w) { w.click(); await wait(1200); } const r = card().querySelector(`.tx-pay[data-o="${n.payRight}"]`); if (r) r.click(); await wait(600); continue; }
+        await wait(100); }"""
+    bad = moves_at(b, URL, READY, setup, '.wk-taxi', "(TAXI_RUN.now() ? TAXI_RUN.now().ride : null)", "Boolean(TAXI_RUN.now()) && TAXI_RUN.now().phase === 'drive'",
+                   "TAXI_RUN.now() ? (TAXI_RUN.now().ride.guided ? 'guided' : 'to') + ':' + TAXI_RUN.now().phase + ':m' + TAXI_RUN.now().miss : '-'", play, 3)
+    assert bad == [], bad
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

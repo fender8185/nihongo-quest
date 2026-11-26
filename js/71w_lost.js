@@ -110,23 +110,43 @@ const LOST_RUN = (() => {
     // what they have said that counts now: while asking, all of it so far; then what it looks like (and, once asked, what is in it)
     const view = () => { const t = R.task; if (R.phase === 'ask') return R.heard; return t.in && R.phase !== 'ask2' ? [[t.desc, ''], [t.in, t.descZh]] : [[t.desc, t.descZh]]; };
     let ear = 0; const hear = () => { const n = ++ear, me0 = R; return JOBS.queue(() => view().reduce((p, [ja]) => p.then(() => (n === ear && R === me0 && live() ? speakAs(R.task.who, ja) : null)), Promise.resolve()), box, 20000); };   // after any line being said (ruling 27)
+    const bubHtml = (said) => `<button type="button" class="wk-ear lf-ear" aria-label="再聽一次">${icon('speaker')}</button>${said ? said.map(([ja, zh]) => `<b lang="ja">${ruby(ja)}</b>${zh ? `<span>${esc(zh)}</span>` : ''}`).join('') : '<b class="bt-dots">……</b>'}`;
     function bub(open) {
       const b = el('.wk-cust .wk-bub'); if (!b) return;
-      b.innerHTML = `<button type="button" class="wk-ear lf-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? view().map(([ja, zh]) => `<b lang="ja">${ruby(ja)}</b>${zh ? `<span>${esc(zh)}</span>` : ''}`).join('') : '<b class="bt-dots">……</b>'}`;
+      b.innerHTML = bubHtml(open ? view() : null);
     }
     const tellAll = () => { const p = R.phase; R.phase = 'find'; bub(true); R.phase = p; };
+    // the questions (kept, shut, while one asked is answered: 2026-11-26, the final fix of test.4 — 「…版面會因為回覆導致版面向上擠壓」), the
+    // four on the counter (the one picked up, its inside), これですか／ありません
+    const qsHtml = (t, qs, know, shut) => qs.map((k) => { const [ja, zh] = LOST.question(t, k, know); return `<button type="button" class="btn lf-q" data-q="${k}" lang="ja"${shut ? ' disabled' : ''}><span>${ruby(ja)}</span>${first ? `<small>${esc(zh)}</small>` : ''}</button>`; }).join('');
+    const candsHtml = (t, sel) => t.cands.map((x, i) => `<button type="button" class="lf-cand${sel === i ? ' sel' : ''}" data-c="${i}" aria-label="候補 ${i + 1}">${art(x, 78, 62)}${sel === i && x.inside.length ? `<span class="lf-in">${x.inside.map(pic).join('')}</span>` : ''}</button>`).join('');
+    const actsHtml = (t, sel) => `<button type="button" class="btn btn-primary lf-give" lang="ja"${sel === null ? ' disabled' : ''}><span>${ruby(s.me.give[0])}</span></button><button type="button" class="btn lf-none" lang="ja"><span>${ruby(s.me.none[0])}</span></button>${t.type === 'gag' ? `<button type="button" class="btn lf-gag" lang="ja"><span>${ruby(s.me.gag[0])}</span></button>` : ''}`;
     function stage() {
       const t = R.task, q = el('.lf-qs'), c = el('.lf-cands'), a = el('.lf-acts'); if (!q) return;
-      const qs = R.phase === 'ask' ? t.qs : R.phase === 'ask2' ? t.q2 : null;
-      q.innerHTML = qs ? qs.map((k) => { const [ja, zh] = LOST.question(t, k, R.know); return `<button type="button" class="btn lf-q" data-q="${k}" lang="ja"><span>${ruby(ja)}</span>${first ? `<small>${esc(zh)}</small>` : ''}</button>`; }).join('') : '';
-      c.innerHTML = R.phase === 'find' || R.phase === 'done' ? t.cands.map((x, i) => `<button type="button" class="lf-cand${R.sel === i ? ' sel' : ''}" data-c="${i}" aria-label="候補 ${i + 1}">${art(x, 78, 62)}${R.sel === i && x.inside.length ? `<span class="lf-in">${x.inside.map(pic).join('')}</span>` : ''}</button>`).join('') : '';
-      a.innerHTML = R.phase === 'find' ? `<button type="button" class="btn btn-primary lf-give" lang="ja"${R.sel === null ? ' disabled' : ''}><span>${ruby(s.me.give[0])}</span></button><button type="button" class="btn lf-none" lang="ja"><span>${ruby(s.me.none[0])}</span></button>${t.type === 'gag' ? `<button type="button" class="btn lf-gag" lang="ja"><span>${ruby(s.me.gag[0])}</span></button>` : ''}` : '';
+      const from = R.phase === 'tell' ? R.from : R.phase, qs = from === 'ask' ? t.qs : from === 'ask2' ? t.q2 : null;
+      q.innerHTML = qs ? qsHtml(t, qs, R.know, R.phase === 'tell') : '';
+      c.innerHTML = R.phase === 'find' || R.phase === 'done' ? candsHtml(t, R.sel) : '';
+      a.innerHTML = R.phase === 'find' ? actsHtml(t, R.sel) : '';
+    }
+    // held for each customer (2026-11-26, the final fix of test.4 — the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」 — as the
+    // onsen's: JOBS.hold, TL.keep): their bubble as tall as the most it will show (what they said, with the one answer that can come
+    // while asking — after two misses it opens: where it is, for one who said what; what it is or its looks, for one who said where; the
+    // looks, and what is in it, once found), the questions and then the four with the two answers (lf-play: as tall as the taller, whichever
+    // is picked up), the talk row as its tallest line — so a question, its answer, a miss or the four coming out move nothing under them
+    const TL = JOBS.talkLine({ box: () => box, sel: '.lf-talk', who: s.who, first });
+    function holdAll(t) {
+      const know = [false, true].map((w) => Object.assign(LOST.known(t), { what: w })), asking = t.open === 'what' ? ['where', 'look'] : t.open === 'where' ? ['what'] : [];
+      JOBS.hold(el('.wk-cust .wk-bub'), [[t.lost], ...asking.map((q) => [t.lost, LOST.answer(t, q)]), [[t.desc, t.descZh]]].concat(t.in ? [[[t.desc, ''], [t.in, t.descZh]]] : []).map(bubHtml));
+      const play = (q, c, a) => `<div class="lf-qs">${q}</div><div class="lf-cands">${c}</div><div class="lf-acts">${a}</div>`;
+      JOBS.hold(el('.lf-play'), know.map((kn) => play(qsHtml(t, t.qs, kn), '', '')).concat(t.q2 ? [play(qsHtml(t, t.q2, know[1]), '', '')] : [], [null, 0, 1, 2, 3].map((sel) => play('', candsHtml(t, sel), actsHtml(t, sel)))));
+      TL.keep(() => ({ drv: [s.hi, s.hat, s.asked, s.twin, s.bring, s.there, s.head, s.call, ...s.ok].concat(k >= 9 ? [s.end, s.all] : []),
+        me: [...new Set([...t.qs, ...(t.q2 || [])])].flatMap((q) => know.map((kn) => LOST.question(t, q, kn))).concat([s.me.give, s.me.none, s.me.gag]) }));
     }
     function show() {
       const t = tasks[k]; R = { k, task: t, phase: 'hi', sel: null, know: LOST.known(t), heard: [t.lost] }; miss = 0; rep = 0;
       el('.wk-n').textContent = `${k + 1}／10`;
       const c = el('.wk-cust'); c.className = 'wk-cust'; c.removeAttribute('data-mood'); c.innerHTML = JOBS.custHtml(t.who); if (t.type === 'gag') c.querySelector('.kr-face').insertAdjacentHTML('beforeend', GLASSES);
-      stage();
+      stage(); holdAll(t);
       const me0 = R; P = JOBS.patience('lost', t.who, 25, () => Boolean(el('.wk-cust')) && R === me0 && ctx.on(), gone, box);
       const hat = k === 4 && Math.random() < 0.5;   // now and then 小林's own hat (on his head)
       (async () => {
@@ -138,7 +158,7 @@ const LOST_RUN = (() => {
     // a question asked that was not yet told: its answer heard (the looks tell what it is too); all told, the four out (two alike on
     // the counter: what is in it asked, then)
     async function ask(q) {
-      const t = R.task, me0 = R, a = LOST.answer(t, q); R.phase = 'tell'; stage(); await JOBS.quiet(box); if (!live() || R !== me0) return;   // asked after any line still being said (ruling 27)
+      const t = R.task, me0 = R, a = LOST.answer(t, q); R.from = R.phase; R.phase = 'tell'; stage(); await JOBS.quiet(box); if (!live() || R !== me0) return;   // asked after any line still being said (ruling 27)
       await said(me(LOST.question(t, q, R.know)), 500); if (!live() || R !== me0) return;
       R.know[q] = true; if (q === 'look') R.know.what = true; if (q !== 'inside') R.heard.push(a);
       bub(false); await said(JOBS.voice(speakAs(t.who, a[0]), box)); if (!live() || R !== me0) return;
@@ -188,7 +208,7 @@ const LOST_RUN = (() => {
     CLASS.card('wk-lost', '失物招領', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja"><ruby>落<rt>お</rt></ruby>とし<ruby>物<rt>もの</rt></ruby></b><span class="wk-n"></span></div>
       <div class="lf-room">${SHELF}<div class="lf-counter"><div class="wk-cust"></div></div></div>
-      <div class="lf-qs"></div><div class="lf-cands"></div><div class="lf-acts"></div>
+      <div class="lf-play"><div class="lf-qs"></div><div class="lf-cands"></div><div class="lf-acts"></div></div>
       <div class="lf-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => {
       if (!R || !live()) return;
       if (e.target.closest('.lf-ear')) { if (R.phase === 'ask' || R.phase === 'ask2' || R.phase === 'find') { const q = P, r = rep = rep + 1; q.hold(); hear().then(() => { if (rep === r) { rep = 0; if (P === q && R.phase === 'find') q.go(); } }); } return; }

@@ -2351,6 +2351,32 @@ def test_a_held_bubble_is_measured_again_on_a_resize(b):
     a2 = b.run([("metrics", (360, 640)), ("eval", look2)], timeout=30)[-1]
     assert a1 > 0 and a2 > a1, (a1, a2)   # narrower: its words run to more lines, held taller
 
+# the final fix of test.4 (2026-11-26, the final review's Minor 4; the drive of the re-review's rv2-hold.py): JOBS.hold driven by the events
+# it listens to, the text drawn shorter or taller between them (its line height, as a font swap does) — a web font in (loadingdone: grow
+# only) never shrinks a held row; a resize measures it afresh, and so does a resize and a font queued together either way within the
+# 120-ms wait; what it shows now counts too; the next customer's own hold() afresh, one queued meanwhile growing only from it; nothing to
+# hold lets it go, and a font leaves it so. 20 px a line: two lines held, 40; drawn at 18 a font keeps 40 (fresh: 36 — the test fails)
+def test_a_held_row_grows_on_a_font_and_is_measured_afresh_on_a_resize(b):
+    r = json.loads(b.run([("metrics", (390, 664)), ("nav", URL), ("wait", READY), ("eval", """(async () => { const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+      const host = document.createElement('div'); host.style.cssText = 'position:absolute;left:0;top:0;width:200px;font-size:16px;line-height:20px'; document.body.appendChild(host);
+      const b = document.createElement('p'); b.style.margin = '0'; b.innerHTML = 'x'; host.appendChild(b);
+      const mh = () => b.style.minHeight, lh = (v) => { host.style.lineHeight = v + 'px'; }, font = () => document.fonts.dispatchEvent(new Event('loadingdone')), turn = () => window.dispatchEvent(new Event('resize'));
+      const r = {}; JOBS.hold(b, ['a', 'a<br>b']); r.hold = mh();
+      lh(18); font(); await wait(200); r.fontShorter = mh();
+      lh(24); font(); await wait(200); r.fontTaller = mh();
+      lh(18); turn(); await wait(200); r.resize = mh();
+      lh(15); font(); await wait(30); turn(); await wait(200); r.fontThenResize = mh();
+      lh(14); turn(); await wait(30); font(); await wait(200); r.resizeThenFont = mh();
+      lh(12); font(); await wait(200); r.fontAfter = mh();
+      b.innerHTML = 'a<br>b<br>c<br>d'; font(); await wait(200); r.shownTaller = mh();
+      b.innerHTML = 'x'; JOBS.hold(b, ['a']); r.nextCustomer = mh();
+      lh(20); JOBS.hold(b, ['a<br>b<br>c']); r.big = mh();
+      font(); await wait(30); JOBS.hold(b, ['a']); r.nextWhileFontWaits = mh(); await wait(200); r.afterTheWait = mh();
+      JOBS.hold(b, []); r.none = mh(); font(); await wait(200); r.noneAfterFont = mh();
+      host.remove(); return JSON.stringify(r); })()""")])[-1])
+    assert r == {'hold': '40px', 'fontShorter': '40px', 'fontTaller': '48px', 'resize': '36px', 'fontThenResize': '30px', 'resizeThenFont': '28px', 'fontAfter': '28px',
+                 'shownTaller': '48px', 'nextCustomer': '12px', 'big': '60px', 'nextWhileFontWaits': '20px', 'afterTheWait': '20px', 'none': '', 'noneAfterFont': ''}, r
+
 # the review of 2bd06dd (Important 2) and of f9f1047: on a 360×640 phone the フロント card's ✕ stays in the screen and takes a tap without
 # the player scrolling — at every guest of a shift (the 備註 guest, #8 of seed 5, too), as each starts and after a wrong reply (佐藤's word
 # and its reason, three lines of them or four); the card's scroll never changed by the reply (fix round 2, ruling 8: a card taller than

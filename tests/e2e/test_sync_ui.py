@@ -1,5 +1,5 @@
-"""Task 9: sync status chip, settings login panel, clickable update toast."""
-import os, subprocess, sys, time
+"""Task 9: sync status chip, settings login panel; the toast (since test.4's final fix: taps pass through it)."""
+import json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
 from test_sync import FAKE, URL as _U, READY, boot
@@ -62,17 +62,23 @@ def test_logged_in_chip_and_panel(b):
     assert out[-2] == '{"email":true,"now":true,"out":true,"del":true,"login":false}', out[-2]
     assert out[-1] == '{"txt":"同步中","cls":"sync-chip is-pending"}', out[-1]
 
-def test_toast_is_clickable_while_shown(b):
-    out = b.run([("nav", URL), ("wait", READY),
-        ("eval", "toast('x'); getComputedStyle(document.getElementById('toast')).pointerEvents")])
-    assert out[0] == "auto", out[0]
+# the final fix of test.4 (2026-11-26; was test_toast_is_clickable_while_shown, from the update toast tapped to reload of 2026-10-24 —
+# gone since new versions put themselves on): no toast holds a control (toast() sets its text only, nothing listens on it), so a shown
+# toast lets a tap through to what lies under it; and it is as wide as its words up to the screen less 16 px a side (it was fixed at
+# left 50% and shrank into half the screen: the knock toast on 3 lines over 町の手帳's buttons at 375×553)
+def test_a_shown_toast_lets_taps_through(b):
+    out = b.run([("metrics", (375, 553)), ("nav", URL), ("wait", READY),
+        ("eval", """(async () => { toast('コンコン……有人在敲門。點大門去開門看看。', 5000); await new Promise((r) => setTimeout(r, 400));
+          const t = document.getElementById('toast'), r = t.getBoundingClientRect(), hit = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);   // all a tap there may land on, top to bottom
+          return JSON.stringify({ shown: t.classList.contains('show'), pe: getComputedStyle(t).pointerEvents, through: hit.length > 0 && !hit.some((e) => t.contains(e)), w: Math.round(r.width) }); })()""")])
+    assert json.loads(out[0]) == {'shown': True, 'pe': 'none', 'through': True, 'w': 343}, out[0]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     tests = [test_chip_shows_logged_out_and_opens_data_tab, test_login_button_sends_normalized_email, test_eight_digit_code_from_the_email_logs_in, test_logged_in_chip_and_panel,
              test_google_button_goes_to_google_and_comes_back_here, test_coming_back_from_google,
-             test_toast_is_clickable_while_shown]
+             test_a_shown_toast_lets_taps_through]
     failed = 0
     try:
         for t in tests:

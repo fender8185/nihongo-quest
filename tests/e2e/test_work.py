@@ -842,6 +842,22 @@ def test_the_rules_card_reads_by_night(b):
     day = {k: v[0] for k, v in r['day']['parts'].items()}
     assert r['day']['mode'] == 'light' and day == {'steps': 'rgb(168, 36, 28)', 'heads': 'rgb(168, 36, 28)', 'back': 'rgb(168, 36, 28)', 'pay': 'rgb(106, 90, 78)', 'place': 'rgb(138, 122, 110)', 'ask': 'rgb(138, 122, 110)'}, r
 
+# the final fix of test.4 (2026-11-26; the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」): at 張's till a piece tapped moves
+# nothing — as the window's, the lost and found's and the taxi's (test_ekimae's moves_at: the jobs' dice seeded, every painted frame from
+# the ask till they go at 390×664 and 375×553, nothing moved more than 1 px, the card's scroll unchanged). The 4th to the 6th: one thing,
+# then two summed (a wrong piece, two for the 5th — the next piece lit — then the sum spelled)
+def test_a_reply_moves_nothing_at_the_till(b):
+    from test_ekimae import moves_at
+    setup = BEGIN + HELP + COUNTER + TILL + """ kana(46); vocab('ふたつ'); vocab('いくら'); nums(); earlier('till'); JOBS.pat.scale = 30;
+      location.hash = '#/chinadori'; route(); await wait(300); state.work.res[dateStr(TOWNEV.today())] = { place: 'till', done: 3, score: { 0: 0, 1: 0, 2: 0 } }; saveState(); SEED; WORK.start(yard(), 'till');"""
+    play = """ const t0 = JOBS.till.now(), all = () => [...document.querySelectorAll('.wk-till .wk-tile')];
+      for (let m = 0; m < (i % 2 ? 2 : 1); m++) { const x = all().find((y) => !t0.parts.includes(y.dataset.p) && !y.disabled); if (x) { x.click(); await wait(1500); } }
+      for (const p of t0.parts) { const x = all().find((y) => y.dataset.p === p && !y.disabled); if (x) x.click(); await wait(450); }
+      await until(() => JOBS.till.now() !== t0, 15000);"""
+    bad = moves_at(b, URL, READY, setup, '.wk-till', "(JOBS.till.now() || null)", "Boolean(JOBS.till.now()) && Boolean(document.querySelector('.wk-till .wk-tile:not(:disabled)'))",
+                   "JOBS.till.now() ? JOBS.till.now().kind + ':' + document.querySelectorAll('.wk-till .wk-spell b').length : '-'", play, 3)
+    assert bad == [], bad
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -83,30 +83,40 @@ const MADO_RUN = (() => {
     const word = ([ja, zh], cls = '') => { talk('drv'); const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(s.who, ja); };
     const me = ([ja, zh]) => { talk('me'); const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
     const said = JOBS.whole;   // each line to its end within the lane's cap (Task 7's fix round, I-1)
+    const bubHtml = (t, open) => `<button type="button" class="wk-ear md-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(t.q[0])}</b><span>${esc(t.q[1])}</span>` : '<b class="bt-dots">……</b>'}`;
     function bub(open) {
-      const R = D.now(), b = el('.wk-bub'); if (!b || !R) return; const t = R.task;
-      b.innerHTML = `<button type="button" class="wk-ear md-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(t.q[0])}</b><span>${esc(t.q[1])}</span>` : '<b class="bt-dots">……</b>'}`;
+      const R = D.now(), b = el('.wk-bub'); if (!b || !R) return;
+      b.innerHTML = bubHtml(R.task, open);
       b.classList.toggle('wk-open', Boolean(open));   // open: a pop-up goes under it, never over the question (N-4)
     }
     // the replies once there is something to say (a ticket: once printed — till then, the tip to tap the station); the Japanese only, the
     // first shift too (2026-11-22, the user: 「16:10。」 under it, the digits read off)
+    const optsHtml = (t) => t.opts.map(([ja], i) => `<button type="button" class="btn md-opt" data-o="${i}" lang="ja"><span>${NUMERIC.has(t.kind) ? esc(kanaOf(ja)) : ruby(ja)}</span></button>`).join(''), TIP = '<p class="md-tip">先在上面的路線圖點客人要去的站，印出車票。</p>';
     function opts(on) {
       const o = el('.md-opts'), R = D.now(); if (!o || !R) return; const t = R.task;
-      o.innerHTML = on && R.printed ? t.opts.map(([ja], i) => `<button type="button" class="btn md-opt" data-o="${i}" lang="ja"><span>${NUMERIC.has(t.kind) ? esc(kanaOf(ja)) : ruby(ja)}</span></button>`).join('') : on && t.kind === 'buy' ? '<p class="md-tip">先在上面的路線圖點客人要去的站，印出車票。</p>' : '';
+      o.innerHTML = on && R.printed ? optsHtml(t) : on && t.kind === 'buy' ? TIP : '';
     }
     // the tickets: the station tapped prints them (大人 1, 子ども 1), then the sum to say
+    const ticketsHtml = (t) => [1, t.kid ? 2 : 0].filter(Boolean).map((n) => `<div class="md-tk"><span lang="ja">みなと → ${EKI.ruby(t.to)}</span><b>${EKI.fare('minato', t.to, n === 2)}円</b><small>${n === 2 ? '小' : '大人'}</small></div>`).join('');
     function print(to) {
       const R = D.now(), t = R.task; R.printed = true; SND.play('paper', { vol: 0.6 });
-      el('.md-ticket').innerHTML = [1, t.kid ? 2 : 0].filter(Boolean).map((n) => `<div class="md-tk"><span lang="ja">みなと → ${EKI.ruby(to)}</span><b>${EKI.fare('minato', to, n === 2)}円</b><small>${n === 2 ? '小' : '大人'}</small></div>`).join('');
+      el('.md-ticket').innerHTML = ticketsHtml(Object.assign({}, t, { to }));
       el('.md-wall .md-chart').classList.remove('pick'); opts(true);
     }
+    // held for each customer (2026-11-26, the final fix of test.4 — the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」 — as the
+    // 案内所's: JOBS.hold, TL.keep): their words as they open, the tickets as printed in a sale, the replies (and the tip before them), the
+    // talk row as tall as the tallest line it may bring — so a reply, a miss or the tickets move nothing under them
+    const TL = JOBS.talkLine({ box: () => box, sel: '.md-talk', who: s.who, first });
+    const talkLines = (t) => ({ drv: [s.miss, ...s.ok].concat(D && D.now() && D.now().k >= MADO.N - 1 ? [s.end, s.all] : []), me: [s.me.hi, t.opts[t.right]] });
     // the desk's flow (ruling 28: JOBS.desk, as the 案内所's and the フロント's): the question heard first, three replies off the wall —
     // the right one said, their thanks, now and then 原田's word; a wrong one (or the wrong station): his word, its cost after it; two and
     // the question shown, the right reply lit (and, before the tickets print, the station); the customer dimmed once served
     D = cur = JOBS.desk({ job: 'window', ctx, N: MADO.N, box: () => box, alive: '.md-glass', mine: () => mine === runs, tasks,
       isRight: (t, i) => i === t.right, secs: () => MADO.SECS, cost: MADO.MISS, hi: () => s.me.hi, fresh: (t) => ({ printed: t.kind !== 'buy' }),
       me, word, bub, opts, optSel: '.md-opt', earSel: '.md-ear', rightCls: 'md-right', dim: true,
-      draw: (t) => { el('.md-wall').innerHTML = `${chart(t, t.kind === 'buy', first)}<div class="md-row">${board(t)}</div>`; el('.md-ticket').innerHTML = ''; },
+      draw: (t) => { el('.md-wall').innerHTML = `${chart(t, t.kind === 'buy', first)}<div class="md-row">${board(t)}</div>`; el('.md-ticket').innerHTML = '';
+        JOBS.hold(el('.wk-cust .wk-bub'), [bubHtml(t, true)]); JOBS.hold(el('.md-ticket'), t.kind === 'buy' ? [ticketsHtml(t)] : []);
+        JOBS.hold(el('.md-opts'), t.kind === 'buy' ? [optsHtml(t), TIP] : [optsHtml(t)]); TL.keep(() => talkLines(t)); },
       miss: () => s.miss,
       hint: (t, R, out) => { if (!out && !R.printed) { const st = el(`.md-st[data-st="${t.to}"]`); if (st) st.classList.add('wk-hint'); } },
       tap: (e, R) => { const st = e.target.closest('.md-st[data-st]'); if (!st || R.printed) return false; if (st.dataset.st === R.task.to) print(R.task.to); else D.miss(st, s.miss); return true; },

@@ -130,20 +130,25 @@ const JOBS = (() => {
   // for the bubble, the replies and the talk row (fix round 2, ruling 8). Measured again, the customer's own, on a resize or a turn of
   // the phone, and once the web fonts (Noto Sans JP/TC, display=swap) are in (fix round 1, the review's Minor 3) — a font in mid-customer
   // only ever lets it grow (grow: 2026-11-26, test.4's fix round: a font's subset arriving mid-guest measured a talk row 1–2 px shorter
-  // and everything under it moved up); a resize, a turn and each customer's own hold() measure it afresh
-  const held = new Map();   // each element held → what it may hold (its customer's, the latest)
+  // and everything under it moved up); a resize, a turn and each customer's own hold() measure it afresh. cap (test.4's final fix: the
+  // taxi's top row on a short phone): a function giving the most it may take — over it, it keeps that box (min and max), what it shows
+  // spilling over what lies under it; its resting state (the first html) never cut
+  const held = new Map();   // each element held → what it may hold (its customer's, the latest; with its cap: { htmls, cap })
   function measure(b, src, grow) {
-    const list = typeof src === 'function' ? src() : src, w = b.getBoundingClientRect().width; if (!w || !list || !list.length) { if (!grow) b.style.minHeight = ''; return; }
+    const s = src && src.htmls ? src : { htmls: src }, list = typeof s.htmls === 'function' ? s.htmls() : s.htmls, w = b.getBoundingClientRect().width;
+    if (!w || !list || !list.length) { if (!grow) { b.style.minHeight = ''; if (s.cap) b.style.maxHeight = ''; } return; }
     // all measured in the copy, what it shows now too: the element itself never let go meanwhile (a card scrolled to it would be pulled
     // back to its top as the browser clamps its scroll to a content gone shorter for a moment — fix round 2)
     const c = b.cloneNode(false); c.style.cssText = `position:absolute;left:0;top:0;width:${w}px;min-height:0;visibility:hidden;pointer-events:none`;
-    b.parentNode.appendChild(c); c.innerHTML = b.innerHTML; let h = c.getBoundingClientRect().height;
-    list.forEach((x) => { const [html, attrs] = Array.isArray(x) ? x : [x, null]; c.innerHTML = html; if (attrs) Object.entries(attrs).forEach(([k, v]) => c.setAttribute(k, v)); h = Math.max(h, c.getBoundingClientRect().height); });
-    c.remove(); b.style.minHeight = `${grow ? Math.max(parseFloat(b.style.minHeight) || 0, Math.ceil(h)) : Math.ceil(h)}px`;
+    b.parentNode.appendChild(c); c.innerHTML = b.innerHTML; let h = c.getBoundingClientRect().height, rest = 0;
+    list.forEach((x, i) => { const [html, attrs] = Array.isArray(x) ? x : [x, null]; c.innerHTML = html; if (attrs) Object.entries(attrs).forEach(([k, v]) => c.setAttribute(k, v)); const hx = c.getBoundingClientRect().height; if (!i) rest = hx; h = Math.max(h, hx); });
+    c.remove(); let px = grow ? Math.max(parseFloat(b.style.minHeight) || 0, Math.ceil(h)) : Math.ceil(h);
+    if (s.cap) { const cap = Math.max(Math.ceil(rest), Math.floor(s.cap())); if (px > cap) { px = cap; b.style.maxHeight = `${px}px`; } else b.style.maxHeight = ''; }
+    b.style.minHeight = `${px}px`;
   }
-  function hold(b, htmls) {
-    if (!b || !b.isConnected) return;
-    held.forEach((_, e) => { if (!e.isConnected) held.delete(e); }); held.set(b, htmls); measure(b, htmls);
+  function hold(b, htmls, cap) {
+    if (!b || !b.isConnected) return; const src = cap ? { htmls, cap } : htmls;
+    held.forEach((_, e) => { if (!e.isConnected) held.delete(e); }); held.set(b, src); measure(b, src);
     if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(() => rehold(true));
   }
   let reholdT = 0, reholdAll = false;   // reholdAll: a resize or a turn among the calls waited on — then every hold measured afresh
@@ -402,22 +407,32 @@ const JOBS = (() => {
     const tasks = tillMake(), first = !Object.values(state.work.res).some((r) => r.place === 'till' && r.yen !== undefined); let k = ctx.done, miss = 0, at = 0, busy = true, P = null;   // at: the pieces tapped so far; P: the customer's patience
     // this run's own card (box, once drawn; ruling 30): an ended shift's goodbye never touches the next
     let box = null; const el = (s) => (box && box.isConnected ? box.querySelector(s) : null), all = (s) => (box && box.isConnected ? [...box.querySelectorAll(s)] : []);
-    const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; return speakAs('hero', l[0]); };
+    const meHtml = (l) => `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`, me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = meHtml(l); return speakAs('hero', l[0]); };
+    const lineHtml = ([ja, zh]) => `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`;
+    // the sum as tapped so far (n pieces), a blank for each piece to come; the pieces under it
+    const spellHtml = (t, n) => t.parts.map((x, i) => (i < n ? `<b>${esc(x)}</b>` : '<i></i>')).join('');
+    const optsHtml = (t, n) => `<p class="wk-spell" lang="ja">${spellHtml(t, n)}</p>${t.tiles.map((p) => `<button type="button" class="btn btn-sm wk-opt wk-tile" data-p="${esc(p)}" lang="ja">${esc(p)}</button>`).join('')}`;
+    // held for each customer (2026-11-26, the final fix of test.4 — the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」 — as the
+    // onsen's: hold): the sum and its pieces at every stage of its spelling, the hero's line (いらっしゃいませ, the sum said, the thanks) and
+    // 張's (a miss, his praise, his closing word) as they come; their bubble (their question, or their leaving word) once they ask — its
+    // width is its words' — so a piece tapped moves nothing
+    const holdAll = (t) => { hold(el('.wk-opts'), t.parts.map((_, n) => optsHtml(t, n)).concat(optsHtml(t, t.parts.length)));
+      hold(el('.wk-me'), [ME.hi, tillSay(t), ME.bye].map(meHtml)); const z = say('till'); hold(el('.wk-who .wk-say'), [z.miss, ...z.ok, z.end].map(lineHtml)); };
     function show() {
       T = tasks[k]; miss = 0; at = 0; busy = true; if (!el('.wk-goods')) return;
       el('.wk-n').textContent = `${k + 1}／${N}`; el('.wk-goods').className = `wk-goods n${T.things.length}`;
       el('.wk-goods').innerHTML = T.things.map((g) => `<span class="wk-good">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b><small>${g[2]}円</small></span>`).join('');
-      el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').removeAttribute('data-mood'); el('.wk-cust').innerHTML = custHtml(T.who);
+      el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').removeAttribute('data-mood'); el('.wk-cust').innerHTML = custHtml(T.who); holdAll(T);
       const t = T; P = patience('till', t.who, TILL_SECS[t.things.length], () => Boolean(el('.wk-cust')) && T === t && ctx.on(), gone, box);
       said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said; then the pieces, and their patience
         if (!el('.wk-cust') || T !== tasks[k] || !ctx.on()) return;
-        const [ja, zh] = tillAsk(T); el('.wk-bub').innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`; el('.wk-cust').classList.add('on'); voice(speakAs(T.who, ja), box); busy = false; P.go();
-        el('.wk-opts').innerHTML = `<p class="wk-spell" lang="ja"></p>${T.tiles.map((p) => `<button type="button" class="btn btn-sm wk-opt wk-tile" data-p="${esc(p)}" lang="ja">${esc(p)}</button>`).join('')}`; built();
+        const l = tillAsk(T); el('.wk-bub').innerHTML = lineHtml(l); hold(el('.wk-cust .wk-bub'), [l, CROSS().out, CROSS().out0].map(lineHtml)); el('.wk-cust').classList.add('on'); voice(speakAs(T.who, l[0]), box); busy = false; P.go();
+        el('.wk-opts').innerHTML = optsHtml(T, 0); built();
       });
     }
     // the sum as tapped so far, a blank for each piece to come; after two misses the next piece lights
     function built() {
-      const p = el('.wk-spell'); if (!p) return; p.innerHTML = T.parts.map((x, i) => (i < at ? `<b>${esc(x)}</b>` : '<i></i>')).join('');
+      const p = el('.wk-spell'); if (!p) return; p.innerHTML = spellHtml(T, at);
       if (miss >= 2) all('.wk-tile').forEach((x) => x.classList.toggle('wk-hint', at < T.parts.length && !x.disabled && x.dataset.p === T.parts[at]));
     }
     // the customer gone (to the next one, or 張's おつかれさま and the card shut once every line is said)
@@ -441,7 +456,7 @@ const JOBS = (() => {
     function gone(leave) {   // patience out: もう いいです！ and off they go, the sum shown whole; the task lost
       busy = true; ctx.right(k, 3); playSfx('bad'); const t = T; at = t.parts.length; built();
       all('.wk-tile').forEach((x) => { x.disabled = true; x.classList.remove('wk-hint'); });
-      el('.wk-bub').innerHTML = `<b lang="ja">${esc(leave[0])}</b><span>${esc(leave[1])}</span>`;
+      el('.wk-bub').innerHTML = lineHtml(leave);
       next(async (live) => { await Promise.all([line(t.who, leave[0], box), sleep(1400)]); if (live()) { el('.wk-cust').classList.add('bye'); await sleep(450); } }, false);   // said in full, from its own start (N-2)
     }
     CLASS.card('wk-till', '收銀', `${head('till', 'ふくの レジ', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {

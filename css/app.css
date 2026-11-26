@@ -585,6 +585,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .wk-grr { position: absolute; left: 50px; top: -20px; z-index: 1; padding: 2px 9px; border-radius: 10px; background: #fff3e0; color: #b4441c; font-size: 15px; box-shadow: 0 2px 0 rgba(0, 0, 0, .12); pointer-events: none; animation: wkGrr 2.2s ease forwards; }
 @keyframes wkGrr { 0% { opacity: 0; transform: translateY(4px); } 12%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } } .wk-cust.on { opacity: 1; } .wk-cust.bye { transform: translateX(-30px); opacity: 0; }
 .wk-cust .kr-face { width: 56px; height: 56px; flex: none; } .wk-bub { position: relative; margin: 0; display: grid; gap: 1px; padding: 8px 12px; border-radius: 14px; background: #fff; box-shadow: 0 2px 0 rgba(0, 0, 0, .08); font-size: 18px; } .wk-bub span { font-size: 12.5px; opacity: .6; } .wk-cnt { font-style: normal; font-weight: 700; color: #c8322a; }
+:is(.wk-window, .wk-lost, .wk-till) .wk-bub { align-content: center; }   /* held as tall as the most it will show (test.4's final fix: JOBS.hold): what it shows now kept together in the middle */
 .wk-goods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; border-radius: 10px; background: #8a5a34; }
 .wk-good { display: grid; justify-items: center; gap: 2px; padding: 8px 4px 6px; border: 0; border-radius: 8px; background: #f6ecd8; cursor: pointer; font: inherit; color: #2b2b33; } .wk-good .pic { width: 54px; height: 54px; } .wk-good b { font-size: 19px; } .wk-good small { font-size: 12px; color: #8a5a34; }
 .wk-ear { display: inline-block; min-width: 3.2em; margin-right: 2px; padding: 0 8px; border: 0; border-bottom: 2px dashed #c8322a; border-radius: 6px; background: #fbe9d0; font: inherit; font-size: 16px; line-height: 1.5; cursor: pointer; vertical-align: baseline; }
@@ -615,6 +616,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .wk-spell b { padding: 1px 6px; border-radius: 8px; background: #fff3d6; color: #6a3a1c; } .wk-spell i { width: 40px; height: 28px; border-bottom: 3px solid #c9b48a; }
 .wk-spell b:last-of-type { animation: wk-pop .25s ease-out; } @keyframes wk-pop { from { transform: scale(.7); } }
 .wk-tile { min-height: 42px; min-width: 52px; padding: 0 12px; font-size: 18px; } .wk-tile:disabled { opacity: .35; }
+.wk-till .wk-who .wk-say { flex: 1 1 0; min-width: 0; }   /* 張's line the rest of the row, whatever it says: held at that width (test.4's final fix) */
 .wk-till .wk-opts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); } .wk-till .wk-spell { grid-column: 1 / -1; } .wk-till .wk-tile { min-width: 0; padding: 0 4px; }   /* up to twelve: three rows of four */
 .wk-me { margin: 8px 0 0; min-height: 1.4em; text-align: center; display: grid; gap: 1px; } .wk-me b { font-size: 15px; color: #2f7a6a; } .wk-me span { font-size: 12px; opacity: .65; }
 /* 包包子: the bun as far as it has come and 王's word (its picture beside it till known); six pictures to choose from; a perfect bun
@@ -712,6 +714,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .lf-qs, .lf-acts { display: grid; gap: 6px; margin-top: 6px; } .lf-acts { display: flex; flex-wrap: wrap; } .lf-acts .btn { flex: 1 1 auto; white-space: nowrap; } .lf-acts:empty, .lf-qs:empty { display: none; } .lf-q { min-height: 44px; font-size: 17px; text-align: left; justify-content: flex-start; flex-direction: column; align-items: flex-start; white-space: normal; } .lf-q small { display: block; font-size: 12px; color: #8a7a6e; }
 .lf-q.wk-bad, .lf-cand.wk-bad, .lf-none.wk-bad { animation: shake .3s ease; }
 .lf-cands { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; } .lf-cands:empty { display: none; }
+.lf-play { display: flow-root; }   /* the questions, or the four and the answers: held as tall as the taller (LOST_RUN), its rows' margins inside it as in the held copy */
 .lf-cand { position: relative; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; border: 0; border-radius: 10px; background: #fbf7ec; box-shadow: 0 2px 0 #d8c8a8; cursor: pointer; transition: transform .2s; }
 .lf-cand svg { width: 100%; height: auto; max-width: 78px; } .lf-cand.sel { transform: translateY(-6px); box-shadow: 0 0 0 3px #3f9a8c, 0 6px 12px rgba(0, 0, 0, .15); }
 .lf-in { display: flex; gap: 2px; justify-content: center; } .lf-in .pic { width: 24px; height: 24px; }
@@ -721,11 +724,15 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
    map shrinking to what is left, the four choices always at the foot, the fare's answers over the map once it has stopped */
 .wk-taxi .cls-card { background: #f4f1e6; color: #2b2b33; border-bottom: 10px solid #e6c23a; display: flex; flex-direction: column; max-height: calc(100vh - 32px); max-height: calc(100dvh - max(16px, env(safe-area-inset-top, 0px)) - max(16px, env(safe-area-inset-bottom, 0px))); padding: 12px 12px 10px; }
 .wk-taxi .cls-card > * { flex: none; } .wk-taxi .cls-card > .tx-mapbox { flex: 0 1 auto; }
+@media (max-height: 699px) {   /* every iPhone in Safari, as the onsen's four (test.4's final fix): nearer the screen's edges (8 px), its foot thinner — the rows held per ride leave the map room for its names */
+  .cls.wk-taxi { padding-top: max(8px, env(safe-area-inset-top, 0px)); padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+  .wk-taxi .cls-card { max-height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)) - max(8px, env(safe-area-inset-bottom, 0px))); padding-bottom: 6px; border-bottom-width: 6px; }
+}
 .tx-head { align-items: center; gap: 8px; } .tx-head b { font-size: 18px; } .tx-head :is(b, .wk-n) { white-space: nowrap; } .tx-head .tx-meter { flex: none; margin-left: auto; }
 @media (max-width: 380px) { .tx-head { gap: 6px; } .tx-head b { font-size: 16px; } .tx-head .wk-n { font-size: 13px; } .tx-meter { padding-inline: 8px; } .tx-meter b { font-size: 18px; } }
 .tx-talk { display: flex; align-items: center; gap: 8px; min-height: 48px; margin-top: 4px; } .tx-talk .kr-face { width: 36px; height: 36px; flex: none; } .tx-talk .wk-say { font-size: 14px; }
 .tx-talk[data-who="me"] :is(.kr-face, .wk-say), .tx-talk:not([data-who="me"]) .wk-me { display: none; } .tx-talk .wk-me { flex: 1; margin: 0; }
-.tx-top { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; min-height: 56px; } .tx-face { width: 44px; flex: none; } .tx-bub { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; padding: 6px 10px; border-radius: 12px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .1); font-size: 15px; } .tx-bub span { display: block; width: 100%; font-size: 12px; color: #8a7a6e; }
+.tx-top { position: relative; z-index: 2; display: flex; align-items: flex-start; gap: 8px; margin: 4px 0 0; min-height: 56px; }   /* held per ride (TAXI_RUN's holdRide), its bubble from its top; on a short phone kept to what leaves the map its size, a longer bubble over the map */ .tx-face { width: 44px; flex: none; } .tx-bub { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; padding: 6px 10px; border-radius: 12px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .1); font-size: 15px; } .tx-bub span { display: block; width: 100%; font-size: 12px; color: #8a7a6e; }
 .tx-meter { display: flex; align-items: baseline; gap: 4px; padding: 2px 10px; border-radius: 8px; background: #1c1c22; color: #ff6a4a; font-family: system-ui, sans-serif; } .tx-meter span { font-size: 11px; color: #c9cdd4; } .tx-meter b { font-size: 20px; } .tx-meter i { font-style: normal; font-size: 11px; color: #c9cdd4; }
 .tx-mapbox { position: relative; aspect-ratio: 380 / 510; min-height: 180px; margin: 4px 0 0; } .tx-map { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .tx-map .tx-narrow, .tx-bub .tx-tapnote, .tx-read { display: none; }   /* a phone's: its own labels, how to read a place, its reading on a tap (the phone type scale, at the foot) */
@@ -2539,8 +2546,11 @@ tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
   @supports (height: 1dvh) { .modal { max-height: calc(100dvh - env(safe-area-inset-top) - 8px); } }
   .modal-foot { display: flex; justify-content: flex-end; }
 }
-.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); z-index: 80; max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 12px; background: var(--fg); color: var(--bg); font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; box-shadow: var(--shadow); }
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); z-index: 80; width: max-content; max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 12px; background: var(--fg); color: var(--bg); font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; box-shadow: var(--shadow); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: none; }
+/* the toast as wide as its words up to the screen less 16 px a side (width: max-content — fixed at left 50% it shrank into half the
+   screen: 2026-11-26, the final fix of test.4, at the read level 3 lines over 町の手帳's buttons), and never in a tap's way: no toast holds
+   a control (toast() sets its text only), so what lies under it takes the tap */
 .sync-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-3); cursor: pointer; white-space: nowrap; }
 .sync-chip::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-3); flex: none; }
 .sync-chip.is-idle::before { background: var(--ok); }
@@ -2887,6 +2897,10 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .gp-foot { position: sticky; bottom: 0; z-index: 5; flex-wrap: nowrap; margin: 12px -16px 0; padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); background: var(--bg); }
   .gp-foot .right { flex: 1 1 auto; flex-wrap: nowrap; justify-content: flex-end; } .gp-foot .right .btn-primary { flex: 1 1 auto; min-height: 48px; font-size: 16px; }
   body.practicing .content:has(> .gp-foot) { padding-bottom: 0; }   /* the strip carries the bottom padding: the page ends under the button */
+  /* 講義 (the course's book): its 五十音 table, its section titles, its patterns */
+  .rd-sheet .kana-cell .kata { font-size: 12px; }   /* 講義's 五十音 table: a cell's カタカナ (its rōmaji beside it, a reading, stays 11) */
+  .lp-title { font-size: var(--fs-sec); }   /* 講義's section titles (這個單元, 例句): the survey's 14 */
+  .lesson .rule { font-size: var(--fs-read); }   /* 講義's patterns, one a line (test.4) */
   /* the labels of every day's screens at the label level (2026-11-26, test.4's fix round): the chips (目前單元 and 新 on every
      question — ruling 10; a glossary chip keeps its row's size, chips set larger keep theirs), 說明, the 目前單元 card's label, a
      unit's weeks, a set's harvest, a letter's state and date, the notebook's tabs; a toast is read, the 學習紀錄 and 變化表 empty
@@ -2908,11 +2922,9 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .tb-who, .tb-lines b, .tb-lines small { font-size: var(--fs-label); }
   .tb-name ruby, .tb-name span { font-size: var(--fs-sec); }
   .tb-talk summary small, .tb-ev small { font-size: 12.5px; } .tb-talk summary small { white-space: nowrap; }   /* the day whole: on the next line if the title leaves no room */
-  /* the 打工證 and the cruise's card: the note under the rank, the tables' heads and places; the page's foot (its line, its rules
-     folded: wk-nfold) a note */
+  /* the 打工證 and the cruise's card: the note under the rank, the tables' heads and places */
   .wk-lic small { font-size: var(--fs-sec); }
   .wk-tbl th, .wk-jobs-tbl td:first-child small { font-size: var(--fs-label); }
-  .wk-note, .wk-nfold.disclose > summary, .wk-nfold p { font-size: var(--fs-sec); }
   /* 學習分析's 今天 card, its week, its gauges; the tables' heads; 聽一輪's count; 錯題本's label; the course's spines */
   .plan-line, .plan-topics { font-size: var(--fs-read); } .plan-topics b { font-size: var(--fs-label); }
   .week-stat-l, .week-axis { font-size: 12px; }
@@ -2926,22 +2938,23 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .listen.compact .listen-count, .listen-seg .n, .lopt, .lopt-scope span { font-size: var(--fs-label); }   /* 聽一輪's count, its tabs' counts, its round pills */
   .nb-label span { font-size: var(--fs-label); }
   .spine .lab.v { font-size: 12px; }
+  /* 考試 */
   .day-cal .left, .day-cal .stamp { font-size: 12px; }   /* 考試's tear-off calendar: 試験まで…日 and the streak's stamp, each on one line in its 104 px */
-  .rd-sheet .kana-cell .kata { font-size: 12px; }   /* 講義's 五十音 table: a cell's カタカナ (its rōmaji beside it, a reading, stays 11) */
-  .lp-title { font-size: var(--fs-sec); }   /* 講義's section titles (這個單元, 例句): the survey's 14 */
-  .lesson .rule { font-size: var(--fs-read); }   /* 講義's patterns, one a line (test.4) */
   /* 設定: each setting's name read, its note a label's size at full strength */
   .setting-row .label { font-size: var(--fs-read); }
   .setting-row .hint { font-size: var(--fs-label); opacity: 1; }
   /* the town's talks: the Chinese under a line (and a pick's, 中文 open), who someone is, a word's gloss; what to say (its own line)
-     and why a pick was wrong read; 中文 a label, a little stronger */
+     and why a pick was wrong read; 中文 a label, a little stronger; the ▼ to go on a label */
   .talk-zh, .talk-name span, .talk-gloss, .talk-pick small { font-size: var(--fs-sec); }
   .talk-card.asking .talk-name span { display: block; margin: 2px 0 0; font-size: var(--fs-read); }
   .talk-why { font-size: var(--fs-read); }
   .zh-btn { font-size: var(--fs-label); opacity: .8; }
-  /* the 求人看板's head and each job's place, pay and whether it is open; what each job is (a line, test.4) read */
+  .talk-next { font-size: var(--fs-label); }
+  /* the 求人看板's head and each job's place, pay and whether it is open; what each job is (a line, test.4) read; its foot, as the 打工證
+     page's (the line, the rules folded: wk-nfold), a note */
   .wk-bhead span, .wk-jtop small, .wk-jtop em, .wk-need { font-size: var(--fs-sec); }
   .wk-does { font-size: var(--fs-read); }
+  .wk-note, .wk-nfold.disclose > summary, .wk-nfold p { font-size: var(--fs-sec); }
   /* the 打工 rules card (test.4): its steps read at every width (.wk-steps), and the rules in full under 詳細規則 too; the fold's title,
      the pay, the shift left halfway and the Chinese under はたらきますか？ a note's size (the headings and the abilities' chips labels,
      13 already; the place's name is Japanese) */
@@ -2966,8 +2979,8 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .rd-led small, .yd-go small, .yd-buy small { font-size: var(--fs-label); }
   /* the wardrobe's names, the 收納箱 (its things, their piles, its tabs and counts), 五十音's 我的標記 and ▶ buttons, a word card's
      rating hints (on two lines where the four in a row leave no room), the blackboard's rōmaji (a reading: 10), the writing pad's
-     credit, a talk's ▼ */
-  .dress-opt, .tray-it, .tray-it .tray-n, .tray-tab, .tray-tab b, .mark-btn.mark-sm, .kana-row-btn, .talk-next { font-size: var(--fs-label); }
+     credit */
+  .dress-opt, .tray-it, .tray-it .tray-n, .tray-tab, .tray-tab b, .mark-btn.mark-sm, .kana-row-btn { font-size: var(--fs-label); }
   .rate .btn { padding-inline: 6px; } .rate .btn small { font-size: var(--fs-label); white-space: normal; word-break: keep-all; line-height: 1.3; }   /* 1・／稍後再看 where it must break */
   .cb-k small { font-size: 10px; }
   .wr-credit { font-size: var(--fs-sec); }

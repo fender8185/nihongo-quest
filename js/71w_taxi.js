@@ -120,10 +120,28 @@ const TAXI_RUN = (() => {
     const meter = () => { const m = el('.tx-meter b'); if (m) m.textContent = yenStr(R.fare); };
     // what they said last (the way at this crossing, or where to): heard; shown once the ride is over or after two misses
     const told = () => (R.ride.guided ? (R.ride.lines.filter((x) => x.at <= R.i).pop() || { line: R.ride.ask }).line : R.ride.ask);
+    const bubHtml = (open, [ja, zh], guided) => `<button type="button" class="wk-ear tx-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="bt-dots">……</b>'}${!open && !guided ? '<span class="tx-tapnote">點地圖上的地名，看它的讀音</span>' : ''}`;   // one who only says where: on a phone, how to find a place's reading (shown there alone: readOut)
     function bub() {
-      const b = el('.tx-bub'); if (!b) return; const open = R.phase === 'pay' || R.phase === 'done' || R.miss >= 2, [ja, zh] = R.phase === 'pay' ? s.cust.price : told();
-      b.innerHTML = `<button type="button" class="wk-ear tx-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="bt-dots">……</b>'}${!open && !R.ride.guided ? '<span class="tx-tapnote">點地圖上的地名，看它的讀音</span>' : ''}`;   // one who only says where: on a phone, how to find a place's reading (shown there alone: readOut)
+      const b = el('.tx-bub'); if (!b) return; const open = R.phase === 'pay' || R.phase === 'done' || R.miss >= 2;
+      b.innerHTML = bubHtml(open, R.phase === 'pay' ? s.cust.price : told(), R.ride.guided);
     }
+    // held for each ride (2026-11-26, the final fix of test.4 — the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」 — as the
+    // onsen's: JOBS.hold, TL.keep): the talk row as its tallest line (鈴木's words, the hero's turns and the fare at any meter); the top row
+    // as tall as its bubble will be (the way told at each crossing, where to, the fare asked) — but never so tall that the map under it
+    // gets too small for its names at 12.5 px (fitMap's 2.2 at most: MAP_MIN, a short phone's): there the bubble, opened, spills over the
+    // map's top (.tx-top over it) — so the map and the buttons never move
+    const TL = JOBS.talkLine({ box: () => document.querySelector('.cls.wk-taxi'), sel: '.tx-talk', who: s.who, first });
+    const payLine = (fare) => S().pay.map((x, i) => (i ? x.replace('{p}', fare) : x.replace('{P}', YEN.priceMark(fare))));
+    const talkLines = (g, last) => ({ drv: [s.wrong, s.on, s.ask, s.cat, ...s.chat].concat(['{右|みぎ}', '{左|ひだり}'].map((d, i) => [s.lean[0].replace('{D}', d), s.lean[1].replace('{d}', i ? '左' : '右')]), last ? [s.end, s.all] : []),
+      me: Object.values(s.go).concat(Array.from({ length: 32 }, (_, n) => payLine(500 + 80 * (n - 1)))) });
+    const MAP_MIN = 240;   // px: the map's height at which its names read at 12.5 (fitMap) with the stacked ones apart (図書館 over 郵便局: at 223 they touch by 0.7 px)
+    const topCap = () => { const card = el('.cls-card'), top = el('.tx-top'), box = el('.tx-mapbox'); if (!card || !top || !box) return Infinity;
+      const px = (e, ...ps) => { const cs = getComputedStyle(e); return ps.reduce((a, q) => a + (parseFloat(cs[q]) || 0), 0); }, max = parseFloat(getComputedStyle(card).maxHeight); if (!(max > 0)) return Infinity;
+      const rest = [...card.children].filter((e) => e !== top && e !== box && getComputedStyle(e).position !== 'absolute').reduce((a, e) => a + e.offsetHeight + px(e, 'marginTop', 'marginBottom'), 0);
+      return max - px(card, 'paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth') - rest - px(box, 'marginTop', 'marginBottom') - MAP_MIN - px(top, 'marginTop', 'marginBottom'); };
+    const topHtml = (g, open, l) => `<span class="kr-face tx-face">${TOWNEV.face(g.who)}</span><p class="tx-bub">${bubHtml(open, l, g.guided)}</p>`;
+    const holdRide = (g, last) => { TL.keep(() => talkLines(g, last));
+      JOBS.hold(el('.tx-top'), [topHtml(g, false, g.ask)].concat([g.ask, ...(g.guided ? g.lines.map((x) => x.line) : []), s.cust.price].map((l) => topHtml(g, true, l))), topCap); };
     // a phone's map labels (tx-narrow) at 12.5 px on the screen, the map drawn at whatever size the card leaves it (scale k), never
     // smaller than drawn; again as the card's size changes. A label grown onto another place's dot slides sideways off it (2026-11-26,
     // test.4's fix round: 図書館's over 郵便局's on an SE), 2 units clear
@@ -222,7 +240,7 @@ const TAXI_RUN = (() => {
       // the card); shut: no more voices (paid all the same)
       const live2 = () => mine === runs && Boolean(el('.tx-map')) && (ctx.on() || k >= 5);
       const bye = (async () => {
-        await said(me(S().pay.map((x, i) => (i ? x.replace('{p}', r.fare) : x.replace('{P}', YEN.priceMark(r.fare))))), 700); if (!live2()) return;
+        await said(me(payLine(r.fare)), 700); if (!live2()) return;
         if (more) { await said(speakAs(r.ride.who, s.cust.keep[0]), 600); playSfx('coin', 2); }
         await said(speakAs(r.ride.who, s.cust.thanks[0]), 600); if (!live2()) return;
         if (k < 5) { begin(); return; }
@@ -235,7 +253,7 @@ const TAXI_RUN = (() => {
     async function begin() {
       const g = rides[k], station = k === 0, pos = station ? STATION.slice() : xy(...g.from), rot = station ? 0 : g.h0 * 90;
       R = { k, ride: g, phase: 'board', at: g.from.slice(), h: g.h0, i: 0, want: g.path[0], choosing: false, choice: null, fare: 500, steps: 0, miss: 0, far: false, pos, rot, lean: null, saying: null };
-      const me0 = R; el('.wk-n').textContent = `${k + 1}／5`; el('.tx-face').innerHTML = TOWNEV.face(g.who); el('.tx-pays').innerHTML = ''; meter(); ctl();
+      const me0 = R; el('.wk-n').textContent = `${k + 1}／5`; el('.tx-face').innerHTML = TOWNEV.face(g.who); el('.tx-pays').innerHTML = ''; meter(); ctl(); holdRide(g, k >= 4);
       const car = el('.tx-car'); if (car) car.setAttribute('transform', `translate(${pos[0]} ${pos[1]}) rotate(${rot})`);
       bub(); SND.play('door-close', { vol: 0.5 });
       await said(speakAs(g.who, g.ask[0]), 400); if (!live() || R !== me0) return;
