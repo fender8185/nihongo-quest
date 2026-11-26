@@ -609,8 +609,8 @@ def test_the_koagari_cushions_are_wider_than_a_head_and_people_still_kneel_on_th
       out.hero = { kneel: h.classList.contains('kneel'), at: Math.abs(yh.X - hx) < 0.5 && Math.abs(yh.Y - hy) < 0.5, on: on(17.6, 13.2), wider: wider(on(17.6, 13.2), h) };
       return JSON.stringify(out); })()"""))
     assert r['n'] == 4 and r['apart'], r   # four cushions, none over another or over the table
-    assert r['nishimura']['kneel'] and r['nishimura']['on'] == 0 and r['nishimura']['wider'] >= 1.1, r   # 西村 on the first one's middle, it wider than her head (her bob: 1.14; 0.83 before)
-    assert r['hero']['kneel'] and r['hero']['at'] and r['hero']['on'] == 2 and r['hero']['wider'] >= 1.1, r   # the hero, tapped there, on the third's (1.22)
+    assert r['nishimura']['kneel'] and r['nishimura']['on'] == 0 and r['nishimura']['wider'] >= 1.1, r   # 西村 on the first one's middle, it wider than her head (her bob: 1.14; 0.76 before)
+    assert r['hero']['kneel'] and r['hero']['at'] and r['hero']['on'] == 2 and r['hero']['wider'] >= 1.1, r   # the hero, tapped there, on the third's (1.22; 0.81 before)
 
 # ---- after round 7 (2026-11-10, the user's list) ----
 def test_the_way_down_to_the_beach_is_long_small_along_the_far_path_and_a_tap_gets_there_at_once(b):

@@ -6,6 +6,9 @@ let roomNow = 'study';   // the room 書房's drawing shows now (1.3.0: 書房 o
 function placedWares(rm = roomNow) { return Object.keys(state.placed).filter((id) => owns(id) && WARE.has(id) && forRoom(WARE.get(id)) && (state.placed[id].rm || 'study') === rm).map((id) => ({ id, it: WARE.get(id), p: state.placed[id] })); }
 function wareFootprint(it, p) { const [w, d] = p.r ? [it.fp[1], it.fp[0]] : it.fp; return [p.x - w / 2, p.y - d / 2, p.x + w / 2, p.y + d / 2]; }
 function wareRect(it, p) { return [p.u - it.size[0] / 2, p.v - it.size[1] / 2, p.u + it.size[0] / 2, p.v + it.size[1] / 2]; }
+// 暖桌's own three cushions, on its left (−x), front (+y) and right (+x), from its footprint (2026-11-26, the review: drawn and knelt
+// on from one place): each lies from c0 out from its middle to c1, the footprint's edge, cw to either side; the quilt ends just inside c0
+function kotatsuSeats(it) { const c1 = it.fp[0] / 2, c0 = c1 - 0.645; return { c0, c1, cw: 0.675, mid: (c0 + c1) / 2, quilt: c0 - 0.03 }; }
 const ROOM = (() => {
   const S = 40, RH = 12, WAIN = 3.2;   // RW, RD: the room shown now (ROOMS)   // RH: the walls were 19 high, to fill a wide screen's top corners, till the room became a block in the sky (1.2.0)
   const P = (x, y, z = 0) => [(x - y) * S, (x + y) * S / 2 - z * S];
@@ -956,7 +959,7 @@ const ROOM = (() => {
   // is put away, the purchases are left alone, and one with nowhere free stays where it was. placed, owned: the copy being loaded
   const GREW = ['zabuton', 'chabudai', 'kotatsu'];
   function refit(placed, owned) {
-    const drawn = {}; Object.keys(placed).forEach((id) => { if (WARE.has(id) && (owned[id] || WARE.get(id).starter)) drawn[id] = placed[id]; });   // what the room shows: owned, or the house's own
+    const drawn = {}; Object.keys(placed).forEach((id) => { const p = placed[id]; if (p && typeof p === 'object' && WARE.has(id) && (owned[id] || WARE.get(id).starter)) drawn[id] = p; });   // what the room shows: owned, or the house's own (a damaged entry, not an object, left out — and left as it is)
     GREW.forEach((id) => {
       const it = WARE.get(id), p = drawn[id];
       if (!it || !p || p.w !== 'F' || !ROOMS[roomOf(p)] || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return;
@@ -1321,9 +1324,8 @@ const ROOM = (() => {
     }
     // the bed (test, 2026-11-09): lain on, the head on the pillow, getting off by its open side
     if (o.it.act === 'bed') { use(el, () => NAP.offer(), { x: o.p.x, y: o.p.y + 1.22, look: 'F', act: 'sleep', from: [o.p.x + 1.95, o.p.y + 1], out: [1.95, -0.2], seat: 'w:' + o.id }); return; }
-    // (2026-11-26: the kotatsu half as big again — the middle of its left cushion, 1.77 out; walked to and stood up 0.5 past its edge)
-    if (o.it.act === 'kotatsu') { use(el, () => {}, { x: o.p.x - 1.77, y: o.p.y, look: 'X', act: 'kneel', from: [o.p.x - 2.6, o.p.y], out: [-0.83, 0] }); return; }
     const g = walkGrid(), ok = ([x, y]) => { const i = Math.floor(x / CELL), j = Math.floor(y / CELL); return i >= 0 && j >= 0 && i < GW && j < GH && !g[j * GW + i]; };
+    if (o.it.act === 'kotatsu') { use(el, () => {}, kotatsuSpot(o, ok)); return; }
     if (o.it.act === 'kneel') { use(el, () => {}, kneelSpot(o, ok)); return; }
     // a wall's (the round mirror): stood before it, facing the wall. A floor one: on its +y side, else its +x side — the other
     // way round for one whose front looks along +x (faces, unturned: the wardrobe, the full-length mirror), so it is stood before
@@ -1338,6 +1340,15 @@ const ROOM = (() => {
     const o = placedWares().find((q) => q.id === 'gramophone'); if (!o) return '';
     const [gx, gy] = P(o.p.x + 0.2, o.p.y - 0.2, 1.1);
     return `<div class="tune gramo" aria-hidden="true" style="${vbPct(gx - 20, gy - 104)};${vbSize(40, 60)}"><i style="--w:0s;--dx:-12px">♪</i><i style="--w:-1.2s;--dx:14px">♫</i><i style="--w:-2.4s;--dx:2px">♪</i></div>`;
+  }
+  // at the kotatsu (2026-11-26, the review): knelt on the middle of one of its own cushions (kotatsuSeats), facing it — the left one,
+  // else the front one, else the right one: the first whose step-off point is clear. That point is 0.6 past the kotatsu's edge, so its
+  // walking cell is off the kotatsu's own 0.3 pad (the left one in a room as laid out); a kotatsu moved flush against something (refit)
+  // has it inside that thing. Walked to there, and stood up there
+  function kotatsuSpot(o, ok) {
+    const s = kotatsuSeats(o.it), off = s.c1 + 0.6, sides = [[-1, 0, 'X'], [0, 1, 'R'], [1, 0, 'L']];
+    const [a, b, look] = sides.find(([dx, dy]) => ok([o.p.x + dx * off, o.p.y + dy * off])) || sides[0];
+    return { x: o.p.x + a * s.mid, y: o.p.y + b * s.mid, look, act: 'kneel', from: [o.p.x + a * off, o.p.y + b * off], out: [a * (off - s.mid), b * (off - s.mid)] };
   }
   // knelt (test, 2026-11-09), as at the kotatsu: on a floor cushion — facing a low table beside it, else us; at a low table on a
   // cushion beside it, else at its first open side (left, back, right, front), facing it. from: where the hero walks to, out: back there
@@ -2053,8 +2064,9 @@ const DECOR = (() => {
     },
     kotatsu: (x, y) => {   // a kotatsu in the middle of 書房: the quilt, the table top, a basket of mikan, a cushion on three sides
       // 2026-11-26 (a tester: 暖爐桌也好小): half as big again across — the quilt, the top, the cushions and what stands on it — as low as it was.
-      // q: the quilt's half width, t: the top's; each cushion from c0 to c1 out from the middle, cw either side of it
-      const q = 1.425, t = 1.23, c0 = 1.455, c1 = 2.1, cw = 0.675, L = lit(x, y), cushion = (x0, y0, x1, y1, c, ct) => box(c, x0, y0, 0, x1, y1, 0.18, { t: ct, hlv: true });
+      // q: the quilt's half width, t: the top's; each cushion from c0 to c1 out from the middle, cw either side of it (kotatsuSeats: from
+      // its footprint, where the hero kneels too)
+      const { c0, c1, cw, quilt: q } = kotatsuSeats(WARE.get('kotatsu')), t = q - 0.195, L = lit(x, y), cushion = (x0, y0, x1, y1, c, ct) => box(c, x0, y0, 0, x1, y1, 0.18, { t: ct, hlv: true });
       let s = shadow(x - 1.95, y - 1.95, x + 2.18, y + 2.18, 0.7) + cushion(x - c1, y - cw, x - c0, y + cw, '#c8553f', '#d36a55');
       s += box('#e6d9c3', x - q, y - q, 0, x + q, y + q, 0.7, { t: '#ede3d1', y: '#dccdb4', x: '#d2c2a6', hlv: true });
       s += `<g transform="${onZ(0.004)}"><path d="M${q2(x - q)} ${q2(y + q)} H${q2(x + q)} V${q2(y - q)}" fill="none" stroke="#b9a684" stroke-opacity=".5" stroke-width=".05"/></g>`;

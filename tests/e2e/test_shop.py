@@ -1238,6 +1238,45 @@ def test_a_seat_saved_where_it_no_longer_fits_moves_to_the_nearest_free_spot_and
     assert r['merged'] == [9.85, 4.85, True], r   # the old spots back from a 1.21.0 device: moved again
     assert r['fresh'] == [4.6, 12.6], r
 
+# fix round 1 (2026-11-26, the review's B4): the kotatsu where refit leaves it in the test above, flush against a bonsai on its left —
+# the hero kneels at it on a cushion whose step-off is clear (its front one), stands up and walks off to the sofa: his spot, as drawn
+# each frame, is never inside anything but the kotatsu, nor as kept in nq_hero inside anything. As laid out he still takes its left cushion
+VISIT = """ localStorage.removeItem('nq_hero'); const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('.study'), hero = () => st().querySelector('.room .hero');
+  const until = async (f, ms) => { const t0 = Date.now(); while (!f() && Date.now() - t0 < ms) await wait(50); await wait(300); };
+  /* his spot in 書房 from his box (heroPlace's vbPct turned back, 書房's view box): [x, y, kneel／sofa／''] each frame */
+  const pos = () => { const h = hero(), VB = [-980, -500, 2200, 1650], px = parseFloat(h.style.left) / 100 * VB[2] + VB[0] + 60, py = parseFloat(h.style.top) / 100 * VB[3] + VB[1] + 200, a = px / 40, s = py / 20;
+    return [(s + a) / 2, (s - a) / 2, ['kneel', 'sofa'].find((c) => h.classList.contains(c)) || '']; };
+  const record = () => { const fr = []; let on = true; const loop = () => { fr.push(pos()); if (on) requestAnimationFrame(loop); }; requestAnimationFrame(loop); return { fr, stop: () => { on = false; } }; };
+  const inside = (q, but) => placedWares().filter((o) => o.it.kind === 'floor' && o.id !== but).map((o) => o.id).filter((id) => { const f = wareFootprint(WARE.get(id), state.placed[id]); return q[0] > f[0] + 1e-6 && q[0] < f[2] - 1e-6 && q[1] > f[1] + 1e-6 && q[1] < f[3] - 1e-6; });
+  const r2 = (v) => Math.round(v * 100) / 100, hits = [];
+  """ + GO_ROOM + """ await wait(700); let r = record(); st().querySelector('.ware-use[data-ware="kotatsu"]').click(); await until(() => hero().classList.contains('kneel'), 9000); r.stop();
+  const k = r.fr.findIndex((f) => f[2] === 'kneel'), knelt = k >= 0 ? r.fr[k] : null, saved = JSON.parse(localStorage.getItem('nq_hero')).room, look = ['back', 'flip', 'turn'].filter((c) => hero().classList.contains(c)).join(' ');
+  r.fr.slice(0, k).forEach((f) => hits.push(...inside(f, 'kotatsu'))); if (knelt) hits.push(...inside(knelt, 'kotatsu')); hits.push(...inside([saved.x, saved.y]));   /* walking there, kneeling, kept */
+  r = record(); st().querySelector('.ware-use[data-ware="sofa"]').click(); await until(() => hero().classList.contains('sofa'), 9000); r.stop();
+  r.fr.filter((f) => !f[2]).forEach((f) => hits.push(...inside(f, 'kotatsu')));   /* up (a frame still on its cushion) and walking off */
+  return JSON.stringify({ kneel: knelt && knelt.slice(0, 2).map(r2), look, saved: [saved.x, saved.y].map(r2), hits: [...new Set(hits)], end: hero().classList.contains('sofa') }); })()"""
+
+def test_at_a_kotatsu_moved_against_something_the_hero_kneels_on_a_clear_side_and_never_stands_inside_a_thing(b):
+    laid = json.loads(ev(b, "(async () => { " + FRESH + VISIT))
+    assert laid == {'kneel': [2.82, 12.6], 'look': 'turn', 'saved': [1.9, 12.6], 'hits': [], 'end': True}, laid   # its left cushion, as before
+    moved = json.loads(ev(b, "(async () => { " + FRESH + """ state.owned.bonsai = { paid: 12, on: '2026-11-20' };
+      Object.assign(state.placed, { bonsai: { w: 'F', x: 2.2, y: 12.6, r: 0 }, kotatsu: { w: 'F', x: 4.85, y: 12.6, r: 0 } }); saveState(); """ + VISIT))
+    assert moved['hits'] == [] and moved['end'], moved   # never inside the bonsai, nor anything else, drawn or kept
+    assert moved['kneel'] == [4.85, 14.38] and moved['look'] == 'back turn' and moved['saved'] == [4.85, 15.3], moved   # its left blocked by the bonsai: the front cushion, facing it
+
+# fix round 1 (2026-11-26, the review's A2): an owned ware whose placed entry is damaged (null) — the progress still opens (the seats'
+# refit read it and the app stopped at boot) with the entry left as it was; a fault inside the refit goes to the error reports, never a stop
+def test_a_damaged_placed_entry_still_opens_the_app_and_a_refit_fault_is_only_reported(b):
+    js = "(async () => { " + FRESH + """ state.owned.bonsai = { paid: 12, on: '2026-11-20' }; state.placed.bonsai = null; saveState(); await (pendingWrite || Promise.resolve()); await new Promise(q => setTimeout(q, 150)); window.__t3 = 1; location.reload(); })()"""
+    js2 = """(async () => { await new Promise(q => setTimeout(q, 2500)); const out = { stopped: /現在沒辦法開始|讀取這台裝置上的進度時出了問題/.test(document.body.textContent), loaded: !!(state && state.updatedAt && state.owned.bonsai), story: state.storyV, entry: state.placed && 'bonsai' in state.placed ? state.placed.bonsai : 'gone' };
+      const r0 = ROOM.refit, n0 = ErrorReport.queue.length; ROOM.refit = () => { throw new Error('refit broke'); }; let threw = false, s = null;
+      try { s = normalizeState(JSON.parse(JSON.stringify(state))); } catch (e) { threw = true; } finally { ROOM.refit = r0; }
+      out.fault = { threw, normalized: !!(s && s.updatedAt), reported: ErrorReport.queue.slice(n0).map((x) => x.kind + ': ' + x.message) };
+      return JSON.stringify(out); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js), ("wait", "!window.__t3 && document.readyState === 'complete'"), ("eval", js2)])[-1])
+    assert r['stopped'] is False and r['loaded'] and r['story'] == 9 and r['entry'] is None, r   # opened, this progress, the entry as it was
+    assert r['fault'] == {'threw': False, 'normalized': True, 'reported': ['error: ROOM.refit: refit broke']}, r   # reported, and the copy normalized all the same
+
 def test_the_telescope_shows_the_stars_and_a_stone_lantern_switches(b):
     js = "(async () => { " + FRESH + """ ['telescope', 'stonelantern'].forEach(id => { state.owned[id] = { paid: 0, on: todayStr() }; }); state.placed.telescope = { w: 'Y', x: -60, y: 80 }; state.placed.stonelantern = { w: 'Y', x: 60, y: 60 }; saveState();
       location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('.yard');
