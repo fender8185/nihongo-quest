@@ -22,6 +22,10 @@ const SHOKUDO_TABLES = [[6.5, 9.5, 8, 9.8], [13, 16, 8, 9.8]];   // the shokudo'
 const KYO_TABLES = [[4.4, 10.4, 6.6, 8.0], [11.8, 17.8, 6.6, 8.0]];
 const KYO_CHAIRS = [5.6, 7.4, 9.2, 13, 14.8, 16.6];
 const KYO_TATAMI = [15.4, 22, 10.2, 16];
+// 居酒屋とり吉's 小上がり: its four cushions [u, v, how whoever kneels there faces], round the low table (u 17–19.8, v 10.1–12.4).
+// 2026-11-26 (a tester: the seats too small for the Q版 people): 1.35 across, half as big again — still clear of the table and of
+// each other, their middles where they were, where the town's people kneel (events.js: izakaya seat3, seat4)
+const IZ_ZABUTON = [[17.6, 9.3, 'kneel turn flip'], [19.2, 9.3, 'kneel turn flip'], [17.6, 13.2, 'kneel back turn'], [19.2, 13.2, 'kneel back turn']];
 let isoProps = [];
 const isoProp = (box, art, h = 2) => { isoProps.push({ box, h, z: 0 }); return `@@ISO${isoProps.length - 1}@@${art}@@/ISO@@`; };
 function isoLay(html) {
@@ -358,8 +362,8 @@ const PLACE_USE = {
     { id: 'crates', name: '啤酒箱', box: isoBBox(0.5, 1.9, 9.6, 11, 0, 1.9), kind: 'do', go: isoXY(2.7, 10.3), face: 'back turn flip', pose: 'reach', say: 'おもい…！', fx: 'crates', fxc: 'rattle' }],
   izakaya: [
     ...[4, 6.5, 9, 11.5, 14].map((u, i) => ({ id: 'stool' + i, name: '吧台座位', box: isoBBox(u - 0.48, u + 0.48, 3.15, 4.05, 0, 1.2), kind: 'seat', say: 'とりあえずビール！', seats: [[u, 3.6, 0.2, 'bench back turn']] })),
-    { id: 'chabudai', name: '矮桌', box: isoBBox(17, 19.8, 10.1, 12.4, 1.05, 1.3), kind: 'seat', say: 'かんぱい！', seats: [[17.6, 9.3, 0.6, 'kneel turn flip'], [19.2, 9.3, 0.6, 'kneel turn flip'], [17.6, 13.2, 0.6, 'kneel back turn'], [19.2, 13.2, 0.6, 'kneel back turn']] },
-    ...[[17.6, 9.3, 'kneel turn flip'], [19.2, 9.3, 'kneel turn flip'], [17.6, 13.2, 'kneel back turn'], [19.2, 13.2, 'kneel back turn']].map(([u, v, how], i) => ({ id: 'zabuton' + i, name: '坐墊', box: isoBBox(u - 0.5, u + 0.5, v - 0.5, v + 0.5, 0.6, 1.3), kind: 'seat', say: 'かんぱい！', seats: [[u, v, 0.6, how]] })),
+    { id: 'chabudai', name: '矮桌', box: isoBBox(17, 19.8, 10.1, 12.4, 1.05, 1.3), kind: 'seat', say: 'かんぱい！', seats: IZ_ZABUTON.map(([u, v, how]) => [u, v, 0.6, how]) },
+    ...IZ_ZABUTON.map(([u, v, how], i) => ({ id: 'zabuton' + i, name: '坐墊', box: isoBBox(u - 0.75, u + 0.75, v - 0.75, v + 0.75, 0.6, 1.3), kind: 'seat', say: 'かんぱい！', seats: [[u, v, 0.6, how]] })),
     { id: 'grill', name: '烤爐', box: isoBBox(6, 9.4, 1.6, 2.1, 1.95, 3), kind: 'do', go: isoXY(7.7, 4.8), face: 'back turn', pose: 'look', say: 'いい匂い！', fx: 'grill', fxc: 'flare' },
     { id: 'taru', name: '酒樽', box: isoBBox(0.5, 1.7, 8.8, 11.3, 0, 2.4), kind: 'do', go: isoXY(2.6, 10.1), face: 'back turn flip', pose: 'reach', say: 'おもい…！', fx: 'taru', fxc: 'rock' },
     { id: 'menu', name: '黑板', box: isoBBox(0, 0.1, 2.9, 8.7, 3.5, 6.5), kind: 'do', go: isoXY(1.4, 5.8), face: 'back turn flip', pose: 'look', toast: 'きょうのおすすめ：焼き鳥 1本 120円・からあげ 480円', buy: 'izakaya' }]

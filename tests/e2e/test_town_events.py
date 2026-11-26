@@ -594,6 +594,24 @@ def test_the_two_rooms_are_seen_at_45_degrees_the_hero_stays_on_their_floor_and_
       return JSON.stringify({ iso, floor: u > 0 && u < ISO.RW && v > 0 && v < ISO.RD, behind, sat, under: tableZ > z(h) }); })()"""))
     assert r == {'iso': True, 'floor': True, 'behind': True, 'sat': True, 'under': True}, r   # the cook behind the counter; sat facing us behind a table
 
+# 2026-11-26 (a tester: the seats too small for the Q版 people): the 居酒屋's 小上がり cushions half as big again — each wider than the
+# head of whoever kneels on it (they were narrower), none over another or over the low table — and the people still kneel on their
+# middles: 西村 there at night, the hero on a tap
+def test_the_koagari_cushions_are_wider_than_a_head_and_people_still_kneel_on_them(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + USE + """ fake([]); state.town.seen.nishimura = 1; saveState(); await go('izakaya', 21);
+      const tops = [...y().querySelectorAll('.indoor-land rect[fill="#7a4a8a"]')], boxes = tops.map((t) => { const [u, v, w, h] = ['x', 'y', 'width', 'height'].map((k) => Number(t.getAttribute(k))); return [u, u + w, v, v + h]; });
+      const over = (a, c) => a[0] < c[1] - 1e-6 && c[0] < a[1] - 1e-6 && a[2] < c[3] - 1e-6 && c[2] < a[3] - 1e-6, table = [17, 19.8, 10.1, 12.4];
+      const on = (u, v) => boxes.findIndex(([u0, u1, v0, v1]) => Math.abs(u - (u0 + u1) / 2) < 0.05 && Math.abs(v - (v0 + v1) / 2) < 0.05);
+      const head = (el) => Math.max(...[...el.querySelectorAll('.head')].map((q) => q.getBoundingClientRect().width)), wider = (i, el) => Math.round(tops[i].getBoundingClientRect().width / head(el) * 100) / 100;
+      const n = y().querySelector('.npc[data-npc="nishimura"]'), sp = TOWN.SPOTS.izakaya.seat3;
+      const out = { n: tops.length, apart: boxes.every((a, i) => !over(a, table) && boxes.every((c, j) => i === j || !over(a, c))), nishimura: n ? { kneel: n.classList.contains('kneel'), on: on(sp.u, sp.v), wider: wider(on(sp.u, sp.v), n) } : null };
+      await use('zabuton2'); const h = y().querySelector('.yhero'), [hx, hy] = isoXY(17.6, 13.2, 0.6);
+      out.hero = { kneel: h.classList.contains('kneel'), at: Math.abs(yh.X - hx) < 0.5 && Math.abs(yh.Y - hy) < 0.5, on: on(17.6, 13.2), wider: wider(on(17.6, 13.2), h) };
+      return JSON.stringify(out); })()"""))
+    assert r['n'] == 4 and r['apart'], r   # four cushions, none over another or over the table
+    assert r['nishimura']['kneel'] and r['nishimura']['on'] == 0 and r['nishimura']['wider'] >= 1.1, r   # 西村 on the first one's middle, it wider than her head (her bob: 1.14; 0.83 before)
+    assert r['hero']['kneel'] and r['hero']['at'] and r['hero']['on'] == 2 and r['hero']['wider'] >= 1.1, r   # the hero, tapped there, on the third's (1.22)
+
 # ---- after round 7 (2026-11-10, the user's list) ----
 def test_the_way_down_to_the_beach_is_long_small_along_the_far_path_and_a_tap_gets_there_at_once(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ state.met = { koharu: 1, mugi: 1 }; fake([]); await go('outside', 12);

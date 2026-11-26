@@ -949,6 +949,31 @@ const ROOM = (() => {
     const p = placed.fullMirror, it = WARE.get('fullMirror');
     if (p && p.w === 'F' && !p.r && !p.rm && p.x === 0.3 && p.y === 3.25 && inRoomOf('study', () => fits(it, it.home, placed))) placed.fullMirror = Object.assign({}, it.home);
   }
+  // 2026-11-26 (a tester: the seats far smaller than the Q版 hero): 座布團, 矮桌 and 暖桌 grew (WARES). One of them saved where it
+  // no longer fits at its new size goes to the nearest spot in its own room where it does — at every load, not once by roomV: a copy
+  // from a device still on 1.21.0 (which draws them smaller, and fits them so) can bring one back in a sync. The cushion is seen to
+  // first, then the table, then the kotatsu, so the smaller one steps aside when two of them meet. Only these three move; nothing
+  // is put away, the purchases are left alone, and one with nowhere free stays where it was. placed, owned: the copy being loaded
+  const GREW = ['zabuton', 'chabudai', 'kotatsu'];
+  function refit(placed, owned) {
+    const drawn = {}; Object.keys(placed).forEach((id) => { if (WARE.has(id) && (owned[id] || WARE.get(id).starter)) drawn[id] = placed[id]; });   // what the room shows: owned, or the house's own
+    GREW.forEach((id) => {
+      const it = WARE.get(id), p = drawn[id];
+      if (!it || !p || p.w !== 'F' || !ROOMS[roomOf(p)] || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return;
+      const q = inRoomOf(roomOf(p), () => (fits(it, p, drawn) ? null : nearestFree(it, p, drawn)));
+      if (q) placed[id] = drawn[id] = q;
+    });
+  }
+  function nearestFree(it, p, pl) {   // the free spot for it nearest p in the room shown now, quarter-unit steps from p, the nearest first
+    const cands = [];
+    for (let i = -4 * RW; i <= 4 * RW; i++) for (let j = -4 * RD; j <= 4 * RD; j++) {
+      const x = q2(p.x + i / 4), y = q2(p.y + j / 4);
+      if (x > 0 && y > 0 && x < RW && y < RD) cands.push({ x, y, d: Math.hypot(i, j) });
+    }
+    cands.sort((a, b) => a.d - b.d || a.y - b.y || a.x - b.x);
+    for (const c of cands) { const q = Object.assign({}, p, { x: c.x, y: c.y }); if (fits(it, q, pl)) return q; }
+    return null;
+  }
   function standingList() {   // the floor wares (a working thing in its parts), unsorted
     return placedWares().filter((o) => o.it.kind === 'floor').flatMap((o) => {
       if (!WORK[o.id]) return [{ id: 'w:' + o.id, fp: wareFootprint(o.it, o.p), ware: o }];
@@ -1296,7 +1321,8 @@ const ROOM = (() => {
     }
     // the bed (test, 2026-11-09): lain on, the head on the pillow, getting off by its open side
     if (o.it.act === 'bed') { use(el, () => NAP.offer(), { x: o.p.x, y: o.p.y + 1.22, look: 'F', act: 'sleep', from: [o.p.x + 1.95, o.p.y + 1], out: [1.95, -0.2], seat: 'w:' + o.id }); return; }
-    if (o.it.act === 'kotatsu') { use(el, () => {}, { x: o.p.x - 1.18, y: o.p.y, look: 'X', act: 'kneel', from: [o.p.x - 1.9, o.p.y], out: [-0.72, 0] }); return; }
+    // (2026-11-26: the kotatsu half as big again — the middle of its left cushion, 1.77 out; walked to and stood up 0.5 past its edge)
+    if (o.it.act === 'kotatsu') { use(el, () => {}, { x: o.p.x - 1.77, y: o.p.y, look: 'X', act: 'kneel', from: [o.p.x - 2.6, o.p.y], out: [-0.83, 0] }); return; }
     const g = walkGrid(), ok = ([x, y]) => { const i = Math.floor(x / CELL), j = Math.floor(y / CELL); return i >= 0 && j >= 0 && i < GW && j < GH && !g[j * GW + i]; };
     if (o.it.act === 'kneel') { use(el, () => {}, kneelSpot(o, ok)); return; }
     // a wall's (the round mirror): stood before it, facing the wall. A floor one: on its +y side, else its +x side — the other
@@ -1315,12 +1341,14 @@ const ROOM = (() => {
   }
   // knelt (test, 2026-11-09), as at the kotatsu: on a floor cushion — facing a low table beside it, else us; at a low table on a
   // cushion beside it, else at its first open side (left, back, right, front), facing it. from: where the hero walks to, out: back there
+  // (2026-11-26: the two half as big again or more — a cushion goes with a table up to 3.6 apart, middle to middle, and is stepped
+  // onto from half a unit past its edge)
   function kneelSpot(o, ok) {
     const face = (dx, dy) => (Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'X' : 'L') : dy > 0 ? 'Y' : 'R');
-    const near = (id, q) => placedWares().find((w) => w.id === id && Math.hypot(w.p.x - q.x, w.p.y - q.y) < 2.4);
+    const near = (id, q) => placedWares().find((w) => w.id === id && Math.hypot(w.p.x - q.x, w.p.y - q.y) < 3.6);
     const at = (x, y, look, sides) => { const fr = sides.map(([dx, dy]) => [x + dx, y + dy]).find(ok) || [x + sides[0][0], y + sides[0][1]]; return { x, y, look, act: 'kneel', from: fr, out: [fr[0] - x, fr[1] - y], seat: cushion ? 'w:' + cushion.id : null }; };
-    const round = [[0, 0.95], [0.95, 0], [-0.95, 0], [0, -0.95]];
     const cushion = o.id === 'zabuton' ? o : near('zabuton', o.p), table = o.id === 'chabudai' ? o : near('chabudai', o.p);
+    const d = cushion ? cushion.it.fp[0] / 2 + 0.5 : 0, round = [[0, d], [d, 0], [-d, 0], [0, -d]];
     if (cushion) return at(cushion.p.x, cushion.p.y, table ? face(table.p.x - cushion.p.x, table.p.y - cushion.p.y) : 'F', table ? round.slice().sort((a, b) => (a[0] * (table.p.x - cushion.p.x) + a[1] * (table.p.y - cushion.p.y)) - (b[0] * (table.p.x - cushion.p.x) + b[1] * (table.p.y - cushion.p.y))) : round);
     const r = o.it.fp[0] / 2 + 0.15, x = o.p.x, y = o.p.y;
     const side = [[-1, 0], [0, -1], [1, 0], [0, 1]].find(([a, b]) => ok([x + a * (r + 0.75), y + b * (r + 0.75)])) || [-1, 0];
@@ -1796,7 +1824,7 @@ const ROOM = (() => {
   setRoom('study'); Object.assign(hero, heroPos.study || {});
   const kit = { S, P, pt, poly, line, onX, onY, onZ, F, FS, tone, box, qX, qY, qZ, shadow, bb, C, q2, r1, DEFS, VB, own, wireArt, bulbsAt };
   function hold() { heroHalt(); hero.going = null; hero.lead = null; }   // the dressing room opens: the hero stops where they are
-  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, give, knock, guest, settle, settle8, settle10, settleNew, SPOTS, room: () => ROOMID, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
+  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, give, knock, guest, settle, settle8, settle10, settleNew, refit, SPOTS, room: () => ROOMID, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
 })();
 // ---------- 古道具屋's wares in 書房 (1.2.0): each one drawn with 書房's own pencils and light (ROOM.kit) ----------
 // DECOR.wall(id, p) draws a wall ware where it hangs, DECOR.floor(id, p) one standing or lying on the floor (p.r turns it a
@@ -2024,15 +2052,17 @@ const DECOR = (() => {
       return s + bb(x - 0.05, y, h, `<ellipse rx="7" ry="2.8" ${F('#d9ccb6', 't', [x, y, h])}/><rect x="-1.2" y="-22" width="2.4" height="22" ${L('#b8925a', h + 0.5)}/><path d="M-12 -20 L12 -20 L8 -38 L-8 -38 Z" style="fill:color-mix(in srgb,#f3e3c4 calc(var(--day)*100%),#ffd27a)"/><path d="M-8 -38 L-12 -20" class="hl"/><ellipse cy="-20" rx="12" ry="3" fill="#fff4d8"/>`);
     },
     kotatsu: (x, y) => {   // a kotatsu in the middle of 書房: the quilt, the table top, a basket of mikan, a cushion on three sides
-      const q = 0.95, t = 0.82, L = lit(x, y), cushion = (x0, y0, x1, y1, c, ct) => box(c, x0, y0, 0, x1, y1, 0.18, { t: ct, hlv: true });
-      let s = shadow(x - 1.3, y - 1.3, x + 1.45, y + 1.45, 0.7) + cushion(x - 1.4, y - 0.45, x - 0.97, y + 0.45, '#c8553f', '#d36a55');
+      // 2026-11-26 (a tester: 暖爐桌也好小): half as big again across — the quilt, the top, the cushions and what stands on it — as low as it was.
+      // q: the quilt's half width, t: the top's; each cushion from c0 to c1 out from the middle, cw either side of it
+      const q = 1.425, t = 1.23, c0 = 1.455, c1 = 2.1, cw = 0.675, L = lit(x, y), cushion = (x0, y0, x1, y1, c, ct) => box(c, x0, y0, 0, x1, y1, 0.18, { t: ct, hlv: true });
+      let s = shadow(x - 1.95, y - 1.95, x + 2.18, y + 2.18, 0.7) + cushion(x - c1, y - cw, x - c0, y + cw, '#c8553f', '#d36a55');
       s += box('#e6d9c3', x - q, y - q, 0, x + q, y + q, 0.7, { t: '#ede3d1', y: '#dccdb4', x: '#d2c2a6', hlv: true });
       s += `<g transform="${onZ(0.004)}"><path d="M${q2(x - q)} ${q2(y + q)} H${q2(x + q)} V${q2(y - q)}" fill="none" stroke="#b9a684" stroke-opacity=".5" stroke-width=".05"/></g>`;
       s += qY('#c98f6d', y + q + 0.003, x - q, x + q, 0.12, 0.2, 'y') + qX('#bf8664', x + q + 0.003, y - q, y + q, 0.12, 0.2, 'x');   // a band near the hem
       s += box(C.oak, x - t, y - t, 0.7, x + t, y + t, 0.8, { t: C.oakTop, hlv: true });
-      s += bb(x - 0.15, y + 0.05, 0.8, `<ellipse rx="10" ry="3.6" ${L('#a9824f', 0.9)}/><path ${L('#b88f5a', 0.9)} d="M-10 0 Q-9 -6 0 -6 Q9 -6 10 0 Q0 4 -10 0 Z"/><g fill="#f0923a"><circle cx="-4" cy="-7" r="3.4"/><circle cx="3" cy="-7.5" r="3.4"/><circle cx="-.5" cy="-11" r="3.4"/></g><path d="M-.5 -14 l1.2 -1.6" stroke="#4f8a4c" stroke-width="1.2"/>`);
-      s += bb(x + 0.45, y - 0.3, 0.8, `<ellipse rx="5" ry="1.8" fill="#2b1c12" fill-opacity=".12"/><path ${L('#f3efe6', 1)} d="M-4 -1 L-4.5 -9 H4.5 L4 -1 Z"/><ellipse cy="-9" rx="4.5" ry="1.5" fill="#7a9a5a"/>`);
-      return s + cushion(x - 0.45, y + 0.97, x + 0.45, y + 1.4, '#4f6aa8', '#6079b4') + cushion(x + 0.97, y - 0.45, x + 1.4, y + 0.45, '#4f6aa8', '#6079b4');
+      s += bb(x - 0.22, y + 0.08, 0.8, `<g transform="scale(1.5)"><ellipse rx="10" ry="3.6" ${L('#a9824f', 0.9)}/><path ${L('#b88f5a', 0.9)} d="M-10 0 Q-9 -6 0 -6 Q9 -6 10 0 Q0 4 -10 0 Z"/><g fill="#f0923a"><circle cx="-4" cy="-7" r="3.4"/><circle cx="3" cy="-7.5" r="3.4"/><circle cx="-.5" cy="-11" r="3.4"/></g><path d="M-.5 -14 l1.2 -1.6" stroke="#4f8a4c" stroke-width="1.2"/></g>`);
+      s += bb(x + 0.68, y - 0.45, 0.8, `<g transform="scale(1.5)"><ellipse rx="5" ry="1.8" fill="#2b1c12" fill-opacity=".12"/><path ${L('#f3efe6', 1)} d="M-4 -1 L-4.5 -9 H4.5 L4 -1 Z"/><ellipse cy="-9" rx="4.5" ry="1.5" fill="#7a9a5a"/></g>`);
+      return s + cushion(x - cw, y + c0, x + cw, y + c1, '#4f6aa8', '#6079b4') + cushion(x + c0, y - cw, x + c1, y + cw, '#4f6aa8', '#6079b4');
     },
     loungeRug: (x, y) => {   // a kilim in front of the sofa: a border, a row of diamonds (2026-11-11, the user: finer: fringe on its ends, inside its footprint, and a zigzag woven along each long side)
       const w = 2.12, d = 1.4, a = [x, y, 0];
@@ -2259,27 +2289,31 @@ const DECOR = (() => {
       return s;
     },
     chabudai: (x, y, r) => {   // 2026-11-11 (the user: finer): grain on the top; the teapot's lid seam and sheen, tea in the cup and a glint on it
-      const m = (dx, dy) => `${q2(x + dx)} ${q2(y + dy)}`;
-      const h = 0.62, top = `<g transform="${onZ(h)}"><circle cx="${x}" cy="${y}" r=".76" ${F(C.oakTop, 't', [x, y, h])}/><circle cx="${x}" cy="${y}" r=".62" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width=".03"/><path d="M${m(-0.56, 0.26)} Q${m(-0.12, -0.12)} ${m(0.5, 0.08)} M${m(-0.42, 0.48)} Q${m(0.02, 0.22)} ${m(0.44, 0.42)} M${m(-0.48, -0.3)} Q${m(-0.04, -0.52)} ${m(0.36, -0.42)}" fill="none" stroke="#8a6a4a" stroke-opacity=".14" stroke-width=".02"/></g>`;
-      let s = shadow(x - 0.8, y - 0.8, x + 0.9, y + 0.9, 0.75);
-      [[-1, 0], [0, -1], [1, 0], [0, 1]].forEach(([a, b]) => { s += box(C.oakDk, x + a * 0.5 - 0.05, y + b * 0.5 - 0.05, 0, x + a * 0.5 + 0.05, y + b * 0.5 + 0.05, h - 0.06, { hl: false }); });
-      s += `<path ${F(C.oak, 'y', [x, y + 0.7, h - 0.05])} d="M${pt(x - 0.76 * Math.SQRT1_2, y + 0.76 * Math.SQRT1_2, h)} A${(0.76 * S * Math.SQRT2).toFixed(1)} ${(0.76 * S * Math.SQRT1_2).toFixed(1)} 0 0 0 ${pt(x + 0.76 * Math.SQRT1_2, y - 0.76 * Math.SQRT1_2, h)} L${pt(x + 0.76 * Math.SQRT1_2, y - 0.76 * Math.SQRT1_2, h - 0.08)} A${(0.76 * S * Math.SQRT2).toFixed(1)} ${(0.76 * S * Math.SQRT1_2).toFixed(1)} 0 0 1 ${pt(x - 0.76 * Math.SQRT1_2, y + 0.76 * Math.SQRT1_2, h - 0.08)} Z"/>`;
+      // 2026-11-26 (a tester: the seats too small for the Q版 hero): half as big again across (R: the top's radius), the teapot and
+      // the cup with it, as low as it was
+      const m = (dx, dy) => `${q2(x + dx)} ${q2(y + dy)}`, R = 1.14, e = R * Math.SQRT1_2;
+      const h = 0.62, top = `<g transform="${onZ(h)}"><circle cx="${x}" cy="${y}" r="${R}" ${F(C.oakTop, 't', [x, y, h])}/><circle cx="${x}" cy="${y}" r=".93" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width=".03"/><path d="M${m(-0.84, 0.39)} Q${m(-0.18, -0.18)} ${m(0.75, 0.12)} M${m(-0.63, 0.72)} Q${m(0.03, 0.33)} ${m(0.66, 0.63)} M${m(-0.72, -0.45)} Q${m(-0.06, -0.78)} ${m(0.54, -0.63)}" fill="none" stroke="#8a6a4a" stroke-opacity=".14" stroke-width=".02"/></g>`;
+      let s = shadow(x - 1.2, y - 1.2, x + 1.35, y + 1.35, 0.75);
+      [[-1, 0], [0, -1], [1, 0], [0, 1]].forEach(([a, b]) => { s += box(C.oakDk, x + a * 0.75 - 0.06, y + b * 0.75 - 0.06, 0, x + a * 0.75 + 0.06, y + b * 0.75 + 0.06, h - 0.06, { hl: false }); });
+      s += `<path ${F(C.oak, 'y', [x, y + 1.05, h - 0.05])} d="M${pt(x - e, y + e, h)} A${(R * S * Math.SQRT2).toFixed(1)} ${(R * S * Math.SQRT1_2).toFixed(1)} 0 0 0 ${pt(x + e, y - e, h)} L${pt(x + e, y - e, h - 0.08)} A${(R * S * Math.SQRT2).toFixed(1)} ${(R * S * Math.SQRT1_2).toFixed(1)} 0 0 1 ${pt(x - e, y + e, h - 0.08)} Z"/>`;
       s += top;
-      s += upright(x - 0.15, y + 0.1, h, r, `<ellipse rx="9" ry="3" fill="#2b1c12" fill-opacity=".15"/><path ${F('#6f8a9c', 'y', [x, y, h + 0.3])} d="M-8 -1 C-10 -8 -8 -14 0 -15 C8 -14 10 -8 8 -1 Z"/><path d="M8 -9 Q14 -10 14 -15" fill="none" stroke="#5c7585" stroke-width="2"/><ellipse cy="-15" rx="5" ry="1.6" fill="#55707f"/><circle cy="-17" r="1.6" fill="#55707f"/><path d="M-6 -12.6 Q0 -10.6 6 -12.6" fill="none" stroke="#2b1c12" stroke-opacity=".2" stroke-width=".7"/><path d="M-6.4 -3 C-7.4 -7 -5.6 -10.6 -2 -11.6" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"/>`);
-      s += upright(x + 0.3, y - 0.12, h, r, `<path ${F('#e9e1d2', 'y', [x, y, h + 0.2])} d="M-4 0 L-4.6 -7 H4.6 L4 0 Z"/><ellipse cy="-7" rx="4.6" ry="1.5" ${F('#e9e1d2', 't', [x, y, h + 0.2])}/><ellipse cy="-6.8" rx="3.8" ry="1.1" fill="#9bbf7a"/><path d="M-3 -1.4 L-3.4 -5.6" stroke="#fff" stroke-opacity=".45" stroke-width=".8" stroke-linecap="round"/>`);
+      s += upright(x - 0.22, y + 0.15, h, r, `<g transform="scale(1.5)"><ellipse rx="9" ry="3" fill="#2b1c12" fill-opacity=".15"/><path ${F('#6f8a9c', 'y', [x, y, h + 0.3])} d="M-8 -1 C-10 -8 -8 -14 0 -15 C8 -14 10 -8 8 -1 Z"/><path d="M8 -9 Q14 -10 14 -15" fill="none" stroke="#5c7585" stroke-width="2"/><ellipse cy="-15" rx="5" ry="1.6" fill="#55707f"/><circle cy="-17" r="1.6" fill="#55707f"/><path d="M-6 -12.6 Q0 -10.6 6 -12.6" fill="none" stroke="#2b1c12" stroke-opacity=".2" stroke-width=".7"/><path d="M-6.4 -3 C-7.4 -7 -5.6 -10.6 -2 -11.6" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"/></g>`);
+      s += upright(x + 0.45, y - 0.18, h, r, `<g transform="scale(1.5)"><path ${F('#e9e1d2', 'y', [x, y, h + 0.2])} d="M-4 0 L-4.6 -7 H4.6 L4 0 Z"/><ellipse cy="-7" rx="4.6" ry="1.5" ${F('#e9e1d2', 't', [x, y, h + 0.2])}/><ellipse cy="-6.8" rx="3.8" ry="1.1" fill="#9bbf7a"/><path d="M-3 -1.4 L-3.4 -5.6" stroke="#fff" stroke-opacity=".45" stroke-width=".8" stroke-linecap="round"/></g>`);
       return s;
     },
     zabuton: (x, y, r) => {   // 2026-11-11 (the user: finer): a plump cushion: the seam round its sides, the top rolling over at the edges and pulled in to the tuft in the middle, a tassel there and at the corners
-      const h = 0.2, c = r ? '#c8553f' : '#4f6aa8', i = 0.46, a = [x, y, h], gold = (z) => F('#e6c36a', 'y', [x, y + i, z]);
-      let s = shadow(x - 0.52, y - 0.52, x + 0.62, y + 0.62, 0.6);
+      // 2026-11-26 (a tester: the cushion bought far smaller than the hero's head): 1.62 across (i: half of it), a quarter wider than
+      // the Q版 head kneeling on it, the tassels half as big again; as thick as it was
+      const h = 0.2, c = r ? '#c8553f' : '#4f6aa8', i = 0.81, a = [x, y, h], gold = (z) => F('#e6c36a', 'y', [x, y + i, z]);
+      let s = shadow(x - 0.92, y - 0.92, x + 1.09, y + 1.09, 0.6);
       s += box(c, x - i, y - i, 0, x + i, y + i, h, { t: c, hlv: true });
-      s += `<path class="ln" stroke="#2b1c12" stroke-opacity=".2" stroke-width="1" d="${line([[x - i + 0.04, y + i + 0.004, h * 0.48], [x + i + 0.004, y + i + 0.004, h * 0.48], [x + i + 0.004, y - i + 0.04, h * 0.48]])}"/>`;
+      s += `<path class="ln" stroke="#2b1c12" stroke-opacity=".2" stroke-width="1" d="${line([[x - i + 0.07, y + i + 0.004, h * 0.48], [x + i + 0.004, y + i + 0.004, h * 0.48], [x + i + 0.004, y - i + 0.07, h * 0.48]])}"/>`;
       const m = (dx, dy) => `${q2(x + dx)} ${q2(y + dy)}`;
-      s += `<g transform="${onZ(h + 0.004)}"><rect x="${q2(x - 0.43)}" y="${q2(y - 0.43)}" width=".86" height=".86" rx=".12" fill="none" stroke="#2b1c12" stroke-opacity=".1" stroke-width=".05"/>
-        <rect x="${q2(x - 0.36)}" y="${q2(y - 0.36)}" width=".72" height=".72" rx=".24" fill="#fff" fill-opacity=".09"/><path d="M${q2(x - 0.4)} ${q2(y + 0.3)} Q${m(-0.4, -0.4)} ${m(0.3, -0.4)}" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width=".04" stroke-linecap="round"/>
-        <path d="M${m(-0.34, -0.34)} L${m(-0.06, -0.06)} M${m(0.34, -0.34)} L${m(0.06, -0.06)} M${m(-0.34, 0.34)} L${m(-0.06, 0.06)} M${m(0.34, 0.34)} L${m(0.06, 0.06)}" stroke="#2b1c12" stroke-opacity=".1" stroke-width=".035" stroke-linecap="round"/>
-        <circle cx="${x}" cy="${y}" r=".09" fill="#2b1c12" fill-opacity=".14"/><path d="M${m(-0.08, -0.05)} L${m(0.08, 0.05)} M${m(-0.08, 0.05)} L${m(0.08, -0.05)} M${m(0, -0.09)} V${q2(y + 0.09)}" stroke-width=".03" stroke-linecap="round" ${FS('#e6c36a', 't', a)}/><circle cx="${x}" cy="${y}" r=".035" ${F('#f2d27a', 't', a)}/></g>`;
-      s += [[x - i, y + i], [x + i, y + i], [x + i, y - i]].map(([cx, cy]) => bb(cx, cy, h * 0.6, `<path d="M-.9 0 Q0 -1.6 .9 0 L1.3 4.2 H-1.3 Z" ${gold(h * 0.4)}/><path d="M-.6 1.6 V4 M.6 1.6 V4" stroke="#2b1c12" stroke-opacity=".2" stroke-width=".4"/>`)).join('');
+      s += `<g transform="${onZ(h + 0.004)}"><rect x="${q2(x - 0.76)}" y="${q2(y - 0.76)}" width="1.52" height="1.52" rx=".21" fill="none" stroke="#2b1c12" stroke-opacity=".1" stroke-width=".06"/>
+        <rect x="${q2(x - 0.63)}" y="${q2(y - 0.63)}" width="1.26" height="1.26" rx=".42" fill="#fff" fill-opacity=".09"/><path d="M${q2(x - 0.7)} ${q2(y + 0.53)} Q${m(-0.7, -0.7)} ${m(0.53, -0.7)}" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width=".05" stroke-linecap="round"/>
+        <path d="M${m(-0.6, -0.6)} L${m(-0.1, -0.1)} M${m(0.6, -0.6)} L${m(0.1, -0.1)} M${m(-0.6, 0.6)} L${m(-0.1, 0.1)} M${m(0.6, 0.6)} L${m(0.1, 0.1)}" stroke="#2b1c12" stroke-opacity=".1" stroke-width=".045" stroke-linecap="round"/>
+        <circle cx="${x}" cy="${y}" r=".16" fill="#2b1c12" fill-opacity=".14"/><path d="M${m(-0.14, -0.09)} L${m(0.14, 0.09)} M${m(-0.14, 0.09)} L${m(0.14, -0.09)} M${m(0, -0.16)} V${q2(y + 0.16)}" stroke-width=".045" stroke-linecap="round" ${FS('#e6c36a', 't', a)}/><circle cx="${x}" cy="${y}" r=".06" ${F('#f2d27a', 't', a)}/></g>`;
+      s += [[x - i, y + i], [x + i, y + i], [x + i, y - i]].map(([cx, cy]) => bb(cx, cy, h * 0.6, `<g transform="scale(1.5)"><path d="M-.9 0 Q0 -1.6 .9 0 L1.3 4.2 H-1.3 Z" ${gold(h * 0.4)}/><path d="M-.6 1.6 V4 M.6 1.6 V4" stroke="#2b1c12" stroke-opacity=".2" stroke-width=".4"/></g>`)).join('');
       return s;
     },
     daruma: (x, y, r) => {   // 2026-11-11 (the user: finer): the shaded side, a nose, a moustache and the beard down the cheeks

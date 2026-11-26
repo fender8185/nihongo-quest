@@ -16,8 +16,11 @@ const WARES = [
   { id: 'bamboo', kind: 'floor', h: 3.4, name: '竹子', price: 14, fp: [0.7, 0.7], desc: '一盆細竹，長得直直的。', act: 'water' },
   { id: 'floorlamp', kind: 'floor', h: 4.1, name: '落地燈', price: 30, fp: [0.7, 0.7], desc: '晚上會亮的暖黃色立燈。', light: { z: 3.7, r: 5 } },
   { id: 'andon', kind: 'floor', h: 1.5, name: '行燈', price: 30, fp: [0.8, 0.8], desc: '和紙糊的燈，晚上透出柔柔的光。', light: { z: 0.9, r: 3.4 } },
-  { id: 'chabudai', kind: 'floor', h: 1.0, name: '矮桌', price: 20, fp: [1.6, 1.6], desc: '圓圓的矮桌，放杯茶剛好。點它在旁邊跪坐。', act: 'kneel' },
-  { id: 'zabuton', kind: 'floor', h: 0.35, name: '座布團', price: 6, fp: [1, 1], desc: '坐墊，累了就坐一下。點它在上面跪坐。', act: 'kneel' },
+  // the seats grew (2026-11-26, a tester: the cushion bought far smaller than the Q版 hero kneeling on it, the kotatsu small too):
+  // 矮桌 1.6 → 2.4 and 暖桌 2.8 → 4.2 (half as big again), 座布團 1 → 1.7 so it shows clearly wider than the hero's head; all as
+  // low as they were. One saved where it no longer fits moves to the nearest free spot (ROOM.refit)
+  { id: 'chabudai', kind: 'floor', h: 1.0, name: '矮桌', price: 20, fp: [2.4, 2.4], desc: '圓圓的矮桌，放杯茶剛好。點它在旁邊跪坐。', act: 'kneel' },
+  { id: 'zabuton', kind: 'floor', h: 0.35, name: '座布團', price: 6, fp: [1.7, 1.7], desc: '坐墊，累了就坐一下。點它在上面跪坐。', act: 'kneel' },
   { id: 'daruma', kind: 'floor', h: 1.25, name: '大達摩', price: 15, fp: [0.8, 0.8], desc: '過了一個階段測驗，就畫上另一隻眼睛。' },
   { id: 'manekineko', kind: 'floor', h: 1.25, name: '招き猫', price: 18, fp: [0.6, 0.6], desc: '舉著手招來好運。' },
   { id: 'guitar', kind: 'floor', h: 2.8, name: '吉他', price: 35, fp: [0.7, 0.6], desc: '放在架上，偶爾彈一下。' },
@@ -106,7 +109,7 @@ const WARES = [
   // wardrobe (it opens 衣櫃, as the button does), a dresser and a plant
   { id: 'sofa', kind: 'floor', starter: true, since: 7, turn: false, h: 2.3, name: '沙發', fp: [3.4, 1.5], at: { w: 'F', x: 22.2, y: 0.75, r: 0 }, desc: '', act: 'sofa' },
   { id: 'sideTable', kind: 'floor', starter: true, since: 7, turn: false, h: 2.6, name: '小邊桌', fp: [0.9, 0.9], at: { w: 'F', x: 24.55, y: 0.5, r: 0 }, desc: '', light: { z: 2.5, r: 4.2 } },
-  { id: 'kotatsu', kind: 'floor', starter: true, since: 7, turn: false, h: 1.1, name: '暖桌', fp: [2.8, 2.8], at: { w: 'F', x: 4.6, y: 12.6, r: 0 }, desc: '', act: 'kotatsu' },
+  { id: 'kotatsu', kind: 'floor', starter: true, since: 7, turn: false, h: 1.1, name: '暖桌', fp: [4.2, 4.2], at: { w: 'F', x: 4.6, y: 12.6, r: 0 }, desc: '', act: 'kotatsu' },
   { id: 'loungeRug', kind: 'rug', starter: true, since: 7, turn: false, name: '長地毯', fp: [4.4, 2.8], at: { w: 'F', x: 22.4, y: 3.3, r: 0 }, desc: '' },
   { id: 'lowShelf', kind: 'floor', starter: true, since: 7, turn: false, h: 2.4, name: '矮書架', fp: [1.1, 3.4], at: { w: 'F', x: 0.55, y: 12.6, r: 0 }, desc: '', act: 'diary' },
   { id: 'bedWindow', kind: 'wall', starter: true, since: 7, win: true, name: '臥房的窗', size: [4.7, 5.4], at: { w: 'R', u: 15.6, v: 6.6, rm: 'bed' }, desc: '' },

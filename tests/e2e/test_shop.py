@@ -1075,8 +1075,9 @@ def test_a_led_hero_keeps_stepping_while_the_finger_moves(b):
 
 def test_walking_across_the_screen_he_does_not_keep_turning_round(b):
     # 1.2.1: going sideways on the screen his step points a hair toward the back or the front by turns, and he turned round with it
-    # (from behind, facing us, from behind…), each turn showing legs that began their step again: he seemed to slide
-    js = "(async () => { " + FRESH + " localStorage.setItem('nq_hero', JSON.stringify({ room: { x: 9, y: 7, back: false, flip: false, pose: '' } })); localStorage.setItem('nq_hero_led', '1'); location.reload(); })()"
+    # (from behind, facing us, from behind…), each turn showing legs that began their step again: he seemed to slide. Led across
+    # open floor (2026-11-26: from 12, 7 — from 9, 7 he now stops against the kotatsu, half as big again, and turns along its edge)
+    js = "(async () => { " + FRESH + " localStorage.setItem('nq_hero', JSON.stringify({ room: { x: 12, y: 7, back: false, flip: false, pose: '' } })); localStorage.setItem('nq_hero_led', '1'); location.reload(); })()"
     js2 = "(async () => { " + GO_ROOM + POINTER + """ await wait(500);
       const st = document.querySelector('.study'), hero = () => st.querySelector('.room .hero'), out = {};
       for (const [name, dx] of [['left', -6], ['right', 6]]) {
@@ -1212,6 +1213,30 @@ def test_the_hero_sits_on_the_sofa_and_kneels_at_the_kotatsu(b):
       return JSON.stringify({ sofa, saved, kneel, up }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'sofa': ['sofa'], 'saved': '', 'kneel': ['kneel'], 'up': False}, r   # seated, saved standing; off the cushion to walk on
+
+# 2026-11-26 (a tester: the cushion bought far smaller than the Q版 hero, the kotatsu small too): 座布團, 矮桌 and 暖桌 grew. A room laid
+# out on 1.21.0 — the cushion against the table, a bonsai against the kotatsu — is loaded: each one that no longer fits moves to the
+# nearest free spot in its room (the cushion steps aside from the table, the kotatsu from the bonsai), nothing is dropped, what is
+# owned stays as it was; loaded again it stays put, the spot it moved to fits 1.21.0's smaller one, and a later copy from a 1.21.0
+# device bringing the old spots back in a sync is moved the same way. A fresh room's kotatsu stands where it always did
+def test_a_seat_saved_where_it_no_longer_fits_moves_to_the_nearest_free_spot_and_stays_owned(b):
+    js = "(async () => { " + FRESH + """ ['chabudai', 'zabuton', 'bonsai'].forEach((id, i) => { state.owned[id] = { paid: [20, 6, 12][i], on: '2026-11-20' }; });
+      Object.assign(state.placed, { chabudai: { w: 'F', x: 12, y: 9, r: 0 }, zabuton: { w: 'F', x: 10.6, y: 9, r: 0 }, bonsai: { w: 'F', x: 2.2, y: 12.6, r: 0 } });   /* as 1.21.0 laid them out */
+      localStorage.setItem('nq_t3', JSON.stringify({ owned: state.owned, n: Object.keys(state.placed).length })); saveState(); await (pendingWrite || Promise.resolve()); await new Promise(q => setTimeout(q, 150)); window.__t3 = 1; location.reload(); })()"""
+    js2 = """(() => { const p = state.placed, was = JSON.parse(localStorage.getItem('nq_t3')), at = (id) => [p[id].x, p[id].y, p[id].w, p[id].r];
+      const OLD = { zabuton: [1, 1], chabudai: [1.6, 1.6], kotatsu: [2.8, 2.8] }, small = (id) => ROOM.fits(Object.assign({}, WARE.get(id), { fp: OLD[id] }), p[id]);   /* as 1.21.0 sizes it */
+      const out = { zabuton: at('zabuton'), chabudai: at('chabudai'), kotatsu: at('kotatsu'), bonsai: at('bonsai'), fit: ['zabuton', 'chabudai', 'kotatsu', 'bonsai'].every((id) => ROOM.fits(WARE.get(id), p[id])),
+        owned: JSON.stringify(state.owned) === JSON.stringify(was.owned), kept: Object.keys(p).length === was.n, again: JSON.stringify(normalizeState(JSON.parse(JSON.stringify(state))).placed) === JSON.stringify(p), small: ['zabuton', 'kotatsu'].every(small) };
+      const theirs = JSON.parse(JSON.stringify(state)); Object.assign(theirs.placed, { zabuton: { w: 'F', x: 10.6, y: 9, r: 0 }, kotatsu: { w: 'F', x: 4.6, y: 12.6, r: 0 } }); theirs.updatedAt = new Date(Date.now() + 60000).toISOString();
+      const merged = normalizeState(SyncCore.mergeStates(JSON.parse(JSON.stringify(state)), theirs)), fresh = normalizeState(defaultState());
+      out.merged = [merged.placed.zabuton.x, merged.placed.kotatsu.x, JSON.stringify(merged.owned) === JSON.stringify(was.owned)];
+      out.fresh = [fresh.placed.kotatsu.x, fresh.placed.kotatsu.y]; return JSON.stringify(out); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js), ("wait", "!window.__t3 && " + READY), ("eval", js2)])[-1])
+    assert r['zabuton'] == [9.85, 9, 'F', 0] and r['chabudai'] == [12, 9, 'F', 0], r   # the cushion three steps left, clear of the table grown into it
+    assert r['kotatsu'] == [4.85, 12.6, 'F', 0] and r['bonsai'] == [2.2, 12.6, 'F', 0], r   # the kotatsu a step right, off the bonsai; the bonsai left be
+    assert r['fit'] and r['owned'] and r['kept'] and r['again'] and r['small'], r   # all fit now; owned as it was, nothing dropped; settled; fine on 1.21.0
+    assert r['merged'] == [9.85, 4.85, True], r   # the old spots back from a 1.21.0 device: moved again
+    assert r['fresh'] == [4.6, 12.6], r
 
 def test_the_telescope_shows_the_stars_and_a_stone_lantern_switches(b):
     js = "(async () => { " + FRESH + """ ['telescope', 'stonelantern'].forEach(id => { state.owned[id] = { paid: 0, on: todayStr() }; }); state.placed.telescope = { w: 'Y', x: -60, y: 80 }; state.placed.stonelantern = { w: 'Y', x: 60, y: 60 }; saveState();
