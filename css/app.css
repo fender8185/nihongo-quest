@@ -612,7 +612,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .wk-till .cls-card { background: #f4f1e2; color: #2b2b33; border-bottom: 10px solid #2f6a4a; }
 .wk-goods.n1 { grid-template-columns: minmax(0, 160px); justify-content: center; }
 span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-weight: 700; color: #c8322a; }
-.wk-spell { flex-basis: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 4px; min-height: 34px; margin: 0 0 4px; font-size: 20px; font-size: clamp(14px, (100cqw - var(--k, 1) * 16px) / var(--n, 1), 20px); font-weight: 700; }
+.wk-spell { flex-basis: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 4px; min-height: 34px; margin: 0 0 4px; font-size: 20px; font-weight: 700; }
+@supports (width: 1cqw) { .wk-spell { font-size: clamp(14px, (100cqw - var(--k, 1) * 16px) / var(--n, 1), 20px); } }   /* no container units (Safari before 16): 20px, long sums wrapping whole pieces — unguarded, the var() made it unset, 15px (final fix round 2's re-review) */
 /* the whole sum on one line (final fix, round 2): --n its kana, --k its pieces (JOBS.till), the letters as small as that takes down to 14px —
    no piece split inside itself (ろ／っ), no second line held over the tiles, the 中文 under the hero's line in sight on a first shift; a sum
    too long even so wraps whole pieces, up into the room held for it. A blank as wide as a one-kana piece: no stage wider than the sum */
@@ -909,7 +910,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .wk-annai .wk-ear { min-height: 40px; min-width: 44px; } .wk-annai .wk-grr { top: -2px; left: 44px; }   /* inside the glass (it clips) */
 /* the question shown (an open bubble, at 案内所 and 原田's window): a customer's word pops up below it, on the spent patience bar under
    their face — never over the question (2026-11-24, fix round 2, N-4) */
-:is(.wk-annai, .wk-window, .wk-miyage, .wk-front) .wk-bub.wk-open ~ .wk-grr { top: auto; bottom: -7px; left: 0; padding: 1px 7px; font-size: 13px; line-height: 20px; }
+:is(.wk-annai, .wk-window, .wk-miyage, .wk-front, .wk-lost) .wk-bub.wk-open ~ .wk-grr { top: auto; bottom: -7px; left: 0; padding: 1px 7px; font-size: 13px; line-height: 20px; }
 .wk-annai .wk-cust:is([data-fun="book"], [data-fun="ghost"], [data-fun="future"])::before { position: absolute; left: 26px; top: 24px; z-index: 1; font-size: 19px; line-height: 1; pointer-events: none; }   /* the face clips (.kr-face): the mark hangs on the row */
 .wk-annai .wk-cust[data-fun="book"]::before { content: '📖'; } .wk-annai .wk-cust[data-fun="ghost"]::before { content: '👻'; } .wk-annai .wk-cust[data-fun="future"]::before { content: '🔮'; }
 .an-opts { display: grid; gap: 4px; margin-top: 6px; }

@@ -114,6 +114,7 @@ const LOST_RUN = (() => {
     function bub(open) {
       const b = el('.wk-cust .wk-bub'); if (!b) return;
       b.innerHTML = bubHtml(open ? view() : null);
+      b.classList.toggle('wk-open', Boolean(open));   // open: a pop-up goes under it, never over the words (it grows up out of its row; final fix round 2's re-review)
     }
     const tellAll = () => { const p = R.phase; R.phase = 'find'; bub(true); R.phase = p; };
     // the questions (kept, shut, while one asked is answered: 2026-11-26, the final fix of test.4 — 「…版面會因為回覆導致版面向上擠壓」), the
