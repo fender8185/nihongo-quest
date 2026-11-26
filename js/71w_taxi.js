@@ -81,7 +81,9 @@ const TAXI_RUN = (() => {
   let R = null, runs = 0;   // the ride now (the tests): { k, ride, phase, at, h, i, want, choosing, fare }
   const S = () => TOWN.WORK.say.taxi;
   // the map: blocks with their roofs, the roads (a dashed middle, crossings striped), each place on its corner (its picture and
-  // name, the reading over it), the station at the foot; the taxi drawn on top (tx-car)
+  // name, the reading over it), the station at the foot; the taxi drawn on top (tx-car). On a phone (2026-11-26, test.4: the names
+  // 9.9 px on a 390×664 screen, 7.1 on an SE) each name on a label of its own (tx-narrow) instead, without the reading, made as
+  // large as 12.5 px on the screen whatever size the map is drawn at (fitMap); a place's reading shown as it is tapped (readOut)
   function mapSvg() {
     const roads = [0, 1, 2, 3].map((r) => `<rect x="10" y="${35 + r * 120}" width="360" height="20" class="tx-road"/>`).join('') + [0, 1, 2].map((c) => `<rect x="${40 + c * 140}" y="10" width="20" height="${c === 1 ? 490 : 415}" class="tx-road"/>`).join('');
     const dashes = [0, 1, 2, 3].map((r) => `<path d="M10 ${45 + r * 120} H370" class="tx-dash"/>`).join('') + [0, 1, 2].map((c) => `<path d="M${50 + c * 140} 10 V${c === 1 ? 500 : 425}" class="tx-dash"/>`).join('');
@@ -96,10 +98,12 @@ const TAXI_RUN = (() => {
     }
     const OFF = { ne: [1, -1], nw: [-1, -1], se: [1, 1], sw: [-1, 1] };
     const places = TOWN.EKI.taxi.spots.map(([c, r, id, w, pic, corner]) => { const [x, y] = xy(c, r), [dx, dy] = OFF[corner], px = x + dx * 42, py = y + dy * (dy < 0 ? 52 : 30), d = PICS[pic] || '';
-      const kana = w.replace(MARK, '$2'), kanji = w.replace(MARK, '$1'), hasK = kana !== kanji, lw = Math.max(44, kanji.length * 13 + 10, kana.length * 7.4 + 8);
-      return `<g class="tx-place" data-place="${id}"><circle cx="${px}" cy="${py - 4}" r="17" fill="#fbf7ec" stroke="#8a7a6e" stroke-width="1.2"/><svg x="${px - 16}" y="${py - 20}" width="32" height="32" viewBox="0 0 100 100">${d}</svg>
-        <rect x="${px - lw / 2}" y="${py + 13}" width="${lw}" height="${hasK ? 25 : 18}" rx="3" fill="#fffaf0" stroke="#d8c8a8" stroke-width=".8"/>${hasK ? `<text x="${px}" y="${py + 21}" text-anchor="middle" font-size="7.4" fill="#8a7a6e">${esc(kana)}</text>` : ''}<text x="${px}" y="${py + (hasK ? 34 : 27)}" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2b33" lang="ja">${esc(kanji)}</text></g>`; }).join('');
-    const station = `<rect x="140" y="478" width="100" height="26" rx="3" fill="#2f4a6e"/><text x="190" y="496" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">みなと駅</text>`;
+      const kana = w.replace(MARK, '$2'), kanji = w.replace(MARK, '$1'), hasK = kana !== kanji, lw = Math.max(44, kanji.length * 13 + 10, kana.length * 7.4 + 8), nw = kanji.length * 13 + 10;
+      return `<g class="tx-place" data-place="${id}"${hasK ? ` data-kana="${esc(kana)}"` : ''}><circle cx="${px}" cy="${py - 4}" r="17" fill="#fbf7ec" stroke="#8a7a6e" stroke-width="1.2"/><svg x="${px - 16}" y="${py - 20}" width="32" height="32" viewBox="0 0 100 100">${d}</svg>
+        <g class="tx-wide"><rect x="${px - lw / 2}" y="${py + 13}" width="${lw}" height="${hasK ? 25 : 18}" rx="3" fill="#fffaf0" stroke="#d8c8a8" stroke-width=".8"/>${hasK ? `<text x="${px}" y="${py + 21}" text-anchor="middle" font-size="7.4" fill="#8a7a6e">${esc(kana)}</text>` : ''}<text x="${px}" y="${py + (hasK ? 34 : 27)}" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2b33" lang="ja">${esc(kanji)}</text></g>
+        <g class="tx-narrow" data-o="${px} ${py + 13}"><rect x="${px - nw / 2}" y="${py + 13}" width="${nw}" height="18" rx="3" fill="#fffaf0" stroke="#d8c8a8" stroke-width=".8"/><text x="${px}" y="${py + 27}" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2b33" lang="ja">${esc(kanji)}</text></g></g>`; }).join('');
+    const station = `<g class="tx-wide"><rect x="140" y="478" width="100" height="26" rx="3" fill="#2f4a6e"/><text x="190" y="496" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">みなと駅</text></g>
+      <g class="tx-narrow" data-o="190 504"><rect x="145" y="482" width="90" height="22" rx="3" fill="#2f4a6e"/><text x="190" y="498" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">みなと駅</text></g>`;
     return `<svg class="tx-map" viewBox="0 0 380 510" aria-hidden="true"><rect width="380" height="510" rx="14" class="tx-ground"/>${blocks}${roads}${dashes}${zebra.join('')}${station}${places}
       <circle class="tx-ring" r="17" cx="-50" cy="-50"/><g class="tx-car" transform="translate(${STATION[0]} ${STATION[1]}) rotate(0)"><ellipse cx="0" cy="1" rx="8" ry="12" fill="#000" opacity=".18"/><rect x="-7" y="-11" width="14" height="22" rx="4" fill="#f3d24a" stroke="#b8961e" stroke-width=".8"/><rect x="-5.4" y="-6" width="10.8" height="5" rx="1.4" fill="#2f3a4a"/><rect x="-5" y="3" width="10" height="4" rx="1.2" fill="#2f3a4a"/><rect x="-3.4" y="-1" width="6.8" height="2.6" rx=".8" fill="#fbf7ec"/><circle cx="-4.4" cy="-10.6" r="1.4" fill="#fff6d8"/><circle cx="4.4" cy="-10.6" r="1.4" fill="#fff6d8"/><circle class="tx-blink l" cx="-6.6" cy="-8" r="1.6" fill="#ff9a2a"/><circle class="tx-blink r" cx="6.6" cy="-8" r="1.6" fill="#ff9a2a"/></g></svg>`;
   }
@@ -118,7 +122,23 @@ const TAXI_RUN = (() => {
     const told = () => (R.ride.guided ? (R.ride.lines.filter((x) => x.at <= R.i).pop() || { line: R.ride.ask }).line : R.ride.ask);
     function bub() {
       const b = el('.tx-bub'); if (!b) return; const open = R.phase === 'pay' || R.phase === 'done' || R.miss >= 2, [ja, zh] = R.phase === 'pay' ? s.cust.price : told();
-      b.innerHTML = `<button type="button" class="wk-ear tx-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="bt-dots">……</b>'}`;
+      b.innerHTML = `<button type="button" class="wk-ear tx-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>` : '<b class="bt-dots">……</b>'}${!open && !R.ride.guided ? '<span class="tx-tapnote">點地圖上的地名，看它的讀音</span>' : ''}`;   // one who only says where: on a phone, how to find a place's reading (shown there alone: readOut)
+    }
+    // a phone's map labels (tx-narrow) at 12.5 px on the screen, the map drawn at whatever size the card leaves it (scale k), never
+    // smaller than drawn; again as the card's size changes
+    function fitMap() {
+      const svg = el('.tx-map'); if (!svg) return; const r = svg.getBoundingClientRect(), k = Math.min(r.width / 380, r.height / 510); if (!(k > 0)) return;
+      const z = Math.min(2.2, Math.max(1, 12.5 / 13 / k)).toFixed(3);
+      svg.querySelectorAll('.tx-narrow').forEach((g) => { const [ox, oy] = g.dataset.o.split(' ').map(Number); g.setAttribute('transform', `translate(${ox} ${oy}) scale(${z}) translate(${-ox} ${-oy})`); });
+    }
+    // a place tapped on a phone's map: its reading over it a moment (the phone's labels have none: 〜まで is heard, the place read here)
+    let readT = 0;
+    function readOut(place) {
+      const box = el('.tx-mapbox'), dot = place.querySelector('circle'); if (!box || !dot || !place.dataset.kana) return;
+      const b = box.getBoundingClientRect(), c = dot.getBoundingClientRect(); let o = box.querySelector('.tx-read');
+      if (!o) { o = document.createElement('i'); o.className = 'tx-read'; o.lang = 'ja'; box.appendChild(o); }
+      o.textContent = place.dataset.kana; o.style.left = `${(c.left + c.width / 2 - b.left).toFixed(1)}px`; o.style.top = `${(c.top - b.top).toFixed(1)}px`;
+      o.classList.remove('on'); void o.offsetWidth; o.classList.add('on'); clearTimeout(readT); readT = setTimeout(() => o.classList.remove('on'), 2600);
     }
     function ctl() {
       const c = el('.tx-ctl'); if (!c) return; const on = R.phase === 'drive' && R.choosing;
@@ -222,6 +242,7 @@ const TAXI_RUN = (() => {
       <div class="tx-mapbox">${mapSvg()}<div class="tx-pays"></div></div>
       <div class="tx-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>
       <div class="tx-ctl"></div>`, (e) => {
+      const pl = e.target.closest('.tx-place[data-kana]'); if (pl) { readOut(pl); return; }
       if (!R || !live()) return;
       if (e.target.closest('.tx-ear')) {   // heard again: the ring at a crossing waits for it (spec §2.3)
         if (R.phase === 'pay') { speakAs(R.ride.who, s.cust.price[0]); return; }
@@ -232,6 +253,7 @@ const TAXI_RUN = (() => {
       const b = e.target.closest('.tx-go'); if (!b || b.disabled || R.phase !== 'drive' || !R.choosing) return;
       SND.play('tick', { vol: 0.5 }); if (R.waiting) apply(b.dataset.ch); else { R.choice = b.dataset.ch; ctl(); }
     });
+    fitMap(); const mb = el('.tx-mapbox'); if (mb && typeof ResizeObserver === 'function') new ResizeObserver(fitMap).observe(mb);
     begin();
   }
   function lines(add) {

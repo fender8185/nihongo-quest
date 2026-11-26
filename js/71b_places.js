@@ -390,6 +390,12 @@ function yPop(yard, x, y, text) {
   const w = yard && yard.querySelector('.yworld'); if (!w) return;
   const el = document.createElement('i'); el.className = 'ypop'; el.textContent = text; el.style.cssText = `left:calc(50% + ${x - 600}px);bottom:${370 - y}px`;
   w.appendChild(el); setTimeout(() => el.remove(), 1800);
+  // clear of the buttons up top (2026-11-26, test.4: 外場's 「でんわ！」 sat under 言靈's): measured as it stands (its pop and rise aside),
+  // put lower by what it would cover, its last rise (16 px, in the scene's scale) and a few px more
+  const tools = yard.querySelector('.yard-tools'); if (!tools || !tools.getClientRects().length) return;
+  el.style.animation = 'none'; el.style.transform = 'translateX(-50%)'; const r = el.getBoundingClientRect(), t = tools.getBoundingClientRect(); el.style.animation = ''; el.style.transform = '';
+  const z = el.offsetHeight ? r.height / el.offsetHeight : 1, over = t.bottom + 4 - (r.top - 16 * z);
+  if (over > 0 && r.right > t.left - 4 && r.left < t.right + 4) el.style.bottom = `${(370 - y - over / z).toFixed(1)}px`;
 }
 // words over someone's head (TOWNLIFE: what they mutter, two talking; 2026-11-12): x, y in the land's units (the top of the head),
 // html marked with ruby already; on the screen ms, then fading

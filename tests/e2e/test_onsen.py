@@ -1966,11 +1966,12 @@ def test_a_shut_miyage_card_says_nothing_more(b):
 
 # the card (spec §5.3, §9): ゆのはな堂's two shelves of the eight goods (the まんじゅう in its two boxes) — each a picture, its name with
 # its reading, its price, the まんじゅう's pieces — the tasting plate and the tray on the counter, どうぞ, the customer and their patience;
-# on a 360-px phone and a 390-px one it stays inside the screen, every button 40 px or more, the tags' words 11 px or more, their
-# readings 8.5 px or more (fix round 1, M-4: にゅうよくざい still inside its tag; a box's pieces read whole, ろっこいり, じゅうにこいり);
-# at a reply the replies and the talk row in sight — the talk row whole where the card holds it all; where it does not (360×640: the
-# shelves' floor of 136 px kept in sight first, rulings 11 and 13), its centre in sight under the header and taking a tap, as the iPhone
-# tests have it at 390×664 (fix round 3); at a pick after two misses the shelves still in reach (M-8)
+# on a 360-px phone and a 390-px one it stays inside the screen, every button 40 px or more, the tags' words 12 px or more (the phone
+# type scale, 2026-11-26: キーホルダー too), their readings 8.5 px or more (fix round 1, M-4: にゅうよくざい still inside its tag; a box's
+# pieces read whole, ろっこいり, じゅうにこいり); at a reply the replies and the talk row in sight — the talk row whole where the card
+# holds it all; where it does not (360×640: the shelves' floor of 136 px kept in sight first, rulings 11 and 13), its centre in sight
+# under the header and taking a tap, as the iPhone tests have it at 390×664 (fix round 3); at a pick after two misses the shelves still
+# in reach (M-8)
 def test_the_miyage_card_fits_a_phone(b):
     out = {}
     for w, h in ((360, 640), (390, 844)):
@@ -1981,7 +1982,7 @@ def test_the_miyage_card_fits_a_phone(b):
           await watch(() => my() && my().k === k && ready(), 12000); await wait(300);
           const c = document.querySelector('.wk-miyage .cls-card'), q = c.getBoundingClientRect(), R = (e) => e.getBoundingClientRect();
           const goods = [...c.querySelectorAll('.om-good')], btns = () => [...c.querySelectorAll('button')].filter((x) => x.offsetParent).map((x) => [x.className, Math.round(R(x).width), Math.round(R(x).height)]).filter(([, ww, hh]) => ww < 40 || hh < 40);
-          const small = [...c.querySelectorAll('.om-tag *')].filter((e) => e.childNodes.length && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && e.tagName !== 'RT' && parseFloat(getComputedStyle(e).fontSize) < 11).map((e) => e.className + ':' + e.textContent);
+          const small = [...c.querySelectorAll('.om-tag *')].filter((e) => e.childNodes.length && [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && e.tagName !== 'RT' && parseFloat(getComputedStyle(e).fontSize) < 12).map((e) => e.className + ':' + e.textContent);
           const pick = { inside: q.left >= 0 && q.right <= innerWidth + 1 && q.top >= 0 && q.bottom <= innerHeight + 1, goods: goods.length, parts: goods.every((g) => g.querySelector('.om-pic svg') && g.querySelector('.om-tag b') && /円/.test(g.textContent)),
             manju: goods.filter((g) => /個入/.test(g.textContent)).map((g) => g.dataset.g), plate: Boolean(c.querySelector('.om-counter .om-plate')), tray: Boolean(c.querySelector('.om-counter .om-tray')), give: Boolean(c.querySelector('.om-counter .om-give')),
             cust: Boolean(c.querySelector('.wk-cust .kr-face') && c.querySelector('.wk-cust .wk-pat')), btns: btns(), small: small.slice(0, 5),
@@ -2290,10 +2291,11 @@ def test_a_shut_front_card_says_nothing_more(b):
 
 # the card (spec §5.4, §9): from behind the counter — the open 予約台帳 on the left (five rows: a name with its reading, how many, the room,
 # dinner, a note), the key board (five tags) and the bell on the right, the guest across the counter with their patience, the replies,
-# 佐藤; on a 360-px phone and a 390-px one it stays inside the screen, every button and key 40 px or more, the book's words 11 px or more
-# and their readings 8 or more; at the key step and after two misses the book, the keys and the talk row in sight — the talk row whole
-# where the card holds it all; where it does not (360×640's birthday guest: the book's floor kept in sight first, ruling 13), its centre
-# in sight under the header and taking a tap, as the iPhone tests have it at 390×664 (fix round 3)
+# 佐藤; on a 360-px phone and a 390-px one it stays inside the screen, every button and key 40 px or more, the book's words 12 px or more
+# (the phone type scale, 2026-11-26: its heads, date, 様 and note) and their readings 8 or more; at the key step and after two misses
+# the book, the keys and the talk row in sight — the talk row whole where the card holds it all; where it does not (360×640's birthday
+# guest: the book's floor kept in sight first, ruling 13), its centre in sight under the header and taking a tap, as the iPhone tests
+# have it at 390×664 (fix round 3)
 def test_the_front_card_fits_a_phone(b):
     out = {}
     for w, h in ((360, 640), (390, 844)):
@@ -2305,7 +2307,7 @@ def test_the_front_card_fits_a_phone(b):
           const c = fc().querySelector('.cls-card'), R = (e) => e.getBoundingClientRect(), q = R(c), top = Math.max(q.top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = q.top + c.clientTop + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;   // in sight: under the sticky header (task 2, ruling 17)
           const btns = () => [...c.querySelectorAll('button')].filter((x) => x.offsetParent && !x.classList.contains('fr-out')).map((x) => [x.className, Math.round(R(x).width), Math.round(R(x).height)]).filter(([, ww, hh]) => ww < 40 || hh < 40);
           const txt = (e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
-          const small = [...c.querySelectorAll('.fr-book *')].filter((e) => e.tagName !== 'RT' && txt(e) && parseFloat(getComputedStyle(e).fontSize) < 11).map((e) => e.className + ':' + e.textContent);
+          const small = [...c.querySelectorAll('.fr-book *')].filter((e) => e.tagName !== 'RT' && txt(e) && parseFloat(getComputedStyle(e).fontSize) < 12).map((e) => e.className + ':' + e.textContent);
           const rt = Math.min(...[...c.querySelectorAll('.fr-book rt, .fr-board rt')].map((e) => parseFloat(getComputedStyle(e).fontSize)));
           const book = c.querySelector('.fr-book'), board = c.querySelector('.fr-board'), first = { inside: q.left >= 0 && q.right <= innerWidth + 1 && q.top >= 0 && q.bottom <= innerHeight + 1,
             rows: c.querySelectorAll('.fr-row').length, keys: c.querySelectorAll('.fr-key').length, bell: Boolean(c.querySelector('.fr-bell svg')), left: R(book).right <= R(board).left + 1,
