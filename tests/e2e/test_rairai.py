@@ -592,24 +592,27 @@ def test_the_wall_menu_opens_a_card_to_read(b):
     assert r['pops'] == ['ぎょうざ、ラーメン…'] and r['toast'] == '' and not r['shown'] and not r['open'] and r['errs'] == [], r   # his line as before, no toast; shut
 
 # the last strip (マーボーどうふ) clear of the 「福」 lantern by it at either end of its sway; the menu's tap box still over all six strips.
-# Each lantern held at each end of its sway (test.4's fix round: a seek to 0 and duration − 1 read the last 福 at ±1.7°, each lantern's
-# negative delay moving its ends): its animation off, the end's transform from the sway's own keyframes on (the origin the CSS's)
+# Each lantern held at each end of its sway (test.4's fix rounds 1 and 3): its animation off, the end's transform from the sway's own
+# keyframes on (the origin the CSS's) — the near lantern's box at one end against the other's, so both ends are shown held whatever the
+# phase the page was read at; each lantern's style put back as it was after (its own inline delay and duration kept)
 def test_the_last_menu_strip_is_clear_of_the_lantern(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ await into(); await wait(300);
       const land = document.querySelector('.rairai-land'), box = (el) => { const q = el.getBoundingClientRect(); return [q.left, q.top, q.right, q.bottom]; };
       const strips = [...land.querySelectorAll('rect[width=".86"][height="2.9"]')].map(box).sort((a, b) => a[0] - b[0]), last = strips[strips.length - 1];
-      const lanterns = [...land.querySelectorAll('.fx-sway')].filter((g) => /[福来]/.test(g.textContent));
+      const lanterns = [...land.querySelectorAll('.fx-sway')].filter((g) => /[福来]/.test(g.textContent)), styles = lanterns.map((g) => g.getAttribute('style'));
       const ends = lanterns.map((g) => { const kf = g.getAnimations()[0].effect.getKeyframes(); return [kf[0].transform, kf[kf.length - 1].transform]; });
-      const apart = (p, q) => p[2] <= q[0] || q[2] <= p[0] || p[3] <= q[1] || q[3] <= p[1], out = { strips: strips.length, lanterns: lanterns.length, ends: [...new Set(ends.map((e) => e.join(' ')))], clear: [], moved: [] };
-      const near = lanterns[lanterns.map((g) => Math.abs(box(g)[0] - last[2])).reduce((k, d, i, ds) => (d < ds[k] ? i : k), 0)];   // the one by the last strip, its box at rest
-      const rest = box(near);
-      for (const end of [0, 1]) { lanterns.forEach((g, i) => { g.style.animation = 'none'; g.style.transform = ends[i][end]; }); await wait(30);
-        out.clear.push(lanterns.every((g) => apart(last, box(g)))); out.moved.push(Math.round(Math.abs(box(near)[0] - rest[0]))); }
-      lanterns.forEach((g) => { g.style.animation = ''; g.style.transform = ''; });
+      const apart = (p, q) => p[2] <= q[0] || q[2] <= p[0] || p[3] <= q[1] || q[3] <= p[1], out = { strips: strips.length, lanterns: lanterns.length, ends: [...new Set(ends.map((e) => e.join(' ')))], clear: [] };
+      const near = lanterns[lanterns.map((g) => Math.abs(box(g)[0] - last[2])).reduce((k, d, i, ds) => (d < ds[k] ? i : k), 0)];   // the one by the last strip
+      const held = [];
+      for (const end of [0, 1]) { lanterns.forEach((g, i) => { g.style.animationName = 'none'; g.style.transform = ends[i][end]; }); await wait(30);
+        out.clear.push(lanterns.every((g) => apart(last, box(g)))); held.push(box(near)); }
+      out.apart = Math.round(Math.max(...[0, 2].map((k) => Math.abs(held[0][k] - held[1][k]))) * 100) / 100;   // the near lantern's left and right edges, one end against the other
+      lanterns.forEach((g, i) => { if (styles[i] === null) g.removeAttribute('style'); else g.setAttribute('style', styles[i]); });
+      out.kept = lanterns.every((g, i) => g.getAttribute('style') === styles[i] && g.getAnimations().length === 1) && styles.every((st) => /animation-delay/.test(st || '') && /animation-duration/.test(st || ''));
       const tap = box(document.querySelector('.use-btn[data-use="menu"]')); out.over = strips.every((s) => s[0] >= tap[0] - 1 && s[2] <= tap[2] + 1 && s[1] >= tap[1] - 1 && s[3] <= tap[3] + 1);
       return JSON.stringify(out); })()"""))
-    assert r['strips'] == 6 and r['lanterns'] == 5 and r['clear'] == [True, True] and r['over'], r
-    assert len(r['ends']) == 1 and re.fullmatch(r'rotate\(-\d+(\.\d+)?deg\) rotate\(\d+(\.\d+)?deg\)', r['ends'][0]) and all(m >= 1 for m in r['moved']), r   # a real swing, each end held
+    assert r['strips'] == 6 and r['lanterns'] == 5 and r['clear'] == [True, True] and r['over'] and r['kept'], r
+    assert len(r['ends']) == 1 and re.fullmatch(r'rotate\(-\d+(\.\d+)?deg\) rotate\(\d+(\.\d+)?deg\)', r['ends'][0]) and r['apart'] > 1, r   # a real swing: the two ends held, the box more than a rounding apart
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

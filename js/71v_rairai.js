@@ -23,6 +23,7 @@ const RAIRAI = {
     const row = ([n, p]) => `<div class="mc-item"><span class="mc-pic">${RAIRAI.dish(n, '', true)}</span><span class="mc-name">${esc(n)}</span><span class="mc-price"><small>${esc(YEN.reading(p))}</small><b>${yenStr(p)}円</b></span><span class="mc-zh" lang="zh-Hant">${esc(RAIRAI.ZH[n] || '')}</span></div>`;
     openModal('らいらいけん', `<div class="menu-card rr-menu" lang="ja"><div class="mc-list">${RAIRAI.MENU.map(row).join('')}</div></div>`, { width: 380, noFocus: true,
       head: '<div class="mc-top"><button type="button" class="zh-btn" data-act="rairai-zh" aria-pressed="false">中文</button></div>' });
+    YEN.fitNames(document.querySelector('#modalRoot .rr-menu'));   // each name whole on its line, as the town's menus (test.4's fix round 3)
   },
   zh: (btn) => { const c = document.querySelector('#modalRoot .rr-menu'); if (!c) return; const on = c.classList.toggle('zh'); btn.textContent = on ? '收起中文' : '中文'; btn.setAttribute('aria-pressed', String(on)); },
 };

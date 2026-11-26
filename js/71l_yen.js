@@ -74,8 +74,25 @@ const YEN = (() => {
       ${none ? '<p class="mc-none">錢包裡還沒有円。帶一趟郵輪導覽，就能拿到導遊費。</p>' : ''}
       <div class="mc-list">${mu.items.map(row).join('')}</div></div>`, { width: 380, noFocus: true,
       head: `<div class="mc-top"><span class="mc-purse">${yenIcon()}${yenStr(Math.max(0, bal))} 円</span><button type="button" class="zh-btn" data-act="yen-zh" aria-pressed="${zh}">${zh ? '收起中文' : '中文'}</button></div>` });
+    fitNames(document.querySelector('#modalRoot .menu-card'));
   }
   function toggleZh() { if (!at) return; zh = !zh; show(); }
+  // each dish's name whole on its line (2026-11-26, test.4's fix round 3: タピオカミルクティー broke beside its price at 375): at 17 px
+  // where it fits; a px smaller (16) where that is enough; else its price goes under it and the name has the row's width — a card
+  // of the town's or らいらいけん's, measured as it opens (and again once a web font comes late, or the card's width changes: a phone turned)
+  function fitNames(card) {
+    if (!card) return;
+    const fit = () => card.querySelectorAll('.mc-item').forEach((it) => {
+      const n = it.querySelector('.mc-name'); if (!n) return; n.classList.remove('mc-name-s'); it.classList.remove('mc-long');
+      const whole = () => { const c = n.cloneNode(true); c.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;width:max-content'; it.appendChild(c); const w = c.getBoundingClientRect().width; c.remove(); return w <= n.getBoundingClientRect().width + 0.01; };   // a hair over and the line breaks
+      if (whole()) return;
+      n.classList.add('mc-name-s'); if (whole()) return;
+      n.classList.remove('mc-name-s'); it.classList.add('mc-long');
+    });
+    fit(); if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(() => { if (card.isConnected) fit(); });
+    if (typeof ResizeObserver !== 'function') return;
+    let w = card.clientWidth; const ro = new ResizeObserver(() => { if (!card.isConnected) { ro.disconnect(); return; } if (card.clientWidth !== w) { w = card.clientWidth; fit(); } }); ro.observe(card);
+  }
 
   // ---- bought: paid, ordered, had ----
   const can = (m, id) => { const it = item(m, id); return Boolean(it) && known(it) && yenEarned() > 0 && yenBalance() >= it[3]; };
@@ -221,5 +238,5 @@ const YEN = (() => {
     given()[g] = day(); if (first) p.book[it[0]] = day(); saveState();
     setTimeout(() => eat(it, first, x.bg), 300);
   }
-  return { open, buy, pay, can, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic, where, treat, gifts: G, giftAsk, giftFor, gift };
+  return { open, buy, pay, can, toggleZh, fitNames, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic, where, treat, gifts: G, giftAsk, giftFor, gift };
 })();

@@ -1168,6 +1168,21 @@ function optSayHtml(v) {
   const w = jaPlain(v.w), r = v.r && !HAS_KANJI.test(v.r) && v.r !== w ? v.r : '';
   return `<button type="button" class="btn btn-ghost btn-icon fb-opt-say" data-act="speak" data-text="${esc(w)}" data-reading="${esc(r)}" aria-label="發音：${esc(w)}">${icon('speaker')}</button>`;
 }
+// how wide a Chinese text must be to fit two lines, in em (2026-11-26, test.4's fix round 3): each character 1em (a Latin letter or a
+// digit about half), a line never starting with a closing mark (、。）…) or ending on an opening one (（「…) and never inside a Latin
+// word — the narrowest of its two-line splits. A row's Chinese part asks this much room beside a Japanese one (see .fb-opt in
+// app.css), so it either sits beside in two lines or gives the Japanese, or the group at the row's end, the line
+const ZH_CLOSE = '、。，．；：？！）」』》〉】…‥・', ZH_OPEN = '（「『《〈【';
+function twoLinesEm(text) {
+  const ch = [...String(text || '')], w = ch.map(c => (c.codePointAt(0) < 0x2E80 ? 0.55 : 1)), all = w.reduce((a, b) => a + b, 0);
+  let best = all, left = 0;
+  for (let p = 1; p < ch.length; p++) {
+    left += w[p - 1];
+    if (ZH_CLOSE.includes(ch[p]) || ZH_OPEN.includes(ch[p - 1]) || (/[A-Za-z0-9]/.test(ch[p]) && /[A-Za-z0-9]/.test(ch[p - 1]))) continue;
+    best = Math.min(best, Math.max(left, all - left));
+  }
+  return Math.round((best + 0.02) * 100) / 100;   // a hair over, so a line that just fits is not lost to rounding
+}
 // the last two kana of a sentence and its closing marks stay on one line, so it never ends on a line of just 「い。」
 // (not text-wrap: pretty: on iPhone Safari it broke an example that fitted into three lines, and Chrome skips a blank with furigana)
 function keepTail(html) { return String(html || '').replace(/([ぁ-ゖァ-ヺー]{2}[。、？！」）]+)$/, '<span class="nowrap">$1</span>'); }
@@ -1182,8 +1197,14 @@ function feedbackHtml(e, sheet = false) {
   // the verdict there, not inside the card (1.0.43)
   const order = q.options.map((o, i) => i).sort((a, b) => (b === q.answer) - (a === q.answer) || (b === e.chosen) - (a === e.chosen));
   const list = sheet && !q.custom && (!ok || q.options.some((o, i) => i !== q.answer && optAside(q, o)[0]));
+  // a row: its mark, the option, what it is (the aside), and at its right end 你選的 and the word's speaker as one group (test.4's fix
+  // round 3: they wrap together, the speaker never alone at the left)
   const chosen = list ? `<div class="fb-opts">${order.map(i => { const o = q.options[i]; const [zh, ja] = i !== q.answer ? optAside(q, o) : ['', false];
-    return `<div class="fb-opt${i === q.answer ? ' ok' : i === e.chosen ? ' bad' : ''}"><span class="fb-mark">${i === q.answer ? '✓' : i === e.chosen ? '✗' : '・'}</span><span class="${optClass(o)}">${optionHtml(q, o)}</span>${zh ? `<span class="fb-opt-zh${ja ? ' jp' : ''}">（${esc(zh)}）</span>` : ''}${i === e.chosen && !ok ? '<span class="fb-you">你選的</span>' : ''}${optSayHtml(optWord(q, i))}</div>`; }).join('')}</div>` : '';
+    const end = `${i === e.chosen && !ok ? '<span class="fb-you">你選的</span>' : ''}${optSayHtml(optWord(q, i))}`;
+    // the Chinese part beside a Japanese one says how wide it must be to fit two lines: the aside of a Japanese option, or a 意思 or
+    // 聽力 row's option beside its Japanese aside (twoLinesEm)
+    const two = (t) => ` style="--fb-two:${twoLinesEm(t)}em"`, optTwo = zh && ja && !optClass(o) ? two(String(o.text).replace(/\[[^\]]*\]/g, '')) : '';
+    return `<div class="fb-opt${i === q.answer ? ' ok' : i === e.chosen ? ' bad' : ''}"><span class="fb-mark">${i === q.answer ? '✓' : i === e.chosen ? '✗' : '・'}</span><span class="${optClass(o)}"${optTwo}>${optionHtml(q, o)}</span>${zh ? `<span class="fb-opt-zh${ja ? ' jp' : ''}"${ja ? '' : two(`（${zh}）`)}>（${esc(zh)}）</span>` : ''}${end ? `<span class="fb-opt-end">${end}</span>` : ''}</div>`; }).join('')}</div>` : '';
   const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${q.kind === 'v' && q.exMarked && q.item && homographReadings(q.item).length ? exampleJpHtml(q.exMarked, q.item) : keepTail(furi(q.fullJp))} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
   // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text);
   // 配對 has none: the sentence would be one word's of six

@@ -246,6 +246,29 @@ def test_the_options_words_have_speakers_after_an_answer(b):
     assert r['tap'][0] == [r['tap'][1]] and r['tap'][1][0], r   # played as the word list's 發音 button plays it
     assert r['wrap'] == {'taller': True, 'wide': True, 'inside': True, 'tall': True}, r
     assert r['grammar'][0] == 4 and r['grammar'][1] == 0, r
+    # at 375×553 (test.4's fix round 3: Japanese stays whole, Chinese gives way first, 你選的 and the speaker one group at the row's
+    # right end): the 意思 row with よろしくお願いします as its aside, picked — the aside whole on one line; and the 中翻日 row of
+    # よろしくお願いします, picked — the word whole, its 你選的 and speaker gone under together at the right, the speaker not at the left
+    js2 = "(async () => { " + FRESH + VOCAB_Q + """ const e = currentEntry(), out = {}, wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const word = (w) => REG.vocab.find((x) => x.builtin && jaPlain(x.w) === w), yo = word('よろしくお願いします'), box = (el) => el.getBoundingClientRect();
+      const whole = (el) => { const c = el.cloneNode(true); c.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;width:max-content;max-width:none;flex:none'; el.parentNode.appendChild(c); const W = box(c); c.remove(); return W; };
+      const row = async (item, fmt, put) => { e.item = item; e.done = false; e.q = makeVocabQuestion(item, { forceFmt: fmt, kana: false }); const q = e.q, k = (q.answer + 1) % q.options.length; put(q, k);
+        renderPractice(); answerCurrent(k); await wait(30);
+        const r = document.querySelector('.fb-sheet .fb-opt.bad'), R = box(r), opt = r.querySelector('.fb-mark + span'), zh = r.querySelector('.fb-opt-zh'), you = r.querySelector('.fb-you'), say = r.querySelector('.fb-opt-say'), end = r.querySelector('.fb-opt-end') || say;
+        const lines = (el) => Math.round(box(el).height / whole(el).height), mid = (el) => (box(el).top + box(el).bottom) / 2;
+        return { fmt: q.fmt, opt: opt.textContent, optJp: opt.classList.contains('jp'), optLines: lines(opt), aside: zh.textContent, asideJp: zh.classList.contains('jp'), asideLines: lines(zh),
+          group: Boolean(you && say && end !== say && you.parentNode === end && say.parentNode === end), right: Math.abs(box(end).right - R.right) <= 1, together: Math.abs(mid(you) - mid(say)) <= 12,
+          under: box(end).top >= Math.max(box(opt).bottom, box(zh).bottom) - 4, sayLeft: Math.round(box(say).left - R.left), w: Math.round(R.width), wide: r.scrollWidth <= r.clientWidth + 1 }; };
+      out.meaning = await row(word('ごめんください'), 'v-meaning', (q, k) => { q.options[k] = { text: yo.m, jp: false }; q.optJa = Object.assign({}, q.optJa, { [yo.m]: jaPlain(yo.w) }); });
+      out.recall = await row(word('ごめんください'), 'v-recall', (q, k) => { q.options[k] = { text: yo.w, jp: true }; q.optZh = Object.assign({}, q.optZh, { [yo.w]: yo.m }); });
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js2, [("metrics", (375, 553))]))
+    x = r['meaning']
+    assert x['fmt'] == 'v-meaning' and not x['optJp'] and x['asideJp'] and 'よろしくお願いします' in x['aside'] and x['asideLines'] == 1 and x['optLines'] <= 2, x   # the Japanese whole, the Chinese wraps
+    assert x['group'] and x['right'] and x['together'] and x['wide'], x
+    x = r['recall']
+    assert x['fmt'] == 'v-recall' and x['optJp'] and 'よろしくお願いします' in x['opt'].replace('ねが', '') and x['optLines'] == 1 and not x['asideJp'] and x['asideLines'] <= 2, x
+    assert x['group'] and x['under'] and x['right'] and x['together'] and x['sayLeft'] > x['w'] / 2 and x['wide'], x   # gone under as one, at the right end
 
 # 2026-11-26 (test.4; the user's pick 「分兩頁＋按鈕固定底部」, ruling 4): a lesson section's card in two pages — its patterns (one a line)
 # and points, then its examples — its main button 「下一頁：例句」, then 「看完了」 with ‹ 上一頁 beside it, on a phone fixed at the foot of

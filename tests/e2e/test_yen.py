@@ -307,6 +307,34 @@ def test_every_menus_chinese_reads_whole_on_a_phone(b):
         r = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=90)[-1])
         assert r['n'] == r['menus'] and r['n'] > 20 and r['bad'] == [] and r['sizes'] == ['14px'], (w, r)
 
+# test.4's fix round 3: every dish's name whole on its line — every menu of the town's and らいらいけん's, at 375×553 and 390×664 — at 17
+# px where it fits beside its price; where it doesn't, a px smaller (16) for that name only, or its price under it and the name the
+# row's width (YEN.fitNames), and only then (at 17 beside its price it would break); the price still in its row. At 360×640 a name
+# breaks only if it alone is wider than its box
+def test_every_dishs_name_is_whole_on_its_line(b):
+    js = """(async () => { localStorage.setItem('nq_menu_all', '1'); const wait = (ms) => new Promise((q) => setTimeout(q, ms)), out = [];
+      const read = (menu) => document.querySelectorAll('#modalRoot .mc-item').forEach((it) => { const n = it.querySelector('.mc-name'); if (!n) return;
+        const one = () => { const c = n.cloneNode(true); c.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;width:max-content'; it.appendChild(c); const W = c.getBoundingClientRect(); c.remove(); return W; };
+        const W = one(), B = n.getBoundingClientRect(), I = it.getBoundingClientRect(), P = it.querySelector('.mc-price').getBoundingClientRect(), small = n.classList.contains('mc-name-s'), long = it.classList.contains('mc-long');
+        const size = getComputedStyle(n).fontSize; n.classList.remove('mc-name-s'); it.classList.remove('mc-long'); const W17 = one().width, B17 = n.getBoundingClientRect().width;
+        if (small) n.classList.add('mc-name-s'); if (long) it.classList.add('mc-long');
+        out.push({ menu, name: n.textContent.replace(/\\s+/g, ''), size, lines: Math.round(B.height / W.height), fits: W.width <= B.width + 0.5, small, long, needed: W17 > B17 + 0.01,
+          inside: P.left >= I.left - 1 && P.right <= I.right + 1 && P.bottom <= I.bottom + 1 && B.right <= I.right + 1 }); });
+      RAIRAI.card(); await wait(30); read('rairai'); closeModal(); await wait(10);
+      for (const m of Object.keys(TOWN.MENU)) { YEN.open(null, { buy: m }); await wait(20); read(m); closeModal(); }
+      localStorage.removeItem('nq_menu_all'); return JSON.stringify({ menus: Object.keys(TOWN.MENU).length + 1, out }); })()"""
+    for w, h in ((375, 553), (390, 664), (360, 640)):
+        r = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=90)[-1]); out = r['out']
+        assert len({x['menu'] for x in out}) == r['menus'] and len(out) > 60, (w, len(out))
+        broke = [x for x in out if x['lines'] > 1]
+        if w == 360: assert all(not x['fits'] for x in broke), (w, broke)   # only a name wider than its box
+        else: assert broke == [], (w, broke)
+        assert all(x['size'] == ('16px' if x['small'] else '17px') for x in out), (w, [x for x in out if x['size'] != '17px'])
+        assert all(x['needed'] for x in out if x['small'] or x['long']), (w, [x for x in out if (x['small'] or x['long']) and not x['needed']])   # 17 kept where it fits
+        assert all(x['inside'] for x in out), (w, [x for x in out if not x['inside']])
+        names = {x['name'] for x in out}
+        assert 'タピオカミルクティー' in names and 'マーボーどうふ' in names, (w, sorted(names))   # the two the review saw break, read whole
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":

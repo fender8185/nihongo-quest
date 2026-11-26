@@ -525,6 +525,10 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .mc-item:not(:disabled):hover { border-color: #c9a97a; } .mc-item:disabled { opacity: .5; cursor: default; }
 .mc-name { font-size: 17px; font-weight: 700; } .mc-price { display: grid; justify-items: end; line-height: 1.15; font-variant-numeric: tabular-nums; } .mc-price small { font-size: 10px; color: #8a7a6e; } .mc-price b { font-size: 17px; color: #b0602a; }
 .mc-zh { display: none; grid-column: 2 / -1; font-size: 13px; color: #8a7a6e; } .menu-card.zh .mc-zh { display: block; }
+/* a name that would break beside its price (YEN.fitNames, 2026-11-26, test.4's fix round 3): a px smaller where that is enough
+   (.mc-name-s), else the price under it and the name the row's width (.mc-long) */
+.mc-name.mc-name-s { font-size: 16px; }
+.mc-item.mc-long .mc-name { grid-column: 2 / -1; } .mc-item.mc-long .mc-price { grid-column: 2 / -1; justify-self: end; }
 .mc-pic { grid-row: span 2; width: 52px; height: 52px; } .mc-pic .pic { width: 100%; height: 100%; }
 .mc-item.locked { opacity: .75; cursor: default; } .mc-item.locked .mc-pic { filter: grayscale(1) blur(2.5px); opacity: .55; } .mc-item.locked .mc-name { color: #a89a88; }
 .mc-lock { grid-column: 2 / -1; font-size: 12.5px; color: #8a7a6e; }
@@ -2264,17 +2268,24 @@ body.reading { overflow: hidden; }
   @keyframes sheetUp { from { transform: translateY(100%); } }
 }
 .fb-opts { display: grid; gap: 2px; margin: 0 0 8px; font-size: 15px; }
-.fb-opt { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; color: var(--fg-2); }
+.fb-opt { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; color: var(--fg-2); }
 .fb-opt .fb-mark { flex: none; width: 1.1em; text-align: center; color: var(--fg-3); }
 .fb-opt.ok { color: var(--fg); } .fb-opt.ok .fb-mark { color: var(--ok); } .fb-opt.bad .fb-mark { color: var(--bad); }
 .fb-opt-zh { color: var(--fg-3); font-size: 13px; }
-/* the option whole on its line, broken only where it alone is wider than the row (2026-11-26, test.4's fix round: よろしくお願いしま／す
-   broke once the speaker came); the aside takes what is left beside it and wraps in it, or goes under with 你選的 and the speaker when
-   less than four characters' room is left */
-.fb-opt > .fb-mark + span { max-width: calc(100% - 1.1em - 6px); } .fb-opt > .fb-opt-zh { flex: 1 1 0; min-width: 4em; }
-.fb-you { margin-left: auto; flex: none; padding-left: 8px; font-size: 13px; color: var(--bad); }
-/* a word's speaker at the end of its row (optWord, 2026-11-26, test.4): 40 px to tap, after 你選的; the row's words wrap before it */
-.fb-opt-say { flex: none; width: 40px; height: 40px; min-height: 40px; margin-left: auto; } .fb-you + .fb-opt-say { margin-left: 0; } .fb-opt-say svg { width: 18px; height: 18px; }
+/* a row's parts (2026-11-26, test.4's fix rounds 1 and 3): Japanese stays whole and Chinese gives way first. The Japanese part (the
+   option, or the aside of a 意思 or 聽力 row) keeps its line unless it alone is wider than the row. The Chinese part asks four
+   characters' room, or beside a Japanese part the room it needs to fit two lines (--fb-two, from twoLinesEm in 60_session.js), and
+   grows to its own width as the row allows, wrapping inside it — or, short of that room, it (the aside) or what follows it (a 意思
+   option's Japanese aside) takes the next line. 你選的 and the word's speaker are one group at the row's right end (.fb-opt-end),
+   going under together when nothing else fits — the speaker never alone at the left. A wrapped row's lines keep no gap between them
+   (.fb-opt's column-gap only): the speaker's 40 px box gives the room */
+.fb-opt > .jp:not(.fb-mark) { flex: 0 0 auto; max-width: calc(100% - 1.1em - 6px); }
+.fb-opt > .fb-mark + span:not(.jp) { flex: 1 1 min(max(4em, var(--fb-two, 4em)), calc(100% - 1.1em - 6px)); min-width: 0; max-width: max-content; }
+.fb-opt > .fb-opt-zh:not(.jp) { flex: 1 1 max(4em, var(--fb-two, 4em)); min-width: 0; max-width: max-content; }
+.fb-opt-end { flex: none; margin-left: auto; display: inline-flex; align-items: baseline; gap: 6px; }
+.fb-you { flex: none; padding-left: 8px; font-size: 13px; color: var(--bad); }
+/* a word's speaker at the end of its row (optWord, 2026-11-26, test.4): 40 px to tap, after 你選的 */
+.fb-opt-say { flex: none; width: 40px; height: 40px; min-height: 40px; } .fb-opt-say svg { width: 18px; height: 18px; }
 .speak-big { display: inline-flex; align-items: center; gap: 10px; margin: 8px auto; padding: 14px 22px; border-radius: 99px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); cursor: pointer; font-size: 16px; }
 .speak-big svg { width: 22px; height: 22px; }
 .speech-prog { max-width: 320px; margin: 2px auto 0; }
