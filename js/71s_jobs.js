@@ -131,8 +131,8 @@ const JOBS = (() => {
   // the phone, and once the web fonts (Noto Sans JP/TC, display=swap) are in (fix round 1, the review's Minor 3) — a font in mid-customer
   // only ever lets it grow (grow: 2026-11-26, test.4's fix round: a font's subset arriving mid-guest measured a talk row 1–2 px shorter
   // and everything under it moved up); a resize, a turn and each customer's own hold() measure it afresh. cap (test.4's final fix: the
-  // taxi's top row on a short phone): a function giving the most it may take — over it, it keeps that box (min and max), what it shows
-  // spilling over what lies under it; its resting state (the first html) never cut
+  // taxi's top row on a short phone; the lost and found's customer, round 2): a function of the tallest it measured giving the most it may
+  // take — over it, it keeps that box (min and max), what it shows spilling out of it; its resting state (the first html) never cut
   const held = new Map();   // each element held → what it may hold (its customer's, the latest; with its cap: { htmls, cap })
   function measure(b, src, grow) {
     const s = src && src.htmls ? src : { htmls: src }, list = typeof s.htmls === 'function' ? s.htmls() : s.htmls, w = b.getBoundingClientRect().width;
@@ -143,7 +143,7 @@ const JOBS = (() => {
     b.parentNode.appendChild(c); c.innerHTML = b.innerHTML; let h = c.getBoundingClientRect().height, rest = 0;
     list.forEach((x, i) => { const [html, attrs] = Array.isArray(x) ? x : [x, null]; c.innerHTML = html; if (attrs) Object.entries(attrs).forEach(([k, v]) => c.setAttribute(k, v)); const hx = c.getBoundingClientRect().height; if (!i) rest = hx; h = Math.max(h, hx); });
     c.remove(); let px = grow ? Math.max(parseFloat(b.style.minHeight) || 0, Math.ceil(h)) : Math.ceil(h);
-    if (s.cap) { const cap = Math.max(Math.ceil(rest), Math.floor(s.cap())); if (px > cap) { px = cap; b.style.maxHeight = `${px}px`; } else b.style.maxHeight = ''; }
+    if (s.cap) { const cap = Math.max(Math.ceil(rest), Math.floor(s.cap(Math.ceil(h))), grow ? parseFloat(b.style.minHeight) || 0 : 0); if (px > cap) { px = cap; b.style.maxHeight = `${px}px`; } else b.style.maxHeight = ''; }   // (a font in: never under what it holds)
     b.style.minHeight = `${px}px`;
   }
   function hold(b, htmls, cap) {
@@ -409,9 +409,10 @@ const JOBS = (() => {
     let box = null; const el = (s) => (box && box.isConnected ? box.querySelector(s) : null), all = (s) => (box && box.isConnected ? [...box.querySelectorAll(s)] : []);
     const meHtml = (l) => `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`, me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = meHtml(l); return speakAs('hero', l[0]); };
     const lineHtml = ([ja, zh]) => `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`;
-    // the sum as tapped so far (n pieces), a blank for each piece to come; the pieces under it
+    // the sum as tapped so far (n pieces), a blank for each piece to come — the sum's kana and pieces counted for its letters' size, the
+    // whole of it on one line (css .wk-spell); the pieces under it
     const spellHtml = (t, n) => t.parts.map((x, i) => (i < n ? `<b>${esc(x)}</b>` : '<i></i>')).join('');
-    const optsHtml = (t, n) => `<p class="wk-spell" lang="ja">${spellHtml(t, n)}</p>${t.tiles.map((p) => `<button type="button" class="btn btn-sm wk-opt wk-tile" data-p="${esc(p)}" lang="ja">${esc(p)}</button>`).join('')}`;
+    const optsHtml = (t, n) => `<p class="wk-spell" lang="ja" style="--n: ${t.parts.join('').length}; --k: ${t.parts.length}">${spellHtml(t, n)}</p>${t.tiles.map((p) => `<button type="button" class="btn btn-sm wk-opt wk-tile" data-p="${esc(p)}" lang="ja">${esc(p)}</button>`).join('')}`;
     // held for each customer (2026-11-26, the final fix of test.4 — the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」 — as the
     // onsen's: hold): the sum and its pieces at every stage of its spelling, the hero's line (いらっしゃいませ, the sum said, the thanks) and
     // 張's (a miss, his praise, his closing word) as they come; their bubble (their question, or their leaving word) once they ask — its

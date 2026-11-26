@@ -118,27 +118,45 @@ const LOST_RUN = (() => {
     const tellAll = () => { const p = R.phase; R.phase = 'find'; bub(true); R.phase = p; };
     // the questions (kept, shut, while one asked is answered: 2026-11-26, the final fix of test.4 — 「…版面會因為回覆導致版面向上擠壓」), the
     // four on the counter (the one picked up, its inside), これですか／ありません
-    const qsHtml = (t, qs, know, shut) => qs.map((k) => { const [ja, zh] = LOST.question(t, k, know); return `<button type="button" class="btn lf-q" data-q="${k}" lang="ja"${shut ? ' disabled' : ''}><span>${ruby(ja)}</span>${first ? `<small>${esc(zh)}</small>` : ''}</button>`; }).join('');
+    const qInner = (t, k, know) => { const [ja, zh] = LOST.question(t, k, know); return `<span>${ruby(ja)}</span>${first ? `<small>${esc(zh)}</small>` : ''}`; };
+    const qsHtml = (t, qs, know, shut) => qs.map((k) => `<button type="button" class="btn lf-q" data-q="${k}" lang="ja"${shut ? ' disabled' : ''}>${qInner(t, k, know)}</button>`).join('');
     const candsHtml = (t, sel) => t.cands.map((x, i) => `<button type="button" class="lf-cand${sel === i ? ' sel' : ''}" data-c="${i}" aria-label="候補 ${i + 1}">${art(x, 78, 62)}${sel === i && x.inside.length ? `<span class="lf-in">${x.inside.map(pic).join('')}</span>` : ''}</button>`).join('');
     const actsHtml = (t, sel) => `<button type="button" class="btn btn-primary lf-give" lang="ja"${sel === null ? ' disabled' : ''}><span>${ruby(s.me.give[0])}</span></button><button type="button" class="btn lf-none" lang="ja"><span>${ruby(s.me.none[0])}</span></button>${t.type === 'gag' ? `<button type="button" class="btn lf-gag" lang="ja"><span>${ruby(s.me.gag[0])}</span></button>` : ''}`;
+    // the question buttons made once a customer and then their words changed in place, each held at the most it will say (a furigana
+    // line once 何を is told: 「どんな {本|ほん}ですか。」; the twin's second three): no question moves the ones under it (final fix, round 2)
     function stage() {
       const t = R.task, q = el('.lf-qs'), c = el('.lf-cands'), a = el('.lf-acts'); if (!q) return;
       const from = R.phase === 'tell' ? R.from : R.phase, qs = from === 'ask' ? t.qs : from === 'ask2' ? t.q2 : null;
-      q.innerHTML = qs ? qsHtml(t, qs, R.know, R.phase === 'tell') : '';
+      if (!qs) q.innerHTML = '';
+      else if (R.qsHeld === R && q.children.length === qs.length) [...q.children].forEach((b, i) => { b.dataset.q = qs[i]; b.disabled = R.phase === 'tell'; b.classList.remove('wk-bad'); b.innerHTML = qInner(t, qs[i], R.know); });
+      else { q.innerHTML = qsHtml(t, qs, R.know, R.phase === 'tell'); holdQs(t); }
       c.innerHTML = R.phase === 'find' || R.phase === 'done' ? candsHtml(t, R.sel) : '';
+      if (c.innerHTML && R.candsHeld !== R) { R.candsHeld = R; JOBS.hold(c, [null, 0, 1, 2, 3].map((sel) => candsHtml(t, sel))); }   // the four as tall as with a wallet's or a bag's inside shown under the one picked up
       a.innerHTML = R.phase === 'find' ? actsHtml(t, R.sel) : '';
     }
     // held for each customer (2026-11-26, the final fix of test.4 — the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」 — as the
-    // onsen's: JOBS.hold, TL.keep): their bubble as tall as the most it will show (what they said, with the one answer that can come
-    // while asking — after two misses it opens: where it is, for one who said what; what it is or its looks, for one who said where; the
-    // looks, and what is in it, once found), the questions and then the four with the two answers (lf-play: as tall as the taller, whichever
-    // is picked up), the talk row as its tallest line — so a question, its answer, a miss or the four coming out move nothing under them
+    // onsen's: JOBS.hold, TL.keep): their bubble's row as tall as the most it will show, up to the room over the counter (round 2, below:
+    // what they said, with the one answer that can come while asking — after two misses it opens: where it is, for one who said what; what
+    // it is or its looks, for one who said where; the looks, and what is in it, once found), the questions and then the four with the two
+    // answers (lf-play: as tall as the taller, whichever is picked up), the talk row as its tallest line — so a question, its answer, a
+    // miss or the four coming out move nothing under them
     const TL = JOBS.talkLine({ box: () => box, sel: '.lf-talk', who: s.who, first });
+    const playList = (t) => { const know = [false, true].map((w) => Object.assign(LOST.known(t), { what: w })), play = (q, c, a) => `<div class="lf-qs">${q}</div><div class="lf-cands">${c}</div><div class="lf-acts">${a}</div>`;
+      return know.map((kn) => play(qsHtml(t, t.qs, kn), '', '')).concat(t.q2 ? [play(qsHtml(t, t.q2, know[1]), '', '')] : [], [null, 0, 1, 2, 3].map((sel) => play('', candsHtml(t, sel), actsHtml(t, sel)))); };
+    function holdQs(t) {
+      R.qsHeld = R; const know = [false, true].map((w) => Object.assign(LOST.known(t), { what: w }));
+      [...el('.lf-qs').children].forEach((b, i) => JOBS.hold(b, know.map((kn) => qInner(t, t.qs[i], kn)).concat(t.q2 ? [qInner(t, t.q2[i], know[1])] : [])));
+      JOBS.hold(el('.lf-play'), playList(t));   // measured again with the questions as held now
+    }
+    // the customer's row (the face and the bubble over the counter) held as tall as their bubble is every time — closed, or opened as
+    // they go — at the least; taller (what they said, after two misses), it grows up over the shelf, never under it: the counter, the
+    // questions and the talk row stay where they are, and the card is no taller than its rows (final fix, round 2: 「…擠壓」, the 中文 in view)
+    const rowHtml = (t, said) => JOBS.custHtml(t.who).replace('<p class="wk-bub"></p>', `<p class="wk-bub">${bubHtml(said)}</p>`);
+    const roomAbove = () => { const r = el('.lf-counter .wk-cust'), m = el('.lf-room'); return r && m ? r.getBoundingClientRect().top - m.getBoundingClientRect().top - 6 : 0; };
     function holdAll(t) {
-      const know = [false, true].map((w) => Object.assign(LOST.known(t), { what: w })), asking = t.open === 'what' ? ['where', 'look'] : t.open === 'where' ? ['what'] : [];
-      JOBS.hold(el('.wk-cust .wk-bub'), [[t.lost], ...asking.map((q) => [t.lost, LOST.answer(t, q)]), [[t.desc, t.descZh]]].concat(t.in ? [[[t.desc, ''], [t.in, t.descZh]]] : []).map(bubHtml));
-      const play = (q, c, a) => `<div class="lf-qs">${q}</div><div class="lf-cands">${c}</div><div class="lf-acts">${a}</div>`;
-      JOBS.hold(el('.lf-play'), know.map((kn) => play(qsHtml(t, t.qs, kn), '', '')).concat(t.q2 ? [play(qsHtml(t, t.q2, know[1]), '', '')] : [], [null, 0, 1, 2, 3].map((sel) => play('', candsHtml(t, sel), actsHtml(t, sel)))));
+      const asking = t.open === 'what' ? ['where', 'look'] : t.open === 'where' ? ['what'] : [], know = [false, true].map((w) => Object.assign(LOST.known(t), { what: w }));
+      JOBS.hold(el('.lf-counter .wk-cust'), [null, [t.lost], ...asking.map((q) => [t.lost, LOST.answer(t, q)]), [[t.desc, t.descZh]]].concat(t.in ? [[[t.desc, ''], [t.in, t.descZh]]] : []).map((said) => rowHtml(t, said)), (h) => h - roomAbove());
+      JOBS.hold(el('.lf-play'), playList(t));
       TL.keep(() => ({ drv: [s.hi, s.hat, s.asked, s.twin, s.bring, s.there, s.head, s.call, ...s.ok].concat(k >= 9 ? [s.end, s.all] : []),
         me: [...new Set([...t.qs, ...(t.q2 || [])])].flatMap((q) => know.map((kn) => LOST.question(t, q, kn))).concat([s.me.give, s.me.none, s.me.gag]) }));
     }

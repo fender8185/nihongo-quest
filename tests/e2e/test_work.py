@@ -844,18 +844,25 @@ def test_the_rules_card_reads_by_night(b):
 
 # the final fix of test.4 (2026-11-26; the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」): at 張's till a piece tapped moves
 # nothing — as the window's, the lost and found's and the taxi's (test_ekimae's moves_at: the jobs' dice seeded, every painted frame from
-# the ask till they go at 390×664 and 375×553, nothing moved more than 1 px, the card's scroll unchanged). The 4th to the 6th: one thing,
-# then two summed (a wrong piece, two for the 5th — the next piece lit — then the sum spelled)
+# the ask till they go at 390×664 and 375×553, nothing moved more than 1 px, the card's scroll unchanged) — round 2: every tile too, never
+# stretched nor shifted, the spelled row's foot where it is (the sum on one line, its letters fitted; a sum too long even so grows up into
+# the room held over it); on a later shift and on the job's first — on that, at 390×664, the 中文 under the hero's いらっしゃいませ in
+# sight from the ask (fd02662 held a second line for the sum over the tiles: 歡迎光臨！ under the fold). The 4th to the 6th: one thing,
+# then two summed (a wrong piece, two for the 5th — the next piece lit — then the sum)
 def test_a_reply_moves_nothing_at_the_till(b):
     from test_ekimae import moves_at
-    setup = BEGIN + HELP + COUNTER + TILL + """ kana(46); vocab('ふたつ'); vocab('いくら'); nums(); earlier('till'); JOBS.pat.scale = 30;
+    setup = BEGIN + HELP + COUNTER + TILL + """ kana(46); vocab('ふたつ'); vocab('いくら'); nums(); earlier('till'); JOBS.pat.scale = 30; LATERSHIFT
       location.hash = '#/chinadori'; route(); await wait(300); state.work.res[dateStr(TOWNEV.today())] = { place: 'till', done: 3, score: { 0: 0, 1: 0, 2: 0 } }; saveState(); SEED; WORK.start(yard(), 'till');"""
     play = """ const t0 = JOBS.till.now(), all = () => [...document.querySelectorAll('.wk-till .wk-tile')];
       for (let m = 0; m < (i % 2 ? 2 : 1); m++) { const x = all().find((y) => !t0.parts.includes(y.dataset.p) && !y.disabled); if (x) { x.click(); await wait(1500); } }
       for (const p of t0.parts) { const x = all().find((y) => y.dataset.p === p && !y.disabled); if (x) x.click(); await wait(450); }
       await until(() => JOBS.till.now() !== t0, 15000);"""
-    bad = moves_at(b, URL, READY, setup, '.wk-till', "(JOBS.till.now() || null)", "Boolean(JOBS.till.now()) && Boolean(document.querySelector('.wk-till .wk-tile:not(:disabled)'))",
-                   "JOBS.till.now() ? JOBS.till.now().kind + ':' + document.querySelectorAll('.wk-till .wk-spell b').length : '-'", play, 3)
+    bad = []
+    for later in (True, False):   # earlier('till') leaves no shift paid: the first shift (the hero's 中文 under his lines); a later one has one
+        bad += [('later' if later else 'first',) + x for x in moves_at(b, URL, READY, setup.replace('LATERSHIFT', "state.work.res['2026-10-04'] = { place: 'till', done: 10, score: {}, yen: 1, grade: 'S' };" if later else ''),
+                '.wk-till', "(JOBS.till.now() || null)", "Boolean(JOBS.till.now()) && Boolean(document.querySelector('.wk-till .wk-tile:not(:disabled)'))",
+                "JOBS.till.now() ? JOBS.till.now().kind + ':' + document.querySelectorAll('.wk-till .wk-spell b').length : '-'", play, 3, track=('.wk-tile',), foot=('.wk-spell',),
+                inview='' if later else '.wk-me span')]
     assert bad == [], bad
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]

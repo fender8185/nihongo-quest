@@ -65,13 +65,16 @@ def test_logged_in_chip_and_panel(b):
 # the final fix of test.4 (2026-11-26; was test_toast_is_clickable_while_shown, from the update toast tapped to reload of 2026-10-24 —
 # gone since new versions put themselves on): no toast holds a control (toast() sets its text only, nothing listens on it), so a shown
 # toast lets a tap through to what lies under it; and it is as wide as its words up to the screen less 16 px a side (it was fixed at
-# left 50% and shrank into half the screen: the knock toast on 3 lines over 町の手帳's buttons at 375×553)
+# left 50% and shrank into half the screen: the knock toast on 3 lines over 町の手帳's buttons at 375×553). Round 2: a word with no
+# break in it — an e-mail in 「已登入 …」 — wraps inside the box too (overflow-wrap: anywhere; fd02662 ran it out of the box's side)
 def test_a_shown_toast_lets_taps_through(b):
     out = b.run([("metrics", (375, 553)), ("nav", URL), ("wait", READY),
         ("eval", """(async () => { toast('コンコン……有人在敲門。點大門去開門看看。', 5000); await new Promise((r) => setTimeout(r, 400));
           const t = document.getElementById('toast'), r = t.getBoundingClientRect(), hit = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);   // all a tap there may land on, top to bottom
-          return JSON.stringify({ shown: t.classList.contains('show'), pe: getComputedStyle(t).pointerEvents, through: hit.length > 0 && !hit.some((e) => t.contains(e)), w: Math.round(r.width) }); })()""")])
-    assert json.loads(out[0]) == {'shown': True, 'pe': 'none', 'through': True, 'w': 343}, out[0]
+          const knock = { shown: t.classList.contains('show'), pe: getComputedStyle(t).pointerEvents, through: hit.length > 0 && !hit.some((e) => t.contains(e)), w: Math.round(r.width) };
+          toast('已登入 someone.with.a.rather.long.name@gmail.com', 5000); await new Promise((r) => setTimeout(r, 400)); const m = t.getBoundingClientRect();
+          return JSON.stringify(Object.assign(knock, { mail: { w: Math.round(m.width), over: t.scrollWidth - t.clientWidth, sides: [Math.round(m.left), Math.round(innerWidth - m.right)] } })); })()""")])
+    assert json.loads(out[0]) == {'shown': True, 'pe': 'none', 'through': True, 'w': 343, 'mail': {'w': 343, 'over': 0, 'sides': [16, 16]}}, out[0]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

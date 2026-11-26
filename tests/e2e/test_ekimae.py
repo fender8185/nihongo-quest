@@ -751,36 +751,47 @@ def test_the_taxi_map_reads_on_a_phone(b):
 # dice seeded (MOVES_SEED: one stream for the calls whose stack runs through the jobs' files, from the job's start), so every tree gets the
 # same customers; each played as a player would (a wrong reply or tap, then the right ones; lines 400 ms each), at 390×664 and 375×553 (a
 # phone: device scale 2). Every painted frame from the frame they are asked till they go — their leaving (.bye) and the card's opening
-# skipped, as the onsen's tests do: the card's top and foot and each of its rows' (its children but ✕) against the frame of the ask: none
-# moves more than 1 px, the card's scroll never changes. MOVES: CARD, KEY() (the customer now), ASKED(), PHASE(), PLAY() (one played), N.
+# skipped, as the onsen's tests do: the card's top and foot and each of its rows' (its children but ✕) against the frame of the ask, and
+# (round 2: the re-review found 收銀's tiles and 落とし物's answers moving inside their held rows) the controls inside them — TRACK: each
+# reply, tile, question, the four and the answers' row, from the frame each comes on show; FOOT: what may grow up only into room held
+# for it (the spelled sum: its foot) — none moves more than 1 px, the card's scroll never changes. INVIEW (a selector): the last one of it
+# shown at the ask sits inside the card's visible part (on a first shift, the 中文: 落とし物's talk row, 收銀's hero line). MOVES: CARD,
+# KEY() (the customer now), ASKED(), PHASE(), PLAY() (one played), N, TRACK, FOOT, INVIEW.
 MOVES_SEED = """ { const orig = Math.random.bind(Math); let sd = 424242; const seeded = () => { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; };
     Math.random = function () { return /71w_|71s_jobs/.test((new Error()).stack || '') ? seeded() : orig(); }; }"""
 MOVES = r""" window.speakAs = () => new Promise((ok) => setTimeout(ok, 400));
   const C = () => document.querySelector(CARD + ' .cls-card'), until = async (f, ms) => { const t0 = Date.now(); while (!f() && Date.now() - t0 < ms) await wait(50); return f(); };
   const box = (e) => { if (!e || !e.isConnected || !e.getClientRects().length) return null; const r = e.getBoundingClientRect(); return [r.top, r.bottom]; };
-  const parts = (c) => [['card', c], ...[...c.children].filter((x) => !x.classList.contains('cls-x')).map((x) => [String(x.className).split(' ')[0], x])];
+  const snap = (c) => { const o = { card: box(c) }; [...c.children].forEach((x, i) => { if (!x.classList.contains('cls-x')) o[i + ':' + String(x.className).split(' ')[0]] = box(x); });
+    TRACK.forEach((q) => c.querySelectorAll(q).forEach((e, i) => { o[q + '#' + i] = box(e); }));
+    FOOT.forEach((q) => c.querySelectorAll(q).forEach((e, i) => { const b = box(e); o['foot ' + q + '#' + i] = b && [b[1], b[1]]; })); return o; };
+  const under = (c) => { const e = [...c.querySelectorAll(INVIEW)].filter((x) => x.getClientRects().length && x.textContent.trim()).pop(); return e ? Math.round(e.getBoundingClientRect().bottom - (c.getBoundingClientRect().top + c.clientTop + c.clientHeight)) : null; };
   const F = { cur: null, base: null, recs: [], stop: false };
   const tick = () => { if (F.stop) return; const c = C();
-    if (c) { const k = KEY(); if (k && k !== F.cur) { F.cur = k; F.base = null; F.recs.push({ max: {}, st: 0, frames: 0, at: {} }); }
+    if (c) { const k = KEY(); if (k && k !== F.cur) { F.cur = k; F.base = null; F.recs.push({ max: {}, st: 0, frames: 0, at: {}, under: null }); }
       const rec = F.recs[F.recs.length - 1];
       if (rec && k === F.cur && !c.querySelector('.bye') && !c.closest('.cls').getAnimations().some((a) => a.playState === 'running')) {
-        if (!F.base) { if (ASKED()) F.base = { st: c.scrollTop, p: parts(c).map(([n, e]) => [n, e, box(e)]) }; }
-        else { rec.frames++; rec.st = Math.max(rec.st, Math.round(Math.abs(c.scrollTop - F.base.st)));
-          F.base.p.forEach(([n, e, b0]) => { const b1 = box(e); if (!b0 || !b1) return; const m = Math.round(Math.max(Math.abs(b1[0] - b0[0]), Math.abs(b1[1] - b0[1])) * 10) / 10;
-            if (m > (rec.max[n] || 0)) { rec.max[n] = m; if (m > 1 && !rec.at[n]) rec.at[n] = PHASE(); } }); } } }
+        if (!F.base) { if (ASKED()) { F.base = { st: c.scrollTop, p: snap(c) }; if (INVIEW) rec.under = under(c); } }
+        else { rec.frames++; rec.st = Math.max(rec.st, Math.round(Math.abs(c.scrollTop - F.base.st))); const s = snap(c);
+          for (const [n, b1] of Object.entries(s)) { const b0 = F.base.p[n]; if (!b1) continue; if (!b0) { F.base.p[n] = b1; continue; }   // a reply, the four, come on show: from then
+            const m = Math.round(Math.max(Math.abs(b1[0] - b0[0]), Math.abs(b1[1] - b0[1])) * 10) / 10;
+            if (m > (rec.max[n] || 0)) { rec.max[n] = m; if (m > 1 && !rec.at[n]) rec.at[n] = PHASE(); } } } } }
     requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
   for (let i = 0; i < N; i++) { if (!(await until(() => C() && ASKED(), 30000))) { F.recs.push({ err: 'no ask ' + i }); break; } await wait(500); await PLAY(i); }
-  F.stop = true; return JSON.stringify(F.recs.slice(0, N).map((r) => (r.err ? r : { max: Object.fromEntries(Object.entries(r.max).filter(([, v]) => v > 1)), most: Math.max(0, ...Object.values(r.max)), st: r.st, frames: r.frames, at: r.at })));"""
-def moves_at(b, url, ready, setup, card, key, asked, phase, play, n, sizes=((390, 664), (375, 553))):
-    """each size: the job set up (setup, with the jobs' dice seeded once it is in), its customers' frames; what moved (or a frameless one)"""
+  F.stop = true; return JSON.stringify(F.recs.slice(0, N).map((r) => (r.err ? r : { max: Object.fromEntries(Object.entries(r.max).filter(([, v]) => v > 1)), most: Math.max(0, ...Object.values(r.max)), st: r.st, frames: r.frames, at: r.at, keys: Object.keys(r.max).length, under: r.under })));"""
+def moves_at(b, url, ready, setup, card, key, asked, phase, play, n, sizes=((390, 664), (375, 553)), track=(), foot=(), inview='', inview_at=(390, 664)):
+    """each size: the job set up (setup, with the jobs' dice seeded once it is in), its customers' frames; what moved (or a frameless one);
+    inview: at the size inview_at, the last of it shown at the ask under the card's visible part"""
     bad = []
     for w, h in sizes:
         recs = json.loads(b.run([("metrics", (w, h)), ("nav", url), ("wait", ready), ("eval", "(async () => { " + setup.replace('SEED;', MOVES_SEED + ';')
-            + f"\n const CARD = '{card}', N = {n}, KEY = () => {key}, ASKED = () => {asked}, PHASE = () => {phase}, PLAY = async (i) => {{ {play} }};" + MOVES + " })()")], timeout=420)[-1])
+            + f"\n const CARD = '{card}', N = {n}, KEY = () => {key}, ASKED = () => {asked}, PHASE = () => {phase}, PLAY = async (i) => {{ {play} }}, TRACK = {json.dumps(list(track))}, FOOT = {json.dumps(list(foot))}, INVIEW = {json.dumps(inview)};"
+            + MOVES + " })()")], timeout=420)[-1])
         if len(recs) < n: bad.append((w, h, 'customers', len(recs), recs))
         for i, r in enumerate(recs):
             if 'err' in r or r['max'] or r['st'] or r['frames'] < 10: bad.append((w, h, i, r))
+            if inview and (w, h) == tuple(inview_at) and (r.get('under') is None or r['under'] > 0): bad.append((w, h, i, 'under the fold at the ask', r.get('under')))
     return bad
 
 def test_a_reply_moves_nothing_at_the_window(b):
@@ -793,12 +804,16 @@ def test_a_reply_moves_nothing_at_the_window(b):
       await until(() => !n() || n().task !== t0, 15000);"""
     bad = moves_at(b, URL, READY, setup, '.wk-window', "(MADO_RUN.now() ? MADO_RUN.now().task : null)",
                    "Boolean(MADO_RUN.now()) && MADO_RUN.now().phase === 'ask' && Boolean(document.querySelector('.wk-window :is(.md-opt, .md-tip)'))",
-                   "MADO_RUN.now() ? MADO_RUN.now().task.kind + ':' + MADO_RUN.now().phase + (MADO_RUN.now().printed ? '+printed' : '') : '-'", play, 6)
+                   "MADO_RUN.now() ? MADO_RUN.now().task.kind + ':' + MADO_RUN.now().phase + (MADO_RUN.now().printed ? '+printed' : '') : '-'", play, 6, track=('.md-opt', '.md-tip'))
     assert bad == [], bad
 
+# 落とし物 (round 2): the 3rd to the 8th of the seeded shift — a wallet (said what), a key (both), a book (said where: 「どんな ものですか。」 gets
+# its furigana once 何を is told), two alike (a bag: the four's insides), none of the four, 源三's glasses — on a later shift and on the job's
+# first (the 中文 under the hero's lines and the questions): each question, the four and the answers never move; on the first shift at
+# 390×664 the talk row's 中文 is in sight from the ask (fd02662 held each row at its own most: the card ran past the screen)
 def test_a_reply_moves_nothing_in_the_lost_and_found(b):
-    setup = BEGIN + LOST_HELP + """ JOBS.pat.scale = 30; location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
-      state.work.res[dateStr(TOWNEV.today())] = { place: 'lost', done: 4, score: { 0: 0, 1: 0, 2: 0, 3: 0 } }; saveState(); SEED; WORK.start(yard(), 'lost');   // the 5th to the 8th: where only, two alike, none of the four, 源三's"""
+    setup = BEGIN + LOST_HELP + """ JOBS.pat.scale = 30; FIRSTSHIFT location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      state.work.res[dateStr(TOWNEV.today())] = { place: 'lost', done: 2, score: { 0: 0, 1: 0 } }; saveState(); SEED; WORK.start(yard(), 'lost');"""
     play = """ const n = () => LOST_RUN.now(), t0 = n().task, c = card(), q = (k) => c.querySelector(`.lf-q[data-q="${k}"]:not(:disabled)`);
       let wrongQ = true;
       for (let g = 0; g < 14 && n() && n().task === t0; g++) {
@@ -811,9 +826,11 @@ def test_a_reply_moves_nothing_in_the_lost_and_found(b):
           if (no >= 0 && g < 12) await give(no); if (n() && n().task === t0 && n().phase === 'find') { if (ok >= 0 && t.type !== 'gag' && t.type !== 'none') await give(ok); else { click('.lf-none'); await wait(1800); } } continue; }
         await wait(300); }
       await until(() => !n() || n().task !== t0, 15000);"""
-    bad = moves_at(b, URL, READY, setup, '.wk-lost', "(LOST_RUN.now() ? LOST_RUN.now().task : null)",
-                   "Boolean(LOST_RUN.now()) && LOST_RUN.now().phase === 'ask' && Boolean(document.querySelector('.wk-lost .lf-q'))",
-                   "LOST_RUN.now() ? LOST_RUN.now().task.type + ':' + LOST_RUN.now().phase : '-'", play, 4)
+    bad = []
+    for first in (False, True):   # a first shift: no shift of it paid yet (LOST_HELP's own is put back unpaid)
+        bad += [('first' if first else 'later',) + x for x in moves_at(b, URL, READY, setup.replace('FIRSTSHIFT', "state.work.res['2026-10-22'] = { place: 'lost', done: 1, score: { 0: 0 } };" if first else ''),
+                '.wk-lost', "(LOST_RUN.now() ? LOST_RUN.now().task : null)", "Boolean(LOST_RUN.now()) && LOST_RUN.now().phase === 'ask' && Boolean(document.querySelector('.wk-lost .lf-q'))",
+                "LOST_RUN.now() ? LOST_RUN.now().task.type + ':' + LOST_RUN.now().phase : '-'", play, 6, track=('.lf-q', '.lf-cands', '.lf-acts'), inview='.lf-talk span' if first else '')]
     assert bad == [], bad
 
 def test_a_reply_moves_nothing_in_the_taxi(b):
@@ -829,7 +846,7 @@ def test_a_reply_moves_nothing_in_the_taxi(b):
           if (w) { w.click(); await wait(1200); } const r = card().querySelector(`.tx-pay[data-o="${n.payRight}"]`); if (r) r.click(); await wait(600); continue; }
         await wait(100); }"""
     bad = moves_at(b, URL, READY, setup, '.wk-taxi', "(TAXI_RUN.now() ? TAXI_RUN.now().ride : null)", "Boolean(TAXI_RUN.now()) && TAXI_RUN.now().phase === 'drive'",
-                   "TAXI_RUN.now() ? (TAXI_RUN.now().ride.guided ? 'guided' : 'to') + ':' + TAXI_RUN.now().phase + ':m' + TAXI_RUN.now().miss : '-'", play, 3)
+                   "TAXI_RUN.now() ? (TAXI_RUN.now().ride.guided ? 'guided' : 'to') + ':' + TAXI_RUN.now().phase + ':m' + TAXI_RUN.now().miss : '-'", play, 3, track=('.tx-go', '.tx-pay'))
     assert bad == [], bad
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
