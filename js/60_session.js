@@ -789,7 +789,10 @@ if (PHONE_MQ && PHONE_MQ.addEventListener) PHONE_MQ.addEventListener('change', (
 // and its result rises in a phone's panel (css/app.css, the same media line)
 const SIDE_MQ = window.matchMedia ? window.matchMedia('(orientation: landscape) and (max-height: 500px)') : null;
 function sideLayout() { return Boolean(SIDE_MQ && SIDE_MQ.matches); }
-if (SIDE_MQ && SIDE_MQ.addEventListener) SIDE_MQ.addEventListener('change', () => { const e = SESSION && currentRoute().name === 'practice' && currentEntry(); if (e && e.q && e.q.passageHtml) renderPractice(); });
+// drawn again only where it changes the drawing (past 600 px wide: the result in a panel or not), never while a field has the keyboard
+// (an on-screen keyboard can shrink a phone to "a short landscape": the AI question's draft and its focus were lost; the fix round's re-review)
+if (SIDE_MQ && SIDE_MQ.addEventListener) SIDE_MQ.addEventListener('change', () => { const e = SESSION && currentRoute().name === 'practice' && currentEntry(), f = document.activeElement;
+  if (!e || !e.q || !e.q.passageHtml || phoneLayout() || (f && /^(INPUT|TEXTAREA|SELECT)$/.test(f.tagName))) return; renderPractice(); });
 // room under the page as tall as the panel, so what it covers can still be scrolled up above it (it grows with ⋯ or AI 解析)
 const SHEET_RO = window.ResizeObserver ? new ResizeObserver(([en]) => { if (en) { const view = document.getElementById('view'); view.style.setProperty('--sheet-h', en.target.offsetHeight + 'px'); rpUnder(view); } }) : null;
 function sheetFit(view) {

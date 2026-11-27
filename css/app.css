@@ -2404,7 +2404,7 @@ body.reading { overflow: hidden; }
   .rp-ask > .q-stem { flex: 0 1 auto; min-height: max(1.95em, var(--rp-stem-h, 0px)); overflow-y: auto; overscroll-behavior: contain; }
   .rp-ask > .opts { flex: none; margin-top: 14px; }
   /* the tool row and, answered, 下一題 beside it: held at the panel's foot under however long a result (the panel scrolling under it) */
-  .rp-foot { position: sticky; bottom: 0; z-index: 1; flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px; margin: 14px -6px 0; padding: 8px 6px 0; background: var(--bg-elev); }
+  .rp-foot { position: sticky; bottom: 0; z-index: 1; flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px; margin: 14px -6px 0; padding: 8px 6px 4px; background: var(--bg-elev); }   /* 4 px under: 下一題's focus ring whole (the re-review) */
   .rp-foot > .pr-actions { flex: 1 1 auto; margin: 0; } .rp-foot > .pr-next { flex: none; margin: 0 0 0 auto; }
   .rp-ask > .rp-foot:not(:has(> .pr-next)) { flex: 0 999 auto; min-height: 0; overflow: hidden; }   /* before the answer (the key hint) it gives way before the question does */
 }
