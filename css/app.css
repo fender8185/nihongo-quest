@@ -2312,7 +2312,7 @@ body.reading { overflow: hidden; }
 .aiq-err:empty { display: none; }
 .pr-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .pr-actions .left, .pr-actions .right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-@media (hover: none) and (pointer: coarse) { .kbd-hint, .opt .kbd:not(.pq-num), .opt-pick .kbd { display: none !important; } }   /* touch screens: no keyboard, no key hints (2026-11-11, the user: nor the options' 1–4) — but a practice option's number, a quiet badge since test.5 (.pq-num: the A2 look the user picked shows it), where it costs no line (pqNums) */
+@media (hover: none) and (pointer: coarse) { .kbd-hint, .opt .kbd, .opt-pick .kbd { display: none !important; } }   /* touch screens: no keyboard, no key hints (2026-11-11, the user: nor the options' 1–4; test.5's quiet badge, .pq-num, included: Ruling 37) */
 .banner.compact { padding: 8px 12px; font-size: 13px; gap: 8px 12px; }
 .pr-next { display: flex; justify-content: flex-end; margin-top: 12px; }
 @media (max-width: 600px) {
@@ -2354,12 +2354,13 @@ body.reading { overflow: hidden; }
    its tip (.pq-bar, .pq-bead, prBarHtml); the count today's plain one by night, a quiet book label by day; the question on a plain page
    (.pq-card: a 14 px radius, a page edge under it); its kind a small filled label at the head of the label row (.pq-kind-tag, pqLabelHtml:
    課程's book colours, dimmed under the night lamps as the covers are — --cover-keep; 聽力's 若竹 a shade deeper than the mockup's for 4.5:1
-   by day), 新 an outline in the kind's ink; the options plain rounded cards with a soft shadow, their number in a quiet badge (.pq-num; a
-   touch screen's too, where it costs no option a line: pqNums); the tiles and 配對's words the same cards; the result a plain slip with a
-   4 px ok／bad top edge (a phone's panel and the box under the options on a wide screen), its ✓／× in a circle that pops in, 下一題 (and a
-   preview's 看完了) flat amber. No size or place changes (a label no taller than its row's line), but a new item's label row keeping its 新
-   chip's height as the chip turns into dots (pq-hold): the card no longer moves 6 px on the answer. The 模擬考 (its own runner) keeps its
-   look. Every class and variable pq- */
+   by day), 新 and every other chip of the row an outline; the options plain rounded cards with a soft shadow, their number in a quiet
+   badge where there is a keyboard (.pq-num; a touch screen shows none: Ruling 37); the tiles and 配對's words the same cards; the result a
+   plain slip with a 4 px ok／bad edge along its rounded top (a phone's panel and the box under the options on a wide screen), its ✓／× in a
+   circle that pops in, its chips outlined, 下一題 (and a preview's 看完了) flat amber. Nothing changes size or place: the label row as wide
+   as before and no taller than its line, a chip set into the line, and a row an answer would still make taller kept on one line (pqRow) —
+   so neither 新 turning into dots nor a miss bringing 錯題複習 or 常錯 moves the card (it moved 6–41 px before). The 模擬考 (its own
+   runner) keeps its look. Every class and variable pq- */
 :root, [data-theme="dark"] {
   --pq-page: #2e3155; --pq-page-line: #3f426d; --pq-page-edge: #262848; --pq-card: #383b66; --pq-card-edge: #464a7d; --pq-num-bg: rgba(236, 235, 246, .09);
   --pq-track: #1b1d36; --pq-fill-a: #f2a65e; --pq-fill-b: #e37f5a; --pq-bead-line: #df7356; --pq-ex: var(--bg-sunken); --pq-ex-line: var(--line);
@@ -2382,12 +2383,17 @@ body.reading { overflow: hidden; }
 .pq-bead { position: absolute; top: 50%; right: -12px; width: 24px; height: 24px; margin-top: -12px; border-radius: 50%; border: 2px solid var(--pq-bead-line); box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='%23df7356'%3E%3Ccircle cx='10' cy='5' r='3.3'/%3E%3Ccircle cx='14.76' cy='8.45' r='3.3'/%3E%3Ccircle cx='12.94' cy='14.05' r='3.3'/%3E%3Ccircle cx='7.06' cy='14.05' r='3.3'/%3E%3Ccircle cx='5.24' cy='8.45' r='3.3'/%3E%3C/g%3E%3Ccircle cx='10' cy='10' r='2.6' fill='%23f6d27a'/%3E%3C/svg%3E") center / 15px no-repeat, var(--label); }
 [data-theme="light"] .pq-top > .pr-count { padding: 2px 9px; border-radius: 6px; background: var(--label); color: var(--label-ink); font-weight: 700; line-height: 1.5; }   /* by night as before (the user) */
-/* the page and its label row */
+/* the page and its label row: the kind's label in the row's type (13 px on a phone, 12 wide) on a line no taller than the row's, its sides
+   and the row's gaps 6 px — the row as wide as 「單字 · 」 made it before, so it wraps where it did; a chip set into the row's line (3 px
+   over it above and below, 7 px clear of the instruction), so a chip coming or going (新 → dots, a miss's 錯題複習 or 常錯) moves nothing.
+   A reading card's row keeps its own height (Task 2: its min-height is a chip's) */
 .pq-card { border-color: var(--pq-page-line); border-radius: 14px; background: var(--pq-page); box-shadow: 0 3px 0 -1px var(--pq-page-edge), var(--shadow); }
-.pq-card > .q-label { color: var(--fg-2); }
-.pq-card:not(.rp-card) > .q-label.pq-hold { min-height: calc(1.6em + 6px); }   /* a new item's: its 新 chip's height, kept as the chip turns into dots (a reading card's row has its own, below) */
-/* the label no taller than the row's line (13 px × 1.6 on a phone): a row of plain text and dots stays as tall as before */
-.pq-kind-tag { display: inline-flex; align-items: center; padding: 0 9px; border-radius: 6px; background: var(--pq-kind-c); color: #fff6e6; font-size: 13px; font-weight: 700; letter-spacing: .08em; line-height: 20px; white-space: nowrap; }
+.pq-card > .q-label { column-gap: 6px; color: var(--fg-2); }
+.pq-card:not(.rp-card) > .q-label .chip { margin-block: -3px; }
+/* answered, a row the answer made taller goes on one line, its text giving way (…) to the chips (pq-keep, pqRow) */
+.pq-card > .q-label.pq-keep { flex-wrap: nowrap; }
+.pq-keep > .pq-kind-tag + span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pq-kind-tag { display: inline-flex; align-items: center; padding: 0 6px; border-radius: 6px; background: var(--pq-kind-c); color: #fff6e6; font-size: var(--fs-label); font-weight: 700; line-height: 1.5; white-space: nowrap; }
 :is(.pq-card > .q-label, .pq-rp-chips) .chip-accent { border-color: var(--pq-kind-ink); background: none; color: var(--pq-kind-ink); font-weight: 700; }
 :is(.pq-card > .q-label, .pq-rp-chips) .chip-bad { border-color: currentColor; background: none; }   /* 常錯, 再看一次: outlined too — on their soft fill they read 4.3:1 */
 /* the options, the tiles and 配對's words: plain rounded cards; an option's number a quiet badge, the ok／bad colour once answered */
@@ -2402,15 +2408,18 @@ body.reading { overflow: hidden; }
 .pq-card .opt:is(.correct, .wrong) > .opt-zh { color: var(--fg-2); }
 .pq-num { width: 22px; min-width: 22px; padding: 0; border: 0; border-radius: 50%; background: var(--pq-num-bg); color: var(--fg-2); font: 600 12.5px/1 "Noto Sans TC", system-ui, sans-serif; }
 .opt.correct > .pq-num { background: var(--ok); color: var(--pq-on-mark); } .opt.wrong > .pq-num { background: var(--bad); color: var(--pq-on-mark); }
-.pq-nonum .pq-num { display: none; }   /* a touch screen where a number would cost an option a line (pqNums) */
 .pq-card .opt-pick .kbd { border: 0; border-radius: 50%; background: var(--pq-num-bg); color: var(--fg-2); }   /* an audio option's key (a keyboard's only): the same quiet badge */
 .pq-card :is(.spell-tile, .order-tile, .match-word, .match-meaning) { border-color: var(--pq-card-edge); border-radius: 12px; background: var(--pq-card); box-shadow: 0 1px 2px rgba(0, 0, 0, .1), 0 4px 10px -8px rgba(0, 0, 0, .5); }
 body > .tile-drag { border-radius: 12px; background: var(--pq-card); }   /* a tile being dragged */
-/* the result: a phone's panel and the box under the options on a wide screen — the page's paper, a 4 px ok／bad edge on top; the head's
-   ✓／× in a 28 px circle popping in (in a panel once it has risen); the example boxes lighter by day (their furigana 4.5:1) */
+/* the result: a phone's panel and the box under the options on a wide screen — the page's paper, a 4 px ok／bad edge along its rounded top
+   (a top border of the slip's own 14 px curve, thinning into the corners); the head's ✓／× in a 28 px circle popping in (in a panel once
+   it has risen); its chips (連對, 升到熟悉, 這次記住了, 已移出錯題本) outlined as the label row's — on their soft fill 4.1–4.3:1 — and a spelled
+   miss's wrong character underlined, not tinted (2.2–2.8:1); the example boxes lighter by day (their furigana 4.5:1) */
 .fb-sheet:is(.ok, .bad) { border-top: 0; border-radius: 14px 14px 0 0; background: var(--pq-page); box-shadow: 0 -10px 26px -12px rgba(0, 0, 0, .5); }
-.fb-sheet::before, .pq-card .feedback::before { content: ''; position: absolute; top: 0; left: 0; right: 0; z-index: 1; height: 4px; border-radius: 14px 14px 0 0; background: var(--ok); opacity: .8; pointer-events: none; }
-:is(.fb-sheet, .pq-card .feedback).bad::before { background: var(--bad); }
+.fb-sheet::before, .pq-card .feedback::before { content: ''; position: absolute; top: 0; left: 0; right: 0; z-index: 1; height: 14px; border-top: 4px solid var(--ok); border-radius: 14px 14px 0 0; opacity: .8; pointer-events: none; }
+:is(.fb-sheet, .pq-card .feedback).bad::before { border-top-color: var(--bad); }
+:is(.fb-sheet, .pq-card .feedback) :is(.chip-accent, .chip-ok) { border-color: currentColor; background: none; }
+:is(.fb-sheet, .pq-card) .fb-diff mark { background: none; color: var(--bad); text-decoration-line: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .fb-sheet > .fb-sheet-body { padding-top: 18px; }   /* as far from the panel's top as under its 2 px border before */
 .fb-sheet-body.pq-more:not(:focus-within) { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent); }   /* more below: the text fades out above 下一題 (sheetFit) */
 .pq-card .feedback { position: relative; border-color: var(--pq-page-line); border-radius: 14px; background: var(--pq-page); }
@@ -2428,9 +2437,9 @@ body > .tile-drag { border-radius: 12px; background: var(--pq-card); }   /* a ti
 .pq-card .speak-big { background: none; }
 :is(.pr-next, .pr-next-sticky) #btnNext { border-color: var(--pq-next); border-radius: 12px; background: var(--pq-next); color: var(--pq-next-fg); font-weight: 700; letter-spacing: .08em; box-shadow: 0 3px 10px -4px rgba(170, 85, 40, .55); }
 :is(.pr-next, .pr-next-sticky) #btnNext:hover { border-color: var(--pq-next); background: color-mix(in srgb, var(--pq-next) 88%, #fff); }
-/* a reading question's chips in its result panel where its label row is hidden (Ruling 36: an SE, a phone on its side — the rules below) */
-.pq-rp-chips { display: none; }
-@media (max-width: 600px) and (max-height: 600px), (orientation: landscape) and (max-height: 500px) { .pq-rp-chips { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; } }
+/* a reading question's chips in its result panel where its label row is hidden (Ruling 36: an SE, a phone on its side — --pq-rp-chips is
+   set with the row's --pq-rp-label, in the reading layout below) */
+.pq-rp-chips { display: var(--pq-rp-chips, none); flex-wrap: wrap; align-items: center; gap: 6px; }
 /* a reading question (2026-11-27, test.5; the user: 「讀解文章的排版也幫我調整一下」, the pick 「選項固定在下方」): the page as tall as the
    screen and never scrolled; the passage (.rp-card > .passage) scrolls on its own and the question with its four options stands in a panel
    of its own (.rp-ask, renderPractice), so the question and every option are in sight from the first frame at any size and the passage
@@ -2472,9 +2481,11 @@ body > .tile-drag { border-radius: 12px; background: var(--pq-card); }   /* a ti
   .rp-ask .opt { min-height: 46px; padding-block: 3px; } .rp-ask .opt > .jp { line-height: 1.9; }
   .rp-ask > .rp-foot { display: none; }   /* no tool row before the answer (no 發音 for a passage, Ruling 33); answered, the result panel's */
 }
-/* an SE (fix round 1): the label row's 27 px go to the question and the passage — a two-line question whole beside four two-line options,
-   every passage a line more */
-@media (max-width: 600px) and (max-height: 600px) { .rp-card > .q-label { display: none; } }
+/* no label row on an SE (fix round 1: its 27 px go to the question and the passage — a two-line question whole beside four two-line options,
+   every passage a line more) nor on a phone on its side (below): one condition, from here, for the row and for its chips in the result
+   panel (Ruling 36, .pq-rp-chips), so the two cannot part */
+@media (max-width: 600px) and (max-height: 600px), (orientation: landscape) and (max-height: 500px) { :root { --pq-rp-label: none; --pq-rp-chips: inline-flex; } }
+.rp-card > .q-label { display: var(--pq-rp-label, flex); }
 @media (min-width: 601px), (orientation: landscape) and (max-height: 500px) {
   body.practicing .content:has(> .rp-card) { max-width: 1120px; height: 100vh; height: 100dvh; display: flex; flex-direction: column; padding-bottom: 24px; }
   body.practicing .content:has(> .rp-card) > :is(.pr-top, .plan-note) { width: 100%; max-width: 728px; margin-inline: auto; }   /* the bar where every question has it */
@@ -2500,7 +2511,7 @@ body > .tile-drag { border-radius: 12px; background: var(--pq-card); }   /* a ti
   body.practicing .content:has(> .rp-card) { padding-bottom: 4px; }
   body.practicing .content:has(> .rp-card) > .plan-note { display: none; }
   body.practicing .content > .q-card.rp-card { grid-template: minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 2.6fr); column-gap: 12px; padding: 6px 8px; }
-  .rp-card > :is(.q-label, .q-instr) { display: none; }
+  .rp-card > .q-instr { display: none; }   /* the label row too: --pq-rp-label, above */
   .rp-card > .passage { padding: 4px 8px; }
   .rp-ask > .opts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }   /* two by two: two rows, each option on more lines, take less height than four */
   .rp-ask .opt { min-height: 46px; padding: 2px 4px 2px 6px; } .rp-ask .opt > .jp { line-height: 1.9; } .rp-ask .opt > .kbd { display: none; }

@@ -183,15 +183,14 @@ def test_a_units_lesson_has_its_own_screen_of_equal_pages(b):
     assert r['back'] == {'hash': '#/course/m2', 'body': False, 'open': '翻開講義', 'chip': '翻完過'}, r   # read to the end: it opens at its start again
     assert r['atEnd'] == {'count': True, 'gift': None} and r['intro'] == {'mark': False, 'h3': 13}, r   # opened at its end is not read through
 
-# 2026-11-11, the user: a phone shows no 1–4 on the answers (they are keyboard keys); a computer keeps them. test.5 (Task 3, A2 — the look
-# the user picked shows them): a practice option's number is a quiet badge (.pq-num) a touch screen shows too where it costs no line
-# (test_practice_style); the key hints, an audio option's pick key and any other option's key (the 模擬考's) stay hidden there
+# 2026-11-11, the user: a phone shows no 1–4 on the answers (they are keyboard keys); a computer keeps them. test.5's quiet badge (.pq-num)
+# included, no option's key excepted (Ruling 37; test_practice_style draws it)
 def test_touch_screens_hide_the_answers_number_keys(b):
     js = """(() => { const rules = [...document.styleSheets].flatMap(sh => { try { return [...sh.cssRules]; } catch (e) { return []; } });
       const touch = rules.filter(r => r.media && /hover: none/.test(r.media.mediaText) && /pointer: coarse/.test(r.media.mediaText)).map(r => r.cssText).join(' ');
-      return JSON.stringify({ opt: /\.opt \.kbd:not\(\.pq-num\)/.test(touch), pick: /\.opt-pick \.kbd/.test(touch), hint: /\.kbd-hint/.test(touch), none: /display: none/.test(touch) }); })()"""
+      return JSON.stringify({ opt: /\.opt \.kbd(?=[\s,{])/.test(touch), pick: /\.opt-pick \.kbd/.test(touch), none: /display: none/.test(touch) }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'opt': True, 'pick': True, 'hint': True, 'none': True}, r
+    assert r == {'opt': True, 'pick': True, 'none': True}, r
 
 # the phone type scale (2026-11-26, test.4; the user's pick 「16／14／13」): on a phone (390 wide) the three levels are 16／14／13 and the
 # shared classes read them — .small 14, .tiny .hint .stat-l .zh-btn .chip 13 (.chip the label level too, ruling 10); on a wide

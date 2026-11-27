@@ -144,57 +144,45 @@ def test_each_kind_has_its_label_in_its_colour(b):
                     c = x['chip']
                     assert c and c['text'] == '新' and c['bg'] == 0 and c['edge'] == c['ink'] and c['ratio'] >= 4.5, (w, h, t, k, c)
 
-# each option's number in a quiet badge (.pq-num, the options' own .kbd): 1–4, a 22 px circle at the option's left, in its middle, 4.5:1 —
-# on a phone (a touch screen: it showed no 1–4 before) and on a wide screen; the key hint 按 1–4 作答 still only where there is a keyboard.
-# Answered (wide), the right one's badge in --ok, the picked wrong one's in --bad, their numbers 4.5:1. By night and by day
-def test_each_option_has_its_badge(b):
+# each option's number (the options' own .kbd) a quiet badge where there is a keyboard and a fine pointer — 1–4, a 22 px circle at the
+# option's left and in its middle, 4.5:1; answered, the right one's in --ok, the picked wrong one's in --bad, 4.5:1 — and none on a touch
+# screen (2026-11-11, the user; Ruling 37): not on a word question, a kana glyph question or a reading question's panel, at a phone's sizes
+# and a tablet's; the key hint 按 1–4 作答 with the badges. By night and by day
+def test_option_numbers_show_with_a_keyboard_and_never_on_a_touch_screen(b):
     js = "(async () => { " + KIT + """ const v = word('学校'), out = {};
-      for (const th of ['night', 'day']) { theme(th); const e = await ask(v, makeVocabQuestion(v, { forceFmt: 'v-meaning' }));
-        const hint = document.querySelector('.pr-actions .kbd-hint');
-        out[th] = { hint: getComputedStyle(hint).display !== 'none', nonum: document.querySelector('.q-card .opts').classList.contains('pq-nonum'),
-          opts: [...document.querySelectorAll('.q-card .opt')].map((o) => { const n = o.querySelector(':scope > .pq-num'), cs = getComputedStyle(n), N = box(n), O = box(o);
-            return { text: n.textContent, shown: cs.display !== 'none', size: [N.width, N.height], round: cs.borderTopLeftRadius === '50%', left: Math.round(N.left - O.left),
-              mid: Math.abs((N.top + N.bottom) / 2 - (O.top + O.bottom) / 2) <= 1, ratio: read(n) }; }) };
-        if (innerWidth > 600) { const q = e.q, pick = (q.answer + 1) % 4; answerCurrent(pick); await wait(30);
-          const badge = (i) => { const n = document.querySelectorAll('.q-card .opt')[i].querySelector('.pq-num'), cs = getComputedStyle(n); return { bg: hex(rgba(cs.backgroundColor)), ink: hex(rgba(cs.color)), ratio: read(n) }; };
-          const root = getComputedStyle(document.documentElement);
-          out[th].answered = { right: badge(q.answer), wrong: badge(pick), okv: root.getPropertyValue('--ok').trim(), badv: root.getPropertyValue('--bad').trim() }; } }
+      const nums = () => [...document.querySelectorAll('.q-card .opt')].map((o) => { const n = o.querySelector(':scope > .kbd'), cs = getComputedStyle(n), N = box(n), O = box(o);
+        return { text: n.textContent, shown: cs.display !== 'none', size: [N.width, N.height], round: cs.borderTopLeftRadius === '50%', left: Math.round(N.left - O.left),
+          mid: Math.abs((N.top + N.bottom) / 2 - (O.top + O.bottom) / 2) <= 1, ratio: cs.display !== 'none' ? read(n) : 0 }; });
+      const hint = () => { const k = document.querySelector('.pr-actions .kbd-hint'); return Boolean(k) && getComputedStyle(k).display !== 'none'; };
+      for (const th of ['night', 'day']) { theme(th); const e = await ask(v, makeVocabQuestion(v, { forceFmt: 'v-meaning' })); out[th] = { word: nums(), hint: hint() };
+        await ask(REG.kana[0], makeQuestion(REG.kana[0], { forceFmt: 'a-read' })); out[th].glyph = nums(); out[th].glyphOpts = Boolean(document.querySelector('.opts.glyph'));
+        await ask(REG.read.find((x) => x.lv === 'N5')); out[th].reading = nums();
+        const e2 = await ask(v, makeVocabQuestion(v, { forceFmt: 'v-meaning' })), pick = (e2.q.answer + 1) % 4; answerCurrent(pick); await wait(30);
+        const badge = (i) => { const n = document.querySelectorAll('.q-card .opt')[i].querySelector('.kbd'), cs = getComputedStyle(n); return { shown: cs.display !== 'none', bg: hex(rgba(cs.backgroundColor)), ratio: cs.display !== 'none' ? read(n) : 0 }; };
+        const root = getComputedStyle(document.documentElement);
+        out[th].answered = { right: badge(e2.q.answer), wrong: badge(pick), okv: root.getPropertyValue('--ok').trim(), badv: root.getPropertyValue('--bad').trim() }; }
       done(); return JSON.stringify(out); })()"""
-    for (w, h) in (PHONE, (430, 740), WIDE):
-        r = json.loads(page(b, w, h, js))
+    for (w, h, touch) in ((390, 664, True), (430, 740, True), (768, 1024, True), (390, 664, False), (1280, 800, False)):
+        r = json.loads(page(b, w, h, js, touch=touch))
         for t in ('night', 'day'):
             x = r[t]
-            assert not x['nonum'] and x['hint'] == (w > 600), (w, h, t, x)   # a phone: no key hint (no keyboard), the numbers all the same
-            assert [o['text'] for o in x['opts']] == ['1', '2', '3', '4'], (w, h, t, x)
-            for o in x['opts']:
-                assert o['shown'] and o['size'] == [22, 22] and o['round'] and 10 <= o['left'] <= 18 and o['mid'] and o['ratio'] >= 4.5, (w, h, t, o)
-            if w > 600:
-                a = x['answered']
-                assert near(a['right']['bg'], a['okv']) and near(a['wrong']['bg'], a['badv']), (w, h, t, a)
-                assert a['right']['ratio'] >= 4.5 and a['wrong']['ratio'] >= 4.5, (w, h, t, a)
-
-# a touch screen shows an option's number only where it costs no line (pqNums): on a 360-wide phone the long sentences of a listening question
-# (l4-004: 旅行のお金をためているから…) go without numbers rather than onto a second line, as they did before; a short question keeps them; the
-# choice kept for the answered card (nothing moves); a wide screen with a keyboard always shows them
-def test_a_number_that_would_cost_an_option_a_line_is_left_out(b):
-    js = "(async () => { " + KIT + """ const out = {}, l = REG.byKey.get('l:l4-004'), lq = makeQuestion(l, {});
-      const state_ = () => { const opts = document.querySelector('.q-card .opts'), texts = [...opts.querySelectorAll('.opt > .pq-num + span')], had = opts.classList.contains('pq-nonum');
-        const hs = () => texts.map((t) => Math.round(box(t).height)); opts.classList.remove('pq-nonum'); const shown = hs(); opts.classList.add('pq-nonum'); const bare = hs(); opts.classList.toggle('pq-nonum', had);
-        return { nonum: had, costs: shown.some((x, i) => x > bare[i] + 1), shown: [...opts.querySelectorAll('.pq-num')].filter((n) => getComputedStyle(n).display !== 'none').length, tops: [...opts.querySelectorAll('.opt')].map((o) => Math.round(box(o).top)).join() }; };
-      await ask(l, lq); await wait(200); renderPractice(); await wait(30); out.long = state_();
-      answerCurrent((lq.answer + 1) % 4); await wait(30); out.longAnswered = state_();
-      const v = word('学校'); await ask(v, makeVocabQuestion(v, { forceFmt: 'v-meaning' })); out.short = state_();
-      done(); return JSON.stringify(out); })()"""
-    r = json.loads(page(b, 360, 640, js))
-    assert r['long']['costs'] and r['long']['nonum'] and r['long']['shown'] == 0, r   # a number would push a sentence onto a second line: none
-    assert r['longAnswered']['nonum'] and r['longAnswered']['tops'] == r['long']['tops'], r   # kept once answered: nothing moves
-    assert not r['short']['costs'] and not r['short']['nonum'] and r['short']['shown'] == 4, r
-    w = json.loads(page(b, 1280, 800, js))
-    assert not w['long']['nonum'] and w['long']['shown'] == 4 and not w['short']['nonum'], w   # a keyboard: the numbers as keys, always
+            assert x['glyphOpts'] and x['hint'] == (not touch), (w, h, touch, t, x)
+            for k in ('word', 'glyph', 'reading'):
+                assert [o['text'] for o in x[k]] == ['1', '2', '3', '4'], (w, h, touch, t, k, x[k])
+                assert all(o['shown'] != touch for o in x[k]), (w, h, touch, t, k, x[k])   # four with a keyboard, none on a touch screen
+            if touch:
+                assert not x['answered']['right']['shown'] and not x['answered']['wrong']['shown'], (w, h, touch, t, x['answered'])
+                continue
+            for o in x['word'] + x['reading']:
+                assert o['size'] == [22, 22] and o['round'] and 10 <= o['left'] <= 18 and o['mid'] and o['ratio'] >= 4.5, (w, h, t, o)
+            assert all(o['size'] == [22, 22] and o['round'] and o['ratio'] >= 4.5 for o in x['glyph']), (w, h, t, x['glyph'])   # in the corner
+            a = x['answered']
+            assert near(a['right']['bg'], a['okv']) and near(a['wrong']['bg'], a['badv']) and a['right']['ratio'] >= 4.5 and a['wrong']['ratio'] >= 4.5, (w, h, t, a)
 
 # the result's head (phone's panel and the box under the options on a wide screen): ✓ or × in a 28 px circle of --ok／--bad, its stroke in
-# --pq-on-mark (3:1 at least: a mark, not text), the head's words 4.5:1 on the panel; a 4 px ok／bad edge on top; 下一題 flat amber, its
-# words 4.5:1; the circle pops in (in the panel once it has risen). Right and wrong, by night and by day
+# --pq-on-mark (3:1 at least: a mark, not text), the head's words 4.5:1 on the panel; a 4 px ok／bad edge along its rounded top (a top border
+# of the slip's own 14 px corner curve, no flat strip: fix round 1); 下一題 flat amber, its words 4.5:1; the circle pops in (in the panel once
+# it has risen). Right and wrong, by night and by day
 def test_the_result_heads_circle_right_and_wrong(b):
     js = "(async () => { " + KIT + """ const v = word('学校'), out = {};
       for (const th of ['night', 'day']) { theme(th); for (const right of [true, false]) { const e = await ask(v, makeVocabQuestion(v, { forceFmt: 'v-meaning' }));
@@ -203,7 +191,8 @@ def test_the_result_heads_circle_right_and_wrong(b):
         const cs = getComputedStyle(svg), edge = getComputedStyle(slip, '::before'), next = document.getElementById('btnNext'), ncs = getComputedStyle(next), root = getComputedStyle(document.documentElement);
         const mark = right ? '--ok' : '--bad';   // its size as laid out (it is mid-pop now: scaled)
         out[th + (right ? 'Right' : 'Wrong')] = { sheet: Boolean(sheet), cls: head.className, size: [cs.width, cs.height], round: cs.borderTopLeftRadius === '50%', fill: hex(rgba(cs.backgroundColor)), want: root.getPropertyValue(mark).trim(),
-          stroke: ratio(rgba(cs.color), rgba(cs.backgroundColor)), words: read(head.querySelector(':scope > span')), edge: [edge.content !== 'none', parseFloat(edge.height), hex(rgba(edge.backgroundColor))],
+          stroke: ratio(rgba(cs.color), rgba(cs.backgroundColor)), words: read(head.querySelector(':scope > span')),
+          edge: [edge.content !== 'none', edge.borderTopWidth, hex(rgba(edge.borderTopColor)), edge.borderTopLeftRadius, edge.borderTopRightRadius, parseFloat(edge.height) >= 14, rgba(edge.backgroundColor)[3], getComputedStyle(slip).borderTopLeftRadius],
           next: [hex(rgba(ncs.backgroundColor)), hex(rgba(ncs.color)), ratio(rgba(ncs.color), rgba(ncs.backgroundColor))], pop: svg.getAnimations().map((a) => a.animationName) }; } }
       done(); return JSON.stringify(out); })()"""
     for w, h in (PHONE, WIDE):
@@ -213,7 +202,8 @@ def test_the_result_heads_circle_right_and_wrong(b):
             assert x['sheet'] == (w <= 600) and x['cls'] == ('fb-head ok' if right else 'fb-head bad'), (w, h, k, x)
             assert x['size'] == ['28px', '28px'] and x['round'] and near(x['fill'], x['want']) and x['stroke'] >= 3, (w, h, k, x)
             assert x['words'] >= 4.5, (w, h, k, x)
-            assert x['edge'][0] and x['edge'][1] == 4 and near(x['edge'][2], x['want']), (w, h, k, x)
+            e = x['edge']   # drawn, 4 px, ok／bad, along the slip's own 14 px corners, as tall as they are, no fill
+            assert e[0] and e[1] == '4px' and near(e[2], x['want']) and e[3] == e[4] == e[7] == '14px' and e[5] and e[6] == 0, (w, h, k, x)
             assert x['next'][0] == '#f0a660' and x['next'][1] == '#2e1c12' and x['next'][2] >= 4.5, (w, h, k, x)
             assert x['pop'] == ['iconPop'], (w, h, k, x)   # ✓ and × alike
 
@@ -231,29 +221,58 @@ def test_the_bead_and_the_circle_follow_reduced_motion(b):
         still = json.loads(page(b, w, h, js, reduce=True))
         assert still['pop'] == [] and still['slide']['names'] == [] and still['slide']['ease'] == '0s', (w, h, still)
 
-# nothing moves on the answer: the label row, the instruction, the question and the options stay put — a new item's row keeping its 新 chip's
-# height as the chip turns into dots (pq-hold; the card rose 6 px before), and a review item's row as tall as it always was. Phone and wide;
-# words asked by their kanji (a word asked by its reading shows its kanji over the options once answered on a wide screen: 1.0.43), measured
-# once the answer's pop is over
-def test_nothing_moves_when_a_new_item_is_answered(b):
-    js = "(async () => { " + KIT + """ const out = {}, t = todayStr();
-      const rects = () => Object.fromEntries([...document.querySelectorAll('.q-card > :is(.q-label, .q-instr, .q-stem), .q-card .opt')].map((el, i) => [el.className.split(' ')[0] + i, [box(el).top, box(el).height].map(Math.round)]));
-      const v = word('勉強'), w2 = word('手紙'); state.srs[w2.key] = { b: 2, s: 5, d: 5, due: t, n: 3, ok: 3, ng: 0, st: 2, last: addDays(t, -5), lapse: 0, intro: addDays(t, -20), f: {} };
-      for (const [k, it] of [['fresh', v], ['review', w2]]) { const e = await ask(it, makeVocabQuestion(it, { forceFmt: 'v-meaning' })); const before = rects(), row = box(document.querySelector('.q-card > .q-label')).height;
-        answerCurrent(e.q.answer); await wait(1100); const after = rects();
-        out[k] = { reveal: Boolean(e.q.revealHtml), row: Math.round(row * 10) / 10, moved: Object.keys(before).filter((n) => !after[n] || Math.abs(after[n][0] - before[n][0]) > 0.5 || Math.abs(after[n][1] - before[n][1]) > 0.5) }; }
+# nothing moves on the answer, right or wrong (fix round 1): the label row's top, the instruction, the question and the options stay put —
+# a new item (新 turning into dots), a review answered right and missed (錯題複習 comes), one missed into a leech (錯題複習 and 常錯 come), a
+# word on the ladder missed into a leech (常錯 comes to a row already two lines at 360: it goes on one line, holding its height), a leech, an
+# encore and a 再練一次 copy missed. Every chip is set into the row's line, so a row of chips is a line tall (20.8 px on a phone, 19.2 wide,
+# BASE's height for a row with no chip), and before the answer no row wraps where BASE's did not (BASE: a chip's row 26.8, two lines 41.8).
+# At 360, 375, 390, 412 and 430 wide and 1280; words asked by their kanji (one asked by its reading shows its kanji over the options once answered
+# on a wide screen: 1.0.43), measured once the answer's pop is over
+def test_nothing_moves_on_the_answer(b):
+    js = "(async () => { " + KIT + """ const out = {}, t = todayStr(), v = word('勉強'), w2 = word('手紙');
+      const rec = (o) => Object.assign({ b: 2, s: 5, d: 5, due: t, n: 3, ok: 3, ng: 0, st: 2, last: addDays(t, -5), lapse: 0, intro: addDays(t, -20), f: {} }, o);
+      const tops = () => Object.fromEntries([...document.querySelectorAll('.q-card > :is(.q-label, .q-instr, .q-stem), .q-card .opt')].map((el, i) => [el.className.split(' ')[0] + i, Math.round(box(el).top * 10) / 10]));
+      const row = () => Math.round(box(document.querySelector('.q-card > .q-label')).height * 10) / 10;
+      const g = REG.grammar.find((x) => unitTag(x) === '第 1–2 週・格助詞' && (x.t || 'choice') === 'choice' && (makeQuestion(x, { choiceOnly: true }) || {}).fmt === 'g-choice');
+      const cases = [['newRight', v, null, {}, true], ['newWrong', v, null, {}, false], ['reviewRight', w2, rec({}), {}, true], ['reviewWrong', w2, rec({}), {}, false],
+        ['toLeech', w2, rec({ lapse: 3 }), {}, false], ['ladderToLeech', w2, rec({ rl: 1, lapse: 3 }), {}, false], ['leech', w2, rec({ rl: 1, lapse: 5, leech: true }), {}, false],
+        ['encore', w2, rec({}), { encore: true }, false], ['redo', w2, rec({}), { requeued: true }, false]];
+      // a phone: a grammar question on the ladder whose row is two lines at 360 (its unit's name, 錯題複習, the dots under) missed into a leech —
+      // 常錯 would fill the dots' line (its options at the foot; on a wide screen its filled blank re-lays the sentence, BASE's own move)
+      if (innerWidth <= 600) cases.push(['grammarLadderToLeech', g, rec({ rl: 1, lapse: 3 }), {}, false]);
+      for (const [k, it, srs, flags, right] of cases) { if (srs) state.srs[it.key] = srs; else delete state.srs[it.key];
+        const e = await ask(it, it.kind === 'g' ? makeQuestion(it, { choiceOnly: true }) : makeVocabQuestion(it, { forceFmt: 'v-meaning' })); Object.assign(e, flags); renderPractice(); await wait(30);
+        const before = tops(), r0 = row(); answerCurrent(right ? e.q.answer : (e.q.answer + 1) % 4); await wait(1100); const after = tops();
+        out[k] = { reveal: Boolean(e.q.revealHtml), rows: [r0, row()], moved: Object.keys(before).filter((n) => after[n] === undefined || Math.abs(after[n] - before[n]) > 0.5).map((n) => n + ' ' + Math.round((after[n] - before[n]) * 10) / 10) }; }
+      // the row no wider than BASE's: 「單字」N5 · 例句填空 on the ladder or as an encore is one line at 360 (BASE's 26.8; the label at its first
+      // width wrapped it to 41.8 — the review); drawn only, not answered (a fill-in's blank is filled on the answer)
+      const m = word('毎晩'); out.cloze = {};
+      for (const [k, srs, flags] of [['ladder', rec({ rl: 1, lapse: 1 }), {}], ['encore', rec({}), { encore: true }]]) { state.srs[m.key] = srs;
+        const e = await ask(m, makeVocabQuestion(m, { forceFmt: 'v-cloze' })); Object.assign(e, flags); renderPractice(); await wait(30); out.cloze[k] = [e.q.label, row()]; }
       done(); return JSON.stringify(out); })()"""
-    for w, h in (PHONE, WIDE):
+    for w, h in ((360, 640), (375, 553), (390, 664), (412, 780), (430, 740), WIDE):
         r = json.loads(page(b, w, h, js))
-        assert not r['fresh']['reveal'] and not r['review']['reveal'], (w, h, r)
-        assert r['fresh']['moved'] == [] and r['review']['moved'] == [], (w, h, r)
-        assert r['fresh']['row'] == (26.8 if w <= 600 else 25.2) and r['review']['row'] == (20.8 if w <= 600 else 20), (w, h, r)   # the chip's height; a line's (the label no taller)
+        line = 20.8 if w <= 600 else 19.2
+        cloze = r.pop('cloze')
+        assert all(lab == '單字 · N5 · 例句填空' and h_ == line for lab, h_ in cloze.values()), (w, h, cloze)
+        for k, x in r.items():
+            assert not x['reveal'] and x['moved'] == [], (w, h, k, x)
+        assert r['newRight']['rows'] == [line, line] and r['reviewRight']['rows'] == [line, line], (w, h, r)   # 新 a line tall, so are the dots
+        for k in ('encore', 'redo', 'reviewWrong'):
+            assert r[k]['rows'][0] == line, (w, h, k, r[k])   # a chip's row before the answer one line, as BASE's (26.8)
+        assert r['leech']['rows'][0] == (35.8 if w <= 375 else line), (w, h, r['leech'])   # at 360 and 375 two lines, as BASE's (41.8); one line from 390, as BASE's (26.8)
+        if w <= 600:
+            x = r['grammarLadderToLeech']
+            assert x['rows'][0] == (35.8 if w == 360 else line), (w, h, x)   # two lines at 360 (BASE 41.8), one from 375 (BASE 26.8)
+            if w == 360: assert x['rows'][1] == line, (w, h, x)   # answered: one line, its height of before held under it
 
 # every text in sight on the practice screens 4.5:1 to what it sits on (the mockup's walker, mock/tools/checks.js: a gradient behind counts each
 # of its colours, the worst wins; opacity counted; text covered by the result panel, or drawn by ::before/::after or in an SVG, not seen),
 # by night and by day, on a phone and a wide screen — a word, a grammar, a listening and a reading question, before and after a wrong answer
-# (a right one for the word), a tile question before and given up, the word, grammar and kana previews and the 常錯 card. Not the controls
-# put out of use on purpose (WCAG's inactive components): the answer's other options faded, the used tiles, a 確定 not yet lit
+# (a right one for the word), a tile question before and given up, the word, grammar and kana previews and the 常錯 card; the result's
+# chips (連對 3 and 這次記住了 in its head, 升到熟悉 and 已移出錯題本 by the level's dots: a phone's panel read at its top and at its end) and a
+# spelled conjugation's miss (你的答案 with its wrong character marked) — each of those walked (fix round 1). Not the controls put out of
+# use on purpose (WCAG's inactive components): the answer's other options faded, the used tiles, a 確定 not yet lit
 WALK = r"""const toC = (s) => { s = String(s || '').trim(); if (s === 'transparent') return [0, 0, 0, 0]; return rgba(s); };
   const split = (s) => { const out = []; let d = 0, cur = ''; for (const ch of s) { if (ch === '(') d++; else if (ch === ')') d--; if (ch === ',' && d === 0) { out.push(cur.trim()); cur = ''; } else cur += ch; } if (cur.trim()) out.push(cur.trim()); return out; };
   const grads = (img, size) => { const out = []; out.cover = false; if (!img || img === 'none') return out; const ls = split(img), ss = split(size || 'auto');
@@ -261,7 +280,7 @@ WALK = r"""const toC = (s) => { s = String(s || '').trim(); if (s === 'transpare
       const cs = []; const re = /rgba?\([^)]*\)|color\(srgb [^)]*\)|transparent/g; let m; while ((m = re.exec(l))) { const c = toC(m[0]); if (c) cs.push(c); }
       if (cs.length && cs.every((c) => c[3] >= 1) && /^linear-gradient/.test(l) && /^(auto|100% 100%|auto auto)$/.test(sz.trim())) out.cover = true; out.push(...cs); }); return out; };
   const mixC = (x, y, o) => [0, 1, 2].map((i) => x[i] * o + y[i] * (1 - o)).concat(1);
-  const lows = () => { const bad = [], seen = new Set(), tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n = 0;
+  const lows = () => { const bad = [], seen = new Set(), walked = [], tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n = 0;
     for (let t = tw.nextNode(); t; t = tw.nextNode()) { if (!t.textContent.trim()) continue; const el = t.parentElement;
       if (!el || el.closest('svg, script, style, template, .faded, button:disabled:not(.opt), .koto-coin')) continue;
       const cs = getComputedStyle(el); if (cs.visibility !== 'visible' || cs.display === 'none') continue;
@@ -275,11 +294,12 @@ WALK = r"""const toC = (s) => { s = String(s || '').trim(); if (s === 'transpare
         const gs = grads(s.backgroundImage, s.backgroundSize); if (gs.length) { const next = gs.cover ? [] : set.slice(); set.forEach((b) => gs.forEach((g) => next.push(over(g, b)))); set = next.slice(0, 96); } }
       const fg = toC(cs.color); if (!fg) continue; let worst = 99;
       for (const b of set) { let f = over(fg, b), bb = b; for (let i = fades.length - 1; i >= 0; i--) { f = mixC(f, fades[i].out, fades[i].op); bb = mixC(bb, fades[i].out, fades[i].op); } worst = Math.min(worst, ratio(f, bb)); }
-      n++; const key = el.className + '|' + t.textContent.trim().slice(0, 10);
+      n++; walked.push((el.closest('mark') ? 'mark:' : '') + t.textContent.trim()); const key = el.className + '|' + t.textContent.trim().slice(0, 10);
       if (worst < 4.5 && !seen.has(key)) { seen.add(key); bad.push([t.textContent.trim().slice(0, 12), worst, String(el.className).slice(0, 40)]); } }
-    return { n, bad }; };"""
+    return { n, bad, walked }; };"""
 def test_every_text_on_the_practice_screens_reads_at_4_5_by_day_and_night(b):
-    js = "(async () => { " + KIT + WALK + """ const out = {}, v = word('毎晩'), g = REG.grammar.find((x) => x.u === 'm3' && x.lv === 'N5' && (x.t || 'choice') === 'choice' && x.why),
+    js = "(async () => { " + KIT + WALK + """ const out = {}, v = word('毎晩'), w2 = word('手紙'), cj = REG.grammar.find((x) => x.t === 'conj' && x.g === '5' && x.f === 'te'),
+        g = REG.grammar.find((x) => x.u === 'm3' && x.lv === 'N5' && (x.t || 'choice') === 'choice' && x.why),
         l = REG.listen.find((x) => x.lv === 'N5' && x.t === 'dialog'), rd = REG.read.find((x) => x.lv === 'N5'), ord = REG.grammar.find((x) => x.lv === 'N5' && (makeQuestion(x, { forceFmt: 'g-order' }) || {}).fmt === 'g-order');
       const check = async (name, draw) => { await draw(); await wait(1100); const r = lows(); out[name] = r; };
       const wrong = async (it, q) => { const e = await ask(it, q); answerCurrent((e.q.answer + 1) % e.q.options.length); };
@@ -298,14 +318,26 @@ def test_every_text_on_the_practice_screens_reads_at_4_5_by_day_and_night(b):
         for (const [k, it] of [['wordPreview', v], ['grammarPreview', REG.grammar.find((x) => x.u === 'm1' && lessonSecKey(x))], ['kanaPreview', REG.kana[0]]]) {
           await check(th + ':' + k, async () => { startSession('items', { items: [it, it] }); route(); const e = currentEntry(); e.preview = true; e.previewDone = false; e.autoPlayedPreview = true; renderPractice(); }); }
         await check(th + ':relearn', async () => { const t = todayStr(); state.srs[v.key] = { b: 1, s: 1, d: 5, due: t, n: 6, ok: 2, ng: 4, st: 0, last: addDays(t, -1), lapse: 4, intro: addDays(t, -30), leech: true, rl: 0, f: {} };
-          startSession('items', { items: [v, v] }); route(); renderPractice(); delete state.srs[v.key]; }); }
+          startSession('items', { items: [v, v] }); route(); renderPractice(); delete state.srs[v.key]; });
+        // the result's chips: a run of three (連對 3), a 再練一次 copy answered right (這次記住了), a level reached (升到熟悉), out of the notebook
+        const chips = async () => { const e = await ask(w2, makeVocabQuestion(w2, { forceFmt: 'v-meaning' })); SESSION.combo = 2; answerCurrent(e.q.answer); await wait(1100);
+          Object.assign(e, { lvUp: '熟悉', requeued: true, mistakeDone: true }); renderPractice(); };
+        await check(th + ':resultChips', chips);
+        await check(th + ':resultChipsEnd', async () => { await chips(); const body = document.querySelector('.fb-sheet-body'); if (body) body.scrollTop = 1e6; else window.scrollTo(0, 1e6); });
+        // a spelled conjugation missed: 你的答案 with its first wrong character marked
+        await check(th + ':spelledMiss', async () => { state.settings.conjInput = 'tiles'; srsAnswer(cj.key, true); state.srs[cj.key].b = 1; const e = await ask(cj, makeGrammarQuestion(cj, {}));
+          finishCustom(e, false, answerKana(JConj.conjVerb(cj.v, cj.g, cj.f)).slice(0, -1) + 'た'); }); }
       done(); return JSON.stringify(out); })()"""
     for w, h in (PHONE, WIDE):
         r = json.loads(page(b, w, h, js))
-        assert len(r) == 2 * 15, (w, h, sorted(r))
+        assert len(r) == 2 * 18, (w, h, sorted(r))
         bad = {k: x['bad'] for k, x in r.items() if x['bad']}
         assert not bad, (w, h, bad)
         assert all(x['n'] >= 8 for x in r.values()), (w, h, {k: x['n'] for k, x in r.items()})   # each screen's text was walked
+        for t in ('night', 'day'):   # the result's chips and the marked character among them
+            seen = r[t + ':resultChips']['walked'] + r[t + ':resultChipsEnd']['walked']
+            assert all(any(s.startswith(c) for s in seen) for c in ('連對 3', '這次記住了', '升到熟悉', '已移出錯題本')), (w, h, t, seen)
+            assert any(s.startswith('mark:') for s in r[t + ':spelledMiss']['walked']), (w, h, t, r[t + ':spelledMiss']['walked'])
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

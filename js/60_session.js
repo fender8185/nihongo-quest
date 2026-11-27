@@ -678,11 +678,11 @@ function optClass(o) { return !o.jp ? '' : (/\[[ぁ-ゖー]+\]/.test(o.text) ? '
 function currentEntry() { return SESSION && SESSION.entries[SESSION.idx]; }
 
 // the practice screen's look (2026-11-27, test.5; the user's pick 「A2A極簡版」, css/app.css's pq- block): a question's kind (and a preview's)
-// is a small filled label at the head of the card's label row, in its colour (data-pq-kind on the card), and the row's own text says the
-// rest without the kind's word (單字 · 入門 · 意思 → 「單字」入門 · 意思; q.label itself stays whole: the AI's prompt and the notebook read it)
-const PQ_KIND = { v: '單字', g: '文法', l: '聽力', r: '閱讀', k: '漢字', a: '假名', c: '變化練習', m: '錯題本' };
+// is a small filled label at the head of the card's label row, named as everywhere (KIND_NAME, js/79_stats.js), in its colour (data-pq-kind
+// on the card), and the row's own text says the rest without the kind's word (單字 · 入門 · 意思 → 「單字」入門 · 意思; q.label itself stays
+// whole: the AI's prompt and the notebook read it)
 function pqLabelHtml(kind, text) {
-  const name = PQ_KIND[kind], s = String(text || ''), rest = name && s.startsWith(name + ' · ') ? s.slice(name.length + 3) : s;
+  const name = KIND_NAME[kind], s = String(text || ''), rest = name && s.startsWith(name + ' · ') ? s.slice(name.length + 3) : s;
   return `${name ? `<span class="pq-kind-tag">${name}</span>` : ''}${rest ? `<span>${esc(rest)}</span>` : ''}`;
 }
 
@@ -726,7 +726,7 @@ function renderPractice() {
     // after answering, each wrong word shows what it actually means, and each wrong meaning the word it belongs to (1.0.45);
     // a phone's panel lists them instead, so the options keep their size under it
     const [zh, ja] = answered && !sheet && i !== q.answer ? optAside(q, o) : ['', false];
-    // the number a quiet badge (pq-num), on a touch screen too where it costs no line (test.5, A2: the user's pick shows it; pqNums)
+    // the number a quiet badge (pq-num, test.5's A2) where there is a keyboard; a touch screen shows none (2026-11-11, the user; Ruling 37)
     return `<button type="button" class="${cls}" data-act="answer" data-i="${i}" ${answered ? 'disabled' : ''}><span class="kbd pq-num">${i + 1}</span><span class="${optClass(o)}">${text}</span>${zh ? `<span class="opt-zh${ja ? ' jp' : ''}">${esc(zh)}</span>` : ''}</button>`;
   }).join('');
   const rec = q.key ? srsGet(q.key) : null;
@@ -766,8 +766,6 @@ function renderPractice() {
   // a reading question on a short phone shows no label row (fix round 1 of test.5's Task 2: its room goes to the passage), so its chips —
   // 新 (dots once answered), 錯題複習, 常錯 — come in the result panel (Ruling 36; shown only where the row is hidden: .pq-rp-chips)
   const rpChips = read && sheet ? `${e.srs && e.srs.isNew ? '<span class="chip chip-accent">新</span>' : ''}${ladder}${leech}` : '';
-  // a new item's label row keeps the height of its 新 chip once the chip has turned into dots (pq-hold): the card does not move on the answer
-  const hold = q.kind !== 'm' && (answered ? Boolean(e.srs && e.srs.isNew) : !rec);
   view.innerHTML = `
     <div class="pr-top pq-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
@@ -776,7 +774,7 @@ function renderPractice() {
     </div>
     ${sessionNoteHtml(answered)}
     <div class="q-card pq-card${read ? ' rp-card' : ''}${just}" data-pq-kind="${esc(q.kind || '')}">
-      <div class="q-label${hold ? ' pq-hold' : ''}">${pqLabelHtml(q.kind, q.label)}${e.requeued ? '<span class="chip">再練一次</span>' : ''}${e.encore ? '<span class="chip">換個方式再考</span>' : ''}${ladder}${leech}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
+      <div class="q-label">${pqLabelHtml(q.kind, q.label)}${e.requeued ? '<span class="chip">再練一次</span>' : ''}${e.encore ? '<span class="chip">換個方式再考</span>' : ''}${ladder}${leech}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${read ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>
       <div class="rp-ask">${ask}${sheet ? '' : `<div class="rp-foot">${tools}${next}</div>`}</div>` : ask}
@@ -786,8 +784,8 @@ function renderPractice() {
       <div class="fb-sheet-body">${feedbackHtml(e, true, true, rpChips)}${tools}</div>
       ${next}
     </div>` : read ? '' : tools + next}`;
+  pqRow(view, e, answered);
   sheetFit(view);
-  pqNums(view, e);
   rpFit(view, e);
   // a tap-to-answer block (拼字, 排序, 配對) loses its bottom row once answered: on a phone it keeps the height it had, so the tiles stay put under the panel
   const block = view.querySelector('.q-card > :is(.spell, .order, .match)');
@@ -829,22 +827,19 @@ function sheetFit(view) {
   pqMore(body);
   if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => pqMore(body));
 }
-// an option's number on a touch screen (test.5's A2 shows it there; until then a touch screen showed no 1–4): only where it costs no line —
-// one that would push an option onto another line (a long sentence on a narrow phone) leaves the question's four without numbers, as
-// before (pq-nonum), so the options take no more room than they did. Measured on the question's first draw, once the fonts are in, and
-// kept for its answered draws (nothing moves on the answer)
-const TOUCH_MQ = window.matchMedia ? window.matchMedia('(hover: none) and (pointer: coarse)') : null;
-function pqNums(view, e) {
-  const opts = view.querySelector('.pq-card .opts:not(.glyph)');
-  if (!opts || !TOUCH_MQ || !TOUCH_MQ.matches) return;
-  if (e.done && typeof e.pqNoNum === 'boolean') { opts.classList.toggle('pq-nonum', e.pqNoNum); return; }
-  const texts = [...opts.querySelectorAll('.opt > .pq-num + span')];
-  if (!texts.length) return;
-  const heights = () => texts.map((t) => t.getBoundingClientRect().height);
-  opts.classList.remove('pq-nonum'); const shown = heights(); opts.classList.add('pq-nonum'); const bare = heights();
-  e.pqNoNum = shown.some((h, i) => h > bare[i] + 1);
-  opts.classList.toggle('pq-nonum', e.pqNoNum);
-  if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => { if (opts.isConnected && !e.done) pqNums(view, e); });
+// the question card's label row moves nothing on the answer (test.5's A2; Task 3's fix round 1): a chip is set into the row's line (css),
+// and where the answer still makes the row taller — a miss's 錯題複習 or 常錯 wrapping it onto another line, or filling a line that held
+// only the dots — the row goes on one line, its text giving way (…: pq-keep), and keeps its height of before the answer (in its margin),
+// so nothing under it moves. A row the answer leaves as tall is left as it is. Its height before the answer: e.pqRowH
+function pqRow(view, e, answered) {
+  const row = view.querySelector('.pq-card:not(.rp-card) > .q-label');
+  if (!row) return;
+  const height = () => row.getBoundingClientRect().height;
+  if (!answered) { e.pqRowH = height(); return; }
+  if (e.pqRowH == null || height() <= e.pqRowH + 0.5) return;
+  row.classList.add('pq-keep');
+  const short = e.pqRowH - height();
+  if (short > 0.5) row.style.marginBottom = `${parseFloat(getComputedStyle(row).marginBottom) + short}px`;
 }
 // a reading question's passage, and its question where the panel is short of room (a 情報検索's conditions on a small phone), each scroll
 // on their own (2026-11-27, test.5): the foot fades while there is more below (rp-more; iOS hides scrollbars; the question says 還有 too),

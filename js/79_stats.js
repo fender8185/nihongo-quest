@@ -9,7 +9,7 @@ const FMT_NAME = {
   'k-meaning': '漢字・意思', 'k-shape': '漢字・選字', 'k-read': '漢字・讀音', 'l-dialog': '聽力・對話', 'l-resp': '聽力・即時應答',
   'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡', 'a-read': '假名・看字選音', 'a-sound': '假名・聽音選字', 'a-pair': '假名・平片對照', 'a-word': '假名・讀讀看'
 };
-const KIND_NAME = { v: '單字', g: '文法', k: '漢字', a: '假名', l: '聽力', r: '閱讀' };
+const KIND_NAME = { v: '單字', g: '文法', k: '漢字', a: '假名', l: '聽力', r: '閱讀', c: '變化練習', m: '錯題本' };   // every kind's name (the practice card's kind label: pqLabelHtml)
 function lvLabel(lv) { return lv === 'PRE_N5' ? '入門' : lv; }
 
 // the past week's practice, from the daily logs: 單字（含漢字）／文法／其他（聽力、閱讀、模擬考）
