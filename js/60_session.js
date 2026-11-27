@@ -841,6 +841,9 @@ function pqRow(view, e, answered) {
   const short = e.pqRowH - height();
   if (short > 0.5) row.style.marginBottom = `${parseFloat(getComputedStyle(row).marginBottom) + short}px`;
 }
+// a width changed inside a phone's range draws nothing again (a split screen, a window dragged): the row's height before the answer is
+// measured afresh, so the hold is the new width's (the fix round's re-review)
+window.addEventListener('resize', () => { const e = currentEntry(); if (!e || e.done) return; const row = document.querySelector('.pq-card:not(.rp-card) > .q-label'); if (row) e.pqRowH = row.getBoundingClientRect().height; });
 // a reading question's passage, and its question where the panel is short of room (a 情報検索's conditions on a small phone), each scroll
 // on their own (2026-11-27, test.5): the foot fades while there is more below (rp-more; iOS hides scrollbars; the question says 還有 too),
 // and each is kept where it was read to as the card is drawn again (the answer, a sync); a new question starts at the top. The question

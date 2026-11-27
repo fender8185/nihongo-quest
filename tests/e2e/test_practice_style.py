@@ -231,7 +231,9 @@ def test_the_bead_and_the_circle_follow_reduced_motion(b):
 def test_nothing_moves_on_the_answer(b):
     js = "(async () => { " + KIT + """ const out = {}, t = todayStr(), v = word('勉強'), w2 = word('手紙');
       const rec = (o) => Object.assign({ b: 2, s: 5, d: 5, due: t, n: 3, ok: 3, ng: 0, st: 2, last: addDays(t, -5), lapse: 0, intro: addDays(t, -20), f: {} }, o);
-      const tops = () => Object.fromEntries([...document.querySelectorAll('.q-card > :is(.q-label, .q-instr, .q-stem), .q-card .opt')].map((el, i) => [el.className.split(' ')[0] + i, Math.round(box(el).top * 10) / 10]));
+      const tops = () => Object.fromEntries([...document.querySelectorAll('.q-card > :is(.q-label, .q-instr, .q-stem), .q-card .opt')].flatMap((el, i) => {
+        const r = box(el), k = el.className.split(' ')[0] + i, top = [k, Math.round(r.top * 10) / 10];
+        return el.matches('.opt') ? [top, ['h ' + k, Math.round(r.height * 10) / 10]] : [top]; }));   // the options' heights too (the re-review's nit)
       const row = () => Math.round(box(document.querySelector('.q-card > .q-label')).height * 10) / 10;
       const g = REG.grammar.find((x) => unitTag(x) === '第 1–2 週・格助詞' && (x.t || 'choice') === 'choice' && (makeQuestion(x, { choiceOnly: true }) || {}).fmt === 'g-choice');
       const cases = [['newRight', v, null, {}, true], ['newWrong', v, null, {}, false], ['reviewRight', w2, rec({}), {}, true], ['reviewWrong', w2, rec({}), {}, false],
