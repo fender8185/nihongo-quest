@@ -176,6 +176,27 @@ const JOBS = (() => {
     if (r.top < top) block.scrollTop -= top - r.top + 4; else if (r.bottom > bot) block.scrollTop += Math.min(r.bottom - bot + 4, r.top - top);
   }
   window.addEventListener('resize', () => rehold(false)); window.addEventListener('orientationchange', () => rehold(false));
+  // a job card that keeps its place between customers (test.5, fix round 2 — ruling 31; the user plays on a 430×740 phone): centred in
+  // the screen, a card that grew and shrank with each customer moved its header with it — the 售票窗口 51–71 px from one to the next, 站櫃
+  // 15, 失物招領 11. Their customers are known as a shift starts: each drawn in turn there and then, before a frame is painted (fill: the
+  // job's own drawing of one at their tallest), the card measured with each, its min-height the tallest (take) — at every customer then as
+  // tall, where it rested (the cost: room to spare under a shorter one). The whole shift measured again as the next customer comes after
+  // a resize or a turn (before: the job's drawing of a customer calls it first, redo putting that customer back once the others were
+  // drawn) — the card kept till then unless the new screen is too short for it (let go at once: the card must fit); after a font comes in,
+  // the same, but only ever taller (its glyphs measured: nothing else changed)
+  const steadies = new Map();
+  function steady(card, fill) {
+    const s = { stale: '', list: [] };
+    const take = (list, grow) => { if (!card || !card.isConnected) return; s.list = list; const was = grow ? parseFloat(card.style.minHeight) || 0 : 0; card.style.minHeight = ''; let most = 0;
+      list.forEach((t) => { fill(t); most = Math.max(most, card.offsetHeight + 1); }); most = Math.max(most, was); card.style.minHeight = most > 1 ? `${most}px` : ''; s.stale = ''; };   // (its layout height, the card perhaps rising into place: a whole px, so 1 more)
+    steadies.forEach((_, c) => { if (!c.isConnected) steadies.delete(c); }); if (card) steadies.set(card, s);
+    return { take, before(redo) { if (s.stale && card && card.isConnected) { take(s.list, s.stale === 'grow'); if (redo) redo(); } } };
+  }
+  const unsteady = () => steadies.forEach((s, c) => { if (!c.isConnected) { steadies.delete(c); return; } s.stale = 'fresh';
+    const max = parseFloat(getComputedStyle(c).maxHeight); if (max && parseFloat(c.style.minHeight) > max) c.style.minHeight = ''; });
+  window.addEventListener('resize', unsteady); window.addEventListener('orientationchange', unsteady);
+  const restudy = () => steadies.forEach((s, c) => { if (!c.isConnected) steadies.delete(c); else if (!s.stale) s.stale = 'grow'; });
+  if (document.fonts) { document.fonts.ready.then(restudy); if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', restudy); }
   if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => rehold(true));   // a later subset of a font in (a glyph not seen before): grow only
   // ---- a desk (2026-11-24, ruling 28): the flow 原田's window, the 観光案内所 and the フロント share — one customer after another: the
   // hero's greeting (after any line still being said), their words heard first (……; 🔊 again: the clock held till they are said in full),
@@ -309,13 +330,22 @@ const JOBS = (() => {
     const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, busy = true, P = null, rep = 0;   // P: the customer's patience; rep: a replay by the speaker under way (its number)
     // this run's own card (box, once drawn; 2026-11-24, ruling 30, as ruling 22 for 駅前): an ended shift's goodbye never touches the next
     let box = null; const el = (s) => (box && box.isConnected ? box.querySelector(s) : null), all = (s) => (box && box.isConnected ? [...box.querySelectorAll(s)] : []);
-    const bub = (open) => { const [ja, zh] = ask(C), w = C.good[0], line = open ? esc(ja) : `<button type="button" class="wk-ear" aria-label="再聽一次">${icon('speaker')}</button>${esc(ja.slice(w.length))}`;   // the word heard, not read, till handed over
-      el('.wk-bub').innerHTML = `<b lang="ja">${line}</b><span>${esc(zh)}</span>${C.kind === 'two' ? `<i class="wk-cnt">${got}／2</i>` : ''}`; };
-    const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; return speakAs('hero', l[0]); };
+    const bubHtml = (t, open, n) => { const [ja, zh] = ask(t), w = t.good[0], line = open ? esc(ja) : `<button type="button" class="wk-ear" aria-label="再聽一次">${icon('speaker')}</button>${esc(ja.slice(w.length))}`;   // the word heard, not read, till handed over
+      return `<b lang="ja">${line}</b><span>${esc(zh)}</span>${t.kind === 'two' ? `<i class="wk-cnt">${n}／2</i>` : ''}`; };
+    const bub = (open) => { el('.wk-bub').innerHTML = bubHtml(C, open, got); };
+    const meHtml = (l) => `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`;
+    const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = meHtml(l); return speakAs('hero', l[0]); };
+    const goodsHtml = (t) => t.goods.map((g) => `<button type="button" class="wk-good" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b></button>`).join('');
+    // the card held at the shift's tallest customer (test.5, fix round 2, ruling 31: it moved 15 px between customers, centred) — each
+    // one's goods on the counter, their words asking and as said aloud, the hero's greeting and his thanks (steady)
+    const fillOne = ([t, open, l]) => { el('.wk-goods').innerHTML = goodsHtml(t); el('.wk-opts').innerHTML = '';
+      const c = el('.wk-cust'); c.className = 'wk-cust on'; c.innerHTML = custHtml(t.who); c.querySelector('.wk-bub').innerHTML = bubHtml(t, open, 0); el('.wk-me').innerHTML = meHtml(l); };
+    const states = () => tasks.slice(k).flatMap((t) => [false, true].flatMap((open) => [ME.hi, ME.bye].map((l) => [t, open, l]))); let ST = null;   // (once its card is drawn)
     function show() {
       C = tasks[k]; miss = 0; got = 0; busy = true; rep = 0; if (!el('.wk-goods')) return;
+      if (ST) ST.before();   // (measured again after a turn of the screen or a font in; this customer drawn right after)
       el('.wk-n').textContent = `${k + 1}／${N}`;
-      el('.wk-goods').innerHTML = C.goods.map((g) => `<button type="button" class="wk-good" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b></button>`).join('');
+      el('.wk-goods').innerHTML = goodsHtml(C);
       el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').removeAttribute('data-mood'); el('.wk-cust').innerHTML = custHtml(C.who);
       const t = C; P = patience('counter', t.who, COUNTER_SECS, () => Boolean(el('.wk-cust')) && C === t && ctx.on(), gone, box);
       said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said; their patience once they have said it (5 s: none of it lost to the asking)
@@ -360,6 +390,7 @@ const JOBS = (() => {
       right();
     });
     box = document.querySelector('.cls.wk-counter');
+    ST = steady(el('.cls-card'), fillOne); ST.take(states());   // every customer of the shift drawn and measured before the first comes
     show();
   }
   function counterLines(add) {
@@ -618,5 +649,5 @@ const JOBS = (() => {
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
   WORK.register('till', { run: tillRun, lines: tillLines, left: tillLeft, open: allNums });
-  return { pat: PAT, clock, said, whole, LINE_CAP, voice, quiet, queue, line, missWord, grr, patience, custHtml, hold, reading, inSight, bring, desk, talkLine, goodPic, rng, pickR, shuffleR, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
+  return { pat: PAT, clock, said, whole, LINE_CAP, voice, quiet, queue, line, missWord, grr, patience, custHtml, hold, steady, reading, inSight, bring, desk, talkLine, goodPic, rng, pickR, shuffleR, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
 })();

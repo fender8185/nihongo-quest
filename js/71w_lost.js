@@ -161,8 +161,12 @@ const LOST_RUN = (() => {
       TL.keep(() => ({ drv: [s.hi, s.hat, s.asked, s.twin, s.bring, s.there, s.head, s.call, ...s.ok].concat(k >= 9 ? [s.end, s.all] : []),
         me: [...new Set([...t.qs, ...(t.q2 || [])])].flatMap((q) => know.map((kn) => LOST.question(t, q, kn))).concat([s.me.give, s.me.none, s.me.gag]) }));
     }
+    // the card held at the shift's tallest customer (test.5, fix round 2, ruling 31: it moved 11 px between customers at 412×780 and
+    // 430×740, centred) — each one's row over the counter, their questions and the four, the talk row as held for them (JOBS.steady)
+    let ST = null; const fillOne = (t) => { const c = el('.wk-cust'); c.className = 'wk-cust'; c.innerHTML = JOBS.custHtml(t.who); if (t.type === 'gag') c.querySelector('.kr-face').insertAdjacentHTML('beforeend', GLASSES); holdAll(t); };
     function show() {
       const t = tasks[k]; R = { k, task: t, phase: 'hi', sel: null, know: LOST.known(t), heard: [t.lost] }; miss = 0; rep = 0;
+      if (ST) ST.before();   // (measured again after a turn of the screen or a font in; this customer drawn right after)
       el('.wk-n').textContent = `${k + 1}／10`;
       const c = el('.wk-cust'); c.className = 'wk-cust'; c.removeAttribute('data-mood'); c.innerHTML = JOBS.custHtml(t.who); if (t.type === 'gag') c.querySelector('.kr-face').insertAdjacentHTML('beforeend', GLASSES);
       stage(); holdAll(t);
@@ -237,6 +241,7 @@ const LOST_RUN = (() => {
       if (e.target.closest('.lf-give')) give(); else if (e.target.closest('.lf-none')) none(); else if (e.target.closest('.lf-gag')) gag();
     });
     box = document.querySelector('.cls.wk-lost');
+    ST = JOBS.steady(el('.cls-card'), fillOne); ST.take(tasks.slice(k));   // every customer of the shift drawn and measured before the first comes
     show();
   }
   function lines(add) {

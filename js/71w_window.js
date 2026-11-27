@@ -111,10 +111,11 @@ const MADO_RUN = (() => {
     // the desk's flow (ruling 28: JOBS.desk, as the 案内所's and the フロント's): the question heard first, three replies off the wall —
     // the right one said, their thanks, now and then 原田's word; a wrong one (or the wrong station): his word, its cost after it; two and
     // the question shown, the right reply lit (and, before the tickets print, the station); the customer dimmed once served
-    D = cur = JOBS.desk({ job: 'window', ctx, N: MADO.N, box: () => box, alive: '.md-glass', mine: () => mine === runs, tasks,
-      isRight: (t, i) => i === t.right, secs: () => MADO.SECS, cost: MADO.MISS, hi: () => s.me.hi, fresh: (t) => ({ printed: t.kind !== 'buy' }),
-      me, word, bub, opts, optSel: '.md-opt', earSel: '.md-ear', rightCls: 'md-right', dim: true,
-      draw: (t) => { const wall = el('.md-wall'); wall.innerHTML = `${chart(t, t.kind === 'buy', first)}<div class="md-row">${board(t)}</div>`; el('.md-ticket').innerHTML = '';
+    // the card held at the shift's tallest customer (test.5, fix round 2, ruling 31: centred, it moved 51–71 px between customers at
+    // 412×780, 430×740 — the user's phone — and on the iPad and the laptop): every customer drawn as the shift starts (their wall, their
+    // words as held, the tickets, the replies, the talk row), the card measured with each (JOBS.steady)
+    let ST = null;
+    const drawOne = (t) => { const wall = el('.md-wall'); wall.innerHTML = `${chart(t, t.kind === 'buy', first)}<div class="md-row">${board(t)}</div>`; el('.md-ticket').innerHTML = '';
         // their words held as tall as they will open (test.4) — on a short screen (under 700 px: every phone in Safari; test.5) the row kept
         // at its closed height instead, their words opening up over the wall as the lost and found's do (they open once answered, or after two
         // misses with the right reply lit: the wall no longer needed) — the replies kept in sight
@@ -126,7 +127,11 @@ const MADO_RUN = (() => {
         // time or a track asked, the board brought into sight inside it; the card so the replies and their words are in sight (JOBS.bring)
         const ch = wall.querySelector('.md-chart'), key = wall.querySelector('.md-key'); if (ch) wall.style.setProperty('--md-chart', `${Math.ceil(ch.offsetHeight + (key ? key.offsetHeight + 8 : 0) + 2 * (parseFloat(getComputedStyle(wall).paddingTop) || 0))}px`);
         JOBS.reading(wall)(); if (t.kind === 'next' || t.kind === 'track') wall.scrollTop = wall.scrollHeight;   // (its scroll says again whether there is more below)
-        JOBS.bring(el('.cls-card'), null, null, [el('.wk-cust .wk-bub'), el('.md-ticket'), el('.md-opts'), t.kind === 'buy' ? ch : null]); },   // (its header not stuck: never scrolled for the talk row)
+        JOBS.bring(el('.cls-card'), null, null, [el('.wk-cust .wk-bub'), el('.md-ticket'), el('.md-opts'), t.kind === 'buy' ? ch : null]); };   // (its header not stuck: never scrolled for the talk row)
+    D = cur = JOBS.desk({ job: 'window', ctx, N: MADO.N, box: () => box, alive: '.md-glass', mine: () => mine === runs, tasks,
+      isRight: (t, i) => i === t.right, secs: () => MADO.SECS, cost: MADO.MISS, hi: () => s.me.hi, fresh: (t) => ({ printed: t.kind !== 'buy' }),
+      me, word, bub, opts, optSel: '.md-opt', earSel: '.md-ear', rightCls: 'md-right', dim: true,
+      draw: (t) => { if (ST) ST.before(() => { el('.wk-cust').innerHTML = JOBS.custHtml(t.who); el('.md-ticket').innerHTML = ''; }); drawOne(t); },   // (measured again after a turn of the screen or a font in)
       miss: () => s.miss,
       hint: (t, R, out) => { if (!out && !R.printed) { const st = el(`.md-st[data-st="${t.to}"]`); if (st) st.classList.add('wk-hint'); } },
       tap: (e, R) => { const st = e.target.closest('.md-st[data-st]'); if (!st || R.printed) return false; if (st.dataset.st === R.task.to) print(R.task.to); else D.miss(st, s.miss); return true; },
@@ -139,6 +144,8 @@ const MADO_RUN = (() => {
       <div class="md-glass"><i class="md-hole" aria-hidden="true"></i><div class="wk-cust"></div><div class="md-ticket"></div></div>
       <div class="md-opts"></div><div class="md-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => D.click(e));
     box = document.querySelector('.cls.wk-window');
+    ST = JOBS.steady(el('.cls-card'), (t) => { const c = el('.wk-cust'); c.className = 'wk-cust'; c.innerHTML = JOBS.custHtml(t.who); el('.md-ticket').innerHTML = ''; drawOne(t); });
+    ST.take(tasks.slice(ctx.done));   // every customer of the shift drawn and measured before the first comes
     D.start();
   }
   function lines(add) {

@@ -5,7 +5,7 @@ matrix — five phones in Safari (360×640, 375×553, 390×664, 412×780, 430×7
 the twelve jobs, from each customer's ask (each question, each ride, each kana), the controls the player answers with and the customer's
 words are whole in view and take a tap (document.elementFromPoint at the middle, the top and the foot of each lands on it); and in the 外場,
 when a customer orders by あれ, the poster it points at is in view (on the wall or held up as its card)."""
-import json, os, subprocess, sys, time
+import json, os, re, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -180,7 +180,10 @@ PROBE = """ const ids = new Map(), idOf = (o) => { if (o == null) return null; i
       if (!seen.has(k)) { seen.add(k); await frames(); if (ASK() && KEY() === k) { out.asks++; out.keys.push(k);
           [['words', WORDS()], ...(typeof TALK === 'function' ? [['talk', TALK()]] : []), ...CONTROLS().map((e) => [name(e), e])].forEach(([n, e]) => { const w = look(e, typeof OVER === 'string' ? OVER : null); if (w) out.bad.push([k, n, w]); });
           if (typeof SIZE === 'function') SIZE().forEach((w) => out.bad.push([k, 'size', w]));
-          const cd = CARD && document.querySelector(CARD + ' .cls-card'); if (cd && !cd.closest('.cls').getAnimations({ subtree: true }).some((x) => x.playState === 'running' && x.effect && x.effect.target && x.effect.target.contains(cd))) out.tops.push(Math.round(cd.getBoundingClientRect().top * 2) / 2); } }   // (the card's own opening, rising into place, waited out)
+          const cd = CARD && document.querySelector(CARD + ' .cls-card');   // where the card and its header are (the card's own opening, rising into place, waited out)
+          if (cd) { const rise = cd.closest('.cls').getAnimations({ subtree: true }).filter((x) => x.playState === 'running' && x.effect && x.effect.target && x.effect.target.contains(cd));
+            if (rise.length) await Promise.race([Promise.all(rise.map((x) => x.finished.catch(() => {}))), wait(2000)]);
+            const hd = cd.querySelector('.wk-head'), at = (e) => Math.round(e.getBoundingClientRect().top * 2) / 2; out.tops.push([k, at(cd), hd ? at(hd) : null]); } } }
       if (k !== last || Date.now() - since > 1500) { last = k; since = Date.now(); await PLAY(); } }
     else if (typeof STEP === 'function') await STEP();
     await wait(25); }
@@ -210,13 +213,26 @@ def run_job(b, job, w, h, mobile, limit=150000, seed=None, pre=''):
 # asks 43–45 by size: none (every ask on show looked at, and the shift to its end, as for every job)
 ASKS = {'counter': 10, 'till': 10, 'buns': 30, 'waiter': None, 'bento': 12, 'window': 12, 'lost': 28, 'taxi': 23, 'annai': {5: 10, 6: 10, 14: 10}, 'nakai': {3: 20, 5: 20}, 'miyage': {13: 14, 1: 14, 2: 14, 5: 14}, 'front': {5: 13, 14: 13, 1: 11}}
 
+# each customer's first ask (the job's key: a letter and the customer's number — 'm3?', 'l2ask', 'y4pick:elder' …) with the card's top and its
+# header's there; how far either moved from one customer to the next (fix round 2, ruling 31: 8 px at the most, at every size)
+def customers(tops):
+    per = []
+    for k, top, head in tops:
+        c = re.match(r'[a-z]\d+', k).group(0)
+        if not per or per[-1][0] != c: per.append((c, top, head))
+    return per
+def jump(per):
+    return max([max(abs(q[1] - p[1]), abs((q[2] or 0) - (p[2] or 0))) for p, q in zip(per, per[1:])] or [0])
+
 def check_job(b, job):
     seen, bad = {}, []
     for w, h, mobile in SIZES:
         for seed in SEEDS.get(job, [None]):
             r, at = run_job(b, job, w, h, mobile, seed=seed), f'{w}x{h}' + (f' seed {seed[0]}' + (' am' if seed[1] else '') if seed and len(SEEDS[job]) > 1 else '')
-            seen[at] = {'asks': r['asks'], 'secs': r['secs'], 'bad': r['bad'][:40], 'nbad': len(r['bad']), 'out': len({x[0] for x in r['bad']}), 'tops': sorted(set(r['tops'])), 'missed': r['missed'], 'ended': r['ended']}
-            if h < 700 and r['tops'] and max(r['tops']) - min(r['tops']) > 0.5: bad.append((job, at, 'the card re-centred between asks', sorted(set(r['tops']))))   # on a phone its top anchored (fix round 1, the review's Minor 8)
+            tops, per = [t[1] for t in r['tops']], customers(r['tops'])
+            seen[at] = {'asks': r['asks'], 'secs': r['secs'], 'bad': r['bad'][:40], 'nbad': len(r['bad']), 'out': len({x[0] for x in r['bad']}), 'tops': sorted(set(tops)), 'jump': jump(per), 'missed': r['missed'], 'ended': r['ended']}
+            if h < 700 and tops and max(tops) - min(tops) > 0.5: bad.append((job, at, 'the card re-centred between asks', sorted(set(tops))))   # on a phone its top anchored (fix round 1, the review's Minor 8)
+            if jump(per) > 8: bad.append((job, at, 'the card moved between customers', jump(per), [p[1] for p in per]))   # at every size (fix round 2, ruling 31)
             want = ASKS[job][seed[0]] if isinstance(ASKS[job], dict) else ASKS[job]
             if want is not None and r['asks'] != want: bad.append((job, at, 'asks', r['asks'], 'not', want))
             if r['missed'] or not r['ended']: bad.append((job, at, 'asks on show not looked at', r['missed'][:6], 'the shift ended' if r['ended'] else 'the shift never ended'))
@@ -236,6 +252,25 @@ def test_the_answers_are_in_view_at_every_size_annai(b): check_job(b, 'annai')
 def test_the_answers_are_in_view_at_every_size_nakai(b): check_job(b, 'nakai')
 def test_the_answers_are_in_view_at_every_size_miyage(b): check_job(b, 'miyage')
 def test_the_answers_are_in_view_at_every_size_front(b): check_job(b, 'front')
+
+# ---- test.5, fix round 2 (ruling 31; the user plays on a 430×740 phone in Safari): between customers a job card keeps its place — centred
+# in the screen, a card that grew and shrank with each customer moved its header with it: on d5e219b the 售票窗口 51–71 px from one customer
+# to the next at 412×780, 430×740, 768×1024, 1024×768 and 1280×800, 站櫃 15 at those five, 失物招領 11 at 412×780 and 430×740. Their seeded
+# shifts walked at 430×740, 390×664 and 1280×800: the card's top and its header's at each customer's first ask, 8 px at the most from the
+# customer before (JOBS.steady: the card held at the shift's tallest customer) ----
+STEADY = ('window', 'counter', 'lost')
+
+def test_a_job_card_keeps_its_place_between_customers(b):
+    seen, bad = {}, []
+    for job in STEADY:
+        for w, h, mobile in ((430, 740, True), (390, 664, True), (1280, 800, False)):
+            r = run_job(b, job, w, h, mobile)
+            per = customers(r['tops'])
+            seen[f'{job} {w}x{h}'] = {'customers': len(per), 'jump': jump(per), 'tops': [p[1] for p in per], 'heads': [p[2] for p in per]}
+            if len(per) < 9: bad.append((job, f'{w}x{h}', 'customers seen', len(per)))
+            if jump(per) > 8: bad.append((job, f'{w}x{h}', 'moved between customers', jump(per), [p[1] for p in per]))
+    keep('steady', seen)
+    assert bad == [], bad
 
 # ---- no container units (Safari before 16: the iPhone 6s/7 stay on iOS 15) — the rules using them dropped, whole shorthands with them, as
 # an old parser drops them, and the `@supports not (height: 1cqh)` blocks' rules in force: the 賣便當 on an SE and a 360×640 phone, its
