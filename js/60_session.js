@@ -738,6 +738,19 @@ function renderPractice() {
       ${answered || q.custom ? '' : '<div class="right"><span class="tiny muted kbd-hint">按 1–4 作答</span></div>'}
     </div>`;
   const next = answered ? `<div class="pr-next"><button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>` : '';
+  // a reading question (2026-11-27, test.5; the user's pick 「選項固定在下方」): its question and options in a panel of their own (.rp-ask)
+  // — on a phone pinned at the foot of the screen under the passage, on a wide screen beside it — and the passage scrolling on its own
+  // (rpFit). Answered on a wide screen, the result (the passage's 中文翻譯 under its verdict, as in a phone's result panel) comes under
+  // the options in the panel, nothing above them moving, and the tool row with 下一題 is a foot held at the panel's bottom (.rp-foot);
+  // on a phone the result panel rises as for any question, the page keeping no tool row of its own (its 發音 has nothing to play for a
+  // passage, and the room is the passage's)
+  const read = Boolean(q.passageHtml);
+  const ask = `
+      ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
+      ${answered && q.revealHtml && !sheet && !read ? q.revealHtml : ''}
+      ${subParts.length && q.custom !== 'g-order' ? `<div class="q-sub">${subParts.join(' ')}</div>` : ''}
+      ${custom || `<div class="opts${q.wide ? ' wide' : ''}${glyph ? ' glyph' : ''}">${opts}</div>`}
+      ${answered && !sheet ? feedbackHtml(e, false, read) : ''}`;
   view.innerHTML = `
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
@@ -745,22 +758,19 @@ function renderPractice() {
       ${prCountHtml()}
     </div>
     ${sessionNoteHtml(answered)}
-    <div class="q-card${just}">
+    <div class="q-card${read ? ' rp-card' : ''}${just}">
       <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip">再練一次</span>' : ''}${e.encore ? '<span class="chip">換個方式再考</span>' : ''}${ladder}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
-      ${q.passageHtml ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>` : ''}
-      ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
-      ${answered && q.revealHtml && !sheet ? q.revealHtml : ''}
-      ${subParts.length && q.custom !== 'g-order' ? `<div class="q-sub">${subParts.join(' ')}</div>` : ''}
-      ${custom || `<div class="opts${q.wide ? ' wide' : ''}${glyph ? ' glyph' : ''}">${opts}</div>`}
-      ${answered && !sheet ? feedbackHtml(e) : ''}
+      ${read ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>
+      <div class="rp-ask">${ask}${sheet ? '' : `<div class="rp-foot">${tools}${next}</div>`}</div>` : ask}
     </div>
-    ${sheet ? `${tools.replace('<div class="pr-actions">', '<div class="pr-actions pr-ghost" aria-hidden="true" inert>')}
+    ${sheet ? `${read ? '' : tools.replace('<div class="pr-actions">', '<div class="pr-actions pr-ghost" aria-hidden="true" inert>')}
     <div class="fb-sheet ${e.chosen === q.answer ? 'ok' : 'bad'}${just ? ' rise' : ''}" role="region" aria-label="作答結果">
       <div class="fb-sheet-body">${feedbackHtml(e, true)}${tools}</div>
       ${next}
-    </div>` : tools + next}`;
+    </div>` : read ? '' : tools + next}`;
   sheetFit(view);
+  rpFit(view, e);
   // a tap-to-answer block (拼字, 排序, 配對) loses its bottom row once answered: on a phone it keeps the height it had, so the tiles stay put under the panel
   const block = view.querySelector('.q-card > :is(.spell, .order, .match)');
   if (block && !answered) e.blockH = block.offsetHeight;
@@ -775,13 +785,42 @@ const PHONE_MQ = window.matchMedia ? window.matchMedia('(max-width: 600px)') : n
 function phoneLayout() { return Boolean(PHONE_MQ && PHONE_MQ.matches); }
 if (PHONE_MQ && PHONE_MQ.addEventListener) PHONE_MQ.addEventListener('change', () => { if (SESSION && currentRoute().name === 'practice') renderPractice(); });
 // room under the page as tall as the panel, so what it covers can still be scrolled up above it (it grows with ⋯ or AI 解析)
-const SHEET_RO = window.ResizeObserver ? new ResizeObserver(([en]) => { if (en) document.getElementById('view').style.setProperty('--sheet-h', en.target.offsetHeight + 'px'); }) : null;
+const SHEET_RO = window.ResizeObserver ? new ResizeObserver(([en]) => { if (en) { const view = document.getElementById('view'); view.style.setProperty('--sheet-h', en.target.offsetHeight + 'px'); rpUnder(view); } }) : null;
 function sheetFit(view) {
   const sh = view.querySelector('.fb-sheet');
   if (SHEET_RO) SHEET_RO.disconnect();
   if (!sh) { view.style.removeProperty('--sheet-h'); return; }
   view.style.setProperty('--sheet-h', sh.offsetHeight + 'px');
   if (SHEET_RO) SHEET_RO.observe(sh);
+}
+// a reading question's passage, and its question where the panel is short of room (a 情報検索's conditions on a small phone), each scroll
+// on their own (2026-11-27, test.5): the foot fades while there is more below (rp-more; iOS hides scrollbars), and each is kept where it
+// was read to as the card is drawn again (the answer, a sync); a new question starts at the top
+const RP_RO = window.ResizeObserver ? new ResizeObserver((ens) => ens.forEach((en) => (en.target.matches('.passage') ? rpUnder(document.getElementById('view')) : rpMore(en.target)))) : null;
+function rpMore(el) { if (el.isConnected) el.classList.toggle('rp-more', el.scrollHeight - el.clientHeight - el.scrollTop > 2); }
+function rpFit(view, e) {
+  if (RP_RO) RP_RO.disconnect();
+  const card = view.querySelector('.q-card.rp-card');
+  if (!card) return;
+  rpUnder(view);
+  [[card.querySelector(':scope > .passage'), 'rpTop'], [card.querySelector('.rp-ask > .q-stem'), 'rpStem']].forEach(([el, k]) => {
+    if (!el) return;
+    el.scrollTop = e[k] || 0;
+    el.addEventListener('scroll', () => { e[k] = el.scrollTop; rpMore(el); }, { passive: true });
+    rpMore(el);
+    if (RP_RO) RP_RO.observe(el);
+    if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => rpMore(el));
+  });
+}
+// answered on a phone: the passage reads on to its last line above the result panel — room at its foot (.passage::after) as deep as the
+// panel covers it, the page unscrolled
+function rpUnder(view) {
+  const pas = view.querySelector('.rp-card > .passage');
+  if (!pas) return;
+  const sh = view.querySelector('.fb-sheet');
+  const under = sh ? Math.max(0, Math.round(pas.getBoundingClientRect().bottom + window.scrollY - (window.innerHeight - sh.offsetHeight))) : 0;
+  pas.style.setProperty('--rp-under', under + 'px');
+  rpMore(pas);
 }
 // something brought into sight (2026-11-26): in a phone's result panel by scrolling the panel alone, as little as it takes (the
 // page under it stays put: scrollIntoView moved that too), elsewhere as the page scrolls
@@ -1189,14 +1228,15 @@ function twoLinesEm(text) {
 // (not text-wrap: pretty: on iPhone Safari it broke an example that fitted into three lines, and Chrome skips a blank with furigana)
 function keepTail(html) { return String(html || '').replace(/([ぁ-ゖァ-ヺー]{2}[。、？！」）]+)$/, '<span class="nowrap">$1</span>'); }
 
-function feedbackHtml(e, sheet = false) {
+function feedbackHtml(e, sheet = false, reveal = sheet) {
   const q = e.q;
   const ok = e.chosen === q.answer;
   const right = q.options[q.answer];
   // in a phone's result panel the options are under it, so it lists them: the right one, the one picked, then the rest, each
   // wrong word with what it means where that is known (1.0.45). A right answer lists them only where the other options have
   // something to show (word questions, 1.0.46). What a listening item reveals (the transcript, the word heard) comes under
-  // the verdict there, not inside the card (1.0.43)
+  // the verdict there, not inside the card (1.0.43); a reading question's (its passage's 中文翻譯) there on a wide screen too
+  // (reveal: test.5, under its options in the panel beside the passage)
   const order = q.options.map((o, i) => i).sort((a, b) => (b === q.answer) - (a === q.answer) || (b === e.chosen) - (a === e.chosen));
   const list = sheet && !q.custom && (!ok || q.options.some((o, i) => i !== q.answer && optAside(q, o)[0]));
   // a row: its mark, the option, what it is (the aside), and at its right end 你選的 and the word's speaker as one group (test.4's fix
@@ -1232,7 +1272,7 @@ function feedbackHtml(e, sheet = false) {
       <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' + (e.combo >= 3 ? `<span class="chip chip-accent combo${e.comboBig ? ' big' : ''}">連對 ${e.combo}</span>` : '') + (e.requeued ? '<span class="chip chip-ok fb-redo">這次記住了</span>' : '')
         : e.missed && e.missed.length ? icon('cross') + `<span>配錯了：<span class="jp">${esc(e.missed.map(x => x.label).join('、'))}</span></span>`   // 配對: the words paired wrong
         : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp || q.picOptions ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
-      ${chosen}${sheet && q.revealHtml ? q.revealHtml : ''}${diff}${full}${example}
+      ${chosen}${reveal && q.revealHtml ? q.revealHtml : ''}${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
       <div class="fb-meta">${q.point && q.kind === 'g' ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}</div>
       <div id="aiExplainBox">${aiBoxHtml(e)}</div>
