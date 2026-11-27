@@ -188,7 +188,9 @@ const JOBS = (() => {
   function steady(card, fill) {
     const s = { stale: '', list: [] };
     const take = (list, grow) => { if (!card || !card.isConnected) return; s.list = list; const was = grow ? parseFloat(card.style.minHeight) || 0 : 0; card.style.minHeight = ''; let most = 0;
-      list.forEach((t) => { fill(t); most = Math.max(most, card.offsetHeight + 1); }); most = Math.max(most, was); card.style.minHeight = most > 1 ? `${most}px` : ''; s.stale = ''; };   // (its layout height, the card perhaps rising into place: a whole px, so 1 more)
+      list.forEach((t) => { fill(t); most = Math.max(most, card.offsetHeight + 1); }); most = Math.max(most, was);
+      const cap = parseFloat(getComputedStyle(card).maxHeight); if (cap) most = Math.min(most, cap);   // never over its own max-height: a resize that leaves the screen as it was lets go of nothing (fix round 2's re-review)
+      card.style.minHeight = most > 1 ? `${most}px` : ''; s.stale = ''; };   // (its layout height, the card perhaps rising into place: a whole px, so 1 more)
     steadies.forEach((_, c) => { if (!c.isConnected) steadies.delete(c); }); if (card) steadies.set(card, s);
     return { take, before(redo) { if (s.stale && card && card.isConnected) { take(s.list, s.stale === 'grow'); if (redo) redo(); } } };
   }

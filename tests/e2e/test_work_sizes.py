@@ -209,9 +209,10 @@ def run_job(b, job, w, h, mobile, limit=150000, seed=None, pre=''):
     return json.loads(b.run([("metrics", (w, h, mobile)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=limit / 1000 + 60)[-1])
 
 # every ask of the shift looked at, the same count at every size: a skipped one fails (fix round 1: the review's Important 6 — a floor under
-# the counts seen let one pass); by job, or by job and seed. The 外場's floor runs by the clock (the hero walking, customers coming in), its
-# asks 43–45 by size: none (every ask on show looked at, and the shift to its end, as for every job)
-ASKS = {'counter': 10, 'till': 10, 'buns': 30, 'waiter': None, 'bento': 12, 'window': 12, 'lost': 28, 'taxi': 23, 'annai': {5: 10, 6: 10, 14: 10}, 'nakai': {3: 20, 5: 20}, 'miyage': {13: 14, 1: 14, 2: 14, 5: 14}, 'front': {5: 13, 14: 13, 1: 11}}
+# the counts seen let one pass); by job, or by job and seed. The 外場's runs by the clock (the hero walking, customers coming in), its asks
+# 43–45 by size: a floor of 40 there (FLOOR), so a shift with no orders still fails (fix round 2's re-review)
+FLOOR = {'waiter'}
+ASKS = {'counter': 10, 'till': 10, 'buns': 30, 'waiter': 40, 'bento': 12, 'window': 12, 'lost': 28, 'taxi': 23, 'annai': {5: 10, 6: 10, 14: 10}, 'nakai': {3: 20, 5: 20}, 'miyage': {13: 14, 1: 14, 2: 14, 5: 14}, 'front': {5: 13, 14: 13, 1: 11}}
 
 # each customer's first ask (the job's key: a letter and the customer's number — 'm3?', 'l2ask', 'y4pick:elder' …) with the card's top and its
 # header's there; how far either moved from one customer to the next (fix round 2, ruling 31: 8 px at the most, at every size)
@@ -234,7 +235,7 @@ def check_job(b, job):
             if h < 700 and tops and max(tops) - min(tops) > 0.5: bad.append((job, at, 'the card re-centred between asks', sorted(set(tops))))   # on a phone its top anchored (fix round 1, the review's Minor 8)
             if jump(per) > 8: bad.append((job, at, 'the card moved between customers', jump(per), [p[1] for p in per]))   # at every size (fix round 2, ruling 31)
             want = ASKS[job][seed[0]] if isinstance(ASKS[job], dict) else ASKS[job]
-            if want is not None and r['asks'] != want: bad.append((job, at, 'asks', r['asks'], 'not', want))
+            if want is not None and (r['asks'] < want if job in FLOOR else r['asks'] != want): bad.append((job, at, 'asks', r['asks'], 'under' if job in FLOOR else 'not', want))
             if r['missed'] or not r['ended']: bad.append((job, at, 'asks on show not looked at', r['missed'][:6], 'the shift ended' if r['ended'] else 'the shift never ended'))
             bad += [(job, at) + tuple(x) for x in r['bad'][:6]]
     keep(job, seen)
