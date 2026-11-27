@@ -229,7 +229,7 @@ const TAXI_RUN = (() => {
     // the fare: read off the meter (three to pick from); right, their thanks (and maybe おつりは いいです), the next ride
     function pay() {
       R.phase = 'pay'; R.choosing = false; ctl(); const f = R.fare, opts = shuffle([f, f + 80, f - 80]); R.payRight = opts.indexOf(f);
-      el('.tx-pays').innerHTML = opts.map((v, i) => { const t = S().pay[0].replace('{P}', YEN.reading(v)); return `<button type="button" class="btn tx-pay" data-o="${i}" lang="ja" style="--n: ${[...t].length}">${esc(t)}</button>`; }).join('');   // in kana: the meter's digits read, not matched; --n its length (one line at any width: css .tx-pay)
+      el('.tx-pays').innerHTML = opts.map((v, i) => { const t = S().pay[0].replace('{P}', YEN.reading(v)); return `<button type="button" class="btn tx-pay" data-o="${i}" lang="ja" style="--tx-n: ${[...t].length}">${esc(t)}</button>`; }).join('');   // in kana: the meter's digits read, not matched; --tx-n its length (one line at any width: css .tx-pay)
       bub(); speakAs(R.ride.who, s.cust.price[0]);
     }
     async function paid() {

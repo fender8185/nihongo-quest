@@ -685,14 +685,27 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .bt-good { position: relative; display: grid; justify-items: center; gap: 2px; min-height: 76px; padding: 6px 2px 4px; border: 0; border-radius: 10px; background: #f6efe0; font-size: 12px; cursor: pointer; } .bt-good .pic { width: 40px; height: 40px; }
 .bt-good.in { box-shadow: 0 0 0 2px #3f9a8c; } .bt-n { position: absolute; top: 2px; right: 4px; font-style: normal; font-weight: 700; color: #c8453a; font-size: 13px; }
 /* the card one column at any size (test.5, 2026-11-27): the car drawn smaller when the screen is short — its stage as tall as the car is
-   at the card's width, given up first (down to 84 px: four windows 40 px wide or more), the car as wide as that height lets it be, its
-   windows with it; the passenger's row and the talk row held for the shift (BENTO_RUN). No container units (Safari before 16): as before */
+   at the card's width, given up first (down to 92 px: four windows 40 × 40 or more — fix round 1; 84 till then), the car as wide as that
+   height lets it be, its windows with it; the passenger's row and the talk row held for the shift (BENTO_RUN). No container units (Safari
+   before 16): as before, but for an SE-sized screen (below) */
 .wk-bento .cls-card { container-type: inline-size; }
-.wk-bento .cls-card > .bt-stage { flex: 1 1 calc((100cqw + 12px) * 150 / 360); min-height: 84px; container-type: size; }
+.wk-bento .cls-card > .bt-stage { flex: 1 1 calc((100cqw + 12px) * 150 / 360); min-height: 92px; container-type: size; }   /* 92: the windows 40 px tall at the least (fix round 1, the review's Minor 9: at 84 they were 40 × 37) */
 .wk-bento .bt-car { width: min(100cqw, 100cqh * 360 / 150); margin-right: auto; }   /* drawn smaller: at the left, the departure bar in the sky to its right (over its windows it hid the 4th) */
 .wk-bento .bt-talk { align-content: start; }   /* held as tall as the shift needs: what shows now at its top */
-.wk-bento .bt-bub { display: grid; grid-template-columns: auto auto minmax(0, 1fr); column-gap: 8px; } .wk-bento .bt-bub > :is(.bt-who, .bt-ear) { grid-row: span 2; } .wk-bento .bt-bub > :is(b, small) { grid-column: 3; } .wk-bento .bt-bub > .bt-hint { grid-column: 1 / -1; }   /* the words and their 中文 one over the other, the whole width beside the face and 🔊 (they stood side by side, each a narrow column) */
+.wk-bento .bt-bub { display: grid; grid-template-columns: auto auto minmax(0, 1fr); column-gap: 8px; align-items: start; } .wk-bento .bt-bub > :is(.bt-who, .bt-ear) { grid-row: span 2; } .wk-bento .bt-bub > :is(b, small) { grid-column: 3; } .wk-bento .bt-bub > .bt-hint { grid-column: 1 / -1; }   /* the words and their 中文 one over the other, the whole width beside the face and 🔊 (they stood side by side, each a narrow column) */
 .wk-bento .bt-handrow { margin: 6px 0; }
+/* the hand one row (fix round 1, the review's Important 3: a third chip wrapped it, and the car, the passenger's words, はい／いいえ, the tray and
+   the talk row moved 20–45 px): its chips never wrap — it slides sideways, the good just taken brought into sight (BENTO_RUN's hand), no bar
+   (a classic one would take height), its sides fading where there are more chips past them. The passenger's bubble: its face, 🔊 and words
+   at its top (they were centred in it) — opened as they are served, or after two misses, it grows down into the room held for it, nothing in
+   it or under it moving */
+.wk-bento .bt-hand { position: relative; min-width: 0; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; } .wk-bento .bt-hand::-webkit-scrollbar { display: none; } .wk-bento .bt-chip { flex: none; }
+.wk-bento .bt-hand.bt-more-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), rgba(0, 0, 0, .15)); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), rgba(0, 0, 0, .15)); }
+.wk-bento .bt-hand.bt-more-l { -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, .15), #000 28px); mask-image: linear-gradient(90deg, rgba(0, 0, 0, .15), #000 28px); }
+.wk-bento .bt-hand.bt-more-l.bt-more-r { -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, .15), #000 28px calc(100% - 28px), rgba(0, 0, 0, .15)); mask-image: linear-gradient(90deg, rgba(0, 0, 0, .15), #000 28px calc(100% - 28px), rgba(0, 0, 0, .15)); }
+/* no container units (Safari before 16, the iPhone 6s/7 on iOS 15): the car at the card's width, as before test.5 — on an SE-sized screen
+   drawn at 70% of it, at the left (fix round 1, the review's Minor 10: the tray's last row 22 px under the fold) */
+@supports not (height: 1cqh) { @media (max-height: 599px) { .wk-bento .bt-car { width: 70%; } } }
 .wk-bento .bt-replies { display: grid; grid-template-columns: 1fr 1fr; } .wk-bento .bt-reply { white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3; }   /* はい、あります。 and すみません、ありません。 side by side, the longer broken at its comma on a phone (they took two rows at 375) */
 /* きっぷ売り場 (2026-11-20): the wall over the window — the route and its fares (pick a station for tickets), the clock and the
    departure board — the glass with whoever is asking, the printed tickets, the replies */
@@ -765,7 +778,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .tx-blink { opacity: 0; } .tx-car.blink-l .tx-blink.l, .tx-car.blink-r .tx-blink.r { animation: txBlink .4s steps(2) infinite; } @keyframes txBlink { 50% { opacity: 1; } }
 .tx-ctl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; } .tx-go { min-width: 0; min-height: 54px; padding-inline: 4px; font-size: 18px; } .tx-go.stop { background: #d0453c; color: #fff; } .tx-go.picked { box-shadow: 0 0 0 3px #f2c94c; } .tx-go:disabled { opacity: .45; }
 .tx-pays { position: absolute; left: 50%; bottom: 10px; width: min(100% - 20px, 340px); transform: translateX(-50%); display: grid; gap: 6px; padding: 8px; border-radius: 14px; background: rgba(244, 241, 230, .95); box-shadow: 0 4px 16px rgba(0, 0, 0, .25); } .tx-pays:empty { display: none; } .tx-pay { min-height: 44px; font-size: 17px; } .tx-pay.wk-bad { animation: shake .3s ease; }
-@supports (width: 1cqw) { .tx-pays { container-type: inline-size; } .tx-pay { padding-inline: 10px; font-size: clamp(13px, (100cqw - 22px) / var(--n, 12), 17px); } }   /* test.5: a fare said in kana on one line, whole in the panel at any width (きゅうひゃくはちじゅうえんです。 ran past it at 360) — 17 px while it fits */
+@supports (width: 1cqw) { .tx-pays { container-type: inline-size; } .tx-pay { padding-inline: 10px; font-size: clamp(13px, (100cqw - 22px) / var(--tx-n, 12), 17px); } }   /* test.5: a fare said in kana on one line, whole in the panel at any width (きゅうひゃくはちじゅうえんです。 ran past it at 360) — 17 px while it fits */
 /* 券売機 and the ride (2026-11-20): the machine (its screen, a button a fare, the coin slot, the ticket out); inside the car (the
    world going by the windows while it runs, the straps swaying, the LED over the door), the announcement, 降りる */
 .kb-card .cls-card, .rd-card .cls-card { background: #eef1ee; color: #2b2b33; border-bottom: 10px solid #3f9a8c; }
@@ -1096,6 +1109,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 @media (max-height: 699px) {   /* a short phone (fix round 1): the フロント a little closer set — the book's rows, the lobby (its room over the face for the mood mark kept: M-3), the replies and the talk row each a few px tighter, more room for the book and keys (fix round 2's column); nothing smaller to read or to tap (the replies 42 px) */
   .wk-front .fr-row { padding-block: 1px; } .wk-front .fr-lobby { margin-top: 4px; padding-bottom: 5px; }
   .wk-front .fr-opts { gap: 4px; margin-top: 4px; } .wk-front .fr-opt { min-height: 42px; } .wk-front .fr-talk { margin-top: 3px; }
+  .wk-front .fr-talk { align-items: flex-start; }   /* the line at the top of its held room (test.5, fix round 1: the review's Minor 7 — where a check-in's room runs under the fold at 360×640, the room held under the line goes first, never the line) */
 } .fr-talk .kr-face { width: 34px; height: 34px; flex: none; } .fr-talk .wk-say { font-size: 14px; }
 .fr-talk[data-who="me"] :is(.kr-face, .wk-say), .fr-talk:not([data-who="me"]) .wk-me { display: none; } .fr-talk .wk-me { flex: 1; margin: 0; }
 /* ---- test.5 (2026-11-27; the user: 「打工進行中，回答選項在小螢幕上也固定在卡片底部，上面的看板、客人自己捲動」, 「必須全面適配各種size」): every
@@ -1108,7 +1122,7 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .wk-col .cls-card { display: flex; flex-direction: column; } .wk-col .cls-card > * { flex-shrink: 0; }
 .wk-col .wk-read { flex: 1 1 auto; min-height: var(--wk-floor, 120px); overflow-y: auto; overscroll-behavior: contain; }
 @media (max-height: 699px) {
-  .cls.wk-col { padding-top: max(8px, env(safe-area-inset-top, 0px)); padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+  .cls.wk-col { padding-top: max(8px, env(safe-area-inset-top, 0px)); padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); align-items: start; }   /* the card's top anchored (fix round 1, the review's Minor 8: centred, the 售票窗口's and 收銀's moved 8–59 px between customers at 360×640) */
   .wk-col .cls-card { max-height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)) - max(8px, env(safe-area-inset-bottom, 0px))); padding-top: 12px; padding-bottom: 6px; border-bottom-width: 6px; }
   /* what a short screen needs a little closer set, nothing to read or tap under its size: 收銀's things on the counter (their pictures
      40 px, the price tags as they were; the customer's face 46, 張's 40), the 駅弁's tray (its goods' pictures 28 px, a row 60-odd px) and the car's stage */
@@ -1136,26 +1150,21 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 .wk-front .cls-card > .fr-desk { flex: 1 1 auto; min-height: max(120px, var(--fr-keys, 0px)); overflow-y: auto; overscroll-behavior: contain; padding-top: calc(6px + var(--wk-under, 0px)); }   /* a check-in's guest: no lower than the key board whole (--fr-keys, FRONT_RUN: its keys are the answers then; test.5) */
 .wk-annai .cls-card > .an-board { flex: 1 1 auto; min-height: 140px; padding-top: var(--wk-under, 0px); } .wk-annai .an-btitle { top: var(--wk-under, 0px); }
 .wk-nakai .cls-card > .nk-stage { flex: 1 1 auto; min-height: 140px; display: flex; } .wk-nakai .nk-art { flex: 1 1 auto; min-height: 0; display: flex; } .wk-nakai .nk-art svg { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; }
-/* the おみやげ屋 (fix round 3, ruling 11): its shop no box of its own — the shelves alone shrink and scroll (their floor: the top row whole,
-   its price tags included: 136), the front (the customer, their bubble, the tray and どうぞ) a fixed part of the column, never cut; the
-   replies' place never blank: the buttons on show for the whole customer, their words not yet shown before the reply step (……) */
+/* the おみやげ屋 (fix round 3, ruling 11): its shop no box of its own — till test.5 the shelves alone shrank and scrolled (their floor: the
+   top row whole, its price tags included: 136); the front (the customer, their bubble, the tray and どうぞ) a fixed part of the column, never
+   cut; the replies' place never blank: the buttons on show for the whole customer, their words not yet shown before the reply step (……) */
 .wk-miyage .cls-card > .om-shop { display: contents; }
-.wk-miyage .om-shelves { flex: none; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(5px + var(--wk-under, 0px)); margin: 2px -8px 0; border: 2px solid #6e5236; border-bottom: 0; border-radius: 12px 12px 0 0; }   /* test.5: whole at every size — every customer picks from them (they are the answers then); the talk row gives way first (it was the shelves' lower row, down to 138 px) */
-/* the shelves' frame (task 2, ruling 18): a border inside their own box, in line with the front's frame (2 px outside it, on top at the
-   seam) — the fade (.wk-more) masks all a box paints and cut a frame drawn outside it at the top and sides; so the fade keeps the two
-   side borders whole, and never starts above the top row's foot (its price tags at full strength at the floor: the same 136 px of
-   shelves under the 2 px border; the fade's 26 px where the shelves are taller) */
-.wk-miyage .om-shelves.wk-more { --om-fade: max(calc(100% - 26px), calc(var(--om-pic) + 84px + var(--wk-under, 0px)));
-  -webkit-mask-image: linear-gradient(90deg, #000 2px, transparent 2px calc(100% - 2px), #000 calc(100% - 2px)), linear-gradient(#000 var(--om-fade), rgba(0, 0, 0, .2));
-  mask-image: linear-gradient(90deg, #000 2px, transparent 2px calc(100% - 2px), #000 calc(100% - 2px)), linear-gradient(#000 var(--om-fade), rgba(0, 0, 0, .2)); }
+.wk-miyage .om-shelves { flex: none; padding-top: 5px; margin: 2px -8px 0; border: 2px solid #6e5236; border-bottom: 0; border-radius: 12px 12px 0 0; }   /* test.5: whole at every size — every customer picks from them (they are the answers then); their goods drawn smaller where the screen is short (MIYAGE_RUN's fit). Their floor, its fade and the chevron for the row below it (task 2, rulings 18 and 20) went with it */
+/* test.5, fix round 1 (the review's Critical 1 and Important 2: a superior's third reply under the fold on an SE, the talk row off a 430×740):
+   on a screen under 850 px tall a customer's replies come up as a sheet over the shelves from their reply step — the shelves done with then —
+   out of the column: its top and height the shelves' (MIYAGE_RUN's fit, the goods drawn large enough for it), its frame theirs. Hidden through
+   a pick (nothing to tap through it), in its place throughout: nothing on screen moves as it comes up */
+@media (max-height: 849px) {
+  .wk-miyage .om-opts.om-sheet { position: absolute; z-index: 3; left: 4px; right: 4px; margin: 0; padding: 5px 6px; box-sizing: border-box; align-content: start; border: 2px solid #6e5236; border-bottom: 0; border-radius: 12px 12px 0 0; background: #f4ece0;
+    visibility: hidden; pointer-events: none; opacity: 0; transition: opacity .15s, visibility 0s .15s; }
+  .wk-miyage .om-opts.om-sheet.om-up { visibility: visible; pointer-events: auto; opacity: 1; transition: opacity .15s; }
+}
 .wk-miyage .om-front { position: relative; z-index: 1; flex: none; margin: 0 -6px; overflow: hidden; border-radius: 0 0 10px 10px; box-shadow: 0 0 0 2px #6e5236; }
-/* more on the shelves below what shows (task 2, fix round 1, ruling 20 — iOS hides scrollbars, and at their floor the fade has no room):
-   a tab with a chevron down hanging from their foot over the noren's middle, while they have more below (.wk-more), at every height —
-   placed (no box in the column: nothing moves as it comes and goes), no tap, under a customer's pop-up word; the front draws it (the
-   shelves' mask cuts all they paint outside their box) */
-.om-more { position: absolute; left: 50%; top: 0; width: 44px; height: 13px; margin-left: -22px; border-radius: 0 0 8px 8px; background: #fbf3e0; box-shadow: 0 1px 2px rgba(20, 12, 6, .5); pointer-events: none; opacity: 0; transition: opacity .2s; }
-.om-more::after { content: ''; position: absolute; left: 50%; top: 1px; width: 6px; height: 6px; margin-left: -4px; border: solid #6e5236; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
-.om-shelves.wk-more + .om-front .om-more { opacity: 1; }
 :is(.om-opt.om-later, .nk-opt.nk-later) { position: relative; } :is(.om-opt.om-later, .nk-opt.nk-later) > span { visibility: hidden; }   /* a reply not yet to be picked: in its place, its words not yet shown (the 仲居's too, till 千代 asks: task 2, ruling 18) */
 :is(.om-opt.om-later, .nk-opt.nk-later)::after { content: '……'; position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #8a7a6e; letter-spacing: .1em; }
 @media (max-height: 699px) {   /* every iPhone in Safari (fix round 3): the four cards nearer the screen's edges (8 px), their headers 8 px from the top (fix round 1's 8 px for the フロント, which lost to the shared rule: now it wins, for all four), the おみやげ屋's front a little closer set — more room for the reading blocks and the talk rows */
@@ -1176,9 +1185,12 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
 @media (max-height: 599px) {   /* an SE-sized screen: a check-in's guest at the フロント — the key board whole (its rows 42 px), their words and four replies in sight too (test.5) */
   .wk-front .fr-board { grid-auto-rows: 42px; } .wk-front .fr-opts { gap: 3px; } .wk-front .fr-lobby { padding-top: 6px; border-bottom-width: 6px; }
 }
-@media (max-height: 599px) {   /* an SE-sized screen (375×553 in Safari): the goods 28 px under a lower まんじゅう sign, the replies 14 px — the shelves, the customer, the tray and the replies in sight */
-  .wk-miyage .om-shelves { --om-pic: 28px; padding-top: calc(3px + var(--wk-under, 0px)); } .wk-miyage .om-shelf.om-top { --om-top: 15px; } .wk-miyage .om-sign { height: 14px; padding-top: 3px; font-size: 11px; } .wk-miyage .om-sign rt { font-size: 8px; } .wk-miyage .om-sign::before { top: 4px; width: 6px; height: 6px; }
-  .wk-miyage .om-opts { gap: 3px; margin-top: 2px; } .wk-miyage .om-opt { min-height: 40px; font-size: 14px; } .wk-miyage .wk-head { padding-top: 6px; } .wk-miyage .wk-head b { font-size: 16px; }   /* a superior's three replies, two lines each, in sight under the shelves and their words */
+@media (max-height: 599px) {   /* an SE-sized screen (375×553 in Safari): the goods 32 px at most (MIYAGE_RUN's fit: smaller where the talk row needs it, larger for a reply sheet); the まんじゅう sign, the replies and the header their own size (fix round 1: the review's Important 4) */
+  .wk-miyage .om-shelves { --om-pic: 32px; padding-top: 3px; } .wk-miyage .om-sheet .om-opt { padding-block: 2px; }
+  .wk-miyage .om-give { min-height: 40px; padding-block: 5px; } .wk-miyage .wk-head { padding-top: 6px; padding-bottom: 2px; } .wk-miyage .wk-head b { font-size: 16px; } .wk-miyage .om-door { padding-block: 1px; } .wk-miyage .wk-grr { top: -1px; }   /* (a customer's pop-up word at the front's top as the door's padding: the front clips) */
+  .cls.wk-miyage { padding-bottom: max(4px, env(safe-area-inset-bottom, 0px)); } .wk-miyage .cls-card { max-height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)) - max(4px, env(safe-area-inset-bottom, 0px)) - var(--wk-top)); border-bottom-width: 4px; }
+  /* (fix round 1) a superior's three two-line replies over the shelves, and under the front the talk row whole — 竹内's why to a wrong reply fills it, 98 px: ゼミの先生's words run to 152 px —
+     どうぞ the tray's 40 px, the header as 26a94d0's, the card 4 px from the screen's foot, its own foot 4 px */
 }
 @media (prefers-reduced-motion: reduce) { :is(.fr-opt, .fr-key).wk-bad, .fr-bell.fr-ding .fr-cap, .fr-dn.fr-new { animation: none; } }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */

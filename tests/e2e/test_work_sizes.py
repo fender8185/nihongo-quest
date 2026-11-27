@@ -106,11 +106,19 @@ KITS = {
       if (n.ready.length) return goTo('pass'); if (c.some((x) => x.state === 'pay')) return goTo('register'); };
     const DONE = () => { const n = HALL.now(); return !n || n.over; };"""),
   'bento': ('.wk-bento', 'm6', 'platform', 'JOBS.pat.scale = 0.2;', """
-    const B = () => BENTO_RUN.now(), ASK = () => { const b = B(); return Boolean(b && b.phase === 'stop' && b.sel && b.sel.heard && b.sel.state === 'calling'); };
+    const B = () => BENTO_RUN.now(), still = () => !q('.bt-car').getAnimations().some((a) => a.playState === 'running');   // the car stood still (this test's sleeps are a tenth; its slide in is not)
+    const ASK = () => { const b = B(); return Boolean(b && b.phase === 'stop' && b.sel && b.sel.heard && b.sel.state === 'calling') && still(); };
     const KEY = () => { const x = B().sel; return 'w' + x.k + (x.o.kind === 'have' ? (x.asked ? '+' : '?') : ''); };
-    const WORDS = () => q('.bt-bub'), CONTROLS = () => qa('.bt-good, .bt-give, .bt-reply');
+    const WORDS = () => q('.bt-bub'), CONTROLS = () => qa('.bt-good, .bt-give, .bt-reply, .bt-win');   // the windows too (fix round 1)
+    const SIZE = () => qa('.bt-win').map((e) => e.getBoundingClientRect()).filter((r) => r.width < 39.5 || r.height < 39.5).map((r) => `a window ${Math.round(r.width)}×${Math.round(r.height)}`);   // 40 × 40 to tap at the least (fix round 1, the review's Minor 9)
+    // the goods they want and one more taken (fix round 1: the hand one row that slides — the chip just taken whole in sight, a tap on it
+    // landing; the hand's height as it was), that one put back, どうぞ
     const PLAY = async () => { const x = B().sel; if (x.o.kind === 'have' && !x.asked) { const r = q(`.bt-reply[data-r="${x.o.has ? 'yes' : 'no'}"]`); if (r) r.click(); return; }
-      for (const [id, n] of x.o.items) for (let i = 0; i < n; i++) { const g = q(`.bt-good[data-g="${id}"]`); if (g) g.click(); } const gv = q('.bt-give'); if (gv) gv.click(); };
+      const want = x.o.items.map(([id]) => id), extra = qa('.bt-good').map((g) => g.dataset.g).find((g) => !want.includes(g)), h0 = q('.bt-hand').getBoundingClientRect().height;
+      for (const [id, n] of x.o.items) for (let i = 0; i < n; i++) { const g = q(`.bt-good[data-g="${id}"]`); if (g) g.click(); }
+      const e = q(`.bt-good[data-g="${extra}"]`); if (e) { e.click(); await frames(); const k = KEY(), ch = q(`.bt-chip[data-drop="${extra}"]`), w = look(ch); if (w) out.bad.push([k, 'chip[' + extra + ']', w]);
+        const h1 = q('.bt-hand').getBoundingClientRect().height; if (Math.abs(h1 - h0) > 0.5) out.bad.push([k, 'hand', `${Math.round(h0)} → ${Math.round(h1)} px`]); if (ch) ch.click(); }
+      const gv = q('.bt-give'); if (gv) gv.click(); };
     const STEP = async () => { const b = B(); if (b && b.phase === 'stop' && (!b.sel || b.sel.state !== 'calling')) { const w = q('.bt-win.calling'); if (w) w.click(); } };"""),
   'window': ('.wk-window', 'm2', 'station', '', """
     const M = () => MADO_RUN.now(), buying = (n) => n.task.kind === 'buy' && !n.printed;
@@ -127,7 +135,8 @@ KITS = {
       if (asking(n)) { const k = qa('.lf-q').map((x) => x.dataset.q).find((x) => !n.know[x]), b = k && q(`.lf-q[data-q="${k}"]`); if (b && !b.disabled) b.click(); return; }
       if (t.type === 'none' || t.type === 'gag') { const b = q(t.type === 'none' ? '.lf-none' : '.lf-gag'); if (b) b.click(); return; }
       const c = t.cands.findIndex((x) => x.color === t.color && x.dim === t.dim && x.inside.join() === t.inside.join()), cb = q(`.lf-cand[data-c="${c}"]`); if (cb) cb.click(); await wait(30); const g = q('.lf-give'); if (g) g.click(); };"""),
-  'taxi': ('.wk-taxi', 'm4', 'station', 'JOBS.pat.scale = 0.05; TAXI.tips = false;', """
+  # (the taxi's pace 0.5: a crossing waits 0.3 s here — at 0.05, 30 ms, a ride's first went straight on by itself before it was looked at: fix round 1)
+  'taxi': ('.wk-taxi', 'm4', 'station', 'JOBS.pat.scale = 0.5; TAXI.tips = false;', """
     const X = () => TAXI_RUN.now(), ASK = () => { const n = X(); if (!n) return false; if (n.phase === 'pay') return Boolean(q('.tx-pay')); return n.phase === 'drive' && n.choosing && Boolean(q('.tx-go:not(:disabled)')); };
     const KEY = () => { const n = X(); return 'x' + n.k + '/' + n.phase + '/' + n.i + '/' + n.steps; };
     const WORDS = () => q('.tx-bub'), CONTROLS = () => (X().phase === 'pay' ? qa('.tx-pay') : qa('.tx-go'));
@@ -147,7 +156,7 @@ KITS = {
   'miyage': ('.wk-miyage', 'm11', 'yudori', "state.work.res[dateStr(TOWNEV.today())] = { place: 'miyage', done: 0, score: {}, keep: { seed: SEEDV } };", """
     const Y = () => MIYAGE_RUN.now(), ASK = () => { const n = Y(); return Boolean(n) && !n.busy && (n.phase === 'pick' || (n.phase === 'reply' && Boolean(q('.om-opt:not(:disabled)')))); };
     const KEY = () => { const n = Y(); return 'y' + n.k + n.phase + ':' + n.c.kind; };
-    const WORDS = () => q('.wk-cust .wk-bub'), CONTROLS = () => (Y().phase === 'pick' ? qa('.om-good, .om-give') : qa('.om-opt'));
+    const WORDS = () => q('.wk-cust .wk-bub'), CONTROLS = () => (Y().phase === 'pick' ? qa('.om-good, .om-give') : qa('.om-opt')), TALK = () => q('.om-talk');   // the talk row whole too (fix round 1: the replies a sheet over the shelves)
     const PLAY = async () => { const n = Y(); if (n.phase === 'pick') { MIYAGE.answer(n.c).forEach((g) => { const b = q(`.om-good[data-g="${g}"]`); if (b && !Y().tray.includes(g)) b.click(); }); await wait(30); const gv = q('.om-give'); if (gv) gv.click(); return; }
       const b = q(`.om-opt[data-o="${n.c.opts.findIndex((o) => o[2])}"]`); if (b && !b.disabled) b.click(); };"""),
   'front': ('.wk-front', 'm15', 'ryokan', "TOWNEV.clock = { h: MORNING ? 9 : 15, day: new Date(2026, 10, 10) }; state.work.res[dateStr(TOWNEV.today())] = { place: 'front', done: 0, score: {}, keep: { seed: SEEDV, morning: MORNING } };", """
@@ -157,54 +166,61 @@ KITS = {
     const PLAY = async () => { const n = F(); if (n.step === 1) { const k = q(`.fr-key[data-room="${n.task.room}"]`); if (k) k.click(); return; }
       const b = q(`.fr-opt[data-o="${n.task.opts.findIndex((o) => o[2] && o[3] !== 'bday')}"]`); if (b && !b.disabled) b.click(); };"""),
 }
-# each ask looked at two frames in (the ask's own frame drawn); answered right at once; the shift to its end (or LIMIT)
+# each ask looked at two frames in (the ask's own frame drawn); answered right at once; the shift to its end (or LIMIT). Every ask on
+# show in any painted frame (a watcher each frame) must have been looked at — none skipped (fix round 1, the review's Important 6) — and
+# the shift must have come to its end
 PROBE = """ const ids = new Map(), idOf = (o) => { if (o == null) return null; if (!ids.has(o)) ids.set(o, ids.size); return ids.get(o); };
   const frames = () => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
-  const out = { asks: 0, keys: [], bad: [] }, seen = new Set(), T0 = Date.now(); let opened = false, last = '', since = 0;
+  const out = { asks: 0, keys: [], bad: [], tops: [], ended: false }, seen = new Set(), onShow = new Set(), T0 = Date.now(); let opened = false, last = '', since = 0, watching = true;
+  const watch = () => { if (!watching) return; try { if (ASK()) onShow.add(KEY()); } catch (e) { /* between customers */ } requestAnimationFrame(watch); }; requestAnimationFrame(watch);
   const done = typeof DONE === 'function' ? DONE : () => (opened && !document.querySelector(CARD)) || Boolean(document.querySelector('.wk-result'));
   while (Date.now() - T0 < LIMIT) {
-    if (CARD && document.querySelector(CARD)) opened = true; if (CARD ? done() : opened && done()) break; if (!CARD && HALL.now()) opened = true;
+    if (CARD && document.querySelector(CARD)) opened = true; if (CARD ? done() : opened && done()) { out.ended = true; break; } if (!CARD && HALL.now()) opened = true;
     if (ASK()) { const k = KEY();
       if (!seen.has(k)) { seen.add(k); await frames(); if (ASK() && KEY() === k) { out.asks++; out.keys.push(k);
-          [['words', WORDS()], ...CONTROLS().map((e) => [name(e), e])].forEach(([n, e]) => { const w = look(e, typeof OVER === 'string' ? OVER : null); if (w) out.bad.push([k, n, w]); }); } }
+          [['words', WORDS()], ...(typeof TALK === 'function' ? [['talk', TALK()]] : []), ...CONTROLS().map((e) => [name(e), e])].forEach(([n, e]) => { const w = look(e, typeof OVER === 'string' ? OVER : null); if (w) out.bad.push([k, n, w]); });
+          if (typeof SIZE === 'function') SIZE().forEach((w) => out.bad.push([k, 'size', w]));
+          const cd = CARD && document.querySelector(CARD + ' .cls-card'); if (cd && !cd.closest('.cls').getAnimations({ subtree: true }).some((x) => x.playState === 'running' && x.effect && x.effect.target && x.effect.target.contains(cd))) out.tops.push(Math.round(cd.getBoundingClientRect().top * 2) / 2); } }   // (the card's own opening, rising into place, waited out)
       if (k !== last || Date.now() - since > 1500) { last = k; since = Date.now(); await PLAY(); } }
     else if (typeof STEP === 'function') await STEP();
     await wait(25); }
+  watching = false; out.missed = [...onShow].filter((k) => !out.keys.includes(k)).map(String);   // on show in a frame, never looked at
   out.secs = Math.round((Date.now() - T0) / 1000); document.querySelectorAll('.wk-result').forEach((x) => x.remove()); CLASS.close(); if (typeof HALL === 'object') HALL.stop();
   return JSON.stringify(out);"""
 
 # the onsen's shifts by their seeds — those the iPhone tests bring every kind of customer with (test_onsen's IP_JOBS): (seed, morning)
-SEEDS = {'annai': [(5, False), (6, False), (14, False)], 'nakai': [(3, False)], 'miyage': [(13, False)], 'front': [(5, False), (14, False), (1, True)]}
+# (fix round 1: test_onsen's IP_JOBS at 390×664 and seed 5 at its other sizes, every kind of customer of each job; the おみやげ屋's three 目上 —
+# 部長, ゼミの先生, 先生 — seeds 13, 1 and 2)
+SEEDS = {'annai': [(5, False), (6, False), (14, False)], 'nakai': [(3, False), (5, False)], 'miyage': [(13, False), (1, False), (2, False), (5, False)], 'front': [(5, False), (14, False), (1, True)]}
 
-def run_job(b, job, w, h, mobile, limit=150000, seed=None):
+def run_job(b, job, w, h, mobile, limit=150000, seed=None, pre=''):
     card, unit, place, setup, kit = KITS[job]
     sd, morning = seed or (SEEDS.get(job) or [(1, False)])[0]
     setup = setup.replace('SEEDV', str(sd)).replace('MORNING', 'true' if morning else 'false')
     js = ("(async () => { " + BEGIN + f" state.currentUnit = '{unit}'; window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();"
           + " const s0 = window.sleep; window.sleep = (ms) => s0(ms / 10);"   # the lines' fixed waits ten times shorter: the layout is the same
           + f" state.work.res['2026-01-01'] = {{ place: '{job}', done: 1, score: {{ 0: 0 }} }}; JOBS.pat.scale = 1000; {setup} saveState();"
-          + f" location.hash = '#/{place}'; route(); await wait(500);" + SEED + f" WORK.start(yard(), '{job}');"
+          + f" location.hash = '#/{place}'; route(); await wait(500);" + pre + SEED + f" WORK.start(yard(), '{job}');"
           + f" const CARD = {json.dumps(card)}, LIMIT = {limit}, q = (s) => document.querySelector((CARD ? CARD + ' ' : '') + s), qa = (s) => [...document.querySelectorAll((CARD ? CARD + ' ' : '') + s)];"
           + kit + PROBE + " })()")
     return json.loads(b.run([("metrics", (w, h, mobile)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=limit / 1000 + 60)[-1])
 
-MIN_ASKS = {'counter': 10, 'till': 10, 'buns': 30, 'waiter': 30, 'bento': 10, 'window': 11, 'lost': 25, 'taxi': 20, 'annai': 10, 'nakai': 16, 'miyage': 13, 'front': 11}
-
-# what does not fit, and why (the report's): on an SE (375×553) the おみやげ屋's superior-gift customer (目上: their words three lines with
-# furigana, held at ~130 px) at the reply step — the shelves whole (a pick's answers; its goods at 24 px for them), their words and three
-# two-line replies with furigana need ~590 px of the card's 525: the 2nd and 3rd replies under the fold, reached by the player's own scroll
-# (the header and ✕ stuck). Allowed so far and no further: those replies, cut by at most 72 px
-ACCEPTED = {('miyage', '375x553'): lambda k, n, w: k.endswith('reply:elder') and n.startswith('btn') and w.startswith('cut by cls-card') and -72 <= int(w.split('/')[-1].split(' ')[0]) < 0}
+# every ask of the shift looked at, the same count at every size: a skipped one fails (fix round 1: the review's Important 6 — a floor under
+# the counts seen let one pass); by job, or by job and seed. The 外場's floor runs by the clock (the hero walking, customers coming in), its
+# asks 43–45 by size: none (every ask on show looked at, and the shift to its end, as for every job)
+ASKS = {'counter': 10, 'till': 10, 'buns': 30, 'waiter': None, 'bento': 12, 'window': 12, 'lost': 28, 'taxi': 23, 'annai': {5: 10, 6: 10, 14: 10}, 'nakai': {3: 20, 5: 20}, 'miyage': {13: 14, 1: 14, 2: 14, 5: 14}, 'front': {5: 13, 14: 13, 1: 11}}
 
 def check_job(b, job):
     seen, bad = {}, []
     for w, h, mobile in SIZES:
         for seed in SEEDS.get(job, [None]):
             r, at = run_job(b, job, w, h, mobile, seed=seed), f'{w}x{h}' + (f' seed {seed[0]}' + (' am' if seed[1] else '') if seed and len(SEEDS[job]) > 1 else '')
-            seen[at] = {'asks': r['asks'], 'secs': r['secs'], 'bad': r['bad'][:40], 'nbad': len(r['bad'])}
-            if r['asks'] < MIN_ASKS[job]: bad.append((job, at, 'asks', r['asks']))
-            ok = ACCEPTED.get((job, f'{w}x{h}'), lambda *x: False)
-            bad += [(job, at) + tuple(x) for x in r['bad'] if not ok(*x)][:6]
+            seen[at] = {'asks': r['asks'], 'secs': r['secs'], 'bad': r['bad'][:40], 'nbad': len(r['bad']), 'out': len({x[0] for x in r['bad']}), 'tops': sorted(set(r['tops'])), 'missed': r['missed'], 'ended': r['ended']}
+            if h < 700 and r['tops'] and max(r['tops']) - min(r['tops']) > 0.5: bad.append((job, at, 'the card re-centred between asks', sorted(set(r['tops']))))   # on a phone its top anchored (fix round 1, the review's Minor 8)
+            want = ASKS[job][seed[0]] if isinstance(ASKS[job], dict) else ASKS[job]
+            if want is not None and r['asks'] != want: bad.append((job, at, 'asks', r['asks'], 'not', want))
+            if r['missed'] or not r['ended']: bad.append((job, at, 'asks on show not looked at', r['missed'][:6], 'the shift ended' if r['ended'] else 'the shift never ended'))
+            bad += [(job, at) + tuple(x) for x in r['bad'][:6]]
     keep(job, seen)
     assert bad == [], bad[:24]
 
@@ -220,6 +236,30 @@ def test_the_answers_are_in_view_at_every_size_annai(b): check_job(b, 'annai')
 def test_the_answers_are_in_view_at_every_size_nakai(b): check_job(b, 'nakai')
 def test_the_answers_are_in_view_at_every_size_miyage(b): check_job(b, 'miyage')
 def test_the_answers_are_in_view_at_every_size_front(b): check_job(b, 'front')
+
+# ---- no container units (Safari before 16: the iPhone 6s/7 stay on iOS 15) — the rules using them dropped, whole shorthands with them, as
+# an old parser drops them, and the `@supports not (height: 1cqh)` blocks' rules in force: the 賣便當 on an SE and a 360×640 phone, its
+# goods, どうぞ, はい／いいえ, windows and the passenger's words in view and taking taps at every ask (fix round 1, the review's Minor 10: the
+# tray's last row 22 px under the fold on an SE) ----
+NOCQ = r""" { const CQ = /cq[whib]|cqmin|cqmax/, NOT = /not \(height: 1cqh\)/, lift = [];
+    const kill = (list) => { for (let i = list.length - 1; i >= 0; i--) { const r = list[i]; if (r.cssRules && !(r instanceof CSSSupportsRule && NOT.test(r.conditionText))) kill(r.cssRules);
+      if (r instanceof CSSStyleRule) { const st = r.style; ['flex', 'inset', 'margin', 'padding', 'font', 'gap', 'grid-template'].forEach((x) => { if (CQ.test(st.getPropertyValue(x))) st.removeProperty(x); });
+        for (let j = st.length - 1; j >= 0; j--) { const p = st[j]; if (CQ.test(st.getPropertyValue(p)) || p === 'container-type') st.removeProperty(p); } } } };
+    const walk = (list) => { for (const r of list) { if (r instanceof CSSSupportsRule && NOT.test(r.conditionText)) for (const x of r.cssRules) lift.push(x.cssText); else if (r.cssRules) walk(r.cssRules); } };
+    for (const sh of document.styleSheets) { let rs; try { rs = sh.cssRules; } catch (e) { continue; } kill(rs); walk(rs); }
+    const st = document.createElement('style'); st.textContent = lift.join('\n'); document.head.appendChild(st); }"""
+
+def test_the_bento_fits_without_container_units(b):
+    seen, bad = {}, []
+    for w, h in ((375, 553), (360, 640)):
+        r = run_job(b, 'bento', w, h, True, pre=NOCQ)
+        seen[f'{w}x{h}'] = {'asks': r['asks'], 'bad': r['bad'][:20]}
+        want = ASKS['bento']
+        if r['asks'] != want: bad.append((f'{w}x{h}', 'asks', r['asks'], 'not', want))
+        if r['missed'] or not r['ended']: bad.append((f'{w}x{h}', 'asks on show not looked at', r['missed'][:6], 'the shift ended' if r['ended'] else 'the shift never ended'))
+        bad += [(f'{w}x{h}',) + tuple(x) for x in r['bad'][:8]]
+    keep('bento-nocq', seen)
+    assert bad == [], bad
 
 # ---- 外場's あれ (js/71u_hall.js:322–330, test.5): an order by これ／それ／あれ — これ the menu in the customer's hands, それ the board in the
 # hero's, あれ the にんき poster on the far wall — at every size: once the room has lifted over the panel, the wall's poster whole over the

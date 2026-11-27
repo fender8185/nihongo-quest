@@ -1968,13 +1968,13 @@ def test_a_shut_miyage_card_says_nothing_more(b):
 # its reading, its price, the まんじゅう's pieces — the tasting plate and the tray on the counter, どうぞ, the customer and their patience;
 # on a 360-px phone and a 390-px one it stays inside the screen, every button 40 px or more, the tags' words 12 px or more (the phone
 # type scale, 2026-11-26: キーホルダー too), their readings 8.5 px or more (fix round 1, M-4: にゅうよくざい still inside its tag; a box's
-# pieces read whole, ろっこいり, じゅうにこいり); at a reply the replies and the talk row in sight — the talk row whole where the card
-# holds it all; where it does not (360×640: the shelves' floor of 136 px kept in sight first, rulings 11 and 13), its centre in sight
-# under the header and taking a tap, as the iPhone tests have it at 390×664 (fix round 3); at a pick after two misses the shelves still
-# in reach (M-8)
+# pieces read whole, ろっこいり, じゅうにこいり); at a reply the replies and the talk row in sight — the talk row whole (test.5, fix round 1:
+# the replies a sheet over the shelves, the talk row budgeted; till then, where the card did not hold it all, its centre in sight); at a
+# pick after two misses the shelves still in reach (M-8). An SE (375×553) too since test.5's fix round 1, and there as anywhere the まんじゅう
+# sign 12 px with its readings 9 px, the replies 15.5 px (26a94d0 had drawn them 11/8 and 14 on an SE: the review's Important 4)
 def test_the_miyage_card_fits_a_phone(b):
     out = {}
-    for w, h in ((360, 640), (390, 844)):
+    for w, h in ((360, 640), (375, 553), (390, 844)):
         out[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
           window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => sh.findIndex((c) => c.kind === 'offer') > 0), k = where(seed, (c) => c.kind === 'offer');
           state.work.res[dateStr(TOWNEV.today())] = { place: 'miyage', done: k, score: upTo(k), keep: { seed } }; saveState();   // a first shift: the hero's 中文 shown
@@ -1987,12 +1987,13 @@ def test_the_miyage_card_fits_a_phone(b):
             manju: goods.filter((g) => /個入/.test(g.textContent)).map((g) => g.dataset.g), plate: Boolean(c.querySelector('.om-counter .om-plate')), tray: Boolean(c.querySelector('.om-counter .om-tray')), give: Boolean(c.querySelector('.om-counter .om-give')),
             cust: Boolean(c.querySelector('.wk-cust .kr-face') && c.querySelector('.wk-cust .wk-pat')), btns: btns(), small: small.slice(0, 5),
             rt: Math.min(...[...c.querySelectorAll('.om-tag rt, .om-sign rt')].map((e) => parseFloat(getComputedStyle(e).fontSize))),
+            sign: [c.querySelector('.om-sign'), c.querySelector('.om-sign rt')].map((e) => parseFloat(getComputedStyle(e).fontSize)), opt: [...new Set([...c.querySelectorAll('.om-opt')].map((e) => parseFloat(getComputedStyle(e).fontSize)))],
             pieces: [...c.querySelectorAll('.om-good[data-g^="manju"] .om-tag b')].map((e) => { const rb = e.querySelector('ruby'); return rb ? [rb.firstChild.textContent, (rb.querySelector('rt') || {}).textContent] : [e.textContent]; }),
             bath: ['bath', 'manju12', 'manju6'].map((id) => { const g = c.querySelector(`.om-good[data-g="${id}"]`), t = R(g.querySelector('.om-tag')), n = R(g.querySelector('.om-tag rt')); return n.left >= t.left - 0.5 && n.right <= t.right + 0.5; }) };   // 入浴剤, and the tightest: じゅうにこいり (parked 6)
           put(MIYAGE.answer(my().c)); await wait(60); give(); await watch(() => my().phase === 'reply' && ready(), 8000); await wait(300);
           const fit = () => { const qq = R(c), top = Math.max(qq.top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = qq.top + c.clientTop + c.clientHeight, inv = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).bottom <= bot + 1;   // in sight: under the sticky header (task 2, ruling 17)
             const tapAt = (e) => { const r = R(e), x = r.left + r.width / 2, y = r.top + r.height / 2; if (y < Math.max(top, R(c.querySelector('.wk-head')).bottom) || y > bot) return false; const h = document.elementFromPoint(x, y); return Boolean(h && (h === e || e.contains(h))); };
-            return [[...c.querySelectorAll('.om-opt')].every(inv), (c.scrollHeight - c.clientHeight > 1 ? tapAt : inv)(c.querySelector('.om-talk')), inv(c.querySelector('.wk-cust .wk-bub'))]; };   // the talk row whole where the card holds it all (ruling 13)
+            return [[...c.querySelectorAll('.om-opt')].every(inv) && [...c.querySelectorAll('.om-opt')].every(tapAt), inv(c.querySelector('.om-talk')), inv(c.querySelector('.wk-cust .wk-bub'))]; };   // the talk row whole (fix round 1); each reply taking a tap
           const ask = fit(), btns2 = btns(); const w = opt(false); w.click(); await wait(500); const wrong = fit(); opt(true).click(); await wait(900); const right = fit();
           CLASS.close(); return JSON.stringify({ pick, ask, wrong, right, btns2 }); })()""")])[-1])
     for w, x in out.items():
@@ -2000,12 +2001,12 @@ def test_the_miyage_card_fits_a_phone(b):
         assert p['inside'] and p['goods'] == 9 and p['parts'] and p['manju'] == ['manju6', 'manju12'] and p['plate'] and p['tray'] and p['give'] and p['cust'], (w, out)
         assert p['btns'] == [] and x['btns2'] == [] and p['small'] == [], (w, out)
         assert p['rt'] >= 8.5 and p['bath'] == [True, True, True] and p['pieces'] == [['6個入', 'ろっこいり'], ['12個入', 'じゅうにこいり']], (w, out)   # M-4
-        talk = w != 360   # test.5's priority (the answers, their words, then the talk row): at 360×640, the shelves whole, the talk row may lie under the fold
-        assert x['ask'][0::2] == [True, True] and x['wrong'][0::2] == [True, True] and (not talk or (x['ask'][1] and x['wrong'][1] and x['right'][1])), (w, out)
+        assert p['sign'] == [12, 9] and p['opt'] == [15.5], (w, out)   # the sign and its readings as they were, the replies' size (fix round 1)
+        assert x['ask'] == [True, True, True] and x['wrong'] == [True, True, True] and x['right'][1], (w, out)
     # M-8 (fix round 1): a pick after two misses — their words opened, the right goods lit, 竹内's word with its reason — on a first shift
-    # at 360×640 and 390×844: every good still inside the card's view, the words and the talk row too
+    # at 360×640, 375×553 and 390×844: every good still inside the card's view, the words and the talk row too
     reach = {}
-    for w, h in ((360, 640), (390, 844)):
+    for w, h in ((360, 640), (375, 553), (390, 844)):
         reach[w] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
           window.speakAs = () => Promise.resolve(); const seed = seedWhere((sh) => sh[0].id === 'two1');
           state.work.res[dateStr(TOWNEV.today())] = { place: 'miyage', done: 0, score: {}, keep: { seed } }; saveState();   // a first shift: the most to show
@@ -2015,7 +2016,7 @@ def test_the_miyage_card_fits_a_phone(b):
           const c = document.querySelector('.wk-miyage .cls-card'), R = (e) => e.getBoundingClientRect(), q = R(c), top = Math.max(q.top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = q.top + c.clientTop + c.clientHeight, inv = (e) => R(e).top >= top - 1 && R(e).bottom <= bot + 1;
           const out = { open: Boolean(c.querySelector('.wk-bub.wk-open')), lit: c.querySelectorAll('.om-good.wk-hint').length, goods: [...c.querySelectorAll('.om-good')].every(inv), bub: inv(c.querySelector('.wk-cust .wk-bub')), talk: inv(c.querySelector('.om-talk')), miss: my().miss };
           CLASS.close(); return JSON.stringify(out); })()""")])[-1])
-    assert all(dict(x, talk=x['talk'] or w == 360) == {'open': True, 'lit': 2, 'goods': True, 'bub': True, 'talk': True, 'miss': 2} for w, x in reach.items()), reach   # (at 360×640 the talk row may lie under the fold: test.5)
+    assert all(x == {'open': True, 'lit': 2, 'goods': True, 'bub': True, 'talk': True, 'miss': 2} for x in reach.values()), reach
 
 # the generator (生成) has the おみやげ屋's lines: every customer's words (and their favour, their word after, what they say to a wrong
 # tray) in their own voice, the hero's every right reply, 竹内's words and his first; every customer one the town already voices
@@ -2295,8 +2296,8 @@ def test_a_shut_front_card_says_nothing_more(b):
 # 佐藤; on a 360-px phone and a 390-px one it stays inside the screen, every button and key 40 px or more, the book's words 12 px or more
 # (the phone type scale, 2026-11-26: its heads, date, 様 and note) and their readings 8 or more; at the key step and after two misses
 # the book, the keys and the talk row in sight — the talk row whole where the card holds it all; where it does not (360×640's birthday
-# guest: the book's floor kept in sight first, ruling 13), its centre in sight under the header and taking a tap, as the iPhone tests
-# have it at 390×664 (fix round 3)
+# guest: the desk no lower than the key board whole, test.5), the line shown whole in sight, at the top of its held room (test.5's fix
+# round 1, the review's Minor 7: centred in it, it lay 17 px under the fold)
 def test_the_front_card_fits_a_phone(b):
     out = {}
     for w, h in ((360, 640), (390, 844)):
@@ -2316,18 +2317,22 @@ def test_the_front_card_fits_a_phone(b):
             names: [...c.querySelectorAll('.fr-row .fr-nm')].every((e) => e.querySelector('ruby rt') && e.scrollWidth <= e.clientWidth && R(e).right <= R(book).right + 0.5),   /* never clipped (fix round 1, M-6) */
             reads: [[...c.querySelectorAll('.fr-row .fr-n')].every((e) => (e.querySelector('rt') || {}).textContent === 'めい'), c.querySelectorAll('.fr-btitle small rt').length] };   /* 名, 月 and 日 read (M-12) */
           const tapAt = (e) => { const r = R(e), x = r.left + r.width / 2, y = r.top + r.height / 2; if (y < Math.max(top, R(c.querySelector('.wk-head')).bottom) || y > bot) return false; const h = document.elementFromPoint(x, y); return Boolean(h && (h === e || e.contains(h))); };
-          const talkSeen = () => (c.scrollHeight - c.clientHeight > 1 ? tapAt : inv)(c.querySelector('.fr-talk'));   // whole where the card holds it all (ruling 13)
-          const fit = () => [inv(book), [...c.querySelectorAll('.fr-key')].every(inv), talkSeen(), inv(c.querySelector('.wk-cust .wk-bub'))];
+          const said = () => [...c.querySelectorAll('.fr-talk :is(.wk-say, .wk-me)')].filter((e) => e.offsetParent && e.textContent.trim()).pop();
+          const begun = (e) => Boolean(e) && R(e).top >= top - 1 && R(e).top + 28 <= bot;   // its top in sight, its first line (with its readings) whole
+          // the talk row whole where the card holds it all (ruling 13); where it does not, the line shown at the top of its room (fix round 1, Minor 7):
+          // whole as the key is asked for, and after two wrong keys 佐藤's why begun in sight — at 360×640 its Japanese 572–628 and its 中文 629–672
+          // against a fold of 626 (the column: the desk 168 with the key board whole, the guest 164, the four replies 180, the talk row 142)
+          const talkSeen = (whole) => (c.scrollHeight - c.clientHeight > 1 ? (whole ? Boolean(said()) && inv(said()) : begun(said())) : inv(c.querySelector('.fr-talk')));
+          const fit = (whole = true) => [inv(book), [...c.querySelectorAll('.fr-key')].every(inv), talkSeen(whole), inv(c.querySelector('.wk-cust .wk-bub'))];
           const i = fr().task.opts.findIndex((o) => o[3] === 'bday'); c.querySelector(`.fr-opt[data-o="${i}"]`).click(); await watch(() => fr().step === 1 && ready(), 8000); await wait(400);
           const keyStep = fit(), btns2 = btns(); const t = fr().task, other = FRONT.ROOMS.map((x) => x[0]).filter((x) => x !== t.room && !key(x).classList.contains('fr-out'));
-          key(other[0]).click(); await wait(300); key(other[1]).click(); await wait(500); const two = fit(), lit = [key(t.room).classList.contains('wk-hint'), Boolean(c.querySelector('.fr-row.fr-lit'))];
+          key(other[0]).click(); await wait(300); key(other[1]).click(); await wait(500); const two = fit(false), lit = [key(t.room).classList.contains('wk-hint'), Boolean(c.querySelector('.fr-row.fr-lit'))];
           CLASS.close(); return JSON.stringify({ first, keyStep, two, lit, btns2 }); })()""")])[-1])
     for w, x in out.items():
         f = x['first']
         assert f['inside'] and f['rows'] == 5 and f['keys'] == 5 and f['bell'] and f['left'] and f['cust'] and f['opts'] == 4 and f['names'] and f['reads'][0] and f['reads'][1] >= 2, (w, out)
         assert f['btns'] == [] and x['btns2'] == [] and f['small'] == [] and f['rt'] >= 8, (w, out)
-        talk = w != 360   # test.5's priority (the answers — here the keys, the desk no lower than their board whole at a check-in — their words, then the talk row): at 360×640 a check-in's talk row may lie under the fold
-        assert [x['keyStep'][i] for i in (0, 1, 3)] == [True] * 3 and [x['two'][i] for i in (0, 1, 3)] == [True] * 3 and (not talk or (x['keyStep'][2] and x['two'][2])) and x['lit'] == [True, True], (w, out)
+        assert x['keyStep'] == [True, True, True, True] and x['two'] == [True, True, True, True] and x['lit'] == [True, True], (w, out)
 
 # fix round 1 (the review's Minor 3): a held bubble is measured again, its customer's own, when the screen changes — the フロント's guest's
 # bubble held at 390×844, held again on a turn to 360×640 (on every screen since fix round 2, ruling 8: at least as tall, the card
@@ -2704,12 +2709,12 @@ def test_the_miyage_shelves_are_whole_on_a_phone(b):
     for w, h in ((390, 664), (375, 553), (360, 640)):
         out[f'{w}x{h}'] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
           window.speakAs = () => Promise.resolve(); JOBS.pat.scale = 100; await begin(5, where(5, (c) => c.kind === 'elder')); await wait(400);
-          const c = document.querySelector('.wk-miyage .cls-card'), s = c.querySelector('.om-shelves'), m = c.querySelector('.om-more'), R = (e) => e.getBoundingClientRect();
+          const c = document.querySelector('.wk-miyage .cls-card'), s = c.querySelector('.om-shelves'), R = (e) => e.getBoundingClientRect();
           const top = Math.max(R(c).top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = Math.min(R(c).top + c.clientTop + c.clientHeight, innerHeight);
           const whole = (g) => { const r = R(g), x = r.left + r.width / 2, y = r.top + r.height / 2, hh = document.elementFromPoint(x, y); return r.top >= top - 0.5 && r.bottom <= bot + 0.5 && Boolean(hh && g.contains(hh)); };
-          const o = { more: s.classList.contains('wk-more') || s.scrollHeight - s.clientHeight > 1, seen: m ? Number(getComputedStyle(m).opacity) : 0, goods: [...c.querySelectorAll('.om-good')].filter((g) => !whole(g)).map((g) => g.dataset.g), st: c.scrollTop };
+          const o = { more: s.classList.contains('wk-more') || s.scrollHeight - s.clientHeight > 1, cue: Boolean(c.querySelector('.om-more')), goods: [...c.querySelectorAll('.om-good')].filter((g) => !whole(g)).map((g) => g.dataset.g), st: c.scrollTop };
           CLASS.close(); return JSON.stringify(o); })()""")])[-1])
-    assert all(x == {'more': False, 'seen': 0, 'goods': [], 'st': 0} for x in out.values()), out
+    assert all(x == {'more': False, 'cue': False, 'goods': [], 'st': 0} for x in out.values()), out   # (the cue's markup gone with it: fix round 1, Minor 11)
 
 # task 2, fix round 1, ruling 20: a good 竹内 lights (two misses, or as the customer goes) brought into sight inside the shelves — JOBS.inSight,
 # as the フロント's lit row and key; never the card's own scroll. Seed 13's 目上 customer (#4) at 390×664 wants 地酒, in the second row: till
@@ -2976,8 +2981,7 @@ def ip_check(b, job):
         if r['player'] and not se: bad.append(run + ('the player had to scroll the card', r['player']))
         for k, m, v in r['after']:
             if se: (under.append((k, m, v['under'])) if any(v['under'].values()) else None)
-            elif not (v['bub'] and v['opts'] and (v['talk'] or (w, h) != (390, 664) or job == 'miyage')): bad.append(run + (k, m, 'out of reach', v))
-            elif not v['talk']: under.append((k, m, f'{w}x{h}', v['under']))   # test.5's priority (the answers, their words, then the talk row): a talk row under the fold is the report's at the sizes added — and at the おみやげ屋, whose shelves (a pick's answers) are whole since test.5
+            elif not (v['bub'] and v['opts'] and v['talk']): bad.append(run + (k, m, 'out of reach', v))
         if not se: seen |= {g['kind'] for g in r['recs']}; kinds = r['kinds']
         sums.append({'job': job, 'size': f'{w}x{h}', 'seed': seed, 'morning': morning, 'customers': len(r['recs']), 'kinds': sorted({g['kind'] for g in r['recs']}),
                      'moved': max([v for g in r['recs'] for v in g['max'].values()] or [0]), 'scrolled': max([g['st'] for g in r['recs']] or [0]), 'start': sorted({g['start'] for g in r['recs']}),

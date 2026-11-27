@@ -144,9 +144,16 @@ const BENTO_RUN = (() => {
       const ts = trains.flat().map((o) => ({ o, asked: false })), row = (b, r) => `<p class="bt-bub">${b}</p><div class="bt-replies">${r}</div>`;
       JOBS.hold(el('.bt-talk'), () => [row(HINT, '')].concat(ts.flatMap((x) => [row(bubHtml(x, false), x.o.kind === 'have' ? repliesHtml() : ''), row(bubHtml(x, true), ''), x.o.kind === 'have' ? row(bubHtml(Object.assign({}, x, { asked: true }), true), '') : null].filter(Boolean))));
     }
-    function hand() {
-      const h = el('.bt-hand'); if (!h) return; const ids = Object.keys(B ? B.hand : {}).filter((id) => B.hand[id] > 0);
-      h.innerHTML = ids.length ? ids.map((id) => { const g = BENTO.good(id); return `<button type="button" class="bt-chip" data-drop="${id}" aria-label="放回一個">${pic(g)}<b lang="ja">${ruby(g[1])}</b><i>×${B.hand[id]}</i></button>`; }).join('') : '<span class="bt-empty">手上還沒有東西</span>';
+    const chipHtml = (id, n) => { const g = BENTO.good(id); return `<button type="button" class="bt-chip" data-drop="${id}" aria-label="放回一個">${pic(g)}<b lang="ja">${ruby(g[1])}</b><i>×${n}</i></button>`; };
+    // the hand one row of chips at any size (test.5, fix round 1: the review's Important 3 — a third chip wrapped it a line taller, and the
+    // car above shrank, the passenger's words and はい／いいえ rose 20–45 px, the tray and the talk row dropped; held for the wrap instead, a
+    // passenger's goods with one more taken by mistake, it ran 138 px tall on every phone, three rows, and on an SE the tray's last row went
+    // under the fold): never wrapping, it slides sideways — the good just taken brought into sight, a fade at a side with more past it
+    function handEdge() { const h = el('.bt-hand'); if (!h) return; h.classList.toggle('bt-more-l', h.scrollLeft > 2); h.classList.toggle('bt-more-r', h.scrollWidth - h.clientWidth - h.scrollLeft > 2); }
+    function hand(took) {
+      const h = el('.bt-hand'); if (!h) return; const ids = Object.keys(B ? B.hand : {}).filter((id) => B.hand[id] > 0), x = h.scrollLeft;
+      h.innerHTML = ids.length ? ids.map((id) => chipHtml(id, B.hand[id])).join('') : '<span class="bt-empty">手上還沒有東西</span>';
+      const ch = took && h.querySelector(`.bt-chip[data-drop="${took}"]`); h.scrollLeft = ch ? Math.min(Math.max(x, ch.offsetLeft + ch.offsetWidth - h.clientWidth), ch.offsetLeft) : Math.min(x, h.scrollWidth - h.clientWidth); handEdge();
       document.querySelectorAll('.wk-bento .bt-good').forEach((b) => { const n = B ? B.hand[b.dataset.g] || 0 : 0; b.querySelector('.bt-n').textContent = n ? `×${n}` : ''; b.classList.toggle('in', n > 0); });
       const give = el('.bt-give'); if (give) give.disabled = !(B && B.sel && B.sel.state === 'calling' && ids.length && !(B.sel.o.kind === 'have' && !B.sel.asked));
     }
@@ -247,10 +254,11 @@ const BENTO_RUN = (() => {
       const w = e.target.closest('.bt-win'); if (w) { const x = B.wins.find((y) => y.w === Number(w.dataset.w)); if (x && x.state === 'calling') pickWin(x); return; }
       const r = e.target.closest('.bt-reply'); if (r) { reply(r.dataset.r); return; }
       const d = e.target.closest('[data-drop]'); if (d) { const id = d.dataset.drop; if (B.hand[id]) B.hand[id]--; SND.play('place', { vol: 0.4 }); hand(); return; }
-      const g = e.target.closest('.bt-good'); if (g) { if (!B.sel) { toast('先點一扇有「！」的車窗。', 1800); return; } B.hand[g.dataset.g] = (B.hand[g.dataset.g] || 0) + 1; SND.play('place', { vol: 0.5 }); hand(); return; }
+      const g = e.target.closest('.bt-good'); if (g) { if (!B.sel) { toast('先點一扇有「！」的車窗。', 1800); return; } B.hand[g.dataset.g] = (B.hand[g.dataset.g] || 0) + 1; SND.play('place', { vol: 0.5 }); hand(g.dataset.g); return; }
       if (e.target.closest('.bt-give')) give();
     });
     holdTalk(); holdTalkRow();   // the talk row and the passenger's row as tall as the shift will need (test.5)
+    { const h = el('.bt-hand'); if (h) h.addEventListener('scroll', handEdge, { passive: true }); }
     arrive();
   }
   function lines(add) {

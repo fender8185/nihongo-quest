@@ -93,6 +93,7 @@ const MIYAGE_RUN = (() => {
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>');
   const S = () => TOWN.ONSEN.miyage;
   let R = null, runs = 0;   // the customer at the counter now (the tests): { k, c, step, phase, tray, seed, miss, busy }
+  let realign = null; window.addEventListener('resize', () => setTimeout(() => { if (realign) realign(); }, 150));   // the replies' sheet over the shelves as the screen turns (test.5, fix round 1)
   const pic = (g) => JOBS.goodPic(g[4]);   // a good's picture by its key (PICS, then PICS_TOWN), as 站櫃's and 收銀's
   // the tasting plate on the counter: まんじゅう cut in quarters (each a piece: .om-bit), toothpicks in them, a tent card 「試食」
   const BIT_AT = [[22, 21], [34, 17], [46, 21], [28, 28], [40, 28], [52, 25]];
@@ -148,9 +149,9 @@ const MIYAGE_RUN = (() => {
       const d = el('.om-give'); if (d) d.disabled = !(R.phase === 'pick' && !R.busy && R.tray.length && R.gave !== trayKey());
     }
     const trayKey = () => R.tray.slice().sort().join();   // the tray as it stands (a tray handed over and not it: どうぞ off till this changes)
-    // the right goods lit (two misses, or as they go) — the first of them brought into sight inside the shelves, never the card's scroll
-    // (task 2, fix round 1, ruling 20: at the shelves' floor a lit good in the second row stayed out of sight)
-    const hint = () => { all('.om-good').forEach((b) => b.classList.toggle('wk-hint', R.c.lit.includes(b.dataset.g))); JOBS.inSight(el('.om-shelves'), el('.om-good.wk-hint')); };
+    // the right goods lit (two misses, or as they go) — in sight where they stand: the shelves are whole since test.5 (till then the first
+    // of them was brought into sight inside the shelves at their floor: task 2, fix round 1, ruling 20)
+    const hint = () => { all('.om-good').forEach((b) => b.classList.toggle('wk-hint', R.c.lit.includes(b.dataset.g))); };
     const unhint = () => all('.om-good.wk-hint').forEach((b) => b.classList.remove('wk-hint'));
     const optsHtml = (c, later) => c.opts.map(([ja], i) => `<button type="button" class="btn om-opt${later ? ' om-later' : ''}" data-o="${i}" lang="ja"${later ? ' disabled' : ''}><span>${ruby(ja)}</span></button>`).join('');
     // the replies, on show for the whole customer who has any (fix round 3, ruling 11: no blank where they will be or were) — to pick at
@@ -177,22 +178,47 @@ const MIYAGE_RUN = (() => {
         ...[s.hi, s.give, ...(c.opts || []).filter((o) => o[2])].map((l) => row('hero', line(l[0], first ? l[1] : ''), 'om-me'))]);
     }
     function plate() { const p = el('.om-plate'); if (p) p.innerHTML = plateSvg(bits); }
-    // the shelves whole at every size (test.5: at a pick the goods are the answers) and, as a customer comes, the goods drawn smaller (down to
-    // 24 px) for one whose words and replies need the room — a superior's three two-line replies — so the tray, どうぞ and the replies' foot are
-    // in sight too; set as each comes, never while they are served
-    function fit() {
-      const sh = el('.om-shelves'), card = el('.cls-card'), foot = el('.om-opts') && el('.om-opts').offsetHeight ? el('.om-opts') : el('.om-counter'); if (!sh || !card || !foot) return;
-      sh.style.removeProperty('--om-pic'); card.scrollTop = 0;
-      const over = foot.getBoundingClientRect().bottom - (card.getBoundingClientRect().top + card.clientTop + card.clientHeight) + 2, p = parseFloat(getComputedStyle(sh).getPropertyValue('--om-pic')) || 50;
-      if (over > 0) sh.style.setProperty('--om-pic', `${Math.max(24, Math.floor(p - over / 2))}px`);   // two rows of goods
+    // test.5, fix round 1 (the review's Critical 1 and Important 2: a superior's third reply under the fold on an SE, the talk row off a 430×740):
+    // the shelves are whole at every size (at a pick the goods are the answers), and on a screen under 850 px tall (css .om-sheet) a customer's
+    // replies come up as a sheet over the shelves' box from their reply step — the shelves done with then — out of the column, so the
+    // customer, the tray, どうぞ and the talk row keep their place under the shelves and nothing on screen moves as it comes. As each customer
+    // comes (and as the screen turns, between customers' asks): the sheet laid over the shelves, the goods drawn as large as the screen leaves
+    // them — at least as tall as the sheet (its replies whole), at most what keeps the tray, どうぞ and then the talk row in sight (down to 24 px)
+    const sheetOn = () => Boolean(R && R.c.opts && MIYAGE.steps(R.c).includes('reply')) && innerHeight < 850;
+    // the sheet over the shelves' box: its sides theirs as a customer comes (before their replies are held: measured at its width), its top
+    // and height once the goods' size is set (lay)
+    function sheetSet() {
+      const o = el('.om-opts'), sh = el('.om-shelves'); if (!o || !sh) return; const on = sheetOn();
+      o.classList.toggle('om-sheet', on); ['top', 'left', 'width', 'height'].forEach((x) => o.style.removeProperty(x));
+      if (on) { o.style.left = `${sh.offsetLeft}px`; o.style.width = `${sh.offsetWidth}px`; }
     }
+    const lay = (o, sh) => { o.style.left = `${sh.offsetLeft}px`; o.style.width = `${sh.offsetWidth}px`; o.style.top = `${sh.offsetTop}px`; o.style.height = `${sh.offsetHeight}px`; };
+    function fit() {
+      const sh = el('.om-shelves'), card = el('.cls-card'), o = el('.om-opts'), talk = el('.om-talk'), counter = el('.om-counter'); if (!sh || !card || !o || !counter) return;
+      const on = o.classList.contains('om-sheet'); sh.style.removeProperty('--om-pic'); card.scrollTop = 0;
+      const p0 = parseFloat(getComputedStyle(sh).getPropertyValue('--om-pic')) || 50, set = (p) => sh.style.setProperty('--om-pic', `${p}px`);
+      const fold = () => card.getBoundingClientRect().top + card.clientTop + card.clientHeight - 2;
+      let floor = 24;   // a sheet: the goods no smaller than keeps the shelves as tall as its replies (two rows of goods)
+      if (on) { set(floor); for (let i = 0; i < 6 && sh.offsetHeight < o.offsetHeight; i++) { floor += Math.max(1, Math.ceil((o.offsetHeight - sh.offsetHeight) / 2)); set(floor); } }
+      let p = Math.max(p0, floor); set(p);
+      const foot = [counter, on ? null : o, talk].filter((e) => e && e.offsetHeight);   // the tray and どうぞ, the replies in the column (no sheet), the talk row
+      for (let i = 0; i < 4 && p > floor; i++) { const over = Math.max(...foot.map((e) => e.getBoundingClientRect().bottom)) - fold(); if (over <= 0) break; p = Math.max(floor, p - Math.ceil(over / 2)); set(p); }
+      if (p === p0) sh.style.removeProperty('--om-pic');
+      if (on) lay(o, sh);
+    }
+    // the sheet up at a reply step, down for a pick (a taste's: down as the piece is cut): in its place throughout, never moving anything.
+    // As the screen turns, all of it again for the new screen — the sheet or not, its replies held at its width, the goods' size, up as it was
+    const sheet = (up) => { const o = el('.om-opts'); if (o) o.classList.toggle('om-up', up && o.classList.contains('om-sheet')); };
+    const holdOpts = (c) => JOBS.hold(el('.om-opts'), MIYAGE.steps(c).includes('reply') && c.opts ? [optsHtml(c)] : []);
+    realign = () => { const o = el('.om-opts'); if (!o || !R || !live()) return; const up = o.classList.contains('om-up'); sheetSet(); holdOpts(R.c); fit(); sheet(up); };
     function show() {
       const c = tasks[k]; R = { k, c, step: 0, phase: 'hi', tray: [], seed, miss: 0, miss2: 0, busy: false, line: c.line }; rep = 0;
       el('.wk-n').textContent = `${k + 1}／${N}`;
       const cu = el('.wk-cust'); cu.className = 'wk-cust'; cu.removeAttribute('data-mood'); cu.dataset.kind = c.kind; cu.innerHTML = JOBS.custHtml(c.who) + hold(c);
+      sheetSet();   // (before the replies are held: measured at the sheet's width)
       unhint(); shelves(); tray(); opts(false); bub(false); JOBS.hold(el('.wk-cust .wk-bub'), [c.line, c.then, c.after].filter((l) => Array.isArray(l) && l[0]).map((l) => bubHtml(true, l)));   // as tall as their words, every step's (2026-11-25)
-      JOBS.hold(el('.om-opts'), MIYAGE.steps(c).includes('reply') && c.opts ? [optsHtml(c)] : []); talkHold(c);   // the replies and the talk row held for the whole customer too (fix round 2, ruling 8)
-      fit(); JOBS.reading(el('.om-shelves'))(); TL.start(null, [el('.om-shelves'), el('.wk-cust .wk-bub'), el('.om-counter'), el('.om-opts')]);   // the shelves whole (test.5: the goods are the answers at a pick — no reading block to give way), the card in sight once: never the goods, the tray, どうぞ, the replies or their words out of it
+      holdOpts(c); talkHold(c);   // the replies and the talk row held for the whole customer too (fix round 2, ruling 8)
+      sheet(false); fit(); TL.start(null, [el('.om-shelves'), el('.wk-cust .wk-bub'), el('.om-counter'), el('.om-opts')]);   // the shelves whole (test.5: the goods are the answers at a pick — no reading block to give way), the card in sight once: never the goods, the tray, どうぞ, the replies or their words out of it
       const me0 = R;
       said(JOBS.queue(() => me(s.hi), box), 700).then(() => { if (mineNow(me0)) begin(0); });
     }
@@ -204,7 +230,7 @@ const MIYAGE_RUN = (() => {
       const line = i === 0 ? c.line : c.kind === 'elder' ? null : c.then;
       R.line = line || c.line; R.phase = st; R.busy = false;
       if (line) bub(false); else bub(true);
-      opts(st === 'reply'); shelves(); tray();
+      opts(st === 'reply'); shelves(); tray(); if (st !== 'eat') sheet(st === 'reply');
       const cu = el('.wk-cust'); cu.classList.add('on'); cu.removeAttribute('data-mood'); const emo = cu.querySelector('.wk-emo'); if (emo) emo.textContent = '';   // calm again: the step before pleased them (fix round 1, M-1)
       P = JOBS.patience('miyage', c.who, st === 'reply' ? SECS.reply : c.kind === 'all' ? SECS.all : SECS.pick, () => mineNow(me0) && R.step === i, gone, box);
       if (!line) { P.go(); return; }
@@ -272,7 +298,7 @@ const MIYAGE_RUN = (() => {
     }
     // a taste: 竹内's どうぞ、どうぞ！, a piece off the plate to them, then what they will have (heard first): the box
     async function eat(me0) {
-      R.phase = 'wait'; R.busy = true; opts(false);
+      R.phase = 'wait'; R.busy = true; opts(false); sheet(false);   // the replies done with: the shelves again for the pick to come
       await keeper(A.taste); if (!mineNow(me0)) return;
       const p = el(`.om-plate .om-bit[data-i="${bits - 1}"]`); if (p) p.classList.add('om-eat');
       SND.play('chomp', { vol: 0.5 }); await sleep(650); if (!mineNow(me0)) return;
@@ -320,7 +346,7 @@ const MIYAGE_RUN = (() => {
     const G = MIYAGE.goods();
     CLASS.card('wk-miyage wk-col', '伴手禮店', `<div class="wk-head"><b lang="ja">ゆのはな<ruby>堂<rt>どう</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
       <div class="om-shop"><div class="om-shelves">${shelf(G.slice(0, 5), true)}${shelf(G.slice(5))}</div>
-        <div class="om-front"><i class="om-more" aria-hidden="true"></i><i class="om-noren" aria-hidden="true">${NOREN}</i><div class="om-door"><div class="wk-cust"></div></div>
+        <div class="om-front"><i class="om-noren" aria-hidden="true">${NOREN}</i><div class="om-door"><div class="wk-cust"></div></div>
           <div class="om-counter"><span class="om-plate" aria-hidden="true"></span><div class="om-tray"></div><button type="button" class="btn btn-primary om-give" lang="ja" disabled>どうぞ</button></div></div></div>
       <div class="om-opts"></div><div class="om-talk" data-who="makoto"><span class="kr-face om-mini"></span><p class="wk-say"></p></div>`, (e) => {
       if (!R || !live()) return;

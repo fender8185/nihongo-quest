@@ -754,7 +754,8 @@ def test_the_taxi_map_reads_on_a_phone(b):
 # skipped, as the onsen's tests do: the card's top and foot and each of its rows' (its children but ✕) against the frame of the ask, and
 # (round 2: the re-review found 收銀's tiles and 落とし物's answers moving inside their held rows) the controls inside them — TRACK: each
 # reply, tile, question, the four and the answers' row, from the frame each comes on show; FOOT: what may grow up only into room held
-# for it (the spelled sum: its foot) — none moves more than 1 px, the card's scroll never changes. INVIEW (a selector): the last one of it
+# for it (the spelled sum: its foot); HEAD: what may grow down only into room held for it (the 駅弁's bubble opened: its top) — none moves
+# more than 1 px, the card's scroll never changes. INVIEW (a selector): the last one of it
 # shown at the ask sits inside the card's visible part (on a first shift, the 中文: 落とし物's talk row, 收銀's hero line). MOVES: CARD,
 # KEY() (the customer now), ASKED(), PHASE(), PLAY() (one played), N, TRACK, FOOT, INVIEW.
 MOVES_SEED = """ { const orig = Math.random.bind(Math); let sd = 424242; const seeded = () => { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; };
@@ -764,7 +765,8 @@ MOVES = r""" window.speakAs = () => new Promise((ok) => setTimeout(ok, 400));
   const box = (e) => { if (!e || !e.isConnected || !e.getClientRects().length) return null; const r = e.getBoundingClientRect(); return [r.top, r.bottom]; };
   const snap = (c) => { const o = { card: box(c) }; [...c.children].forEach((x, i) => { if (!x.classList.contains('cls-x')) o[i + ':' + String(x.className).split(' ')[0]] = box(x); });
     TRACK.forEach((q) => c.querySelectorAll(q).forEach((e, i) => { o[q + '#' + i] = box(e); }));
-    FOOT.forEach((q) => c.querySelectorAll(q).forEach((e, i) => { const b = box(e); o['foot ' + q + '#' + i] = b && [b[1], b[1]]; })); return o; };
+    FOOT.forEach((q) => c.querySelectorAll(q).forEach((e, i) => { const b = box(e); o['foot ' + q + '#' + i] = b && [b[1], b[1]]; }));
+    HEAD.forEach((q) => c.querySelectorAll(q).forEach((e, i) => { const b = box(e); o['head ' + q + '#' + i] = b && [b[0], b[0]]; })); return o; };
   const under = (c) => { const e = [...c.querySelectorAll(INVIEW)].filter((x) => x.getClientRects().length && x.textContent.trim()).pop(); return e ? Math.round(e.getBoundingClientRect().bottom - (c.getBoundingClientRect().top + c.clientTop + c.clientHeight)) : null; };
   const F = { cur: null, base: null, recs: [], stop: false };
   const tick = () => { if (F.stop) return; const c = C();
@@ -780,13 +782,13 @@ MOVES = r""" window.speakAs = () => new Promise((ok) => setTimeout(ok, 400));
   requestAnimationFrame(tick);
   for (let i = 0; i < N; i++) { if (!(await until(() => C() && ASKED(), 30000))) { F.recs.push({ err: 'no ask ' + i }); break; } await wait(500); await PLAY(i); }
   F.stop = true; return JSON.stringify(F.recs.slice(0, N).map((r) => (r.err ? r : { max: Object.fromEntries(Object.entries(r.max).filter(([, v]) => v > 1)), most: Math.max(0, ...Object.values(r.max)), st: r.st, frames: r.frames, at: r.at, keys: Object.keys(r.max).length, under: r.under })));"""
-def moves_at(b, url, ready, setup, card, key, asked, phase, play, n, sizes=((390, 664), (375, 553), (430, 740), (360, 640)), track=(), foot=(), inview='', inview_at=(390, 664)):   # 430×740 and 360×640 since test.5 (every size)
+def moves_at(b, url, ready, setup, card, key, asked, phase, play, n, sizes=((390, 664), (375, 553), (430, 740), (360, 640)), track=(), foot=(), inview='', inview_at=(390, 664), head=()):   # 430×740 and 360×640 since test.5 (every size)
     """each size: the job set up (setup, with the jobs' dice seeded once it is in), its customers' frames; what moved (or a frameless one);
     inview: at the size inview_at, the last of it shown at the ask under the card's visible part"""
     bad = []
     for w, h in sizes:
         recs = json.loads(b.run([("metrics", (w, h)), ("nav", url), ("wait", ready), ("eval", "(async () => { " + setup.replace('SEED;', MOVES_SEED + ';')
-            + f"\n const CARD = '{card}', N = {n}, KEY = () => {key}, ASKED = () => {asked}, PHASE = () => {phase}, PLAY = async (i) => {{ {play} }}, TRACK = {json.dumps(list(track))}, FOOT = {json.dumps(list(foot))}, INVIEW = {json.dumps(inview)};"
+            + f"\n const CARD = '{card}', N = {n}, KEY = () => {key}, ASKED = () => {asked}, PHASE = () => {phase}, PLAY = async (i) => {{ {play} }}, TRACK = {json.dumps(list(track))}, FOOT = {json.dumps(list(foot))}, HEAD = {json.dumps(list(head))}, INVIEW = {json.dumps(inview)};"
             + MOVES + " })()")], timeout=420)[-1])
         if len(recs) < n: bad.append((w, h, 'customers', len(recs), recs))
         for i, r in enumerate(recs):
@@ -847,6 +849,32 @@ def test_a_reply_moves_nothing_in_the_taxi(b):
         await wait(100); }"""
     bad = moves_at(b, URL, READY, setup, '.wk-taxi', "(TAXI_RUN.now() ? TAXI_RUN.now().ride : null)", "Boolean(TAXI_RUN.now()) && TAXI_RUN.now().phase === 'drive'",
                    "TAXI_RUN.now() ? (TAXI_RUN.now().ride.guided ? 'guided' : 'to') + ':' + TAXI_RUN.now().phase + ':m' + TAXI_RUN.now().miss : '-'", play, 3, track=('.tx-go', '.tx-pay'))
+    assert bad == [], bad
+
+# test.5, fix round 1 (the review's Important 3: in the 賣便當 a third chip wrapped the hand row — the car shrank, the passenger's words and
+# はい／いいえ rose 20–45 px, the tray and the talk row dropped): nothing lifts or drops from a passenger's ask till they go, at the five phone
+# sizes — the m6 shift (reasons, hot and cold tea), its windows tapped as they call; every other passenger with a wrong はい／いいえ first
+# where they ask, or one good more than they want put in the hand and taken back (a third chip), and every fourth a wrong どうぞ first.
+# Sampled: the card's rows, and inside them the car, its windows, the passenger's face and 🔊 in their bubble (its top: opened as they are
+# served it grows down into its held room), はい／いいえ, the hand, its chips, どうぞ and the goods
+def test_a_reply_moves_nothing_in_the_bento(b):
+    setup = BEGIN + BENTO_HELP + """ state.currentUnit = 'm6'; JOBS.pat.scale = 0.4; location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      SEED; WORK.start(yard(), 'bento');
+      setInterval(() => { const n = BENTO_RUN.now(); if (n && n.phase === 'stop' && (!n.sel || n.sel.state !== 'calling')) click('.bt-win.calling'); }, 250);"""
+    play = """ const x = BENTO_RUN.now().sel, c = card(), on = (q) => { const e = c.querySelector(q); if (!e || e.disabled) return false; e.click(); return true; };
+      if (x.o.kind === 'have' && !x.asked) { if (i % 2) { on(`.bt-reply[data-r="${x.o.has ? 'no' : 'yes'}"]`); await wait(1500); }
+        on(`.bt-reply[data-r="${x.o.has ? 'yes' : 'no'}"]`); await until(() => x.asked || x.state !== 'calling', 4000); await wait(900); }
+      if (x.state === 'calling') { const want = {}; x.o.items.forEach(([id, n]) => { want[id] = (want[id] || 0) + n; });
+        const extra = [...c.querySelectorAll('.bt-good')].map((g) => g.dataset.g).find((g) => !want[g]);
+        if (i % 4 === 3) { on(`.bt-good[data-g="${extra}"]`); await wait(300); on('.bt-give'); await wait(1500); on(`.bt-chip[data-drop="${extra}"]`); await wait(400); }
+        for (const [id, n] of Object.entries(want)) for (let k = 0; k < n; k++) { on(`.bt-good[data-g="${id}"]`); await wait(300); }
+        if (i % 2) { on(`.bt-good[data-g="${extra}"]`); await wait(600); on(`.bt-chip[data-drop="${extra}"]`); await wait(400); }
+        on('.bt-give'); }
+      await until(() => { const n = BENTO_RUN.now(); return !n || n.sel !== x || n.phase !== 'stop'; }, 15000);"""
+    bad = moves_at(b, URL, READY, setup, '.wk-bento', "(BENTO_RUN.now() && BENTO_RUN.now().phase === 'stop' && BENTO_RUN.now().sel ? BENTO_RUN.now().sel : null)",
+                   "Boolean(BENTO_RUN.now() && BENTO_RUN.now().sel && BENTO_RUN.now().sel.heard && BENTO_RUN.now().sel.state === 'calling')",
+                   "BENTO_RUN.now() && BENTO_RUN.now().sel ? BENTO_RUN.now().sel.o.kind + ':' + BENTO_RUN.now().sel.state + (BENTO_RUN.now().sel.asked ? '+' : '') + ':hand' + document.querySelectorAll('.wk-bento .bt-chip').length : '-'",
+                   play, 8, sizes=((390, 664), (375, 553), (430, 740), (360, 640), (412, 780)), track=('.bt-car', '.bt-win', '.bt-bub .bt-who', '.bt-ear', '.bt-reply', '.bt-hand', '.bt-chip', '.bt-give', '.bt-good'), head=('.bt-bub',))
     assert bad == [], bad
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
