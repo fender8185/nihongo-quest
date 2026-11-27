@@ -96,7 +96,7 @@ function renderStageSummary(view) {
     : T.undone ? '<div class="banner mt-4">通過了。已復原，題目的星星照舊。</div>'
     : `<div class="banner mt-4"><div class="grow">通過了。已把${range}還不到四顆的 ${T.marked} 題設成四顆。目前單元：${esc(cu.weeks)}・${esc(cu.short)}</div>${LAST_BULK_MARK ? '<button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button>' : ''}</div>`;
   view.innerHTML = `
-    <div class="pr-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
+    <div class="pr-top pq-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
     <div class="card">
       <div class="small muted">${total} 題、不計時、作答不影響排程；答對 ${need} 題算通過。</div>
       <div class="page-title mt-2">${title}</div>

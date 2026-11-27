@@ -677,6 +677,15 @@ function optClass(o) { return !o.jp ? '' : (/\[[ぁ-ゖー]+\]/.test(o.text) ? '
 
 function currentEntry() { return SESSION && SESSION.entries[SESSION.idx]; }
 
+// the practice screen's look (2026-11-27, test.5; the user's pick 「A2A極簡版」, css/app.css's pq- block): a question's kind (and a preview's)
+// is a small filled label at the head of the card's label row, in its colour (data-pq-kind on the card), and the row's own text says the
+// rest without the kind's word (單字 · 入門 · 意思 → 「單字」入門 · 意思; q.label itself stays whole: the AI's prompt and the notebook read it)
+const PQ_KIND = { v: '單字', g: '文法', l: '聽力', r: '閱讀', k: '漢字', a: '假名', c: '變化練習', m: '錯題本' };
+function pqLabelHtml(kind, text) {
+  const name = PQ_KIND[kind], s = String(text || ''), rest = name && s.startsWith(name + ' · ') ? s.slice(name.length + 3) : s;
+  return `${name ? `<span class="pq-kind-tag">${name}</span>` : ''}${rest ? `<span>${esc(rest)}</span>` : ''}`;
+}
+
 function renderPractice() {
   const view = document.getElementById('view');
   if (!SESSION) { go('#/today'); return; }
@@ -717,13 +726,15 @@ function renderPractice() {
     // after answering, each wrong word shows what it actually means, and each wrong meaning the word it belongs to (1.0.45);
     // a phone's panel lists them instead, so the options keep their size under it
     const [zh, ja] = answered && !sheet && i !== q.answer ? optAside(q, o) : ['', false];
-    return `<button type="button" class="${cls}" data-act="answer" data-i="${i}" ${answered ? 'disabled' : ''}><span class="kbd">${i + 1}</span><span class="${optClass(o)}">${text}</span>${zh ? `<span class="opt-zh${ja ? ' jp' : ''}">${esc(zh)}</span>` : ''}</button>`;
+    // the number a quiet badge (pq-num), on a touch screen too where it costs no line (test.5, A2: the user's pick shows it; pqNums)
+    return `<button type="button" class="${cls}" data-act="answer" data-i="${i}" ${answered ? 'disabled' : ''}><span class="kbd pq-num">${i + 1}</span><span class="${optClass(o)}">${text}</span>${zh ? `<span class="opt-zh${ja ? ' jp' : ''}">${esc(zh)}</span>` : ''}</button>`;
   }).join('');
   const rec = q.key ? srsGet(q.key) : null;
   // a missed item on its 1/3/7 ladder: on (or after) its day this is a step; before it (most notebook-queue draws) extra practice
   const ladder = !rec || typeof rec.rl !== 'number' || e.requeued || e.encore || (e.srs && e.srs.isNew) ? ''
     : (e.srs ? !e.srs.reviewed : rec.due > todayStr()) ? '<span class="chip" title="還沒到這題的複習日：答對不算進第 1、3、7 天，到了那天照常複習">錯題</span>'
     : `<span class="chip" title="答錯過的題：第 1、3、7 天各複習一次，三次都對才離開錯題本">錯題複習 ${rec.rl + 1}/3</span>`;
+  const leech = rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : '';
   let stem = keepTail(q.stemHtml);
   if (answered && q.fillHtml) stem = stem.replace(/<span class="blank" data-blank>[\s\S]*?<!--\/blank-->/, `<span class="blank filled">${q.fillHtml}</span>`);
   let custom = q.custom ? customInteractionHtml(e, answered) : '';
@@ -752,25 +763,31 @@ function renderPractice() {
       ${subParts.length && q.custom !== 'g-order' ? `<div class="q-sub">${subParts.join(' ')}</div>` : ''}
       ${custom || `<div class="opts${q.wide ? ' wide' : ''}${glyph ? ' glyph' : ''}">${opts}</div>`}
       ${answered && !sheet ? feedbackHtml(e, false, read) : ''}`;
+  // a reading question on a short phone shows no label row (fix round 1 of test.5's Task 2: its room goes to the passage), so its chips —
+  // 新 (dots once answered), 錯題複習, 常錯 — come in the result panel (Ruling 36; shown only where the row is hidden: .pq-rp-chips)
+  const rpChips = read && sheet ? `${e.srs && e.srs.isNew ? '<span class="chip chip-accent">新</span>' : ''}${ladder}${leech}` : '';
+  // a new item's label row keeps the height of its 新 chip once the chip has turned into dots (pq-hold): the card does not move on the answer
+  const hold = q.kind !== 'm' && (answered ? Boolean(e.srs && e.srs.isNew) : !rec);
   view.innerHTML = `
-    <div class="pr-top">
+    <div class="pr-top pq-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
       ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
     ${sessionNoteHtml(answered)}
-    <div class="q-card${read ? ' rp-card' : ''}${just}">
-      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip">再練一次</span>' : ''}${e.encore ? '<span class="chip">換個方式再考</span>' : ''}${ladder}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
+    <div class="q-card pq-card${read ? ' rp-card' : ''}${just}" data-pq-kind="${esc(q.kind || '')}">
+      <div class="q-label${hold ? ' pq-hold' : ''}">${pqLabelHtml(q.kind, q.label)}${e.requeued ? '<span class="chip">再練一次</span>' : ''}${e.encore ? '<span class="chip">換個方式再考</span>' : ''}${ladder}${leech}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${read ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>
       <div class="rp-ask">${ask}${sheet ? '' : `<div class="rp-foot">${tools}${next}</div>`}</div>` : ask}
     </div>
     ${sheet ? `${read ? '' : tools.replace('<div class="pr-actions">', '<div class="pr-actions pr-ghost" aria-hidden="true" inert>')}
-    <div class="fb-sheet ${e.chosen === q.answer ? 'ok' : 'bad'}${just ? ' rise' : ''}" role="region" aria-label="作答結果">
-      <div class="fb-sheet-body">${feedbackHtml(e, true)}${tools}</div>
+    <div class="fb-sheet ${e.chosen === q.answer ? 'ok' : 'bad'}${just ? ' rise' : ''}" data-pq-kind="${esc(q.kind || '')}" role="region" aria-label="作答結果">
+      <div class="fb-sheet-body">${feedbackHtml(e, true, true, rpChips)}${tools}</div>
       ${next}
     </div>` : read ? '' : tools + next}`;
   sheetFit(view);
+  pqNums(view, e);
   rpFit(view, e);
   // a tap-to-answer block (拼字, 排序, 配對) loses its bottom row once answered: on a phone it keeps the height it had, so the tiles stay put under the panel
   const block = view.querySelector('.q-card > :is(.spell, .order, .match)');
@@ -793,14 +810,41 @@ function sideLayout() { return Boolean(SIDE_MQ && SIDE_MQ.matches); }
 // (an on-screen keyboard can shrink a phone to "a short landscape": the AI question's draft and its focus were lost; the fix round's re-review)
 if (SIDE_MQ && SIDE_MQ.addEventListener) SIDE_MQ.addEventListener('change', () => { const e = SESSION && currentRoute().name === 'practice' && currentEntry(), f = document.activeElement;
   if (!e || !e.q || !e.q.passageHtml || phoneLayout() || (f && /^(INPUT|TEXTAREA|SELECT)$/.test(f.tagName))) return; renderPractice(); });
-// room under the page as tall as the panel, so what it covers can still be scrolled up above it (it grows with ⋯ or AI 解析)
-const SHEET_RO = window.ResizeObserver ? new ResizeObserver(([en]) => { if (en) { const view = document.getElementById('view'); view.style.setProperty('--sheet-h', en.target.offsetHeight + 'px'); rpUnder(view); } }) : null;
+// room under the page as tall as the panel, so what it covers can still be scrolled up above it (it grows with ⋯ or AI 解析); and the
+// panel's text fading out above 下一題 while there is more below (pq-more, test.5's A2: a line is no longer cut through; at its end, or
+// while a field in it has the focus, nothing fades) — looked at again as it scrolls and as its content or the panel changes size
+const SHEET_RO = window.ResizeObserver ? new ResizeObserver((ens) => { const view = document.getElementById('view');
+  ens.forEach((en) => { if (en.target.classList.contains('fb-sheet')) { view.style.setProperty('--sheet-h', en.target.offsetHeight + 'px'); rpUnder(view); } });
+  const body = view.querySelector('.fb-sheet-body'); if (body) pqMore(body); }) : null;
+function pqMore(el) { if (el.isConnected) el.classList.toggle('pq-more', el.scrollHeight - el.clientHeight - el.scrollTop > 2); }
 function sheetFit(view) {
   const sh = view.querySelector('.fb-sheet');
   if (SHEET_RO) SHEET_RO.disconnect();
   if (!sh) { view.style.removeProperty('--sheet-h'); return; }
   view.style.setProperty('--sheet-h', sh.offsetHeight + 'px');
-  if (SHEET_RO) SHEET_RO.observe(sh);
+  const body = sh.querySelector('.fb-sheet-body');
+  if (SHEET_RO) { SHEET_RO.observe(sh); if (body && body.firstElementChild) SHEET_RO.observe(body.firstElementChild); }
+  if (!body) return;
+  body.addEventListener('scroll', () => pqMore(body), { passive: true });
+  pqMore(body);
+  if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => pqMore(body));
+}
+// an option's number on a touch screen (test.5's A2 shows it there; until then a touch screen showed no 1–4): only where it costs no line —
+// one that would push an option onto another line (a long sentence on a narrow phone) leaves the question's four without numbers, as
+// before (pq-nonum), so the options take no more room than they did. Measured on the question's first draw, once the fonts are in, and
+// kept for its answered draws (nothing moves on the answer)
+const TOUCH_MQ = window.matchMedia ? window.matchMedia('(hover: none) and (pointer: coarse)') : null;
+function pqNums(view, e) {
+  const opts = view.querySelector('.pq-card .opts:not(.glyph)');
+  if (!opts || !TOUCH_MQ || !TOUCH_MQ.matches) return;
+  if (e.done && typeof e.pqNoNum === 'boolean') { opts.classList.toggle('pq-nonum', e.pqNoNum); return; }
+  const texts = [...opts.querySelectorAll('.opt > .pq-num + span')];
+  if (!texts.length) return;
+  const heights = () => texts.map((t) => t.getBoundingClientRect().height);
+  opts.classList.remove('pq-nonum'); const shown = heights(); opts.classList.add('pq-nonum'); const bare = heights();
+  e.pqNoNum = shown.some((h, i) => h > bare[i] + 1);
+  opts.classList.toggle('pq-nonum', e.pqNoNum);
+  if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => { if (opts.isConnected && !e.done) pqNums(view, e); });
 }
 // a reading question's passage, and its question where the panel is short of room (a 情報検索's conditions on a small phone), each scroll
 // on their own (2026-11-27, test.5): the foot fades while there is more below (rp-more; iOS hides scrollbars; the question says 還有 too),
@@ -899,11 +943,12 @@ function sessionCount() {
   const owed = SESSION.test ? 0 : encoreEstimate(es.slice(at).filter(x => x.item && !x.encore && !x.requeued).map(x => x.item));
   return { before: at, n: Math.min(at + 1, es.length), total: es.length + owed };
 }
-// the bar on top of a practice card slides from where the last card left it (1.0.41); the same card drawn again keeps still
+// the bar on top of a practice card slides from where the last card left it (1.0.41); the same card drawn again keeps still. test.5 (A2):
+// 16 px, a warm fill and a 梅 bead riding its tip (.pq-bar, .pq-bead: in the fill, so it slides with it and stays put with motion reduced)
 function prBarHtml(pct) {
   const from = SESSION.barPct; SESSION.barPct = pct;
   const slide = from != null && from !== pct;
-  return `<div class="bar"><span${slide ? ' class="slide"' : ''} style="${slide ? `--from:${from}%;` : ''}width:${pct}%"></span></div>`;
+  return `<div class="bar pq-bar"><span${slide ? ' class="slide"' : ''} style="${slide ? `--from:${from}%;` : ''}width:${pct}%"><i class="pq-bead"></i></span></div>`;
 }
 function prCountHtml() {
   const c = sessionCount();
@@ -916,15 +961,16 @@ function previewHtml(e, pct) {
   if (e.item.kind === 'a') return kanaPreviewHtml(e, pct);
   const v = e.item;
   const reading = v.r && v.r !== jaPlain(v.w) ? v.r : '';
+  // the label row (test.5, A2): 「單字」入門 · 生活 with 新 — or, for a word missed again and again, 「單字」常錯 · 入門 · 生活 with 再看一次
   return `
-    <div class="pr-top">
+    <div class="pr-top pq-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
       ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
     ${sessionNoteHtml()}
-    <div class="q-card">
-      <div class="q-label"><span>${e.relearn ? '常錯的字' : '新單字'} · ${esc(lvLabel(v.lv))} · ${esc(vocabTheme(v))}</span>${e.relearn ? '<span class="chip chip-bad">再看一次</span>' : '<span class="chip chip-accent">新</span>'}</div>
+    <div class="q-card pq-card" data-pq-kind="v">
+      <div class="q-label">${pqLabelHtml('v', `${e.relearn ? '常錯 · ' : ''}${lvLabel(v.lv)} · ${vocabTheme(v)}`)}${e.relearn ? '<span class="chip chip-bad">再看一次</span>' : '<span class="chip chip-accent">新</span>'}</div>
       <div class="q-instr">${e.relearn ? '這個字錯過好幾次，先再看一遍，等一下再考。' : '先看一遍，接著會用幾種方式考這個字。'}</div>
       <div class="preview">
         ${picSvg(picKey(v))}
@@ -949,14 +995,14 @@ function kanaPreviewHtml(e, pct) {
   const a = e.item, other = a.script === 'hira' ? '片假名' : '平假名', origin = kanaOriginText(a);
   const looks = KANA_LOOKALIKE.filter(g => g.includes(a.ch)).flat().filter((c, i, all) => c !== a.ch && all.indexOf(c) === i);
   return `
-    <div class="pr-top">
+    <div class="pr-top pq-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
       ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
     ${sessionNoteHtml()}
-    <div class="q-card">
-      <div class="q-label"><span>新假名 · ${a.script === 'hira' ? '平假名' : '片假名'}</span><span class="chip chip-accent">新</span></div>
+    <div class="q-card pq-card" data-pq-kind="a">
+      <div class="q-label">${pqLabelHtml('a', a.script === 'hira' ? '平假名' : '片假名')}<span class="chip chip-accent">新</span></div>
       <div class="q-instr">先看一遍、聽一次，等一下會考。</div>
       <div class="preview kana-preview">
         <div class="word jp">${esc(a.ch)}</div>
@@ -1242,7 +1288,8 @@ function twoLinesEm(text) {
 // (not text-wrap: pretty: on iPhone Safari it broke an example that fitted into three lines, and Chrome skips a blank with furigana)
 function keepTail(html) { return String(html || '').replace(/([ぁ-ゖァ-ヺー]{2}[。、？！」）]+)$/, '<span class="nowrap">$1</span>'); }
 
-function feedbackHtml(e, sheet = false, reveal = sheet) {
+// chips: the label row's chips for a reading question's panel on a short phone (Ruling 36, renderPractice's rpChips)
+function feedbackHtml(e, sheet = false, reveal = sheet, chips = '') {
   const q = e.q;
   const ok = e.chosen === q.answer;
   const right = q.options[q.answer];
@@ -1288,7 +1335,7 @@ function feedbackHtml(e, sheet = false, reveal = sheet) {
         : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp || q.picOptions ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${chosen}${reveal && q.revealHtml ? q.revealHtml : ''}${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
-      <div class="fb-meta">${q.point && q.kind === 'g' ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}</div>
+      <div class="fb-meta">${chips ? `<span class="pq-rp-chips">${chips}</span>` : ''}${q.point && q.kind === 'g' ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}</div>
       <div id="aiExplainBox">${aiBoxHtml(e)}</div>
     </div>`;
 }
@@ -1447,7 +1494,7 @@ function renderSummary(view) {
   const allRight = n >= 5 && !s.stats.wrong && !s.quit;   // 全對: a set of five or more without a miss
   const wrongList = [...wrongKeys.values()].map(r => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(r.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(r.q.options[r.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(r.q.options[r.chosen].text))}</span></div></div></div>`).join('');
   view.innerHTML = `
-    <div class="pr-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
+    <div class="pr-top pq-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
     <div class="card">
       <div class="row between" style="align-items:flex-start">
         <div>

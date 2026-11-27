@@ -366,14 +366,14 @@ function grammarPreviewHtml(e, pct) {
   const main = page === 1 && two ? `<button type="button" class="btn btn-primary" data-act="preview-page" data-page="2" id="btnNext">下一頁：例句 ${kbd}</button>`
     : `${page === 2 ? '<button type="button" class="btn btn-sm btn-ghost gp-back" data-act="preview-page" data-page="1">‹ 上一頁</button>' : ''}${previewGoBtn()}`;
   return `
-    <div class="pr-top">
+    <div class="pr-top pq-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
       ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
     ${sessionNoteHtml()}
-    <div class="q-card">
-      <div class="q-label"><span>${e.relearn ? '常錯的文法' : '新文法'} · ${esc(u.short)}</span>${e.relearn ? '<span class="chip chip-bad">再看一次</span>' : '<span class="chip chip-accent">新</span>'}</div>
+    <div class="q-card pq-card" data-pq-kind="g">
+      <div class="q-label">${pqLabelHtml('g', `${e.relearn ? '常錯 · ' : ''}${u.short}`)}${e.relearn ? '<span class="chip chip-bad">再看一次</span>' : '<span class="chip chip-accent">新</span>'}</div>
       <div class="q-instr">${e.relearn ? '這一段的題目錯過好幾次，先再看一遍講義，等一下再考。' : '先看這一段講義，接下來的題目會考這裡的用法。'}</div>
       <div class="preview grammar" data-page="${page}">
         <div class="word">${bracketRuby(sec.h)}</div>

@@ -660,8 +660,9 @@ def test_a_leech_just_missed_gets_its_card_again_before_it_is_asked(b):
     r = json.loads(ev(b, js))
     w, g, w2, w3 = r['keys']
     assert r['flags'] == {w: True, g: True, w2: False, w3: False}, r
-    assert '常錯的字' in r['w']['label'] and '再看一次' in r['w']['label'] and not r['w']['known'], r   # no 我會了 on a word that keeps being missed
-    assert '常錯的文法' in r['g']['label'] and '再看一次' in r['g']['label'], r
+    # test.5 (A2): the kind a label at the row's head (單字／文法), the row's text 常錯 · … without it, then 再看一次
+    assert r['w']['label'].startswith('單字常錯 · ') and '再看一次' in r['w']['label'] and not r['w']['known'], r   # no 我會了 on a word that keeps being missed
+    assert r['g']['label'].startswith('文法常錯 · ') and '再看一次' in r['g']['label'], r
     assert r['stillThere'] and r['wMark'] is None, r
 
 # the summary says how many sets and minutes are left: sets cut like the day's sets (a small tail joins the one before), minutes

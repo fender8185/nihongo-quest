@@ -183,13 +183,15 @@ def test_a_units_lesson_has_its_own_screen_of_equal_pages(b):
     assert r['back'] == {'hash': '#/course/m2', 'body': False, 'open': '翻開講義', 'chip': '翻完過'}, r   # read to the end: it opens at its start again
     assert r['atEnd'] == {'count': True, 'gift': None} and r['intro'] == {'mark': False, 'h3': 13}, r   # opened at its end is not read through
 
-# 2026-11-11, the user: a phone shows no 1–4 on the answers (they are keyboard keys); a computer keeps them
+# 2026-11-11, the user: a phone shows no 1–4 on the answers (they are keyboard keys); a computer keeps them. test.5 (Task 3, A2 — the look
+# the user picked shows them): a practice option's number is a quiet badge (.pq-num) a touch screen shows too where it costs no line
+# (test_practice_style); the key hints, an audio option's pick key and any other option's key (the 模擬考's) stay hidden there
 def test_touch_screens_hide_the_answers_number_keys(b):
     js = """(() => { const rules = [...document.styleSheets].flatMap(sh => { try { return [...sh.cssRules]; } catch (e) { return []; } });
       const touch = rules.filter(r => r.media && /hover: none/.test(r.media.mediaText) && /pointer: coarse/.test(r.media.mediaText)).map(r => r.cssText).join(' ');
-      return JSON.stringify({ opt: /\.opt \.kbd/.test(touch), pick: /\.opt-pick \.kbd/.test(touch), none: /display: none/.test(touch) }); })()"""
+      return JSON.stringify({ opt: /\.opt \.kbd:not\(\.pq-num\)/.test(touch), pick: /\.opt-pick \.kbd/.test(touch), hint: /\.kbd-hint/.test(touch), none: /display: none/.test(touch) }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'opt': True, 'pick': True, 'none': True}, r
+    assert r == {'opt': True, 'pick': True, 'hint': True, 'none': True}, r
 
 # the phone type scale (2026-11-26, test.4; the user's pick 「16／14／13」): on a phone (390 wide) the three levels are 16／14／13 and the
 # shared classes read them — .small 14, .tiny .hint .stat-l .zh-btn .chip 13 (.chip the label level too, ruling 10); on a wide
@@ -297,12 +299,13 @@ def test_the_grammar_preview_comes_in_two_pages(b):
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("metrics", (390, 664))]))
     pats, npoints, ex = r['sec']
-    assert r['p1'] == {'n': 1, 'pats': pats, 'points': npoints, 'ex': [], 'main': '下一頁：例句', 'seen': True, 'back': False, 'lesson': True, 'label': r['p1']['label']} and '新文法' in r['p1']['label'] and r['foot'] == 'sticky', r
+    # test.5 (A2): the row 「文法」 and the unit's name, 新 after it (it was 新文法 · …)
+    assert r['p1'] == {'n': 1, 'pats': pats, 'points': npoints, 'ex': [], 'main': '下一頁：例句', 'seen': True, 'back': False, 'lesson': True, 'label': r['p1']['label']} and r['p1']['label'].startswith('文法') and r['p1']['label'].endswith('新') and r['foot'] == 'sticky', r
     assert r['p2'] == {'n': 2, 'pats': [], 'points': 0, 'ex': ex, 'main': '看完了', 'seen': True, 'back': True, 'lesson': True, 'label': r['p1']['label']} and len(ex) >= 1, r
     assert r['back'] == 1 and r['done'] == {'done': True, 'seen': True, 'next': True, 'later': True}, r   # Enter, Enter: 看完了 as before
     assert r['n'] >= 130 and r['off'] == [], r   # every section (the longest, m27's 比喻 at 1,300 px, too): in sight on both pages
     assert r['one']['main'] == '看完了' and not r['one']['back'] and r['one']['ex'] == [] and r['oneDone'], r
-    assert '常錯的文法' in r['relearn']['label'] and r['relearn']['main'] == '下一頁：例句', r
+    assert r['relearn']['label'].startswith('文法常錯 · ') and r['relearn']['main'] == '下一頁：例句', r   # test.5 (A2): it was 常錯的文法 · …
     wide = json.loads(ev(b, "(async () => { " + FRESH + GP + """ const g = REG.grammar.find((x) => x.u === 'm1' && x.sec === 0); show(g); const f = document.querySelector('.gp-foot'), c = document.querySelector('.q-card');
       const out = { p1: page().main, pos: getComputedStyle(f).position, under: f.getBoundingClientRect().top >= c.getBoundingClientRect().bottom }; previewMain(); out.p2 = page().main;
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""", [("metrics", (1280, 800, False))]))
@@ -618,6 +621,29 @@ def test_the_reading_panel_beside_the_passage_keeps_a_focus_ring_whole(b):
     for w, h in ((768, 1024), (1280, 800)):
         r = json.loads(ev(b, js, [rp_metrics(w, h)]))
         assert r['x'] == 'hidden' and all(a >= 4 and c >= 4 for a, c in r['opts'] + [r['next']]), (w, h, r)
+
+# Ruling 36 (test.5's Task 3): on a phone 600 px tall or less (an SE) and on a phone on its side a reading question shows no label row (fix
+# round 1: its room is the passage's), so its chips — 新 (dots once answered), 錯題複習, 常錯 — come in the result panel after the answer
+# (.pq-rp-chips, in its row of the item's level); where the row shows (a taller phone) the panel leaves them to it. The fix round's
+# re-review found 常錯 never showed on an SE reading question
+def test_a_reading_questions_chips_come_in_the_panel_where_its_label_row_is_hidden(b):
+    js = "(async () => { " + FRESH + RP + """ const t = todayStr(), it = items.short, out = {};
+      const look = () => { const c = document.querySelector('.fb-sheet .pq-rp-chips'), shown = Boolean(c) && getComputedStyle(c).display !== 'none';
+        if (shown) sheetReveal(c);
+        return { shown, chips: c ? [...c.querySelectorAll('.chip')].map((x) => x.textContent) : [], seen: shown && [...c.querySelectorAll('.chip')].every((x) => { const q = box(x); return q.width > 0 && q.top >= 0 && q.bottom <= innerHeight; }),
+          label: getComputedStyle(document.querySelector('.q-card > .q-label')).display !== 'none', row: [...document.querySelectorAll('.q-card > .q-label .chip')].map((x) => x.textContent) }; };
+      state.srs[it.key] = { b: 1, s: 1, d: 5, due: t, n: 6, ok: 2, ng: 4, st: 0, last: addDays(t, -3), lapse: 4, intro: addDays(t, -40), leech: true, rl: 1, f: {} };   // 常錯, on its ladder
+      let e = await show(it); answerCurrent((e.q.answer + 1) % 4); await wait(700); out.leech = look();
+      delete state.srs[it.key]; e = await show(it); answerCurrent(e.q.answer); await wait(700); out.fresh = look();   // a new one, answered right
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    for w, h in ((375, 553), (667, 375), (430, 740)):
+        r = json.loads(ev(b, js, [rp_metrics(w, h)]))
+        hidden = (w <= 600 and h <= 600) or rp_land(w, h)
+        for k in ('leech', 'fresh'):
+            assert r[k]['label'] == (not hidden) and r[k]['shown'] == hidden, (w, h, k, r)
+        assert '常錯' in r['leech']['chips'] and r['fresh']['chips'][:1] == ['新'], (w, h, r)   # in the panel's markup at every size
+        if hidden: assert r['leech']['seen'] and r['fresh']['seen'], (w, h, r)   # shown there, in sight
+        else: assert '常錯' in r['leech']['row'], (w, h, r)   # the row says it
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

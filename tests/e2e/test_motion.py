@@ -75,7 +75,7 @@ def test_an_answer_pops_or_shakes_once_and_the_bar_slides(b):
     assert 'just' not in r['redraw']['cls'] and r['redraw']['names'] == [], r
     assert r['slide']['cls'] == 'slide' and r['slide']['from'] == '0%' and r['slide']['width'] not in ('0%', '') and r['slide']['names'] == ['barSlide'], r
     assert r['still'] == '', r
-    assert 'just-bad' in r['bad']['cls'] and r['bad']['icon'] == [], r
+    assert 'just-bad' in r['bad']['cls'] and r['bad']['icon'] == ['iconPop'], r   # test.5 (A2, the user's pick): the head's ✓ and × alike in a circle that pops in
     assert r['bad']['names'] == ['shake'] or r['bad']['fmt'] == 'v-match', r
 
 def test_the_summary_ring_fills_from_where_the_set_began(b):

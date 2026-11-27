@@ -2312,7 +2312,7 @@ body.reading { overflow: hidden; }
 .aiq-err:empty { display: none; }
 .pr-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .pr-actions .left, .pr-actions .right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-@media (hover: none) and (pointer: coarse) { .kbd-hint, .opt .kbd, .opt-pick .kbd { display: none !important; } }   /* touch screens: no keyboard, no key hints (2026-11-11, the user: nor the options' 1–4) */
+@media (hover: none) and (pointer: coarse) { .kbd-hint, .opt .kbd:not(.pq-num), .opt-pick .kbd { display: none !important; } }   /* touch screens: no keyboard, no key hints (2026-11-11, the user: nor the options' 1–4) — but a practice option's number, a quiet badge since test.5 (.pq-num: the A2 look the user picked shows it), where it costs no line (pqNums) */
 .banner.compact { padding: 8px 12px; font-size: 13px; gap: 8px 12px; }
 .pr-next { display: flex; justify-content: flex-end; margin-top: 12px; }
 @media (max-width: 600px) {
@@ -2348,6 +2348,89 @@ body.reading { overflow: hidden; }
   .fb-sheet.rise { animation: sheetUp .25s ease-out .3s backwards; }
   @keyframes sheetUp { from { transform: translateY(100%); } }
 }
+/* ---- the practice screen's look (2026-11-27, test.5; the user: 「我希望目前答題的那個進度條可以粗一點然後有一點風格，現在的每日練習的作答介面有些
+   太像工程師用的沒有包裝過」, of the mockups 「A不錯但有點太花了尤其是選項的那個線」 and 「剩下幾分鐘之幾的那個底色如果是夜晚版太顯眼了跟原本一樣」, the
+   pick 「A2A極簡版」): 書房's paper by day and its navy by night, calm. The bar 16 px with a smooth amber-to-coral fill and a 梅 bead riding
+   its tip (.pq-bar, .pq-bead, prBarHtml); the count today's plain one by night, a quiet book label by day; the question on a plain page
+   (.pq-card: a 14 px radius, a page edge under it); its kind a small filled label at the head of the label row (.pq-kind-tag, pqLabelHtml:
+   課程's book colours, dimmed under the night lamps as the covers are — --cover-keep; 聽力's 若竹 a shade deeper than the mockup's for 4.5:1
+   by day), 新 an outline in the kind's ink; the options plain rounded cards with a soft shadow, their number in a quiet badge (.pq-num; a
+   touch screen's too, where it costs no option a line: pqNums); the tiles and 配對's words the same cards; the result a plain slip with a
+   4 px ok／bad top edge (a phone's panel and the box under the options on a wide screen), its ✓／× in a circle that pops in, 下一題 (and a
+   preview's 看完了) flat amber. No size or place changes (a label no taller than its row's line), but a new item's label row keeping its 新
+   chip's height as the chip turns into dots (pq-hold): the card no longer moves 6 px on the answer. The 模擬考 (its own runner) keeps its
+   look. Every class and variable pq- */
+:root, [data-theme="dark"] {
+  --pq-page: #2e3155; --pq-page-line: #3f426d; --pq-page-edge: #262848; --pq-card: #383b66; --pq-card-edge: #464a7d; --pq-num-bg: rgba(236, 235, 246, .09);
+  --pq-track: #1b1d36; --pq-fill-a: #f2a65e; --pq-fill-b: #e37f5a; --pq-bead-line: #df7356; --pq-ex: var(--bg-sunken); --pq-ex-line: var(--line);
+  --pq-next: #f0a660; --pq-next-fg: #2e1c12; --pq-on-mark: var(--bg); --pq-ink-mix: 52%;   /* --pq-on-mark: what sits on --ok／--bad (a badge's number, the head's ✓／×) */
+}
+[data-theme="light"] {
+  --pq-page: #fffdf7; --pq-page-line: #ebe0cb; --pq-page-edge: #ece1cc; --pq-card: #ffffff; --pq-card-edge: #ede3d1; --pq-num-bg: #f3ebde;
+  --pq-track: #eae0cd; --pq-fill-a: #eea055; --pq-fill-b: #de7a55; --pq-bead-line: #d9674c; --pq-ex: #fbf6ea; --pq-ex-line: #eadfc9;
+  --pq-next: #f0a660; --pq-next-fg: #2e1c12; --pq-on-mark: #fff; --pq-ink-mix: 100%;   /* the page's --bg on --ok was 4.3:1 by day: white */
+}
+/* the kinds (data-pq-kind on the card and the result panel): 單字 朱, 文法 藍, 聽力 若竹, 閱讀 藤, 漢字 金茶, 假名 桃, 錯題本 墨, 變化練習 青磁; the
+   label's fill (--pq-kind-c) dims by night as 課程's covers do, the ink of 新's outline (--pq-kind-ink) lightens by night */
+[data-pq-kind] { --pq-kind: #b8463a; --pq-kind-c: color-mix(in srgb, var(--pq-kind) var(--cover-keep), var(--cover-shade)); --pq-kind-ink: color-mix(in srgb, var(--pq-kind) var(--pq-ink-mix), #fff); }
+[data-pq-kind="g"] { --pq-kind: #3e5f8e; } [data-pq-kind="l"] { --pq-kind: #477754; } [data-pq-kind="r"] { --pq-kind: #6b4d8a; } [data-pq-kind="k"] { --pq-kind: #8a6620; }
+[data-pq-kind="a"] { --pq-kind: #a94a63; } [data-pq-kind="m"] { --pq-kind: #55525e; } [data-pq-kind="c"] { --pq-kind: #2f6f73; }
+/* the bar: the fill's end carries the bead (half past either end at 0% and 100%, in the strip's 14 px gaps) */
+.pq-top { gap: 14px; }
+.pq-bar { position: relative; height: 16px; border: 0; overflow: visible; background: var(--pq-track); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .22); }
+.pq-bar > span { position: relative; background: linear-gradient(90deg, var(--pq-fill-a), var(--pq-fill-b)); }
+.pq-bead { position: absolute; top: 50%; right: -12px; width: 24px; height: 24px; margin-top: -12px; border-radius: 50%; border: 2px solid var(--pq-bead-line); box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='%23df7356'%3E%3Ccircle cx='10' cy='5' r='3.3'/%3E%3Ccircle cx='14.76' cy='8.45' r='3.3'/%3E%3Ccircle cx='12.94' cy='14.05' r='3.3'/%3E%3Ccircle cx='7.06' cy='14.05' r='3.3'/%3E%3Ccircle cx='5.24' cy='8.45' r='3.3'/%3E%3C/g%3E%3Ccircle cx='10' cy='10' r='2.6' fill='%23f6d27a'/%3E%3C/svg%3E") center / 15px no-repeat, var(--label); }
+[data-theme="light"] .pq-top > .pr-count { padding: 2px 9px; border-radius: 6px; background: var(--label); color: var(--label-ink); font-weight: 700; line-height: 1.5; }   /* by night as before (the user) */
+/* the page and its label row */
+.pq-card { border-color: var(--pq-page-line); border-radius: 14px; background: var(--pq-page); box-shadow: 0 3px 0 -1px var(--pq-page-edge), var(--shadow); }
+.pq-card > .q-label { color: var(--fg-2); }
+.pq-card:not(.rp-card) > .q-label.pq-hold { min-height: calc(1.6em + 6px); }   /* a new item's: its 新 chip's height, kept as the chip turns into dots (a reading card's row has its own, below) */
+/* the label no taller than the row's line (13 px × 1.6 on a phone): a row of plain text and dots stays as tall as before */
+.pq-kind-tag { display: inline-flex; align-items: center; padding: 0 9px; border-radius: 6px; background: var(--pq-kind-c); color: #fff6e6; font-size: 13px; font-weight: 700; letter-spacing: .08em; line-height: 20px; white-space: nowrap; }
+:is(.pq-card > .q-label, .pq-rp-chips) .chip-accent { border-color: var(--pq-kind-ink); background: none; color: var(--pq-kind-ink); font-weight: 700; }
+:is(.pq-card > .q-label, .pq-rp-chips) .chip-bad { border-color: currentColor; background: none; }   /* 常錯, 再看一次: outlined too — on their soft fill they read 4.3:1 */
+/* the options, the tiles and 配對's words: plain rounded cards; an option's number a quiet badge, the ok／bad colour once answered */
+.pq-card .opt { border-color: var(--pq-card-edge); border-radius: 14px; background: var(--pq-card); box-shadow: 0 1px 2px rgba(0, 0, 0, .1), 0 6px 14px -10px rgba(0, 0, 0, .55); }
+.pq-card .opt:hover:not(:disabled) { border-color: var(--pq-kind-ink); background: var(--pq-card); }
+.pq-card .opt:active:not(:disabled) { transform: translateY(1px); }
+/* answered (seen on a wide screen): a light tint of the page's paper — the options' words, asides and furigana 4.5:1 (on the soft tint
+   over the card, as the mockup had it, the furigana read 4.1–4.3:1 and the picked one's aside 3.3:1) — the edge and the badge in
+   ok／bad; that aside a shade stronger */
+.pq-card .opt.correct { border-color: var(--ok-line); background: color-mix(in srgb, var(--ok) 6%, var(--pq-page)); }
+.pq-card .opt.wrong { border-color: var(--bad-line); background: color-mix(in srgb, var(--bad) 6%, var(--pq-page)); }
+.pq-card .opt:is(.correct, .wrong) > .opt-zh { color: var(--fg-2); }
+.pq-num { width: 22px; min-width: 22px; padding: 0; border: 0; border-radius: 50%; background: var(--pq-num-bg); color: var(--fg-2); font: 600 12.5px/1 "Noto Sans TC", system-ui, sans-serif; }
+.opt.correct > .pq-num { background: var(--ok); color: var(--pq-on-mark); } .opt.wrong > .pq-num { background: var(--bad); color: var(--pq-on-mark); }
+.pq-nonum .pq-num { display: none; }   /* a touch screen where a number would cost an option a line (pqNums) */
+.pq-card .opt-pick .kbd { border: 0; border-radius: 50%; background: var(--pq-num-bg); color: var(--fg-2); }   /* an audio option's key (a keyboard's only): the same quiet badge */
+.pq-card :is(.spell-tile, .order-tile, .match-word, .match-meaning) { border-color: var(--pq-card-edge); border-radius: 12px; background: var(--pq-card); box-shadow: 0 1px 2px rgba(0, 0, 0, .1), 0 4px 10px -8px rgba(0, 0, 0, .5); }
+body > .tile-drag { border-radius: 12px; background: var(--pq-card); }   /* a tile being dragged */
+/* the result: a phone's panel and the box under the options on a wide screen — the page's paper, a 4 px ok／bad edge on top; the head's
+   ✓／× in a 28 px circle popping in (in a panel once it has risen); the example boxes lighter by day (their furigana 4.5:1) */
+.fb-sheet:is(.ok, .bad) { border-top: 0; border-radius: 14px 14px 0 0; background: var(--pq-page); box-shadow: 0 -10px 26px -12px rgba(0, 0, 0, .5); }
+.fb-sheet::before, .pq-card .feedback::before { content: ''; position: absolute; top: 0; left: 0; right: 0; z-index: 1; height: 4px; border-radius: 14px 14px 0 0; background: var(--ok); opacity: .8; pointer-events: none; }
+:is(.fb-sheet, .pq-card .feedback).bad::before { background: var(--bad); }
+.fb-sheet > .fb-sheet-body { padding-top: 18px; }   /* as far from the panel's top as under its 2 px border before */
+.fb-sheet-body.pq-more:not(:focus-within) { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent); }   /* more below: the text fades out above 下一題 (sheetFit) */
+.pq-card .feedback { position: relative; border-color: var(--pq-page-line); border-radius: 14px; background: var(--pq-page); }
+.pq-card .feedback::before { top: -1px; left: -1px; right: -1px; }   /* over the box's border */
+:is(.fb-sheet, .pq-card) .fb-head { gap: 10px; } .fb-sheet .fb-head { margin-bottom: 8px; }
+:is(.fb-sheet, .pq-card) .fb-head > svg:first-child { width: 28px; height: 28px; padding: 5px; border-radius: 50%; background: var(--ok); color: var(--pq-on-mark); stroke-width: 3; }
+:is(.fb-sheet, .pq-card) .fb-head.bad > svg:first-child { background: var(--bad); }
+.fb-sheet.rise .fb-head > svg:first-child { animation: iconPop .35s cubic-bezier(.3, 1.6, .6, 1) .55s backwards; }   /* ✓ and × alike (the right one popped on a wide screen already: 1.0.41) */
+.pq-card.just-bad .fb-head > svg:first-child { animation: iconPop .3s cubic-bezier(.3, 1.6, .6, 1); }
+/* the boxes of Japanese — an example, a reading passage, a listening transcript — lighter by day (their furigana 4.5:1; by night as before);
+   a filled blank's tint lighter (its words and furigana 4.5:1); 再聽一次 outlined (on its soft fill 4.1:1) */
+:is(.pq-card, .fb-sheet) :is(.example, .panel), .pq-card .preview .example { border-color: var(--pq-ex-line); background: var(--pq-ex); }
+.pq-card .blank { background: color-mix(in srgb, var(--accent) 5%, var(--pq-page)); }   /* its hint (飲む →) 4.5:1 */
+.pq-card .blank.filled { background: color-mix(in srgb, var(--ok) 6%, var(--pq-page)); }
+.pq-card .speak-big { background: none; }
+:is(.pr-next, .pr-next-sticky) #btnNext { border-color: var(--pq-next); border-radius: 12px; background: var(--pq-next); color: var(--pq-next-fg); font-weight: 700; letter-spacing: .08em; box-shadow: 0 3px 10px -4px rgba(170, 85, 40, .55); }
+:is(.pr-next, .pr-next-sticky) #btnNext:hover { border-color: var(--pq-next); background: color-mix(in srgb, var(--pq-next) 88%, #fff); }
+/* a reading question's chips in its result panel where its label row is hidden (Ruling 36: an SE, a phone on its side — the rules below) */
+.pq-rp-chips { display: none; }
+@media (max-width: 600px) and (max-height: 600px), (orientation: landscape) and (max-height: 500px) { .pq-rp-chips { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; } }
 /* a reading question (2026-11-27, test.5; the user: 「讀解文章的排版也幫我調整一下」, the pick 「選項固定在下方」): the page as tall as the
    screen and never scrolled; the passage (.rp-card > .passage) scrolls on its own and the question with its four options stands in a panel
    of its own (.rp-ask, renderPractice), so the question and every option are in sight from the first frame at any size and the passage
