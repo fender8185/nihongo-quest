@@ -442,88 +442,130 @@ def test_a_clicked_button_on_a_word_preview_leaves_enter_to_the_main_one(b):
     assert after['replays'] == 1 and after['done'] and after['on'], r   # Enter: the preview goes on, no replay
 
 # 2026-11-27 (test.5; the user: 「讀解文章的排版也幫我調整一下」, the pick 「選項固定在下方」): a reading question's passage scrolls on its own
-# and its question and four options stand in a panel of their own (.rp-ask) — on a phone pinned across the foot of the screen under the
-# passage, as the result panel is; on a wide screen beside the passage — the page as tall as the screen. At every size of the matrix, for
-# the longest passage of data.js and data-n3.js and the shortest: from the first frame the question (whole) and the four options are in
-# sight, each option's middle taps it, the passage's first line is in sight and it scrolls on to its last line; the passage's 17 px, the
-# question's 18 (20 wide) and the furigana as they were
+# and its question and four options stand in a panel of their own (.rp-ask) — on a phone held upright pinned across the foot of the
+# screen under the passage, as the result panel is; on a wide screen, and on a phone on its side (fix round 1, Ruling 34), beside the
+# passage — the page as tall as the screen. At every size of the matrix and the three landscape ones, for the longest passage of data.js
+# and data-n3.js and the shortest: from the first frame the question (whole, or at 568×320 its first line with 還有) and the four options
+# are in sight, each option's middle taps it, the passage's first line is in sight and it scrolls on to its last line; the passage's
+# 17 px, the question's 18 (20 wider than 600 px) and the furigana as they were; no label row on an SE or a phone on its side (fix
+# round 1: its 27 px go to the question and the passage)
 RP_SIZES = [(360, 640), (375, 553), (390, 664), (412, 780), (430, 740), (768, 1024), (1024, 768), (1280, 800)]
+RP_LAND = [(667, 375), (640, 360), (568, 320)]   # a phone on its side (fix round 1, Ruling 34)
+def rp_land(w, h): return w > h and h <= 500   # a short landscape screen
+def rp_side(w, h): return w > 600 or rp_land(w, h)   # the panel beside the passage (else pinned across the screen's foot)
+def rp_metrics(w, h): return ("metrics", (w, h, w <= 430 or rp_land(w, h)))   # a phone's emulation (scale 2) for the phones
 RP = """const wait = (ms) => new Promise((r) => setTimeout(r, ms)), len = (x) => jaPlain(x.passage).length;
   const byLen = REG.read.slice().sort((a, c) => len(c) - len(a) || (a.id < c.id ? -1 : 1)), items = { long: byLen[0], short: byLen[byLen.length - 1] };
   const box = (el) => el.getBoundingClientRect(), inView = (q) => q.top >= -0.5 && q.bottom <= innerHeight + 0.5 && q.left >= -0.5 && q.right <= innerWidth + 0.5;
+  // whole in sight: inside the screen and inside every box that clips it (the panel, the passage)
+  const shown = (el) => { const r = box(el); let top = 0, bot = innerHeight, a = el.parentElement;
+    while (a && a !== document.body) { if (/auto|scroll|hidden|clip/.test(getComputedStyle(a).overflowY)) { const q = box(a); top = Math.max(top, q.top + a.clientTop); bot = Math.min(bot, q.top + a.clientTop + a.clientHeight); } a = a.parentElement; }
+    return r.top >= top - 0.5 && r.bottom <= bot + 0.5 && inView(r); };
+  const hits = (o) => { const r = box(o), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return Boolean(h && h.closest('.opt') === o); };
   const lineRect = (p, last) => { const tw = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); let n = null;
     while (tw.nextNode()) { const t = tw.currentNode; if (t.textContent.trim() && !t.parentElement.closest('rt')) { n = t; if (!last) break; } }
     const rg = document.createRange(); rg.selectNodeContents(n); const rs = [...rg.getClientRects()]; return rs[last ? rs.length - 1 : 0]; };
-  const show = async (it) => { startSession('items', { items: [it, it] }); route(); const e = currentEntry(); e.preview = false; e.q = makeQuestion(it, {}); renderPractice(); window.scrollTo(0, 0);
+  // a reading question with its options in the data's order: the app shuffles them, and two by two (a phone on its side) a row is as tall
+  // as its taller option, so a test draws one order
+  const rpAsk = (it) => { const q = makeQuestion(it, {}), right = q.options[q.answer]; q.options.sort((a, c) => it.op.indexOf(a.text) - it.op.indexOf(c.text)); q.answer = q.options.indexOf(right); return q; };
+  const show = async (it) => { startSession('items', { items: [it, it] }); route(); const e = currentEntry(); e.preview = false; e.q = rpAsk(it); renderPractice(); window.scrollTo(0, 0);
     await wait(80); if (document.fonts) await document.fonts.ready; return e; };
   // scrolled to its end, the passage's last line inside its box, in sight and above the result panel if one is up
   const readsToEnd = async (p) => { const t0 = p.scrollTop; p.scrollTop = 1e6; await wait(60); const L = lineRect(p, true), P = box(p), sh = document.querySelector('.fb-sheet');
     const ok = L.top >= P.top - 1 && L.bottom <= Math.min(P.bottom, sh ? box(sh).top : innerHeight) + 1; p.scrollTop = t0; await wait(30); return ok; };
-  const parts = () => ({ p: document.querySelector('.q-card .passage'), ask: document.querySelector('.q-card.rp-card > .rp-ask') });"""
+  const parts = () => ({ p: document.querySelector('.q-card .passage'), ask: document.querySelector('.q-card.rp-card > .rp-ask') });
+  // whether the question scrolls inside the panel (as the app counts it: more than 2 px below) and, if so, whether it says so — rp-more on
+  // it and 還有 in sight at its foot's right (fix round 1)
+  const cue = (stem) => { const more = stem.scrollHeight - stem.clientHeight - stem.scrollTop > 2, c = document.querySelector('.rp-ask > .q-stem + .rp-qcue > span');
+    if (!more) return [false, true]; const S = box(stem), C = c && box(c);
+    return [true, stem.classList.contains('rp-more') && Boolean(C) && getComputedStyle(c).opacity === '1' && C.width > 20 && C.right <= S.right + 1 && C.bottom <= S.bottom + 1 && C.bottom >= S.bottom - 30]; };"""
 def test_a_reading_question_shows_its_question_and_options_from_the_first_frame(b):
     js = "(async () => { " + FRESH + RP + """ const out = { ids: [items.long.id, items.short.id] };
       for (const [k, it] of Object.entries(items)) { const e = await show(it), { p, ask } = parts();
-        const stem = document.querySelector('.q-card .q-stem'), opts = [...document.querySelectorAll('.q-card .opt')], F = lineRect(p, false), P = box(p), A = ask ? box(ask) : null;
-        out[k] = { n: opts.length, stem: inView(box(stem)), whole: stem.scrollHeight <= stem.clientHeight + 1, opts: opts.every((o) => inView(box(o))),
-          hits: opts.every((o) => { const r = box(o), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return Boolean(h && h.closest('.opt') === o); }),
+        const stem = document.querySelector('.q-card .q-stem'), opts = [...document.querySelectorAll('.q-card .opt')], F = lineRect(p, false), P = box(p), A = ask ? box(ask) : null, label = document.querySelector('.q-card .q-label');
+        out[k] = { n: opts.length, stem: shown(stem), whole: stem.scrollHeight <= stem.clientHeight + 1, cued: cue(stem)[1], opts: opts.every(shown), hits: opts.every(hits),
           first: F.top >= P.top - 1 && F.bottom <= P.bottom + 1 && inView(F), toEnd: await readsToEnd(p), page: document.documentElement.scrollHeight <= innerHeight + 1,
           under: Boolean(A) && A.top >= P.bottom - 1, foot: A && [Math.round(A.left), Math.round(A.right) - innerWidth, Math.round(A.bottom) - innerHeight], beside: Boolean(A) && A.left >= P.right - 1,
-          sizes: [getComputedStyle(p).fontSize, getComputedStyle(stem).fontSize], html: p.innerHTML === e.q.passageHtml, bare: !/<r(?:uby|t)\\s/.test(document.querySelector('.q-card').innerHTML) }; }
+          label: getComputedStyle(label).display !== 'none', sizes: [getComputedStyle(p).fontSize, getComputedStyle(stem).fontSize], html: p.innerHTML === e.q.passageHtml,
+          bare: !/<r(?:uby|t)\\s/.test(document.querySelector('.q-card').innerHTML) }; }
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
-    for w, h in RP_SIZES:
-        r = json.loads(ev(b, js, [("metrics", (w, h, w <= 430))]))
+    for w, h in RP_SIZES + RP_LAND:
+        r = json.loads(ev(b, js, [rp_metrics(w, h)]))
         assert r['ids'][0] == 'rd-416', (w, h, r)   # the longest passage (623 characters, N3)
         for k in ('long', 'short'):
             x = r[k]
-            assert x['n'] == 4 and x['stem'] and x['whole'] and x['opts'] and x['hits'], (w, h, k, x)   # the question whole and every option in sight, each tapped at its middle
+            assert x['n'] == 4 and x['stem'] and x['opts'] and x['hits'] and x['cued'], (w, h, k, x)   # the question and every option in sight, each tapped at its middle
+            if (w, h) != (568, 320): assert x['whole'], (w, h, k, x)   # the question whole (at 568×320 the longest's scrolls inside the panel, saying 還有)
             assert x['first'] and x['toEnd'] and x['page'], (w, h, k, x)   # the passage's first line in sight, its last one reached by scrolling it; the page itself does not scroll
             assert x['html'] and x['bare'], (w, h, k, x)   # the passage and its furigana as they were, no attribute on a <ruby> or an <rt>
-            if w <= 600: assert x['under'] and x['foot'] == [0, 0, 0] and x['sizes'] == ['17px', '18px'], (w, h, k, x)   # a phone: the panel under the passage, across the screen at its foot
-            else: assert x['beside'] and x['sizes'] == ['17px', '20px'], (w, h, k, x)   # a wide screen: beside the passage
+            assert x['sizes'] == ['17px', '18px' if w <= 600 else '20px'], (w, h, k, x)
+            assert x['label'] == (not (w <= 600 and h <= 600) and not rp_land(w, h)), (w, h, k, x)   # no label row on an SE or a phone on its side
+            if rp_side(w, h): assert x['beside'], (w, h, k, x)   # a wide screen or a phone on its side: the panel beside the passage
+            else: assert x['under'] and x['foot'] == [0, 0, 0], (w, h, k, x)   # a phone held upright: under the passage, across the screen at its foot
 
-# …and answered: the options stay put, the passage is where it was read to and still reads on to its last line — on a phone above the
-# result panel, which rises as for any question (its 下一題 in sight, 70% of the screen at the most) — and 下一題 is in sight; the
-# passage's 中文翻譯 is there to open (in the result panel on a phone, under the result on a wide screen)
+# …and answered, right and wrong: the options stay put, the passage is where it was read to and still reads on to its last line — on a
+# phone (upright or on its side) above the result panel, which rises as for any question (its 下一題 in sight, 70% of the screen at the
+# most) — and 下一題 is in sight; the passage's 中文翻譯 is there to open (in the result panel on a phone, under the result on a wide
+# screen); no 發音 (Ruling 33)
 def test_a_reading_question_answered_keeps_its_passage_readable_and_next_in_sight(b):
     js = "(async () => { " + FRESH + RP + """ const out = {};
-      for (const [k, it] of Object.entries(items)) { const e = await show(it), { p } = parts();
+      for (const [k, it] of Object.entries(items)) for (const right of [false, true]) { const e = await show(it), { p } = parts();
         p.scrollTop = 30; await wait(30); const read = p.scrollTop, tops = () => [...document.querySelectorAll('.q-card .opt')].map((o) => Math.round(box(o).top)).join(','), t0 = tops();
-        answerCurrent((e.q.answer + 1) % 4); await wait(700);   // the panel's rise
+        answerCurrent(right ? e.q.answer : (e.q.answer + 1) % 4); await wait(700);   // the panel's rise
         const p2 = parts().p, nb = document.getElementById('btnNext'), N = box(nb), hit = document.elementFromPoint(N.left + N.width / 2, N.top + N.height / 2), sh = document.querySelector('.fb-sheet');
-        out[k] = { same: tops() === t0, kept: p2.scrollTop === read, scrolls: p2.scrollHeight > p2.clientHeight + 1, toEnd: await readsToEnd(p2),
-          next: inView(N) && Boolean(hit && hit.closest('#btnNext')), sheet: sh ? box(sh).height / innerHeight : 0,
+        out[k + (right ? 'Right' : 'Wrong')] = { same: tops() === t0, kept: p2.scrollTop === read, scrolls: p2.scrollHeight > p2.clientHeight + 1, toEnd: await readsToEnd(p2),
+          next: inView(N) && Boolean(hit && hit.closest('#btnNext')), sheet: sh ? box(sh).height / innerHeight : 0, replay: Boolean(document.querySelector('#view [data-act="replay"]')),
           zh: [...document.querySelectorAll(sh ? '.fb-sheet details > summary' : '.q-card details > summary')].map((s) => s.textContent) }; }
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
-    for w, h in RP_SIZES:
-        r = json.loads(ev(b, js, [("metrics", (w, h, w <= 430))]))
-        for k in ('long', 'short'):
+    for w, h in RP_SIZES + RP_LAND:
+        r = json.loads(ev(b, js, [rp_metrics(w, h)]))
+        for k in ('longWrong', 'longRight', 'shortWrong', 'shortRight'):
             x = r[k]
-            assert x['same'] and x['kept'] and x['toEnd'] and x['next'], (w, h, k, x)
+            assert x['same'] and x['kept'] and x['toEnd'] and x['next'] and not x['replay'], (w, h, k, x)
             assert x['zh'] == ['短文的中文翻譯'], (w, h, k, x)
-            if k == 'long': assert x['scrolls'], (w, h, k, x)   # the passage can still be scrolled
-            if w <= 600: assert 0 < x['sheet'] <= 0.701, (w, h, k, x)   # the result panel as before
+            if k.startswith('long'): assert x['scrolls'], (w, h, k, x)   # the passage can still be scrolled
+            if w <= 600 or rp_land(w, h): assert 0 < x['sheet'] <= 0.701, (w, h, k, x)   # the result panel as before (a phone on its side too)
             else: assert x['sheet'] == 0, (w, h, k, x)
 
-# every reading question of data.js and data-n3.js (305 on 2026-11-27) at every size of the matrix: the four options in sight and tapped at
-# their middle, the question's box and the passage's first line in sight, the page not scrolled. The question whole but where four long
-# options leave it no room on the smallest phones — then it scrolls inside the panel, its first line in sight: at 375×553 a 情報検索's
-# conditions (rd-489's 121 characters, rd-501's 154) and two N3 questions whose options run to three lines (rd-451, rd-488), at 360×640
-# rd-501 (2026-11-27)
-RP_SCROLLS = {(375, 553): {'rd-451', 'rd-488', 'rd-489', 'rd-501'}, (360, 640): {'rd-501'}}
+# every reading question of data.js and data-n3.js (305 on 2026-11-27) at every size of the matrix and the three landscape ones (fix round
+# 1), drawn in the data's option order (rpAsk), once plainly and once with a session's note over the card: the four options whole in sight
+# and tapped at their middle, the question's box (a line at the least) and the passage's first line in sight, the page not scrolled. But at
+# 568×320, five N3 questions whose options run to four lines two by two (RP_MISS: their second row is cut, the panel scrolls). The
+# question whole but where it is too long for the room — then it scrolls inside the panel saying 還有: at 375×553 and 360×640 the
+# 情報検索's conditions (rd-489's 121 characters, rd-501's 154), on a phone on its side also rd-451 (its options of up to 40) and at
+# 568×320 most long N3 ones (RP_SCROLLS, ==: a stale or broad entry fails too); with the note (shown on a wide screen only: hidden on a
+# phone, upright or on its side) rd-501 at 1024×768 as well. Measured 2026-11-28
+RP_SCROLLS = {(375, 553): {'rd-489', 'rd-501'}, (360, 640): {'rd-501'}, (667, 375): {'rd-451', 'rd-489', 'rd-501'}, (640, 360): {'rd-451', 'rd-489', 'rd-501'},
+    (568, 320): {'rd-027', 'rd-035', 'rd-404', 'rd-415', 'rd-416', 'rd-417', 'rd-422', 'rd-423', 'rd-429', 'rd-432', 'rd-433', 'rd-434', 'rd-437', 'rd-438', 'rd-440', 'rd-446',
+                 'rd-447', 'rd-450', 'rd-451', 'rd-452', 'rd-457', 'rd-458', 'rd-462', 'rd-464', 'rd-470', 'rd-476', 'rd-482', 'rd-488', 'rd-489', 'rd-490', 'rd-492', 'rd-494',
+                 'rd-495', 'rd-496', 'rd-499', 'rd-500', 'rd-501', 'rd-517', 'rd-537'}}
+RP_SCROLLS_NOTE = {(1024, 768): {'rd-501'}}
+RP_MISS = {(568, 320): {'rd-027', 'rd-451', 'rd-470', 'rd-488', 'rd-500'}}
 def test_every_reading_question_shows_its_options_and_passage_from_the_first_frame(b):
-    js = "(async () => { " + FRESH + RP + """ const bad = [], scrolls = []; startSession('items', { items: [items.long, items.long] }); route(); const e = currentEntry(); e.preview = false;
-      if (document.fonts) await document.fonts.ready;
-      for (const it of REG.read) { e.item = it; e.q = makeQuestion(it, {}); e.done = false; e.chosen = undefined; e.rpTop = 0; e.rpStem = 0; renderPractice(); window.scrollTo(0, 0);
-        const { p } = parts(), stem = document.querySelector('.q-card .q-stem'), opts = [...document.querySelectorAll('.q-card .opt')], F = lineRect(p, false), P = box(p);
-        const ok = opts.length === 4 && opts.every((o) => { const r = box(o), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return inView(r) && Boolean(h && h.closest('.opt') === o); })
-          && inView(box(stem)) && stem.clientHeight >= 34 && F.top >= P.top - 1 && F.bottom <= P.bottom + 1 && inView(F) && document.documentElement.scrollHeight <= innerHeight + 1;
-        if (!ok) bad.push(it.id);
-        if (stem.scrollHeight > stem.clientHeight + 1) scrolls.push(it.id); }
-      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify({ n: REG.read.length, bad, scrolls }); })()"""
-    for w, h in RP_SIZES:
-        r = json.loads(ev(b, js, [("metrics", (w, h, w <= 430))]))
-        assert r['n'] >= 300 and r['bad'] == [], (w, h, r)
-        assert set(r['scrolls']) <= RP_SCROLLS.get((w, h), set()), (w, h, r)
+    js = "(async () => { " + FRESH + RP + """ startSession('items', { items: [items.long, items.long] }); route(); const e = currentEntry(); e.preview = false;
+      const draw = (it) => { e.item = it; e.q = rpAsk(it); e.done = false; e.chosen = undefined; e.rpTop = 0; e.rpStem = 0; e.rpStemH = 0; renderPractice(); window.scrollTo(0, 0); };
+      // every passage drawn once first: the web font's pieces their kanji need are fetched (display: swap), then they are measured with them
+      for (const it of REG.read) { draw(it); void document.body.offsetHeight; } await wait(300); if (document.fonts) await document.fonts.ready;
+      const out = { n: REG.read.length };
+      for (const note of [false, true]) { SESSION.meta = Object.assign({}, SESSION.meta, { note: note ? '這是一段練習說明，看完就開始作答。' : '' }); const bad = [], scrolls = [], uncued = [];
+        for (const it of REG.read) { draw(it);
+          const { p } = parts(), stem = document.querySelector('.q-card .q-stem'), opts = [...document.querySelectorAll('.q-card .opt')], F = lineRect(p, false), P = box(p);
+          const ok = opts.length === 4 && opts.every((o) => shown(o) && hits(o)) && inView(box(stem)) && stem.clientHeight >= 34 && F.top >= P.top - 1 && F.bottom <= P.bottom + 1 && inView(F)
+            && document.documentElement.scrollHeight <= innerHeight + 1;
+          if (!ok) bad.push(it.id);
+          const [more, cued] = cue(stem); if (more) scrolls.push(it.id); if (!cued) uncued.push(it.id); }
+        const n = document.querySelector('#view > .plan-note');
+        out[note ? 'note' : 'plain'] = { bad, scrolls, uncued, noteShown: Boolean(n) && getComputedStyle(n).display !== 'none' }; }
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    for w, h in RP_SIZES + RP_LAND:
+        r = json.loads(ev(b, js, [rp_metrics(w, h)]))
+        assert r['n'] >= 300, (w, h, r['n'])
+        for k in ('plain', 'note'):
+            x = r[k]
+            assert set(x['bad']) == RP_MISS.get((w, h), set()), (w, h, k, x['bad'])
+            assert set(x['scrolls']) == RP_SCROLLS.get((w, h), set()) | (RP_SCROLLS_NOTE.get((w, h), set()) if k == 'note' else set()), (w, h, k, x['scrolls'])
+            assert x['uncued'] == [], (w, h, k, x['uncued'])   # each question that scrolls says so
+        assert r['note']['noteShown'] == (not rp_land(w, h) and w > 600), (w, h, r['note'])   # the note over a reading card on a wide screen only
 
 # the keyboard on a reading question as on any: 1–4 answer, Enter goes on (a phone's width and a wide screen)
 def test_a_reading_question_answers_by_the_keyboard(b):
@@ -532,10 +574,52 @@ def test_a_reading_question_answers_by_the_keyboard(b):
       key('Enter'); await wait(50); out.on = SESSION.idx;
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     for w, h in ((390, 664), (1280, 800)):
-        r = json.loads(ev(b, js, [("metrics", (w, h, w <= 430))]))
+        r = json.loads(ev(b, js, [rp_metrics(w, h)]))
         assert r == {'done': True, 'chosen': 2, 'built': True, 'on': 1}, (w, h, r)
 
-TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
+# Ruling 33 (fix round 1): a reading question has no 發音 anywhere — not on the panel's foot beside the passage before or after the answer,
+# nor in a phone's result panel — and R does nothing there, no toast (a passage has no clip: the button only ever toasted 「作答後可以聽
+# 整句。」); a word question keeps its 發音 and R
+def test_a_reading_question_has_no_speaker_and_r_does_nothing(b):
+    js = "(async () => { " + FRESH + RP + """ const key = (k) => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+      const said = [], s0 = speak, s1 = speakScript; speak = (t) => { said.push(t); return Promise.resolve(); }; speakScript = (t) => { said.push(t); return Promise.resolve(); };
+      const toast = () => document.getElementById('toast').classList.contains('show'), btn = () => Boolean(document.querySelector('#view [data-act="replay"]')), out = {};
+      const e = await show(items.long); out.before = btn(); key('r'); await wait(50); out.rBefore = [said.length, toast()];
+      answerCurrent((e.q.answer + 1) % 4); await wait(700); out.after = btn(); key('R'); await wait(50); out.rAfter = [said.length, toast()];
+      const v = REG.vocab.find((x) => x.builtin && jaPlain(x.w) === '学校'); startSession('items', { items: [v, v] }); route(); const e2 = currentEntry(); e2.preview = false; e2.autoPlayed = true;
+      e2.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); await wait(50); out.word = btn(); key('r'); await wait(50); out.wordSaid = said.length;
+      speak = s0; speakScript = s1; SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    for w, h in ((390, 664), (1280, 800), (667, 375)):
+        r = json.loads(ev(b, js, [rp_metrics(w, h)]))
+        assert r['before'] is False and r['after'] is False and r['rBefore'] == [0, False] and r['rAfter'] == [0, False], (w, h, r)
+        assert r['word'] is True and r['wordSaid'] == 1, (w, h, r)   # 發音 elsewhere as before
+
+# fix round 1 (review Minor 3): a phone's reading panel runs across the screen to its foot whatever the card's padding or border or the
+# page's gutter (Task 3 restyles the card): its margins are the screen's half-width either side of the card's middle, no sum of paddings
+def test_the_reading_panel_spans_the_screen_whatever_the_cards_padding(b):
+    js = "(async () => { " + FRESH + RP + """ await show(items.long); const st = document.createElement('style'); document.head.appendChild(st); const out = [];
+      for (const css of ['', '.q-card.rp-card { padding-left: 24px !important; padding-right: 24px !important; }', '.q-card.rp-card { padding-left: 12px !important; padding-right: 12px !important; }',
+        '.q-card.rp-card { border-left-width: 3px !important; border-right-width: 3px !important; }', 'body.practicing .content { padding-left: 20px !important; padding-right: 20px !important; }']) {
+        st.textContent = css; await wait(30); const A = box(parts().ask);
+        out.push([Math.round(A.left), Math.round(A.right) - innerWidth, Math.round(A.bottom) - innerHeight, document.documentElement.scrollWidth - innerWidth]); }
+      st.remove(); SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    for w, h in ((375, 553), (430, 740)):
+        r = json.loads(ev(b, js, [rp_metrics(w, h)]))
+        assert r == [[0, 0, 0, 0]] * 5, (w, h, r)   # left edge, right edge, foot, no sideways scroll
+
+# fix round 1 (review Minor 5): beside the passage the panel keeps 6 px either side, so an option's and 下一題's focus ring (2 px out at a
+# 2 px offset) shows whole, and it clips sideways: the answer's pop and shake never flash a scrollbar
+def test_the_reading_panel_beside_the_passage_keeps_a_focus_ring_whole(b):
+    js = "(async () => { " + FRESH + RP + """ const e = await show(items.long);
+      const room = (el) => { const ask = parts().ask, A = box(ask), r = box(el), l = A.left + ask.clientLeft; return [Math.round(r.left - l), Math.round(l + ask.clientWidth - r.right)]; };   // the panel drawn now
+      const out = { x: getComputedStyle(parts().ask).overflowX, opts: [...parts().ask.querySelectorAll('.opt')].map(room) };
+      answerCurrent((e.q.answer + 1) % 4); await wait(700); out.next = room(document.getElementById('btnNext'));
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    for w, h in ((768, 1024), (1280, 800)):
+        r = json.loads(ev(b, js, [rp_metrics(w, h)]))
+        assert r['x'] == 'hidden' and all(a >= 4 and c >= 4 for a, c in r['opts'] + [r['next']]), (w, h, r)
+
+TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

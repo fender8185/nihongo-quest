@@ -697,7 +697,8 @@ function renderPractice() {
   if (q.subHtml) subParts.push(q.subHtml);
   if (q.zhText) subParts.push(showZh ? `<span>${esc(q.zhText)}</span>` : '<button type="button" class="toggle-zh" data-act="show-zh">顯示中文（T）</button>');
   const answered = e.done;
-  const sheet = answered && phoneLayout();   // 1.0.43: a phone shows the result in a panel from the bottom
+  const read = Boolean(q.passageHtml);   // a reading question (test.5): its own panel, below
+  const sheet = answered && (phoneLayout() || (read && sideLayout()));   // 1.0.43: a phone shows the result in a panel from the bottom (and, test.5, a reading question on a phone on its side)
   const longOpts = q.options.some(o => jaPlain(o.text).length > 14);   // one long option makes all four smaller, so their sizes match
   // four 50音 options (ち ら き さ, ga gi gu ge) or four single characters (百 目 日 白): big, two by two. Not two-character words
   // (2026-11-13, the user): 今年 色 玄関 毎週 came two by two while other 例句填空 came in four rows; one kind of question, one look
@@ -728,25 +729,25 @@ function renderPractice() {
   let custom = q.custom ? customInteractionHtml(e, answered) : '';
   if (q.custom === 'g-order' && subParts.length) custom = custom.replace('<div class="order">', `<div class="order"><div class="q-sub order-sub">${subParts.join(' ')}</div>`);   // 排序: the meaning right above the sentence it explains
   const just = answered && e.justAnswered ? (e.chosen === q.answer ? ' just-ok' : ' just-bad') : ''; e.justAnswered = false;   // 1.0.41: only the draw right after the answer
+  // a reading question (2026-11-27, test.5; the user's pick 「選項固定在下方」): its question and options in a panel of their own (.rp-ask)
+  // — on a phone held upright pinned at the foot of the screen under the passage, on a wide screen or a phone on its side beside it — and
+  // the passage scrolling on its own (rpFit). Answered beside the passage (inline), the result (the passage's 中文翻譯 under its verdict,
+  // as in a phone's result panel) comes under the options in the panel, nothing above them moving, and the tool row with 下一題 is a foot
+  // held at the panel's bottom (.rp-foot); in a phone's result panel as for any question (a phone on its side too). No 發音 (Ruling 33: a
+  // passage has no clip, it only ever toasted), so the page keeps no tool row of its own on a phone
   const tools = `
     <div class="pr-actions">
       <div class="left">
-        ${q.custom === 'v-match' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>`}
+        ${q.custom === 'v-match' || read ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>`}
         ${q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-match' && (answered || q.fmt !== 'v-cloze') ? '<button type="button" class="btn btn-sm btn-ghost" data-act="speak-example" title="朗讀例句">例句</button>' : ''}
         ${answered ? answeredToolsHtml(e) : ''}
       </div>
       ${answered || q.custom ? '' : '<div class="right"><span class="tiny muted kbd-hint">按 1–4 作答</span></div>'}
     </div>`;
   const next = answered ? `<div class="pr-next"><button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>` : '';
-  // a reading question (2026-11-27, test.5; the user's pick 「選項固定在下方」): its question and options in a panel of their own (.rp-ask)
-  // — on a phone pinned at the foot of the screen under the passage, on a wide screen beside it — and the passage scrolling on its own
-  // (rpFit). Answered on a wide screen, the result (the passage's 中文翻譯 under its verdict, as in a phone's result panel) comes under
-  // the options in the panel, nothing above them moving, and the tool row with 下一題 is a foot held at the panel's bottom (.rp-foot);
-  // on a phone the result panel rises as for any question, the page keeping no tool row of its own (its 發音 has nothing to play for a
-  // passage, and the room is the passage's)
-  const read = Boolean(q.passageHtml);
+  // a reading question's question that scrolls inside the panel (short of room) says so: 還有 at its foot (.rp-qcue, shown by rp-more)
   const ask = `
-      ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
+      ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>${read ? '<div class="rp-qcue" aria-hidden="true"><span>還有</span></div>' : ''}` : ''}
       ${answered && q.revealHtml && !sheet && !read ? q.revealHtml : ''}
       ${subParts.length && q.custom !== 'g-order' ? `<div class="q-sub">${subParts.join(' ')}</div>` : ''}
       ${custom || `<div class="opts${q.wide ? ' wide' : ''}${glyph ? ' glyph' : ''}">${opts}</div>`}
@@ -784,6 +785,11 @@ function renderPractice() {
 const PHONE_MQ = window.matchMedia ? window.matchMedia('(max-width: 600px)') : null;
 function phoneLayout() { return Boolean(PHONE_MQ && PHONE_MQ.matches); }
 if (PHONE_MQ && PHONE_MQ.addEventListener) PHONE_MQ.addEventListener('change', () => { if (SESSION && currentRoute().name === 'practice') renderPractice(); });
+// a short landscape screen (a phone on its side; test.5's fix round 1, Ruling 34): a reading question lays its panel beside the passage
+// and its result rises in a phone's panel (css/app.css, the same media line)
+const SIDE_MQ = window.matchMedia ? window.matchMedia('(orientation: landscape) and (max-height: 500px)') : null;
+function sideLayout() { return Boolean(SIDE_MQ && SIDE_MQ.matches); }
+if (SIDE_MQ && SIDE_MQ.addEventListener) SIDE_MQ.addEventListener('change', () => { const e = SESSION && currentRoute().name === 'practice' && currentEntry(); if (e && e.q && e.q.passageHtml) renderPractice(); });
 // room under the page as tall as the panel, so what it covers can still be scrolled up above it (it grows with ⋯ or AI 解析)
 const SHEET_RO = window.ResizeObserver ? new ResizeObserver(([en]) => { if (en) { const view = document.getElementById('view'); view.style.setProperty('--sheet-h', en.target.offsetHeight + 'px'); rpUnder(view); } }) : null;
 function sheetFit(view) {
@@ -794,14 +800,19 @@ function sheetFit(view) {
   if (SHEET_RO) SHEET_RO.observe(sh);
 }
 // a reading question's passage, and its question where the panel is short of room (a 情報検索's conditions on a small phone), each scroll
-// on their own (2026-11-27, test.5): the foot fades while there is more below (rp-more; iOS hides scrollbars), and each is kept where it
-// was read to as the card is drawn again (the answer, a sync); a new question starts at the top
+// on their own (2026-11-27, test.5): the foot fades while there is more below (rp-more; iOS hides scrollbars; the question says 還有 too),
+// and each is kept where it was read to as the card is drawn again (the answer, a sync); a new question starts at the top. The question
+// keeps the height it was given before the answer (--rp-stem-h) when the result comes under the options beside the passage: the panel
+// scrolls then, and the options stay where they were (fix round 1)
 const RP_RO = window.ResizeObserver ? new ResizeObserver((ens) => ens.forEach((en) => (en.target.matches('.passage') ? rpUnder(document.getElementById('view')) : rpMore(en.target)))) : null;
 function rpMore(el) { if (el.isConnected) el.classList.toggle('rp-more', el.scrollHeight - el.clientHeight - el.scrollTop > 2); }
 function rpFit(view, e) {
   if (RP_RO) RP_RO.disconnect();
   const card = view.querySelector('.q-card.rp-card');
   if (!card) return;
+  const stem = card.querySelector('.rp-ask > .q-stem');
+  if (stem && !e.done) e.rpStemH = stem.getBoundingClientRect().height;
+  else if (stem && e.rpStemH && !view.querySelector('.fb-sheet')) stem.style.setProperty('--rp-stem-h', e.rpStemH + 'px');
   rpUnder(view);
   [[card.querySelector(':scope > .passage'), 'rpTop'], [card.querySelector('.rp-ask > .q-stem'), 'rpStem']].forEach(([el, k]) => {
     if (!el) return;

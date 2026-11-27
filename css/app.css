@@ -2330,9 +2330,12 @@ body.reading { overflow: hidden; }
   /* a word or a kanji on its own sits halfway down the room the options leave (a sentence stays at the top) */
   .q-card > .q-stem:is(.word, .zhstem, .picstem) { margin-top: auto; }
   .q-card > .opts { padding-top: 18px; }
-  /* 1.0.43: the result rises from the bottom in a panel (renderPractice draws it on a phone only) while the options stay put:
-     the page keeps its tool row as an inert ghost of the same height, and room under the page (--sheet-h, kept by sheetFit)
-     lets everything scroll up above the panel. It shows after the answer's pop or shake, and only on that draw. */
+}
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  /* 1.0.43: the result rises from the bottom in a panel (renderPractice draws it on a phone only — and for a reading question on a
+     phone on its side, test.5's fix round 1) while the options stay put: the page keeps its tool row as an inert ghost of the same
+     height, and room under the page (--sheet-h, kept by sheetFit) lets everything scroll up above the panel. It shows after the
+     answer's pop or shake, and only on that draw. */
   body.practicing .content:has(> .fb-sheet) { margin-bottom: var(--sheet-h, 0px); }
   .pr-ghost { visibility: hidden; }
   .fb-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; max-height: 70vh; max-height: 70dvh; display: flex; flex-direction: column; background: linear-gradient(var(--ok-soft), var(--ok-soft)), var(--bg-elev); border-top: 2px solid var(--ok-line); border-radius: 18px 18px 0 0; box-shadow: 0 -12px 30px -14px rgba(0,0,0,.55); }
@@ -2341,51 +2344,92 @@ body.reading { overflow: hidden; }
   .fb-sheet .feedback { margin: 0; padding: 0; border: 0; background: none; }
   .fb-sheet .pr-actions { margin-top: 8px; }
   .fb-sheet .pr-next { position: static; margin: 0; padding: 8px 16px calc(10px + env(safe-area-inset-bottom)); background: none; }
+  .fb-sheet .pr-next .btn-primary { width: 100%; min-height: 48px; font-size: 16px; }   /* as a phone's (above), the panel wider than 600 px too */
   .fb-sheet.rise { animation: sheetUp .25s ease-out .3s backwards; }
   @keyframes sheetUp { from { transform: translateY(100%); } }
 }
 /* a reading question (2026-11-27, test.5; the user: 「讀解文章的排版也幫我調整一下」, the pick 「選項固定在下方」): the page as tall as the
    screen and never scrolled; the passage (.rp-card > .passage) scrolls on its own and the question with its four options stands in a panel
    of its own (.rp-ask, renderPractice), so the question and every option are in sight from the first frame at any size and the passage
-   can be read on at any time. A phone: the panel pinned at the screen's foot under the passage, as the result panel is (which rises over
-   it as for any question); a wide screen: the panel beside the passage. While there is more below, the passage's foot fades (rp-more,
-   rpFit; iOS hides scrollbars); a question too long for the room left (a 情報検索's conditions on a small phone) scrolls inside the panel
-   the same way, the options never. Answered on a phone, room at the passage's foot as deep as the result panel covers it (--rp-under,
-   rpUnder) lets it read on to its last line above the panel. The look — the panel's edge and background, the options' padding — is in
-   the rules of .rp-ask */
+   can be read on at any time. One of three layouts at a time:
+   - a phone held upright (≤ 600 px wide, but for a short landscape screen): the panel pinned across the screen's foot under the passage,
+     as the result panel is (which rises over it as for any question);
+   - a wide screen: the panel beside the passage;
+   - a short landscape screen (a phone on its side, ≤ 500 px tall; fix round 1, Ruling 34): beside it too, closer set.
+   While there is more below, the passage's foot fades (rp-more, rpFit; iOS hides scrollbars); a question too long for the room left (a
+   情報検索's conditions on a small phone) scrolls inside the panel the same way and says 還有 (.rp-qcue), the options never. Answered on
+   a phone, room at the passage's foot as deep as the result panel covers it (--rp-under, rpUnder) lets it read on to its last line above
+   the panel; answered beside the passage, the question keeps its height (--rp-stem-h) and the panel scrolls. The look — the panel's
+   edge and background, the options' padding, the 還有 tag — is in the rules of .rp-ask and .rp-qcue */
 :is(.rp-card > .passage, .rp-ask > .q-stem).rp-more { -webkit-mask-image: linear-gradient(#000 calc(100% - min(26px, 35%)), rgba(0, 0, 0, .2)); mask-image: linear-gradient(#000 calc(100% - min(26px, 35%)), rgba(0, 0, 0, .2)); }
 .rp-card > .passage::after { content: ''; display: block; height: var(--rp-under, 0px); }
 .rp-card > .q-label { min-height: calc(1.6em + 6px); }   /* a chip's height: the 新 that turns into dots once answered moves the passage nowhere */
-@media (max-width: 600px) {
-  body.practicing .content:has(> .rp-card) { height: 100vh; height: 100dvh; padding-bottom: 0; }
+/* 還有 over the question's cut foot, at its right, while it scrolls (fix round 1): a tag on a line of no height, so nothing moves */
+.rp-qcue { position: relative; flex: none; height: 0; }
+.rp-qcue > span { position: absolute; right: 0; bottom: 3px; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px 0 10px; border-radius: 99px; border: 1px solid var(--line-2);
+  background: var(--bg-elev-2); color: var(--fg-2); font-size: var(--fs-label); line-height: 22px; box-shadow: var(--shadow); opacity: 0; pointer-events: none; }
+.rp-qcue > span::after { content: ''; width: 6px; height: 6px; margin-top: -4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+.rp-ask > .q-stem.rp-more + .rp-qcue > span { opacity: 1; }
+@media (max-width: 600px) and (orientation: portrait), (max-width: 600px) and (min-height: 501px) {
+  body.practicing .content:has(> .rp-card) { height: 100vh; height: 100dvh; padding-bottom: 0; overflow-x: clip; }   /* clip: a desktop's own scrollbar under the panel's 100vw */
+  body.practicing .content:has(> .rp-card) > .plan-note { display: none; }   /* a session's note: the room is the question's (fix round 1; no reading question opens a set today) */
   /* everything above the options closer set than on other cards (the card's top, the label's line, the passage's padding, the gaps), and
      the options too (their padding, the gaps, a line of 1.9 — the furigana still clear): an SE (375×553) holds an N3 question's four
      two-line options, its two-line question and the passage's first line */
-  body.practicing .content > .q-card.rp-card { flex: 1 1 0; min-height: 0; padding-top: 8px; padding-bottom: 0; border-bottom: 0; border-radius: 16px 16px 0 0; }
+  body.practicing .content > .q-card.rp-card { flex: 1 1 0; min-height: 0; padding-top: 8px; padding-bottom: 0; border-bottom-width: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
   .rp-card > .q-label { margin-bottom: 4px; line-height: 1.3; min-height: calc(1.3em + 6px); }
   .rp-card > .q-instr { display: none; }   /* 閱讀 on the label says it; its line goes to the passage (the user's sketch has none) */
   .rp-card > .passage { flex: 1 1 0; min-height: calc(2em + 10px); margin: 0 0 8px; padding: 4px 12px; overflow-y: auto; overscroll-behavior: contain; }   /* its first line at the least */
-  /* across the screen to its foot (the card's 16 px padding, its border and the page's 16 px gutter), the safe area under the options */
-  .rp-ask { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; margin: 0 -33px; padding: 6px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  /* across the screen to its foot whatever the card's and the page's paddings (fix round 1: the screen's half-width either side of the
+     card's middle), the safe area under the options */
+  .rp-ask { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; margin: 0 calc(50% - 50vw); padding: 6px 16px calc(10px + env(safe-area-inset-bottom, 0px));
     background: var(--bg-elev); border-top: 1px solid var(--line-2); border-radius: 18px 18px 0 0; box-shadow: 0 -12px 28px -16px rgba(0, 0, 0, .5); }
   .rp-ask > .q-stem { flex: 0 1 auto; min-height: 1.95em; overflow-y: auto; overscroll-behavior: contain; }   /* gives way first, a line at the least */
   .rp-ask > .opts { flex: none; gap: 4px; margin-top: 4px; }
   .rp-ask .opt { min-height: 46px; padding-block: 3px; } .rp-ask .opt > .jp { line-height: 1.9; }
-  .rp-ask > .rp-foot { display: none; }   /* no tool row before the answer (its 發音 has nothing to play for a passage); answered, the result panel's */
+  .rp-ask > .rp-foot { display: none; }   /* no tool row before the answer (no 發音 for a passage, Ruling 33); answered, the result panel's */
 }
-@media (min-width: 601px) {
+/* an SE (fix round 1): the label row's 27 px go to the question and the passage — a two-line question whole beside four two-line options,
+   every passage a line more */
+@media (max-width: 600px) and (max-height: 600px) { .rp-card > .q-label { display: none; } }
+@media (min-width: 601px), (orientation: landscape) and (max-height: 500px) {
   body.practicing .content:has(> .rp-card) { max-width: 1120px; height: 100vh; height: 100dvh; display: flex; flex-direction: column; padding-bottom: 24px; }
   body.practicing .content:has(> .rp-card) > :is(.pr-top, .plan-note) { width: 100%; max-width: 728px; margin-inline: auto; }   /* the bar where every question has it */
   /* the passage under the label and the instruction on the left, the panel from the card's top on the right */
   body.practicing .content > .q-card.rp-card { flex: 1 1 0; min-height: 0; display: grid; grid-template: auto auto minmax(0, 1fr) / minmax(0, 1.15fr) minmax(0, 1fr); column-gap: 28px; }
   .rp-card > .passage { min-height: 0; margin: 0; overflow-y: auto; overscroll-behavior: contain; }
-  .rp-ask { grid-area: 1 / 2 / -1 / 3; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-  .rp-ask > .opts { margin-top: 14px; }
+  /* the panel: the question gives way first (a line at the least), the options never; 6 px either side for a focus ring and the answer's
+     pop and shake (clipped there: no scrollbar flashes, fix round 1) */
+  .rp-ask { grid-area: 1 / 2 / -1 / 3; min-height: 0; display: flex; flex-direction: column; margin-inline: -6px; padding-inline: 6px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+  .rp-ask > .q-stem { flex: 0 1 auto; min-height: max(1.95em, var(--rp-stem-h, 0px)); overflow-y: auto; overscroll-behavior: contain; }
+  .rp-ask > .opts { flex: none; margin-top: 14px; }
   /* the tool row and, answered, 下一題 beside it: held at the panel's foot under however long a result (the panel scrolling under it) */
-  .rp-foot { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px; margin-top: 14px; padding-top: 8px; background: var(--bg-elev); }
+  .rp-foot { position: sticky; bottom: 0; z-index: 1; flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px; margin: 14px -6px 0; padding: 8px 6px 0; background: var(--bg-elev); }
   .rp-foot > .pr-actions { flex: 1 1 auto; margin: 0; } .rp-foot > .pr-next { flex: none; margin: 0 0 0 auto; }
+  .rp-ask > .rp-foot:not(:has(> .pr-next)) { flex: 0 999 auto; min-height: 0; overflow: hidden; }   /* before the answer (the key hint) it gives way before the question does */
 }
 @media (min-width: 901px) { body.practicing .content:has(> .rp-card) > :is(.pr-top, .plan-note) { max-width: 696px; } }
+/* a short landscape screen (fix round 1, Ruling 34: 667×375, 640×360, 568×320 — a phone on its side): beside the passage, closer set —
+   the bar and the card's edges, no label or instruction line, the options as in a phone's panel (no 1–4 keys: a touch screen), no tool
+   row before the answer, the options two by two and closer set at their sides; the panel 2.6 times the passage's width — every passage's
+   four options whole at 667×375 and 640×360; at 568×320 five whose options run to four lines cannot all be (fix round 1's report) */
+@media (orientation: landscape) and (max-height: 500px) {
+  body.practicing .content:has(> .rp-card) { padding-bottom: 4px; }
+  body.practicing .content:has(> .rp-card) > .plan-note { display: none; }
+  body.practicing .content > .q-card.rp-card { grid-template: minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 2.6fr); column-gap: 12px; padding: 6px 8px; }
+  .rp-card > :is(.q-label, .q-instr) { display: none; }
+  .rp-card > .passage { padding: 4px 8px; }
+  .rp-ask > .opts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }   /* two by two: two rows, each option on more lines, take less height than four */
+  .rp-ask .opt { min-height: 46px; padding: 2px 4px 2px 6px; } .rp-ask .opt > .jp { line-height: 1.9; } .rp-ask .opt > .kbd { display: none; }
+  .rp-ask > .rp-foot:not(:has(> .pr-next)) { display: none; }
+}
+@media (max-width: 600px) and (orientation: landscape) and (max-height: 500px) {   /* the phone's own bar, across the screen */
+  body.practicing .content:has(> .rp-card) > .pr-top { width: auto; max-width: none; margin: 0 -16px 4px; padding-top: calc(6px + env(safe-area-inset-top, 0px)); padding-bottom: 4px; }
+}
+@media (min-width: 601px) and (orientation: landscape) and (max-height: 500px) {
+  body.practicing .content:has(> .rp-card) { padding-top: calc(6px + env(safe-area-inset-top, 0px)); }
+  body.practicing .content:has(> .rp-card) > .pr-top { margin-bottom: 4px; }
+}
 .fb-opts { display: grid; gap: 2px; margin: 0 0 8px; font-size: 15px; }
 .fb-opt { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; color: var(--fg-2); }
 .fb-opt .fb-mark { flex: none; width: 1.1em; text-align: center; color: var(--fg-3); }

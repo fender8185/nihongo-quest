@@ -330,6 +330,7 @@ const ACTIONS = {
     if (!e || !e.q) return;
     const q = e.q;
     if (q.custom === 'v-match') return;   // 配對 has no 發音: each word is read as it is tapped
+    if (q.passageHtml) return;   // nor a reading question (Ruling 33, test.5): a passage has no clip; R does nothing there, no toast
     // before answering a grammar question the full sentence would give the answer away (句意拼貼 shows it: it can be heard)
     const text = q.audio || (e.done || q.fmt === 'g-zh' ? (q.fullJp || q.speakWord) : (q.fmt && q.fmt.startsWith('g-') ? '' : q.speakWord)) || '';
     if (!text) { toast('作答後可以聽整句。'); return; }
