@@ -2244,7 +2244,7 @@ body.reading { overflow: hidden; }
 .q-stem.word { font-size: 52px; line-height: 1.7; text-align: center; padding: 6px 0; }
 .q-stem.zhstem { font-family: inherit; font-size: 24px; text-align: center; }
 .q-sub { margin-top: 6px; font-size: 14px; color: var(--fg-3); }
-.q-stem:is(.word, .zhstem) + .q-sub { text-align: center; }
+.q-stem:is(.word, .zhstem) ~ .q-sub { text-align: center; }   /* ~: the 還有 tag's empty line (.rp-qcue) between them */
 .q-sub .toggle-zh { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 13px; }
 /* a reading question sits under its passage and should not outshine it (in practice in a panel of its own, .rp-ask: test.5) */
 :is(.passage + .q-stem, .rp-ask > .q-stem) { font-size: 20px; font-weight: 400; line-height: 1.95; }
@@ -2315,6 +2315,10 @@ body.reading { overflow: hidden; }
 @media (hover: none) and (pointer: coarse) { .kbd-hint, .opt .kbd, .opt-pick .kbd { display: none !important; } }   /* touch screens: no keyboard, no key hints (2026-11-11, the user: nor the options' 1–4; test.5's quiet badge, .pq-num, included: Ruling 37) */
 .banner.compact { padding: 8px 12px; font-size: 13px; gap: 8px 12px; }
 .pr-next { display: flex; justify-content: flex-end; margin-top: 12px; }
+/* answered on a wide screen (2026-11-28, test.5's Task 4: 「下一題」 in sight at every size — a long result, a listening transcript, put it
+   under the screen's foot), the button held at the screen's foot on the page's own strip while the result runs on under it, and in its
+   place once the page ends above; nothing moves for it. A phone's is in its result panel */
+@media (min-width: 601px) { body.practicing #view > .pr-next { position: sticky; bottom: 0; z-index: 5; padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--bg); } }
 @media (max-width: 600px) {
   /* only the button sticks (the tool row stays in flow above the feedback), on a solid strip so nothing shows through */
   .pr-next { position: sticky; bottom: 0; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); background: var(--bg); }
@@ -2453,7 +2457,7 @@ body > .tile-drag { border-radius: 12px; background: var(--pq-card); }   /* a ti
    a phone, room at the passage's foot as deep as the result panel covers it (--rp-under, rpUnder) lets it read on to its last line above
    the panel; answered beside the passage, the question keeps its height (--rp-stem-h) and the panel scrolls. The look — the panel's
    edge and background, the options' padding, the 還有 tag — is in the rules of .rp-ask and .rp-qcue */
-:is(.rp-card > .passage, .rp-ask > .q-stem).rp-more { -webkit-mask-image: linear-gradient(#000 calc(100% - min(26px, 35%)), rgba(0, 0, 0, .2)); mask-image: linear-gradient(#000 calc(100% - min(26px, 35%)), rgba(0, 0, 0, .2)); }
+:is(.rp-card > .passage, .rp-ask > .q-stem, .pq-fit > :is(.q-stem, .q-sub)).rp-more { -webkit-mask-image: linear-gradient(#000 calc(100% - min(26px, 35%)), rgba(0, 0, 0, .2)); mask-image: linear-gradient(#000 calc(100% - min(26px, 35%)), rgba(0, 0, 0, .2)); }
 .rp-card > .passage::after { content: ''; display: block; height: var(--rp-under, 0px); }
 .rp-card > .q-label { min-height: calc(1.6em + 6px); }   /* a chip's height: the 新 that turns into dots once answered moves the passage nowhere */
 /* 還有 over the question's cut foot, at its right, while it scrolls (fix round 1): a tag on a line of no height, so nothing moves */
@@ -2461,7 +2465,7 @@ body > .tile-drag { border-radius: 12px; background: var(--pq-card); }   /* a ti
 .rp-qcue > span { position: absolute; right: 0; bottom: 3px; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px 0 10px; border-radius: 99px; border: 1px solid var(--line-2);
   background: var(--bg-elev-2); color: var(--fg-2); font-size: var(--fs-label); line-height: 22px; box-shadow: var(--shadow); opacity: 0; pointer-events: none; }
 .rp-qcue > span::after { content: ''; width: 6px; height: 6px; margin-top: -4px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
-.rp-ask > .q-stem.rp-more + .rp-qcue > span { opacity: 1; }
+:is(.rp-ask, .pq-fit) > .q-stem.rp-more + .rp-qcue > span { opacity: 1; }
 @media (max-width: 600px) and (orientation: portrait), (max-width: 600px) and (min-height: 501px) {
   body.practicing .content:has(> .rp-card) { height: 100vh; height: 100dvh; padding-bottom: 0; overflow-x: clip; }   /* clip: a desktop's own scrollbar under the panel's 100vw */
   body.practicing .content:has(> .rp-card) > .plan-note { display: none; }   /* a session's note: the room is the question's (fix round 1; no reading question opens a set today) */
@@ -2480,6 +2484,70 @@ body > .tile-drag { border-radius: 12px; background: var(--pq-card); }   /* a ti
   .rp-ask > .opts { flex: none; gap: 4px; margin-top: 4px; }
   .rp-ask .opt { min-height: 46px; padding-block: 3px; } .rp-ask .opt > .jp { line-height: 1.9; }
   .rp-ask > .rp-foot { display: none; }   /* no tool row before the answer (no 發音 for a passage, Ruling 33); answered, the result panel's */
+  /* every other question (.pq-fit, 2026-11-28, test.5's Task 4; the user: 「這種還是要讓使用者一開始就能看得到選項」 and 「但感覺還是必須全
+     面適配各種size」) by the panel's own rule — the question gives way, the options never: the options (the tiles, 配對's words) at the
+     card's foot where they were and never under the screen's foot. The card is no taller than the room from its top to the screen's foot
+     (--pq-at, its top on the page: rpFit), so short of room the tool row under it (發音, 例句) goes under the screen's foot first, as it
+     did; then the Chinese under the stem gives way, to a line (or a chip) at the least, then the stem, to its first line: a sentence's,
+     a word's, a listening question's play button, a drill's verb (a kana or a kanji on its own stays whole, 看圖選字's picture grows
+     smaller instead) — each scrolling in place with the passage's fade and the question's 還有 (rp-more, .rp-qcue, rpFit; 還有 only
+     while words are under its foot). Should the rest not fit even so (none at the sizes of the matrix: the sweep), the card scrolls in its
+     own box rather than run under the screen */
+  body.practicing .content > .q-card.pq-fit { max-height: calc(100vh - var(--pq-at, 0px)); max-height: calc(100dvh - var(--pq-at, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+  .pq-fit > :is(.q-stem, .q-sub) { flex: 0 1 auto; overflow-y: auto; overscroll-behavior: contain; }
+  .pq-fit > .q-stem { min-height: 1.9em; } .pq-fit > .q-stem.zhstem { min-height: 1.6em; } .pq-fit > .q-stem.word { min-height: calc(1.7em + 4px); }   /* its first line */
+  .pq-fit > .q-sub { flex-shrink: 100; min-height: calc(1.6em + 6px); }   /* the Chinese first, to a line or a chip whole */
+  /* a listening question's play button (its block: --pq-play) whole at the least and never faded: the fade only under it */
+  .pq-fit > .q-stem:has(> .center:first-child) { --pq-play: 72px; min-height: var(--pq-play); }
+  .pq-fit > .q-stem.rp-more:has(> .center:first-child) { -webkit-mask-image: linear-gradient(#000 max(var(--pq-play), calc(100% - 26px)), rgba(0, 0, 0, .2)); mask-image: linear-gradient(#000 max(var(--pq-play), calc(100% - 26px)), rgba(0, 0, 0, .2)); }
+  .pq-fit > .q-stem:has(.kanji-big) { flex-shrink: 0; }   /* a kana, a kanji or a kana word on its own: whole */
+  .pq-fit > .q-stem:has(> .q-stem.word:first-child) { min-height: calc(44px * 1.7 + 12px); }   /* a drill's verb whole (its form's line under it names what the instruction does) */
+  /* 看圖選字's picture as large as the room allows (190 px, as before) and 96 px at the least, never cut: it fills the room the options
+     leave and sits in its middle, as the picture did between its margins */
+  .pq-fit > .q-stem.picstem { flex: 1 1 0; min-height: 96px; display: flex; justify-content: center; align-items: center; }
+  .pq-fit > .q-stem.picstem .pic { width: auto; height: 100%; max-width: min(190px, 60%); max-height: 190px; margin: 0; }
+  /* 句意拼貼 of six pieces or more (an N3 sentence's: a piece a row) closer set, as on a short phone (below) */
+  .pq-fit .zh-build .order-tiles:has(> :nth-child(6)) { gap: 3px 6px; } .pq-fit .zh-build .order-tiles:has(> :nth-child(6)) > .order-tile { padding-block: 6px; line-height: 1.35; }
+}
+/* a short phone (≤ 699 px tall: an iPhone in Safari but a Pro Max, a 360×640 Android; test.5's Task 4) sets the practice screen closer, so a
+   question's stem has the room before it must give way: the bar's strip, the card's paddings, the gaps under the label row and the
+   instruction, the room over the options and between them, the options' own padding (each 50 px or more to tap), the tool row's gap;
+   no type smaller, every furigana kept, nothing else of the A2 look changed */
+@media (max-width: 600px) and (max-height: 699px) {
+  body.practicing .pq-top { padding-top: calc(10px + env(safe-area-inset-top, 0px)); padding-bottom: 6px; margin-bottom: 4px; }
+  body.practicing .content > .q-card.pq-fit { padding-top: 12px; padding-bottom: 10px; }
+  .pq-fit > :is(.q-label, .q-instr) { margin-bottom: 6px; }
+  .pq-fit > .q-stem.word { padding-block: 2px; }
+  .pq-fit > .opts { padding-top: 12px; gap: 8px; }
+  .pq-fit > .opts:not(.glyph) > .opt:not(.opt-audio) { min-height: 50px; padding-block: 8px; }
+  body.practicing .content > .pq-fit + .pr-actions { margin-top: 8px; }
+  /* long content as the reading panel sets it: options of a long sentence (a listening dialog's) on its lines of 1.9 with 4 px over and
+     under (.rp-ask's: the furigana still clear), a listening question's play button 8 px slimmer and its margins 4 px; 句意拼貼's pieces
+     (Chinese, no furigana) on lines of 1.35, 6 px over and under, 3 px apart in a column, its slots' line closer; 排序's pieces 6 px over
+     and under and 6 px apart, its slots' line closer; the spelled answer's line closer (拼字, the tiles of 變化練習 and a fill-in);
+     配對's words (kana and Chinese, no furigana) on lines of 1.35, 8 px over and under, 6 px apart */
+  .pq-fit > .opts > .opt.long:not(.opt-audio) { padding-block: 4px; } .pq-fit > .opts > .opt.long > .jp { line-height: 1.9; }
+  .pq-fit > .q-stem .speak-big { margin-block: 4px; padding-block: 10px; } .pq-fit > .q-stem:has(> .center:first-child) { --pq-play: 56px; }
+  .pq-fit .zh-build .order-out { min-height: 0; padding: 0 0 4px; margin-bottom: 4px; line-height: 1.6; }
+  .pq-fit .spell-out { padding: 2px 0 6px; margin-bottom: 8px; }   /* the spelled answer's line (拼字, 變化練習's tiles) */
+  .pq-fit .zh-build .order-tiles { gap: 3px 6px; } .pq-fit .zh-build .order-tile { padding-block: 6px; line-height: 1.35; }
+  .pq-fit .order:not(.zh-build) .order-tile { padding-block: 6px; } .pq-fit .order:not(.zh-build) .order-out { padding: 2px 0 6px; margin-bottom: 8px; }
+  .pq-fit .order-tiles { gap: 6px; }
+  .pq-fit .match { gap: 6px 10px; } .pq-fit .match-col { gap: 6px; } .pq-fit :is(.match-word, .match-meaning) { padding-block: 8px; line-height: 1.35; }   /* 配對's words (kana and Chinese, no furigana) */
+}
+/* an SE-sized screen (≤ 599 px tall) closer still, as the reading card is there (its top 8 px): the bar's strip, the card's paddings, the
+   gaps under the label row (two lines for a word missed again and again) and the instruction, over the options and between them, 句意拼貼's
+   six pieces or more two to a row, 配對's words 6 px over and under; and no session note over a question (its line or two are 學習分析's
+   今天 card's as well) — the room is the question's, as on a reading card on any phone */
+@media (max-width: 600px) and (max-height: 599px) {
+  body.practicing .pq-top { padding-top: calc(8px + env(safe-area-inset-top, 0px)); padding-bottom: 4px; margin-bottom: 2px; }
+  body.practicing .content > .q-card.pq-fit { padding-top: 8px; padding-bottom: 8px; }
+  .pq-fit > :is(.q-label, .q-instr) { margin-bottom: 4px; }
+  .pq-fit > .opts { padding-top: 8px; gap: 6px; }
+  .pq-fit .zh-build .order-tiles:has(> :nth-child(6)) > .order-tile { max-width: calc(50% - 3px); padding-block: 4px; }   /* six pieces or more, two to a row (a long one on two lines) */
+  .pq-fit :is(.match-word, .match-meaning) { padding-block: 6px; }
+  body.practicing .content:has(> .pq-fit) > .plan-note { display: none; }
 }
 /* no label row on an SE (fix round 1: its 27 px go to the question and the passage — a two-line question whole beside four two-line options,
    every passage a line more) nor on a phone on its side (below): one condition, from here, for the row and for its chips in the result

@@ -756,9 +756,10 @@ function renderPractice() {
       ${answered || q.custom ? '' : '<div class="right"><span class="tiny muted kbd-hint">按 1–4 作答</span></div>'}
     </div>`;
   const next = answered ? `<div class="pr-next"><button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>` : '';
-  // a reading question's question that scrolls inside the panel (short of room) says so: 還有 at its foot (.rp-qcue, shown by rp-more)
+  // a question that scrolls in its own box (short of room: a reading question's in its panel, any other on a phone, rpFit) says so: 還有
+  // at its foot (.rp-qcue, shown by rp-more)
   const ask = `
-      ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>${read ? '<div class="rp-qcue" aria-hidden="true"><span>還有</span></div>' : ''}` : ''}
+      ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div><div class="rp-qcue" aria-hidden="true"><span>還有</span></div>` : ''}
       ${answered && q.revealHtml && !sheet && !read ? q.revealHtml : ''}
       ${subParts.length && q.custom !== 'g-order' ? `<div class="q-sub">${subParts.join(' ')}</div>` : ''}
       ${custom || `<div class="opts${q.wide ? ' wide' : ''}${glyph ? ' glyph' : ''}">${opts}</div>`}
@@ -772,8 +773,8 @@ function renderPractice() {
       ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
-    ${sessionNoteHtml(answered)}
-    <div class="q-card pq-card${read ? ' rp-card' : ''}${just}" data-pq-kind="${esc(q.kind || '')}">
+    ${sessionNoteHtml()}
+    <div class="q-card pq-card${read ? ' rp-card' : ' pq-fit'}${just}" data-pq-kind="${esc(q.kind || '')}">
       <div class="q-label">${pqLabelHtml(q.kind, q.label)}${e.requeued ? '<span class="chip">再練一次</span>' : ''}${e.encore ? '<span class="chip">換個方式再考</span>' : ''}${ladder}${leech}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${read ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>
@@ -849,22 +850,56 @@ window.addEventListener('resize', () => { const e = currentEntry(); if (!e || e.
 // and each is kept where it was read to as the card is drawn again (the answer, a sync); a new question starts at the top. The question
 // keeps the height it was given before the answer (--rp-stem-h) when the result comes under the options beside the passage: the panel
 // scrolls then, and the options stay where they were (fix round 1)
-const RP_RO = window.ResizeObserver ? new ResizeObserver((ens) => ens.forEach((en) => (en.target.matches('.passage') ? rpUnder(document.getElementById('view')) : rpMore(en.target)))) : null;
-function rpMore(el) { if (el.isConnected) el.classList.toggle('rp-more', el.scrollHeight - el.clientHeight - el.scrollTop > 2); }
+// Every other question on a phone held upright (2026-11-28, test.5's Task 4; the user: 「這種還是要讓使用者一開始就能看得到選項」) is laid
+// out by the same rule as a reading question's panel (.pq-fit, css/app.css): its stem — and the Chinese under it — give way and scroll in
+// place, saying so as the reading question does, the options never; so are they kept where they were read to across the answer's draw.
+// A box's content that grows inside it (a listening question's progress line under its play button) is watched too: its blocks. The card
+// is held to the room from its top to the screen's foot (--pq-at: its top on the page, measured again as the bar or a session's note over
+// it changes height)
+const RP_BOX = '.passage, .rp-ask > .q-stem, .pq-fit, .pq-fit > :is(.q-stem, .q-sub)';
+const RP_RO = window.ResizeObserver ? new ResizeObserver((ens) => ens.forEach((en) => { if (en.target.matches('#view > :is(.pr-top, .plan-note)')) { pqAt(); return; }
+  const el = en.target.matches(RP_BOX) ? en.target : en.target.parentElement;
+  if (el.matches('.passage')) rpUnder(document.getElementById('view')); else rpMore(el); })) : null;
+function pqAt() { const card = document.querySelector('#view > .q-card.pq-fit'); if (card) card.style.setProperty('--pq-at', `${Math.round(card.getBoundingClientRect().top + window.scrollY)}px`); }
+// answered on a phone, the card keeps the height it had as it was answered (measured then: answerCurrent), so a filled blank that takes
+// another line gives way in the stem and nothing under it moves — the options stay under the result panel as they were
+function pqHold(e) { const card = document.querySelector('#view > .q-card.pq-fit'); e.pqCardH = card && phoneLayout() ? [card.getBoundingClientRect().height, window.innerWidth] : null; }
+function rpMore(el) { if (el.isConnected) el.classList.toggle('rp-more', el.scrollHeight - el.clientHeight - el.scrollTop > 2 && (!el.matches('.pq-fit, .pq-fit > *') || rpHidden(el))); }
+// a question's box (.pq-fit) that gave way by a few px of the space under its last line hides nothing: 還有 only when some of its words (or a
+// picture, a button) are under its foot — more than the empty foot of a run of text (15% of its height, 4 px at the most) cut
+function rpHidden(el) {
+  const foot = el.getBoundingClientRect().top + el.clientTop + el.clientHeight, tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+    let rs = null;
+    if (n.nodeType === 3 && n.textContent.trim()) { const rg = document.createRange(); rg.selectNodeContents(n); rs = rg.getClientRects(); } else if (n.nodeType === 1 && n.matches('svg, img, button')) rs = n.getClientRects();
+    if (rs && [...rs].some((r) => r.height > 0 && r.bottom > foot + Math.max(1, Math.min(4, r.height * 0.15)))) return true;
+  }
+  return false;
+}
 function rpFit(view, e) {
   if (RP_RO) RP_RO.disconnect();
-  const card = view.querySelector('.q-card.rp-card');
+  const card = view.querySelector('.q-card:is(.rp-card, .pq-fit)');
   if (!card) return;
-  const stem = card.querySelector('.rp-ask > .q-stem');
-  if (stem && !e.done) e.rpStemH = stem.getBoundingClientRect().height;
-  else if (stem && e.rpStemH && !view.querySelector('.fb-sheet')) stem.style.setProperty('--rp-stem-h', e.rpStemH + 'px');
-  rpUnder(view);
-  [[card.querySelector(':scope > .passage'), 'rpTop'], [card.querySelector('.rp-ask > .q-stem'), 'rpStem']].forEach(([el, k]) => {
+  const read = card.classList.contains('rp-card');
+  if (read) {
+    const stem = card.querySelector('.rp-ask > .q-stem');
+    if (stem && !e.done) e.rpStemH = stem.getBoundingClientRect().height;
+    else if (stem && e.rpStemH && !view.querySelector('.fb-sheet')) stem.style.setProperty('--rp-stem-h', e.rpStemH + 'px');
+    rpUnder(view);
+  } else {
+    pqAt();
+    if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(pqAt);
+    if (RP_RO) view.querySelectorAll(':scope > :is(.pr-top, .plan-note)').forEach((el) => RP_RO.observe(el));
+    if (e.done && e.pqCardH && e.pqCardH[1] === window.innerWidth && view.querySelector('.fb-sheet')) { card.style.height = `${e.pqCardH[0]}px`; card.style.flexGrow = '0'; }
+  }
+  const boxes = read ? [[card.querySelector(':scope > .passage'), 'rpTop'], [card.querySelector('.rp-ask > .q-stem'), 'rpStem']]
+    : [[card, 'rpCard'], [card.querySelector(':scope > .q-stem'), 'rpStem'], [card.querySelector(':scope > .q-sub'), 'rpSub']];
+  boxes.forEach(([el, k]) => {
     if (!el) return;
     el.scrollTop = e[k] || 0;
     el.addEventListener('scroll', () => { e[k] = el.scrollTop; rpMore(el); }, { passive: true });
     rpMore(el);
-    if (RP_RO) RP_RO.observe(el);
+    if (RP_RO) { RP_RO.observe(el); if (el !== card) [...el.children].forEach((kid) => { if (kid.tagName === 'DIV') RP_RO.observe(kid); }); }
     if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => rpMore(el));
   });
 }
@@ -952,8 +987,9 @@ function prCountHtml() {
   const c = sessionCount();
   return `<div class="pr-count">${c.n} / ${c.total}</div>`;
 }
-// the session's note (the day's, or a drill's) over its first screen, a question or a new item's preview
-function sessionNoteHtml(answered = false) { return SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''; }
+// the session's note (the day's, or a drill's) over its first screen, a question or a new item's preview — answered too (test.5's Task 4:
+// it went with the answer, and the card moved up under the result)
+function sessionNoteHtml() { return SESSION.idx === 0 && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''; }
 function previewHtml(e, pct) {
   if (e.item.kind === 'g') return grammarPreviewHtml(e, pct);
   if (e.item.kind === 'a') return kanaPreviewHtml(e, pct);
@@ -1343,6 +1379,7 @@ function answerCurrent(i) {
   if (!e || e.done) return;
   const q = e.q;
   if (i < 0 || i >= q.options.length) return;
+  pqHold(e);
   e.done = true; e.chosen = i; e.justAnswered = true;
   const ok = i === q.answer;
   // 配對: every word paired wrong is answered wrong on its own; the word asked counts as right unless it is one of them
