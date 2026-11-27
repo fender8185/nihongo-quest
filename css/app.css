@@ -424,6 +424,9 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky :is(.yhero, .cust) :is(.hl-board, .hl-menu) .pic { display: block; width: 72px; height: 64px; }
 .sky :is(.yhero, .cust) :is(.hl-board, .hl-menu) i { font-style: normal; font-weight: 700; font-size: 22px; line-height: 1.15; color: #3b2a1c; white-space: nowrap; }
 .sky .yhero .hl-board { transform: translateX(-118%); }
+.hl-poster { position: absolute; z-index: 56; right: 12px; display: grid; justify-items: center; padding: 5px 9px 6px; border: 3px solid #a8241c; border-radius: 4px; background: #fbf3e2; box-shadow: 0 4px 0 rgba(0, 0, 0, .2); transform: rotate(3deg); pointer-events: none; --pic-shadow: transparent; --pic-steam: #c9bda6; }   /* あれ's poster held up when the wall's is off the screen (HALL's poster, test.5): as the wall's, a pin at its top — at the right, under the screen's buttons: これ's menu and それ's board are held up nearer the middle and the left */
+.hl-poster::before { content: ''; position: absolute; top: 3px; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #d0453c; }
+.hl-poster b { font-size: 17px; line-height: 1.2; color: #c8322a; font-family: 'Hiragino Mincho ProN', 'Noto Serif JP', serif; white-space: nowrap; } .hl-poster .pic { display: block; width: 54px; height: 46px; } .hl-poster i { font-style: normal; font-weight: 700; font-size: 15px; line-height: 1.2; color: #3b2a1c; white-space: nowrap; }
 .sky .cust .hl-menu { bottom: 44%; padding: 4px 8px 5px; transform: translateX(16%) rotate(6deg); border-color: #7a1a14; background: #b8322a; } .sky .cust .hl-menu :is(b, i) { font-size: 19px; } .sky .cust .hl-menu .pic { width: 58px; height: 50px; } .sky .cust .hl-menu b { color: #f6d47a; } .sky .cust .hl-menu .pic { border-radius: 6px; background: #fffaf0; } .sky .cust .hl-menu i { color: #fffaf0; }
 .hl-pick { position: absolute; z-index: 60; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); transform: translateX(-50%); width: min(520px, calc(100% - 24px)); padding: 14px 12px 12px; border-radius: 16px; overflow: hidden; background: rgba(251, 243, 226, .97); color: #2b2b33; box-shadow: 0 8px 28px rgba(0, 0, 0, .3); --pc: #4fae5a; --pic-shadow: rgba(90, 60, 30, .16); --pic-steam: #b4a891; }
 .hl-q { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; color: #6e4a30; } .hl-ear { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 0 #d8c8a8; font-size: 19px; cursor: pointer; }
@@ -602,6 +605,11 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .wk-uses { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; } .wk-uses span { padding: 2px 10px; border-radius: 99px; background: #fbeee0; color: #8a3a1c; font-size: 13px; font-weight: 600; }
 .wk-pay, .wk-back { margin: 12px 0 0; font-size: 13px; color: #6a5a4e; } .wk-back { color: #a8241c; font-weight: 600; }
 .wk-ask { display: grid; justify-items: center; margin: 14px 0 8px; } .wk-ask b { font-size: 18px; } .wk-ask span { font-size: 12px; color: #8a7a6e; }
+/* test.5 (2026-11-27; the user: 「SE 上有 3 張打工說明卡要捲一下才看得到はい／いいえ」): はたらきますか？ and はい／いいえ pinned at the card's foot
+   (wk-rfoot), the rest scrolling inside the card above them (wk-rbody, wide as the card: its scrollbar at the card's edge), its foot fading
+   while there is more below (wk-more) — at every size, 詳細規則 shut or open */
+.wk-rules .cls-card { display: flex; flex-direction: column; overflow: hidden; } .wk-rfoot { flex: none; }
+.wk-rbody { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -16px; padding: 0 16px 2px; }
 .wk-yn { display: flex; justify-content: center; gap: 10px; } .wk-yn .btn { min-width: 96px; font-size: 16px; }
 /* by night the card is the night's navy (--bg-elev): its reds and its notes lighter, 4.5:1 or more against it — ①②③, the headings and
    「今天做到…」 a light red, the pay line and the notes a light grey (test.4's fix round); by day as they were */
@@ -676,6 +684,16 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .bt-box { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px; border-radius: 12px; background: #b9875a; box-shadow: inset 0 0 0 3px #8a5e3a; } .bt-box.nine { grid-template-columns: repeat(3, 1fr); }
 .bt-good { position: relative; display: grid; justify-items: center; gap: 2px; min-height: 76px; padding: 6px 2px 4px; border: 0; border-radius: 10px; background: #f6efe0; font-size: 12px; cursor: pointer; } .bt-good .pic { width: 40px; height: 40px; }
 .bt-good.in { box-shadow: 0 0 0 2px #3f9a8c; } .bt-n { position: absolute; top: 2px; right: 4px; font-style: normal; font-weight: 700; color: #c8453a; font-size: 13px; }
+/* the card one column at any size (test.5, 2026-11-27): the car drawn smaller when the screen is short — its stage as tall as the car is
+   at the card's width, given up first (down to 84 px: four windows 40 px wide or more), the car as wide as that height lets it be, its
+   windows with it; the passenger's row and the talk row held for the shift (BENTO_RUN). No container units (Safari before 16): as before */
+.wk-bento .cls-card { container-type: inline-size; }
+.wk-bento .cls-card > .bt-stage { flex: 1 1 calc((100cqw + 12px) * 150 / 360); min-height: 84px; container-type: size; }
+.wk-bento .bt-car { width: min(100cqw, 100cqh * 360 / 150); margin-right: auto; }   /* drawn smaller: at the left, the departure bar in the sky to its right (over its windows it hid the 4th) */
+.wk-bento .bt-talk { align-content: start; }   /* held as tall as the shift needs: what shows now at its top */
+.wk-bento .bt-bub { display: grid; grid-template-columns: auto auto minmax(0, 1fr); column-gap: 8px; } .wk-bento .bt-bub > :is(.bt-who, .bt-ear) { grid-row: span 2; } .wk-bento .bt-bub > :is(b, small) { grid-column: 3; } .wk-bento .bt-bub > .bt-hint { grid-column: 1 / -1; }   /* the words and their 中文 one over the other, the whole width beside the face and 🔊 (they stood side by side, each a narrow column) */
+.wk-bento .bt-handrow { margin: 6px 0; }
+.wk-bento .bt-replies { display: grid; grid-template-columns: 1fr 1fr; } .wk-bento .bt-reply { white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3; }   /* はい、あります。 and すみません、ありません。 side by side, the longer broken at its comma on a phone (they took two rows at 375) */
 /* きっぷ売り場 (2026-11-20): the wall over the window — the route and its fares (pick a station for tickets), the clock and the
    departure board — the glass with whoever is asking, the printed tickets, the replies */
 .wk-window .cls-card { background: #eef1ee; color: #2b2b33; border-bottom: 10px solid #3f9a8c; }
@@ -683,10 +701,11 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
    board's rows tighter, 原田's word and the hero's one line under the answers */
 .wk-window .cls-card { padding: 12px 12px 10px; } .wk-window .wk-cust { min-height: 0; gap: 4px 8px; align-items: flex-start; } .wk-window .wk-cust .kr-face { width: 44px; height: 44px; } .wk-window .wk-emo { left: 20px; }   /* the face at the row's top, its mood mark on its corner, clear of the bubble however tall the words grow (2026-11-25, parked from Task 7: the shared 38 px put it half under the bubble) */
 .wk-window .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; padding: 6px 10px; font-size: 17px; } .wk-window .wk-bub .wk-ear { grid-row: span 2; } .wk-window .wk-bub > :not(.wk-ear) { grid-column: 2; }
-:is(.md-talk, .lf-talk) { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } :is(.md-talk, .lf-talk) .kr-face { width: 34px; height: 34px; flex: none; } :is(.md-talk, .lf-talk) .wk-say { font-size: 14px; }
-:is(.md-talk, .lf-talk)[data-who="me"] :is(.kr-face, .wk-say), :is(.md-talk, .lf-talk):not([data-who="me"]) .wk-me { display: none; } :is(.md-talk, .lf-talk) .wk-me { flex: 1; margin: 0; }
+:is(.md-talk, .lf-talk, .bt-tk) { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } :is(.md-talk, .lf-talk, .bt-tk) .kr-face { width: 34px; height: 34px; flex: none; } :is(.md-talk, .lf-talk, .bt-tk) .wk-say { font-size: 14px; }
+:is(.md-talk, .lf-talk, .bt-tk)[data-who="me"] :is(.kr-face, .wk-say), :is(.md-talk, .lf-talk, .bt-tk):not([data-who="me"]) .wk-me { display: none; } :is(.md-talk, .lf-talk, .bt-tk) .wk-me { flex: 1; margin: 0; }   /* ハル's and the hero's under the 駅弁's tray too (test.5) */
 .wk-window .md-opts { margin-top: 6px; } .wk-window .md-opt { min-height: 44px; padding-block: 6px; }
 .md-wall { margin: 4px -6px 6px; padding: 6px 10px 6px; border-radius: 12px; background: #2f4a6e; color: #fff; }
+.wk-window .md-wall { --wk-floor: var(--md-chart, 132px); }   /* test.5: the card's reading block (wk-read) — down to the chart whole (its stations are tapped for tickets: MADO_RUN sets --md-chart from it), the clock and the board under it reached by its own scroll, brought into sight for a time or a track asked */
 .md-chart { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; } .md-rail { position: absolute; left: 7%; right: 7%; top: 12px; height: 4px; border-radius: 2px; background: #3f9a8c; }
 .md-st { position: relative; display: grid; justify-items: center; align-content: start; gap: 1px; padding: 2px 0 4px; border: 0; border-radius: 8px; background: none; color: #fff; font: inherit; cursor: default; }
 .md-chart.pick .md-st:not(.here) { cursor: pointer; background: rgba(255, 255, 255, .12); animation: mdPulse 1.4s ease-in-out infinite; } @keyframes mdPulse { 50% { background: rgba(255, 255, 255, .26); } }
@@ -746,6 +765,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .tx-blink { opacity: 0; } .tx-car.blink-l .tx-blink.l, .tx-car.blink-r .tx-blink.r { animation: txBlink .4s steps(2) infinite; } @keyframes txBlink { 50% { opacity: 1; } }
 .tx-ctl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; } .tx-go { min-width: 0; min-height: 54px; padding-inline: 4px; font-size: 18px; } .tx-go.stop { background: #d0453c; color: #fff; } .tx-go.picked { box-shadow: 0 0 0 3px #f2c94c; } .tx-go:disabled { opacity: .45; }
 .tx-pays { position: absolute; left: 50%; bottom: 10px; width: min(100% - 20px, 340px); transform: translateX(-50%); display: grid; gap: 6px; padding: 8px; border-radius: 14px; background: rgba(244, 241, 230, .95); box-shadow: 0 4px 16px rgba(0, 0, 0, .25); } .tx-pays:empty { display: none; } .tx-pay { min-height: 44px; font-size: 17px; } .tx-pay.wk-bad { animation: shake .3s ease; }
+@supports (width: 1cqw) { .tx-pays { container-type: inline-size; } .tx-pay { padding-inline: 10px; font-size: clamp(13px, (100cqw - 22px) / var(--n, 12), 17px); } }   /* test.5: a fare said in kana on one line, whole in the panel at any width (きゅうひゃくはちじゅうえんです。 ran past it at 360) — 17 px while it fits */
 /* 券売機 and the ride (2026-11-20): the machine (its screen, a button a fare, the coin slot, the ticket out); inside the car (the
    world going by the windows while it runs, the straps swaying, the LED over the door), the announcement, 降りる */
 .kb-card .cls-card, .rd-card .cls-card { background: #eef1ee; color: #2b2b33; border-bottom: 10px solid #3f9a8c; }
@@ -1078,6 +1098,27 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
   .wk-front .fr-opts { gap: 4px; margin-top: 4px; } .wk-front .fr-opt { min-height: 42px; } .wk-front .fr-talk { margin-top: 3px; }
 } .fr-talk .kr-face { width: 34px; height: 34px; flex: none; } .fr-talk .wk-say { font-size: 14px; }
 .fr-talk[data-who="me"] :is(.kr-face, .wk-say), .fr-talk:not([data-who="me"]) .wk-me { display: none; } .fr-talk .wk-me { flex: 1; margin: 0; }
+/* ---- test.5 (2026-11-27; the user: 「打工進行中，回答選項在小螢幕上也固定在卡片底部，上面的看板、客人自己捲動」, 「必須全面適配各種size」): every
+   job's card one column no taller than the screen (wk-col: the onsen's four since fix round 2, ruling 8 — below — now all twelve). The
+   answers, the customer and the talk row are fixed parts of it, never shrunk; what is read (wk-read: a board, the chart, the shelf, a
+   picture) takes what is left down to its floor (--wk-floor) and scrolls inside itself, its foot fading while there is more (JOBS.reading),
+   or is drawn smaller (a picture: the 駅弁's car). Where even so the column runs past the screen, the talk row goes under the fold first:
+   JOBS.bring, once as a customer comes, never scrolls the answers or the customer's words out of sight. On every phone in Safari (under 700
+   px tall) the card 8 px from the screen's edges, its foot thinner (the taxi's and the onsen's four, test.4) ---- */
+.wk-col .cls-card { display: flex; flex-direction: column; } .wk-col .cls-card > * { flex-shrink: 0; }
+.wk-col .wk-read { flex: 1 1 auto; min-height: var(--wk-floor, 120px); overflow-y: auto; overscroll-behavior: contain; }
+@media (max-height: 699px) {
+  .cls.wk-col { padding-top: max(8px, env(safe-area-inset-top, 0px)); padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+  .wk-col .cls-card { max-height: calc(100dvh - max(8px, env(safe-area-inset-top, 0px)) - max(8px, env(safe-area-inset-bottom, 0px))); padding-top: 12px; padding-bottom: 6px; border-bottom-width: 6px; }
+  /* what a short screen needs a little closer set, nothing to read or tap under its size: 收銀's things on the counter (their pictures
+     40 px, the price tags as they were; the customer's face 46, 張's 40), the 駅弁's tray (its goods' pictures 28 px, a row 60-odd px) and the car's stage */
+  .wk-till .wk-goods { padding: 6px; } .wk-till .wk-good { padding: 5px 4px 4px; } .wk-till .wk-good .pic { width: 40px; height: 40px; } .wk-till .wk-cust .kr-face { width: 46px; height: 46px; } .wk-till .wk-cust { min-height: 54px; } .wk-till .wk-who { min-height: 44px; margin-top: 4px; } .wk-till .wk-who .kr-face { width: 40px; height: 40px; }
+  .wk-bento .bt-box { gap: 5px; padding: 6px; } .wk-bento .bt-good { min-height: 0; padding: 2px; } .wk-bento .bt-good .pic { width: 28px; height: 28px; } .wk-bento .bt-stage { margin-block: 4px 2px; } .wk-bento .bt-dep i { width: 60px; }
+  .wk-bento .bt-tk { align-items: flex-start; }   /* its line at its top: under the fold on an SE it is the room held under it that goes first */
+  .wk-window .wk-cust { align-items: flex-end; align-content: flex-end; }   /* 原田's customer kept at their closed height (MADO_RUN): opened, their words grow up over the wall, the face where it was */
+  .wk-window .cls-card { padding-top: 8px; } .wk-window .wk-bub { padding-block: 3px; } .wk-window .md-wall { margin-bottom: 4px; padding-block: 4px; } .wk-window .md-opts { margin-top: 4px; } .wk-window .md-glass { padding: 6px 8px 4px; } .wk-window .md-tk { margin-top: 4px; padding: 3px 8px; } .wk-window .md-tk b { font-size: 15px; }
+  .wk-window .md-opt { min-height: 42px; padding-block: 4px; line-height: 1.3; }   /* a sum for two tickets on two lines (ぜんぶで｜…えんです。), three of them in sight with the chart on an SE */
+}
 /* fix round 2, ruling 8 (the user plays on an iPhone: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」 — in Safari every iPhone is under
    700 px tall): the onsen's four job cards are columns no taller than the screen. The header (its ✕) stays, stuck at the top should the
    card itself have to scroll; the customer, the replies and the talk row are each held for the whole customer (JOBS.hold); the reading
@@ -1087,20 +1128,19 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
    card whole (140: they run 95–109 px); the room drawn at 140 px tall at the least (a guest's three two-line replies fit a 360×640 phone
    so; at a do task, where the replies' place is empty, it is taller and its things 40 px or more to tap); the shelves' top row whole, its
    price tags included (136; fix round 3) */
-:is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card { --wk-top: clamp(0px, calc(50dvh - 420px), 160px); margin-top: var(--wk-top); padding-top: 0; display: flex; flex-direction: column;
-  max-height: calc(100dvh - max(16px, env(safe-area-inset-top, 0px)) - max(16px, env(safe-area-inset-bottom, 0px)) - var(--wk-top)); }
-:is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card > * { flex-shrink: 0; }
+:is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .cls-card { --wk-top: clamp(0px, calc(50dvh - 420px), 160px); margin-top: var(--wk-top); padding-top: 0;
+  max-height: calc(100dvh - max(16px, env(safe-area-inset-top, 0px)) - max(16px, env(safe-area-inset-bottom, 0px)) - var(--wk-top)); }   /* the column itself: wk-col (above) */
 :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .wk-head { position: sticky; top: 0; z-index: 4; margin: 0 -12px; padding: 12px 52px 4px 12px; background: inherit; }
 :is(.wk-annai, .wk-front, .wk-nakai, .wk-miyage) .wk-head .cls-x { top: 8px; right: 8px; }
 .wk-more { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), rgba(0, 0, 0, .2)); mask-image: linear-gradient(#000 calc(100% - 26px), rgba(0, 0, 0, .2)); }
-.wk-front .cls-card > .fr-desk { flex: 1 1 auto; min-height: 120px; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(6px + var(--wk-under, 0px)); }
+.wk-front .cls-card > .fr-desk { flex: 1 1 auto; min-height: max(120px, var(--fr-keys, 0px)); overflow-y: auto; overscroll-behavior: contain; padding-top: calc(6px + var(--wk-under, 0px)); }   /* a check-in's guest: no lower than the key board whole (--fr-keys, FRONT_RUN: its keys are the answers then; test.5) */
 .wk-annai .cls-card > .an-board { flex: 1 1 auto; min-height: 140px; padding-top: var(--wk-under, 0px); } .wk-annai .an-btitle { top: var(--wk-under, 0px); }
 .wk-nakai .cls-card > .nk-stage { flex: 1 1 auto; min-height: 140px; display: flex; } .wk-nakai .nk-art { flex: 1 1 auto; min-height: 0; display: flex; } .wk-nakai .nk-art svg { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; }
 /* the おみやげ屋 (fix round 3, ruling 11): its shop no box of its own — the shelves alone shrink and scroll (their floor: the top row whole,
    its price tags included: 136), the front (the customer, their bubble, the tray and どうぞ) a fixed part of the column, never cut; the
    replies' place never blank: the buttons on show for the whole customer, their words not yet shown before the reply step (……) */
 .wk-miyage .cls-card > .om-shop { display: contents; }
-.wk-miyage .om-shelves { flex: 1 1 auto; min-height: 138px; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(5px + var(--wk-under, 0px)); margin: 2px -8px 0; border: 2px solid #6e5236; border-bottom: 0; border-radius: 12px 12px 0 0; }
+.wk-miyage .om-shelves { flex: none; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(5px + var(--wk-under, 0px)); margin: 2px -8px 0; border: 2px solid #6e5236; border-bottom: 0; border-radius: 12px 12px 0 0; }   /* test.5: whole at every size — every customer picks from them (they are the answers then); the talk row gives way first (it was the shelves' lower row, down to 138 px) */
 /* the shelves' frame (task 2, ruling 18): a border inside their own box, in line with the front's frame (2 px outside it, on top at the
    seam) — the fade (.wk-more) masks all a box paints and cut a frame drawn outside it at the top and sides; so the fade keeps the two
    side borders whole, and never starts above the top row's foot (its price tags at full strength at the floor: the same 136 px of
@@ -1126,6 +1166,19 @@ body { --rk-out: var(--day); --rk-md: calc(var(--day) + (1 - var(--day)) * .2); 
   .om-noren { height: 14px; padding-top: 3px; } .om-noren svg { height: 9px; } .om-door { padding-block: 2px 4px; } .om-counter { padding-block: 4px 5px; }
   .wk-miyage .wk-grr { top: -14px; }   /* a customer's pop-up word under the 14 px noren: inside the front, which clips (task 2, ruling 18: −20 cut its top 4 px) */
   .wk-miyage .om-opts { gap: 4px; margin-top: 4px; } .wk-miyage .om-talk { margin-top: 3px; }
+  /* test.5: the shelves whole (the goods are the answers at a pick) — their goods 38 px, their tags closer under them; the tray and the
+     replies a little lower (42, as the フロント's); the talk row's line at its top, the room held under it the first to go under the fold */
+  .wk-miyage .om-shelves { --om-pic: 38px; gap: 2px; padding-bottom: 3px; } .wk-miyage .om-tag { margin-top: 3px; }
+  .wk-miyage .om-tray { height: 40px; } .wk-miyage .om-plate { width: 60px; height: 36px; } .wk-miyage .om-opt { min-height: 42px; line-height: 1.3; } .wk-miyage .om-talk { align-items: flex-start; }
+  .wk-miyage .om-noren { display: none; } .wk-miyage .wk-grr { top: -2px; }   /* the noren's strip left out (a customer's pop-up word under its place, inside the front, which clips) */
+  .wk-miyage .om-door { padding-block: 2px; } .wk-miyage .om-counter { padding-block: 2px 3px; }
+}
+@media (max-height: 599px) {   /* an SE-sized screen: a check-in's guest at the フロント — the key board whole (its rows 42 px), their words and four replies in sight too (test.5) */
+  .wk-front .fr-board { grid-auto-rows: 42px; } .wk-front .fr-opts { gap: 3px; } .wk-front .fr-lobby { padding-top: 6px; border-bottom-width: 6px; }
+}
+@media (max-height: 599px) {   /* an SE-sized screen (375×553 in Safari): the goods 28 px under a lower まんじゅう sign, the replies 14 px — the shelves, the customer, the tray and the replies in sight */
+  .wk-miyage .om-shelves { --om-pic: 28px; padding-top: calc(3px + var(--wk-under, 0px)); } .wk-miyage .om-shelf.om-top { --om-top: 15px; } .wk-miyage .om-sign { height: 14px; padding-top: 3px; font-size: 11px; } .wk-miyage .om-sign rt { font-size: 8px; } .wk-miyage .om-sign::before { top: 4px; width: 6px; height: 6px; }
+  .wk-miyage .om-opts { gap: 3px; margin-top: 2px; } .wk-miyage .om-opt { min-height: 40px; font-size: 14px; } .wk-miyage .wk-head { padding-top: 6px; } .wk-miyage .wk-head b { font-size: 16px; }   /* a superior's three replies, two lines each, in sight under the shelves and their words */
 }
 @media (prefers-reduced-motion: reduce) { :is(.fr-opt, .fr-key).wk-bad, .fr-bell.fr-ding .fr-cap, .fr-dn.fr-new { animation: none; } }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */

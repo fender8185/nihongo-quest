@@ -229,7 +229,7 @@ const TAXI_RUN = (() => {
     // the fare: read off the meter (three to pick from); right, their thanks (and maybe おつりは いいです), the next ride
     function pay() {
       R.phase = 'pay'; R.choosing = false; ctl(); const f = R.fare, opts = shuffle([f, f + 80, f - 80]); R.payRight = opts.indexOf(f);
-      el('.tx-pays').innerHTML = opts.map((v, i) => `<button type="button" class="btn tx-pay" data-o="${i}" lang="ja">${esc(S().pay[0].replace('{P}', YEN.reading(v)))}</button>`).join('');   // in kana: the meter's digits read, not matched
+      el('.tx-pays').innerHTML = opts.map((v, i) => { const t = S().pay[0].replace('{P}', YEN.reading(v)); return `<button type="button" class="btn tx-pay" data-o="${i}" lang="ja" style="--n: ${[...t].length}">${esc(t)}</button>`; }).join('');   // in kana: the meter's digits read, not matched; --n its length (one line at any width: css .tx-pay)
       bub(); speakAs(R.ride.who, s.cust.price[0]);
     }
     async function paid() {
@@ -262,7 +262,7 @@ const TAXI_RUN = (() => {
       if (station) drive(xy(...R.at), 0, T(1.6)).then(() => arrive());
       else { R.choosing = true; ctl(); arrive(); }
     }
-    CLASS.card('wk-taxi', '計程車導航', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
+    CLASS.card('wk-taxi wk-col', '計程車導航', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head tx-head"><b lang="ja"><ruby>鈴木<rt>すずき</rt></ruby>タクシー</b><span class="wk-n"></span><div class="tx-meter"><span lang="ja"><ruby>料金<rt>りょうきん</rt></ruby></span><b></b><i>円</i></div></div>
       <div class="tx-top"><span class="kr-face tx-face"></span><p class="tx-bub"></p></div>
       <div class="tx-mapbox">${mapSvg()}<div class="tx-pays"></div></div>

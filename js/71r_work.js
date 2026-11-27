@@ -201,15 +201,22 @@ const WORK = (() => {
   function intro(yard, job) {
     const c = can(job); if (!c.ok) { toast(c.why, 3600); return false; }
     const P = PLACES[job], R = RULES[job] || { steps: [DOES[job] || ''], inside: [], how: [], uses: [], n: `一班 ${nOf(job)} 件` }, t = today(), back = t && t.place === job && !fin(t) ? t.done : 0, p = pay(job, 'E');   // a job without its card yet: what the board says of it
-    CLASS.card('wk-rules', P.name, `<div class="wk-rhead"><span class="kr-face">${TOWNEV.face(P.who)}</span><p><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span></p></div>
+    // 2026-11-27 (test.5; the user: 「SE 上有 3 張打工說明卡要捲一下才看得到はい／いいえ。這種還是要讓使用者一開始就能看得到選項」): はたらきますか？
+    // and はい／いいえ pinned at the card's foot (wk-rfoot), in sight the moment it opens at any size, 詳細規則 shut or open; all above them
+    // scrolls inside the card (wk-rbody), its foot fading while there is more below (wk-more) — the fold opened or shut too
+    CLASS.card('wk-rules', P.name, `<div class="wk-rbody"><div class="wk-rhead"><span class="kr-face">${TOWNEV.face(P.who)}</span><p><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span></p></div>
       <h4>玩法</h4><ol class="wk-steps">${R.steps.map((l, i) => `<li><span class="wk-sn" aria-hidden="true">${'①②③④⑤'[i] || ''}</span>${esc(l)}</li>`).join('')}</ol>
       ${R.how.length ? `<details class="disclose wk-fold"><summary>詳細規則${R.inside.length ? `（${esc(R.inside.join('、'))}…）` : ''}</summary><ul class="wk-how">${R.how.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
       <h4>需要的能力</h4><p class="wk-uses">${R.uses.map((u) => `<span lang="ja">${esc(u)}</span>`).join('')}</p>
       <p class="wk-pay">${esc(typeof R.n === 'function' ? R.n() : R.n)}・底薪 ${p.base} 円＋評級加給最多 50 円${job === 'waiter' ? '＋店長紅包' : ''}${p.pct ? `・打工證加給 +${p.pct}%` : ''}${P.area === 'onsen' ? '・每天第一次打工，另付當天搭車上來的車資（交通費）' : ''}</p>
-      ${back ? `<p class="wk-back">今天做到 ${back}／${nOf(job)}，按「はい」接著做。</p>` : ''}
-      <p class="wk-ask"><b lang="ja">はたらきますか？</b><span>要開始打工嗎？</span></p>
-      <div class="wk-yn"><button type="button" class="btn" data-rules="yes" lang="ja">はい</button><button type="button" class="btn" data-rules="no" lang="ja">いいえ</button></div>`,
+      ${back ? `<p class="wk-back">今天做到 ${back}／${nOf(job)}，按「はい」接著做。</p>` : ''}</div>
+      <div class="wk-rfoot"><p class="wk-ask"><b lang="ja">はたらきますか？</b><span>要開始打工嗎？</span></p>
+      <div class="wk-yn"><button type="button" class="btn" data-rules="yes" lang="ja">はい</button><button type="button" class="btn" data-rules="no" lang="ja">いいえ</button></div></div>`,
     (e) => { const b = e.target.closest('[data-rules]'); if (!b) return; CLASS.close(); if (b.dataset.rules === 'yes') start(document.querySelector('#view .yard') || yard, job); });   // the place as it is now: shutting the card may draw it anew (CLASS.close → sceneMinute: an hour turned meanwhile), the keeper's first word in it, not in the old one off the page (the final review's I-1)
+    // more below, as the jobs' reading blocks say it (JOBS.reading; here JOBS is WORK's own runners): its foot faded — the fold opened or shut too
+    const body = document.querySelector('.cls.wk-rules .wk-rbody');
+    if (body) { const more = () => body.classList.toggle('wk-more', body.scrollHeight - body.clientHeight - body.scrollTop > 4);
+      more(); body.addEventListener('scroll', more, { passive: true }); body.addEventListener('toggle', more, true); if (typeof ResizeObserver === 'function') new ResizeObserver(more).observe(body); }
     return true;
   }
   // the job a person takes beginners on for, where they are now, once its kana are seen (today taken elsewhere or closed: still

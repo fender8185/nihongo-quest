@@ -114,18 +114,28 @@ const MADO_RUN = (() => {
     D = cur = JOBS.desk({ job: 'window', ctx, N: MADO.N, box: () => box, alive: '.md-glass', mine: () => mine === runs, tasks,
       isRight: (t, i) => i === t.right, secs: () => MADO.SECS, cost: MADO.MISS, hi: () => s.me.hi, fresh: (t) => ({ printed: t.kind !== 'buy' }),
       me, word, bub, opts, optSel: '.md-opt', earSel: '.md-ear', rightCls: 'md-right', dim: true,
-      draw: (t) => { el('.md-wall').innerHTML = `${chart(t, t.kind === 'buy', first)}<div class="md-row">${board(t)}</div>`; el('.md-ticket').innerHTML = '';
-        JOBS.hold(el('.wk-cust .wk-bub'), [bubHtml(t, true)]); JOBS.hold(el('.md-ticket'), t.kind === 'buy' ? [ticketsHtml(t)] : []);
-        JOBS.hold(el('.md-opts'), t.kind === 'buy' ? [optsHtml(t), TIP] : [optsHtml(t)]); TL.keep(() => talkLines(t)); },
+      draw: (t) => { const wall = el('.md-wall'); wall.innerHTML = `${chart(t, t.kind === 'buy', first)}<div class="md-row">${board(t)}</div>`; el('.md-ticket').innerHTML = '';
+        // their words held as tall as they will open (test.4) — on a short screen (under 700 px: every phone in Safari; test.5) the row kept
+        // at its closed height instead, their words opening up over the wall as the lost and found's do (they open once answered, or after two
+        // misses with the right reply lit: the wall no longer needed) — the replies kept in sight
+        const short = () => innerHeight < 700, row = (open) => JOBS.custHtml(t.who).replace('<p class="wk-bub"></p>', `<p class="wk-bub${open ? ' wk-open' : ''}">${bubHtml(t, open)}</p>`);
+        JOBS.hold(el('.wk-cust .wk-bub'), () => (short() ? [] : [bubHtml(t, true)])); JOBS.hold(el('.md-glass .wk-cust'), () => (short() ? [row(false), row(true)] : []), () => 0);
+        JOBS.hold(el('.md-ticket'), t.kind === 'buy' ? [ticketsHtml(t)] : []);
+        JOBS.hold(el('.md-opts'), t.kind === 'buy' ? [optsHtml(t), TIP] : [optsHtml(t)]); TL.keep(() => talkLines(t));
+        // test.5 (2026-11-27, every size): the wall a reading block, down to its chart whole (--md-chart: the stations tapped for tickets); a
+        // time or a track asked, the board brought into sight inside it; the card so the replies and their words are in sight (JOBS.bring)
+        const ch = wall.querySelector('.md-chart'), key = wall.querySelector('.md-key'); if (ch) wall.style.setProperty('--md-chart', `${Math.ceil(ch.offsetHeight + (key ? key.offsetHeight + 8 : 0) + 2 * (parseFloat(getComputedStyle(wall).paddingTop) || 0))}px`);
+        JOBS.reading(wall)(); if (t.kind === 'next' || t.kind === 'track') wall.scrollTop = wall.scrollHeight;   // (its scroll says again whether there is more below)
+        JOBS.bring(el('.cls-card'), null, null, [el('.wk-cust .wk-bub'), el('.md-ticket'), el('.md-opts'), t.kind === 'buy' ? ch : null]); },   // (its header not stuck: never scrolled for the talk row)
       miss: () => s.miss,
       hint: (t, R, out) => { if (!out && !R.printed) { const st = el(`.md-st[data-st="${t.to}"]`); if (st) st.classList.add('wk-hint'); } },
       tap: (e, R) => { const st = e.target.closest('.md-st[data-st]'); if (!st || R.printed) return false; if (st.dataset.st === R.task.to) print(R.task.to); else D.miss(st, s.miss); return true; },
       served: async (t, R, lv) => { await said(speakAs(t.who, s.cust.thanks[0]), 600); if (!lv()) return;
         el('.wk-cust').classList.add('bye'); if (!R.miss && Math.random() < 0.3) await said(word(s.ok[Math.floor(Math.random() * s.ok.length)], 'ok')); },
       end: s.end, all: s.all });
-    CLASS.card('wk-window', '售票窗口', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
+    CLASS.card('wk-window wk-col', '售票窗口', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja">きっぷうりば</b><span class="wk-n"></span></div>
-      <div class="md-wall"></div>
+      <div class="md-wall wk-read"></div>
       <div class="md-glass"><i class="md-hole" aria-hidden="true"></i><div class="wk-cust"></div><div class="md-ticket"></div></div>
       <div class="md-opts"></div><div class="md-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => D.click(e));
     box = document.querySelector('.cls.wk-window');

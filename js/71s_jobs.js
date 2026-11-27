@@ -271,19 +271,25 @@ const JOBS = (() => {
   // keeps what the stuck header covers of it as room at its own top (--wk-under): its title and every row still reached by its own scroll.
   // The reading block keeps its floor in sight first, at every height (fix round 3, ruling 13) — the book for a 備註 question, the board —
   // the talk row then partly under the fold where the card cannot hold it all (the player scrolls to it)
-  function bring(card, to, block) {
+  // need (test.5, 2026-11-27 — the user: 「打工進行中，回答選項在小螢幕上也固定在卡片底部」, at every size): what must be whole in sight from
+  // the moment the customer asks — the answers (their place, held) and the customer's words — first of all: scrolled as far as their feet
+  // need, never so far that their tops go under the stuck header; the talk row and the reading block's floor give way before them
+  function bring(card, to, block, need) {
     if (!card) return; card.scrollTop = 0; if (block) block.style.removeProperty('--wk-under');
-    if (!to || card.scrollHeight - card.clientHeight < 1) return;
-    const top = card.getBoundingClientRect().top + card.clientTop, head0 = card.querySelector('.wk-head');
-    let d = to.getBoundingClientRect().bottom - (top + card.clientHeight) + 6;
-    if (block && head0) d = Math.min(d, block.getBoundingClientRect().bottom - head0.getBoundingClientRect().bottom - Math.min(block.getBoundingClientRect().height, parseFloat(getComputedStyle(block).minHeight) || 0));   // its floor in sight first, at every height (fix round 3, ruling 13)
+    if (card.scrollHeight - card.clientHeight < 1) return;
+    const top = card.getBoundingClientRect().top + card.clientTop, bot = top + card.clientHeight, head0 = card.querySelector('.wk-head');
+    const under = head0 && getComputedStyle(head0).position === 'sticky' ? head0.getBoundingClientRect().bottom : top;
+    let d = to ? to.getBoundingClientRect().bottom - bot + 6 : 0;
+    if (to && block && head0) d = Math.min(d, block.getBoundingClientRect().bottom - head0.getBoundingClientRect().bottom - Math.min(block.getBoundingClientRect().height, parseFloat(getComputedStyle(block).minHeight) || 0));   // its floor in sight first, at every height (fix round 3, ruling 13)
+    const must = (need || []).filter((e) => e && e.isConnected && e.getClientRects().length && !(block && block.contains(e))).map((e) => e.getBoundingClientRect());   // (inside the reading block — the フロント's keys — its floor keeps them: the part the header covers becomes room at its top, --wk-under)
+    if (must.length) d = Math.min(Math.max(d, ...must.map((r) => r.bottom - bot + 2)), ...must.map((r) => r.top - under - 2));
     if (d > 0) card.scrollTop = Math.min(d, card.scrollHeight - card.clientHeight);
     const head = card.querySelector('.wk-head'), u = block && head && card.scrollTop > 0 ? head.getBoundingClientRect().bottom - block.getBoundingClientRect().top : 0;
     if (u > 0) block.style.setProperty('--wk-under', `${Math.ceil(u)}px`);
   }
   function talkLine(o) {
     const el = (q) => { const b = o.box(); return b && b.isConnected ? b.querySelector(q) : null; }, card = () => el('.cls-card');
-    const start = (block) => bring(card(), el(o.sel), block);
+    const start = (block, need) => bring(card(), el(o.sel), block, need);
     const talk = (who) => { const t = el(o.sel); if (t) t.dataset.who = who; };
     const wordHtml = (ja, zh) => `<b lang="ja">${markRuby(ja)}</b><span>${esc(zh)}</span>`, mine = (ja, zh) => `<b lang="ja">${markRuby(ja)}</b>${o.first ? `<span>${esc(zh)}</span>` : ''}`;
     const word = ([ja, zh], cls = '') => { talk('drv'); const p = el(`${o.sel} .wk-say`); if (p) { p.innerHTML = wordHtml(ja, zh); p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(o.who, ja); };
@@ -345,7 +351,7 @@ const JOBS = (() => {
       all('.wk-good').forEach((x) => x.classList.toggle('wk-hint', x.dataset.good === t.good[0]));
       next(async (live) => { await Promise.all([line(t.who, leave[0], box), sleep(1200)]); if (live()) { el('.wk-cust').classList.add('bye'); await sleep(450); } }, false);   // said in full, from its own start (N-2)
     }
-    CLASS.card('wk-counter', '站櫃', `${head('counter', 'らんらん', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
+    CLASS.card('wk-counter wk-col', '站櫃', `${head('counter', 'らんらん', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !C) return;
       if (e.target.closest('.wk-ear')) { const q = P, r = rep = rep + 1; q.hold(); line(C.who, ask(C)[0], box).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }   // said again: the clock waits till it is said in full (the review, 2026-11-20; N-2)
       const g = e.target.closest('.wk-good'); if (!g) return;
@@ -460,7 +466,7 @@ const JOBS = (() => {
       el('.wk-bub').innerHTML = lineHtml(leave);
       next(async (live) => { await Promise.all([line(t.who, leave[0], box), sleep(1400)]); if (live()) { el('.wk-cust').classList.add('bye'); await sleep(450); } }, false);   // said in full, from its own start (N-2)
     }
-    CLASS.card('wk-till', '收銀', `${head('till', 'ふくの レジ', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
+    CLASS.card('wk-till wk-col', '收銀', `${head('till', 'ふくの レジ', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !T) return;
       const o = e.target.closest('.wk-tile'); if (!o || o.disabled) return;
       if (o.dataset.p !== T.parts[at]) {   // not the next piece: a miss
@@ -593,7 +599,7 @@ const JOBS = (() => {
       Promise.race([line ? (quiet(line, perfect ? 'ok' : ''), speakAs(s.who, line[0])) : Promise.resolve(), new Promise((ok) => setTimeout(ok, 2500))])
         .then(() => new Promise((ok) => setTimeout(ok, 250))).then(() => { if (!live()) return; busy = false; ask(); });
     }
-    CLASS.card('wk-buns', '包包子', `${head('buns', 'ふくめい', ctx.done)}<div class="wk-closeup" data-step="0"></div>
+    CLASS.card('wk-buns wk-col', '包包子', `${head('buns', 'ふくめい', ctx.done)}<div class="wk-closeup" data-step="0"></div>
       <div class="wk-krow"><button type="button" class="wk-ear" aria-label="再聽一次">${icon('speaker')}</button><div class="wk-clock"><i></i></div></div><div class="wk-keys"></div>`, (e) => {
       if (busy || !ctx.on() || !target) return;
       if (e.target.closest('.wk-ear')) { speak(target); return; }

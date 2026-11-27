@@ -164,7 +164,7 @@ const NAKAI_RUN = (() => {
       const before = t.kind === 'check' ? [k === 0 && !ctx.done ? S0.start : null, S0.rooms[ri], st && st.cat ? S0.cat : null].filter(Boolean) : [];   // a check laid out before 千代 says the room (lay): her words till she asks too
       JOBS.hold(el('.nk-talk'), () => (t.opts ? t.opts.filter((o) => !o[2]).map((o) => row('chiyo', line([(o[3] === 'form' ? S0.form : S0.fact)[0], o[1]]))).concat(t.opts.filter((o) => o[2]).map((o) => row('hero', line(o, true), true)))
         : [S0.miss, S0.hurry].concat(S0.ok).map((l) => row('chiyo', line(l)))).concat(before.map((l) => row('chiyo', line(l))), k >= N - 1 ? [S0.end, S0.all].map((l) => row('chiyo', line(l))) : []));   // the last task: 千代's closing word too (fix round 3)
-      JOBS.bring(el('.cls-card'), t.opts ? el('.nk-talk') : null, el('.nk-stage'));   // the room kept in sight first on the smallest phones (bring)
+      JOBS.bring(el('.cls-card'), t.opts ? el('.nk-talk') : null, el('.nk-stage'), t.opts ? [el('.nk-bub'), el('.nk-opts')] : [el('.nk-stage'), el('.nk-bub')]);   // the room kept in sight first on the smallest phones (bring) — never the replies or the words (test.5), nor the room at a task done in it
     }
     // the room drawn (washitsuArt); a thing just changed comes in with a little pop (laid ones dropping in) while the old fades out,
     // a thing put back its own way — the light: the whole room dims or brightens
@@ -316,7 +316,7 @@ const NAKAI_RUN = (() => {
       SND.play('fusuma', { vol: 0.5 }); who(g.who); bub(false); opts(true); phase = 'ask'; const c = el('.cls-card'); if (c) c.classList.add('nk-guest'); holdTask();
       const p = until(); await JOBS.line(g.who, g.line[0], box); return p;
     }
-    CLASS.card('wk-nakai', '仲居', `<div class="wk-head"><b lang="ja"><ruby>仲居<rt>なかい</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
+    CLASS.card('wk-nakai wk-col', '仲居', `<div class="wk-head"><b lang="ja"><ruby>仲居<rt>なかい</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
       <div class="nk-top"><p class="nk-room" lang="ja"></p><div class="nk-dep idle" role="timer" aria-label="客人到達前的倒數"><span lang="ja">お<ruby>客<rt>きゃく</rt></ruby><ruby>様<rt>さま</rt></ruby> <ruby>到着<rt>とうちゃく</rt></ruby>まで</span><i><b></b></i></div></div>
       <div class="nk-stage"><div class="nk-art"></div></div>
       <div class="nk-task"><span class="kr-face nk-face"></span><p class="nk-bub"></p></div>

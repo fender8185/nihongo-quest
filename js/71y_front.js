@@ -189,7 +189,10 @@ const FRONT_RUN = (() => {
       // and the keys take what is left, from their top; the card in sight once (JOBS.talkLine's start)
       JOBS.hold(el('.wk-cust .wk-bub'), [t.q, t.answer, t.after, t.opts && t.opts.some((o) => o[3] === 'bday') ? (F.named[t.who] || {}).bday : null].filter((l) => Array.isArray(l) && l[0]).map((l) => bubHtml(true, l)));
       JOBS.hold(el('.fr-opts'), [optsHtml(t)].concat(t.steps ? [TIP] : []));
-      TL.keep(() => talkLines(t)); JOBS.reading(el('.fr-desk'))(); TL.start(el('.fr-desk'));
+      // test.5 (every size): a check-in's keys are its answers at its second step — the desk no lower than the key board whole for that guest,
+      // and the card never scrolled past them, their words or the replies (JOBS.bring)
+      const desk = el('.fr-desk'), board = el('.fr-board'); if (desk && board) desk.style.setProperty('--fr-keys', t.steps ? `${Math.ceil(board.offsetHeight + 12)}px` : '0px');
+      TL.keep(() => talkLines(t)); JOBS.reading(desk)(); TL.start(desk, [el('.wk-cust .wk-bub'), el('.fr-opts'), t.steps ? board : null]);
       all('.fr-row.fr-lit').forEach((x) => x.classList.remove('fr-lit')); all('.fr-key.wk-hint').forEach((x) => x.classList.remove('wk-hint')); all('.fr-dn.fr-new').forEach((x) => x.classList.remove('fr-new'));
       const c = el('.wk-cust'); c.dataset.kind = t.kind; c.dataset.fun = t.fun || ''; if (t.kind === 'luggage') c.insertAdjacentHTML('beforeend', `<i class="fr-hold" aria-label="提著很多行李">${BAGS}</i>`);
       const bell = el('.fr-bell'); if (bell) { bell.classList.remove('fr-ding'); void bell.getBoundingClientRect(); bell.classList.add('fr-ding'); } SND.play('desk-bell', { vol: 0.45 });
@@ -242,7 +245,7 @@ const FRONT_RUN = (() => {
         if (!R.task.steps || R.step !== 1 || k.classList.contains('fr-out')) return true;
         if (k.dataset.room === R.task.room) { handOver(R.task); D.right(); } else D.miss(k, [A.key[0], F.keyWhy]); return true; },
       end: A.end, all: A.all, extra: () => (tip ? { tip, tipName: F.tipName } : {}) });
-    CLASS.card('wk-front', '旅館櫃台', `<div class="wk-head"><b lang="ja">フロント</b><span class="wk-n">${Math.min(ctx.done + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
+    CLASS.card('wk-front wk-col', '旅館櫃台', `<div class="wk-head"><b lang="ja">フロント</b><span class="wk-n">${Math.min(ctx.done + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
       <div class="fr-desk"><div class="fr-book" lang="ja">${bookHtml(book)}</div><div class="fr-board" lang="ja">${boardHtml(book)}</div></div>
       <div class="fr-lobby"><div class="wk-cust"></div></div>
       <div class="fr-opts"></div><div class="fr-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(A.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => D.click(e));

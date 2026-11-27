@@ -776,25 +776,26 @@ def test_every_rules_card_has_three_steps_and_its_rules_folded(b):
         assert x['how'] == HOW_BEFORE[job] and x['kept'] == [], (job, x)   # every rule as it was; the face, 需要的能力, the pay, はたらきますか？ はい／いいえ kept
     assert r['nakai']['steps'][2] == '客人進房時，選你要回的那句' and r['window']['steps'][2] == '從下面選你要回答的那句', r   # fix round: not 「回進房」; the 快速 question has two replies
 
-# on a phone: shut, the whole card in sight at 390×664 with nothing to scroll, はい／いいえ in it; open at 375×553, the card scrolls in itself
-# and はい／いいえ are reached at its foot (a tap there lands on them)
+# on a phone: shut, the whole card in sight at 390×664 with nothing to scroll, はい／いいえ in it; open at 375×553 (test.5, 2026-11-27 — the user:
+# 「SE 上有 3 張打工說明卡要捲一下才看得到はい／いいえ」), はい／いいえ in sight at the card's foot with no scroll at all (a tap there lands on
+# them), what is above them scrolling inside the card (wk-rbody: nearly all run past the screen open), the card itself never
 def test_the_rules_cards_fit_a_phone(b):
     probe = "(async () => { " + BEGIN + ALL12 + """ location.hash = '#/chinadori'; route(); await wait(300); const out = {}, open = %s;
       const hit = (el) => { const q = el.getBoundingClientRect(), x = (q.left + q.right) / 2, y = (q.top + q.bottom) / 2; return q.top >= 0 && q.bottom <= innerHeight && document.elementFromPoint(x, y) === el; };
-      for (const job of JOBS12) { WORK.intro(yard(), job); await wait(30); const card = document.querySelector('.wk-rules .cls-card'), f = card.querySelector('details.wk-fold');
-        if (open) { f.querySelector('summary').click(); await wait(30); card.scrollTop = card.scrollHeight; await wait(30); }
+      for (const job of JOBS12) { WORK.intro(yard(), job); await wait(30); const card = document.querySelector('.wk-rules .cls-card'), f = card.querySelector('details.wk-fold'), body = card.querySelector('.wk-rbody');
+        if (open) { f.querySelector('summary').click(); await wait(30); }
         const c = card.getBoundingClientRect();
-        out[job] = { fold: f.open, inside: card.scrollHeight <= card.clientHeight + 1, onScreen: c.top >= 0 && c.bottom <= innerHeight, yes: hit(card.querySelector('[data-rules="yes"]')), no: hit(card.querySelector('[data-rules="no"]')),
+        out[job] = { fold: f.open, inside: card.scrollHeight <= card.clientHeight + 1, body: body.scrollHeight > body.clientHeight + 1, onScreen: c.top >= 0 && c.bottom <= innerHeight, yes: hit(card.querySelector('[data-rules="yes"]')), no: hit(card.querySelector('[data-rules="no"]')),
           read: getComputedStyle(card.querySelector('.wk-steps li')).fontSize, how: getComputedStyle(card.querySelector('.wk-how li')).fontSize };
         CLASS.close(); }
       return JSON.stringify(out); })()"""
     shut = json.loads(b.run([("metrics", (390, 664)), ("nav", URL), ("wait", READY), ("eval", probe % 'false')])[-1])
     for job, x in shut.items():
-        assert x == {'fold': False, 'inside': True, 'onScreen': True, 'yes': True, 'no': True, 'read': '16px', 'how': '16px'}, (job, x)
+        assert x == {'fold': False, 'inside': True, 'body': False, 'onScreen': True, 'yes': True, 'no': True, 'read': '16px', 'how': '16px'}, (job, x)
     opened = json.loads(b.run([("metrics", (375, 553)), ("nav", URL), ("wait", READY), ("eval", probe % 'true')])[-1])
     for job, x in opened.items():
-        assert x['fold'] and x['onScreen'] and x['yes'] and x['no'], (job, x)   # the card stays on the screen, scrolled in itself to its foot
-    assert sum(not x['inside'] for x in opened.values()) >= 10, opened   # (open, nearly all run past the screen: it is the card that scrolls)
+        assert x['fold'] and x['onScreen'] and x['inside'] and x['yes'] and x['no'], (job, x)   # the card on the screen and never scrolled, はい／いいえ in sight
+    assert sum(x['body'] for x in opened.values()) >= 10, opened   # (open, nearly all run past the screen: it is the body above the ask that scrolls)
 
 # the user's pick 「每份一句＋規則折起來（建議）」: each area's 求人看板 says each job in one line (25 characters at most); under the jobs only
 # the 打工證's line, the scoring (RULE), the area's hours and how to ask folded shut in 「規則」 (today's line and 「今天還沒打工」 as they were)

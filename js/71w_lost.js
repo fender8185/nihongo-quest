@@ -224,7 +224,7 @@ const LOST_RUN = (() => {
       const t = R.task;
       done(async (live2) => { await JOBS.quiet(box); if (!live2()) return; await said(me(s.me.gag), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.gag[0]), 700); voiceFx('laugh'); await sleep(900); if (live2()) el('.wk-cust').classList.add('bye'); });
     }
-    CLASS.card('wk-lost', '失物招領', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
+    CLASS.card('wk-lost wk-col', '失物招領', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja"><ruby>落<rt>お</rt></ruby>とし<ruby>物<rt>もの</rt></ruby></b><span class="wk-n"></span></div>
       <div class="lf-room">${SHELF}<div class="lf-counter"><div class="wk-cust"></div></div></div>
       <div class="lf-play"><div class="lf-qs"></div><div class="lf-cands"></div><div class="lf-acts"></div></div>

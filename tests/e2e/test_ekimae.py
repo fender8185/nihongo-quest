@@ -780,7 +780,7 @@ MOVES = r""" window.speakAs = () => new Promise((ok) => setTimeout(ok, 400));
   requestAnimationFrame(tick);
   for (let i = 0; i < N; i++) { if (!(await until(() => C() && ASKED(), 30000))) { F.recs.push({ err: 'no ask ' + i }); break; } await wait(500); await PLAY(i); }
   F.stop = true; return JSON.stringify(F.recs.slice(0, N).map((r) => (r.err ? r : { max: Object.fromEntries(Object.entries(r.max).filter(([, v]) => v > 1)), most: Math.max(0, ...Object.values(r.max)), st: r.st, frames: r.frames, at: r.at, keys: Object.keys(r.max).length, under: r.under })));"""
-def moves_at(b, url, ready, setup, card, key, asked, phase, play, n, sizes=((390, 664), (375, 553)), track=(), foot=(), inview='', inview_at=(390, 664)):
+def moves_at(b, url, ready, setup, card, key, asked, phase, play, n, sizes=((390, 664), (375, 553), (430, 740), (360, 640)), track=(), foot=(), inview='', inview_at=(390, 664)):   # 430×740 and 360×640 since test.5 (every size)
     """each size: the job set up (setup, with the jobs' dice seeded once it is in), its customers' frames; what moved (or a frameless one);
     inview: at the size inview_at, the last of it shown at the ask under the card's visible part"""
     bad = []

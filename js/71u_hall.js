@@ -38,7 +38,7 @@
 // 2026-11-18 (the user): once they are seen to at the door, the 「！」 moves on to the free tables (tapped as the table is) — no
 // 「點一張空桌子」 line any more.
 const HALL = (() => {
-  const api = { pace: 1, pat: 1, force: null };   // the waits' scale and patience's (the tests run them fast or calm); force: { toilet, drop, regular, solo, water, have, osusume, great, price, bye, phone, order, door, self } for the tests
+  const api = { pace: 1, pat: 1, force: null };   // the waits' scale and patience's (the tests run them fast or calm); force: { toilet, drop, regular, solo, water, have, osusume, great, price, bye, phone, order, word, door, self } for the tests
   const VOICES = ['kaneda', 'umeko', 'yuta', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama', 'mike'];
   const MALE_HAIR = ['短髮', '刺蝟頭', '旁分呆毛', '中分'];
   const MAX = 4, rnd = (a, b) => a + Math.random() * (b - a), pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -285,7 +285,7 @@ const HALL = (() => {
     else if (kind === 'order') {   // これ by the customer (the menu in their hands), それ by the hero (the board in his), あれ across the room (the poster): all three drawn while it is up (props)
       near = pick(DISHES().filter((d) => d !== 'マーボーどうふ' && d !== H.board));
       const where = { これ: `客人手上的菜單：${near}`, それ: `你手上的推薦牌：${H.board}`, あれ: '牆上的海報：マーボーどうふ' };
-      word = pick(['これ', 'それ', 'あれ']); line = s.cust.point[word]; right = [where[word]]; opts = [where.これ, where.それ, where.あれ];
+      word = (api.force && api.force.word) || pick(['これ', 'それ', 'あれ']); line = s.cust.point[word]; right = [where[word]]; opts = [where.これ, where.それ, where.あれ];   // force.word: the tests' (test.5's あれ)
     } else if (kind === 'dish') {   // a dish by its name: its picture (and its name) picked
       const d = c.want || (api.force && api.force.dish) || pick(DISHES()); line = s.cust.dish[d]; right = [d]; opts = three(d, DISHES());
     } else if (kind === 'pass') {   // 黄 calls one up by its name: the plate picked (pictures only)
@@ -323,7 +323,7 @@ const HALL = (() => {
   // hero's board): the menu in the customer's hands (これ to them), the おすすめ board in the hero's (それ to them; これ to him, asked
   // おすすめは どれですか); the poster's on the wall
   function props() {
-    H.yard.querySelectorAll('.hl-menu, .hl-board').forEach((x) => x.remove());
+    H.yard.querySelectorAll('.hl-menu, .hl-board, .hl-poster').forEach((x) => x.remove());
     const a = H.ask, h = H.yard.querySelector('.yhero'); if (!a || !['order', 'osusume'].includes(a.kind)) return;
     const card = (cls, top, dish) => `<span class="${cls}" aria-hidden="true"><b lang="ja">${top}</b>${RAIRAI.dish(dish)}<i lang="ja">${esc(dish)}</i></span>`;
     if (h) h.insertAdjacentHTML('beforeend', card('hl-board', 'おすすめ', H.board));
@@ -336,6 +336,22 @@ const HALL = (() => {
     const who = [y.querySelector('.yhero'), H.ask.c.el, H.ask.who === 'huang' && y.querySelector('.npc[data-npc="huang"]')].filter(Boolean);
     const low = Math.max(...who.map((x) => x.getBoundingClientRect().bottom)) + was;   // where they would be with the room down
     y.style.setProperty('--hl-lift', `${Math.round(Math.max(0, Math.min(innerHeight * 0.45, low - el.getBoundingClientRect().top + 14)))}px`);
+    poster(was);
+  }
+  // あれ's poster (test.5, 2026-11-27 — at every size what あれ points at in sight): while an order by これ／それ／あれ is up, the wall's にんき
+  // poster where the screen shows it whole over the panel, clear of the HUD, once the room has lifted, else held up as its card as これ's menu
+  // and それ's board are — at the screen's right, under the HUD and the screen's buttons, clear of the menu and the board held up nearer the
+  // middle (was: where the room stood as the lift began)
+  function poster(was) {
+    const y = H.yard, a = H.ask; let c = y.querySelector('.hl-poster');
+    if (!a || a.kind !== 'order') { if (c) c.remove(); return; }
+    const wall = y.querySelector('.use-btn[data-use="poster"]'), pk = y.querySelector('.hl-pick'), hud = y.querySelector('.hl-hud'), lift = parseFloat(y.style.getPropertyValue('--hl-lift')) || 0;
+    const r = wall && wall.getBoundingClientRect(), dy = was - lift, hb = hud ? hud.getBoundingClientRect() : null, top = hb ? hb.bottom : 0, bot = pk ? pk.getBoundingClientRect().top : innerHeight;
+    const underHud = r && hb && r.left < hb.right && r.right > hb.left && r.top + dy < hb.bottom && r.bottom + dy > hb.top;
+    if (r && r.width && r.left >= 0 && r.right <= innerWidth && r.top + dy >= 0 && r.bottom + dy <= bot && !underHud) { if (c) c.remove(); return; }
+    if (!c) { y.insertAdjacentHTML('beforeend', `<span class="hl-poster" aria-hidden="true"><b lang="ja">にんき！</b>${RAIRAI.dish('マーボーどうふ')}<i lang="ja">マーボーどうふ</i></span>`); c = y.querySelector('.hl-poster'); }
+    const tools = document.querySelector('.yard-tools'), under = Math.max(top, tools ? tools.getBoundingClientRect().bottom : 0);
+    c.style.top = `${Math.round(under + 10)}px`;   // under the HUD and the screen's buttons (the purse, the wardrobe…)
   }
   function choose(b) {
     const a = H.ask; if (!a || !live()) return; const said = b.dataset.o, c = a.c;
@@ -478,7 +494,7 @@ const HALL = (() => {
   }
   function stop() {
     if (!H) return; H.timers.forEach(clearTimeout); cancelAnimationFrame(H.raf);
-    if (H.yard.isConnected) { H.cust.forEach((c) => c.el.remove()); H.yard.querySelectorAll('.hl-pick, .hl-hud, .hl-ring, .hl-plate, .hl-heard, .hl-tmark, .hl-board').forEach((x) => x.remove()); H.yard.style.setProperty('--hl-lift', '0px'); H.tray = { dish: '' }; carry(false); H.ready = []; readyMark(); }
+    if (H.yard.isConnected) { H.cust.forEach((c) => c.el.remove()); H.yard.querySelectorAll('.hl-pick, .hl-hud, .hl-ring, .hl-plate, .hl-heard, .hl-tmark, .hl-board, .hl-poster').forEach((x) => x.remove()); H.yard.style.setProperty('--hl-lift', '0px'); H.tray = { dish: '' }; carry(false); H.ready = []; readyMark(); }
     H = null; MUSIC.sync();
   }
   function run(ctx) {

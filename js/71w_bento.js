@@ -109,8 +109,17 @@ const BENTO_RUN = (() => {
     let voice = Promise.resolve(), gen = 0;
     const now = (who, l) => { gen++; voice = said(speakAs(who, l), 0, 6000); return voice; };
     const turn = (who, l, last) => { const g = gen, t0 = Date.now(); voice = voice.then(() => (last ? last.up() : live() && g === gen && Date.now() - t0 < 5000) ? said(speakAs(who, l), 0, last ? JOBS.LINE_CAP : 6000) : null); return voice; };
-    const word = ([ja, zh], cls = '', last) => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return turn(s.who, ja, last); };
-    const me = ([ja, zh], wait = false) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return wait ? turn('hero', ja) : now('hero', ja); };
+    // ハル and the hero share the line under the tray (test.5, 2026-11-27, as at the window, the lost and found and the taxi since 2026-11-22 —
+    // the card one column on any screen): whoever spoke last; held as tall as the tallest line the shift may bring (holdTalk)
+    const talk = (who) => { const t = el('.bt-tk'); if (t) t.dataset.who = who; };
+    const sayHtml = ([ja, zh]) => `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`, meHtml = ([ja, zh]) => `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`;
+    const word = ([ja, zh], cls = '', last) => { talk('drv'); const p = el('.wk-say'); if (p) { p.innerHTML = sayHtml([ja, zh]); p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return turn(s.who, ja, last); };
+    const me = ([ja, zh], wait = false) => { talk('me'); const p = el('.wk-me'); if (p) p.innerHTML = meHtml([ja, zh]); return wait ? turn('hero', ja) : now('hero', ja); };
+    function holdTalk() {
+      const t = el('.bt-tk'); if (!t) return; const face = t.querySelector('.kr-face').outerHTML, row = (who, html) => [`${face}<p class="wk-say">${who === 'drv' ? html : ''}</p><p class="wk-me">${who === 'me' ? html : ''}</p>`, { 'data-who': who }];
+      const usual = trains.flat().some((o) => o.kind === 'usual') && !usualTold();   // what いつもの is: only when 中村 comes this shift and is still to be told
+      JOBS.hold(t, () => [s.train, s.bell, s.gone, s.end, s.all, s.yes, s.no, ...(usual ? [BENTO.hotCold() ? s.usual2 : s.usual] : []), ...s.ok].filter(Boolean).map((l) => row('drv', sayHtml(l))).concat(Object.values(s.me).map((l) => row('me', meHtml(l)))));
+    }
     // the order now for one at a window: what was asked (an ask put right: what followed)
     const lineOf = (x) => (x.o.kind === 'have' && x.asked ? x.o.then : x.o.line);
     function drawWin(x) {
@@ -119,12 +128,21 @@ const BENTO_RUN = (() => {
       const f = b.querySelector('.bt-face'); if (x.state !== 'shut' && !f.firstChild) f.innerHTML = TOWNEV.face(x.o.who);
       if (x.state === 'shut') f.innerHTML = '';
     }
+    const HINT = '<span class="bt-hint">點有「！」的車窗，聽乘客要什麼。</span>';
+    const bubHtml = (x, open) => `<span class="kr-face bt-who">${TOWNEV.face(x.o.who)}</span><button type="button" class="wk-ear bt-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(lineOf(x))}</b><small>${esc(x.asked && x.o.kind === 'have' ? x.o.thenZh || '' : BENTO.zhOf(x.o))}</small>` : '<b class="bt-dots">……</b>'}`;
+    const repliesHtml = () => [['yes', TOWN.WORK.say.bento.me.yes], ['no', TOWN.WORK.say.bento.me.no]].map(([k, [ja]]) => `<button type="button" class="btn btn-sm bt-reply" data-r="${k}" lang="ja"><span>${ruby(ja)}</span></button>`).join('');
     function bubble() {
       const p = el('.bt-bub'), r = el('.bt-replies'); if (!p || !r) return; const x = B && B.sel;
-      if (!x) { p.innerHTML = '<span class="bt-hint">點有「！」的車窗，聽乘客要什麼。</span>'; r.innerHTML = ''; return; }
-      const open = x.state === 'done' || x.miss >= 2, l = lineOf(x);
-      p.innerHTML = `<span class="kr-face bt-who">${TOWNEV.face(x.o.who)}</span><button type="button" class="wk-ear bt-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(l)}</b><small>${esc(x.asked && x.o.kind === 'have' ? x.o.thenZh || '' : BENTO.zhOf(x.o))}</small>` : '<b class="bt-dots">……</b>'}`;
-      r.innerHTML = x.o.kind === 'have' && !x.asked && x.state !== 'done' ? [['yes', TOWN.WORK.say.bento.me.yes], ['no', TOWN.WORK.say.bento.me.no]].map(([k, [ja]]) => `<button type="button" class="btn btn-sm bt-reply" data-r="${k}" lang="ja"><span>${ruby(ja)}</span></button>`).join('') : '';
+      if (!x) { p.innerHTML = HINT; r.innerHTML = ''; return; }
+      p.innerHTML = bubHtml(x, x.state === 'done' || x.miss >= 2);
+      r.innerHTML = x.o.kind === 'have' && !x.asked && x.state !== 'done' ? repliesHtml() : '';
+    }
+    // the passenger's row held for the whole shift (test.5; the user: 「新的打工回答會跑版」, test.4) as tall as the most it will show — the
+    // hint, someone asking (……) with はい／いいえ under it, any order heard out (its 中文), before and after an ask is answered — so neither a
+    // window picked nor a reply moves the car, the hands or the tray
+    function holdTalkRow() {
+      const ts = trains.flat().map((o) => ({ o, asked: false })), row = (b, r) => `<p class="bt-bub">${b}</p><div class="bt-replies">${r}</div>`;
+      JOBS.hold(el('.bt-talk'), () => [row(HINT, '')].concat(ts.flatMap((x) => [row(bubHtml(x, false), x.o.kind === 'have' ? repliesHtml() : ''), row(bubHtml(x, true), ''), x.o.kind === 'have' ? row(bubHtml(Object.assign({}, x, { asked: true }), true), '') : null].filter(Boolean))));
     }
     function hand() {
       const h = el('.bt-hand'); if (!h) return; const ids = Object.keys(B ? B.hand : {}).filter((id) => B.hand[id] > 0);
@@ -215,15 +233,14 @@ const BENTO_RUN = (() => {
       if (B.wins.every((y) => y.state === 'done')) { if (t === trains.length - 1) { depart(T(1.8)); return; } await sleep(T(1.8)); if (live() && B.phase === 'stop') depart(); }
     }
     const goods = BENTO.goods();
-    CLASS.card('wk-bento', '賣便當', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
+    CLASS.card('wk-bento wk-col', '賣便當', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja">みなと<ruby>弁当<rt>べんとう</rt></ruby></b><span class="wk-n"></span></div>
-      <div class="wk-who"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p></div>
       <div class="bt-stage"><div class="bt-car" data-state="away"><div class="bt-carwrap"></div>${[0, 1, 2, 3].map(winBtn).join('')}</div>
         <div class="bt-dep"><span lang="ja"><ruby>発車<rt>はっしゃ</rt></ruby>まで</span><i><b></b></i></div></div>
       <div class="bt-talk"><p class="bt-bub"></p><div class="bt-replies"></div></div>
       <div class="bt-handrow"><div class="bt-hand"></div><button type="button" class="btn btn-primary bt-give" lang="ja" disabled>どうぞ</button></div>
       <div class="bt-box${goods.length > 8 ? ' nine' : ''}">${goods.map((g) => `<button type="button" class="bt-good" data-g="${g[0]}">${pic(g)}<b lang="ja">${ruby(g[1])}</b><i class="bt-n"></i></button>`).join('')}</div>
-      <p class="wk-me"></p>`, (e) => {
+      <div class="bt-tk" data-who="drv"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => {
       if (!B || !live()) return;
       if (e.target.closest('.bt-ear')) { if (B.sel) now(B.sel.o.who, lineOf(B.sel)); return; }
       if (B.phase !== 'stop') return;
@@ -233,6 +250,7 @@ const BENTO_RUN = (() => {
       const g = e.target.closest('.bt-good'); if (g) { if (!B.sel) { toast('先點一扇有「！」的車窗。', 1800); return; } B.hand[g.dataset.g] = (B.hand[g.dataset.g] || 0) + 1; SND.play('place', { vol: 0.5 }); hand(); return; }
       if (e.target.closest('.bt-give')) give();
     });
+    holdTalk(); holdTalkRow();   // the talk row and the passenger's row as tall as the shift will need (test.5)
     arrive();
   }
   function lines(add) {

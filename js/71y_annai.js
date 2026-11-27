@@ -208,14 +208,14 @@ const ANNAI_RUN = (() => {
       isRight: (t, i) => Boolean(t.opts[i] && t.opts[i][2]), secs: () => SECS, cost: MISS, hi: () => s.hi, fresh: () => ({ seed }),
       me, word, bub, opts, optSel: '.an-opt', earSel: '.an-ear', rightCls: 'an-right', once: true,
       draw: (t) => { el('.wk-cust').dataset.fun = t.fun || ''; JOBS.hold(el('.wk-cust .wk-bub'), [t.q, t.after].filter(Boolean).map((l) => bubHtml(true, l)));   // the bubble as tall as their words (2026-11-25)
-        JOBS.hold(el('.an-opts'), [optsHtml(t)]); TL.keep(() => talkLines(t)); JOBS.reading(el('.an-board'))(); TL.start(el('.an-board')); },   // the replies and the talk row held too, the board from its top taking what is left, the card in sight once (fix round 2, ruling 8)
+        JOBS.hold(el('.an-opts'), [optsHtml(t)]); TL.keep(() => talkLines(t)); JOBS.reading(el('.an-board'))(); TL.start(el('.an-board'), [el('.wk-cust .wk-bub'), el('.an-opts')]); },   // (test.5: the replies and their words never out of sight for the talk row or the board's floor)   // the replies and the talk row held too, the board from its top taking what is left, the card in sight once (fix round 2, ruling 8)
       miss: (t, i) => { const o = t.opts[i]; return [(o[3] === 'form' ? A.form : A.fact)[0], o[1]]; },
       served: async (t, R, lv) => {
         const after = t.after || s.thanks; if (t.after) bub(true, after); await said(speakAs(t.who, after[0]), 600); if (!lv()) return;
         el('.wk-cust').classList.add('bye'); if (!R.miss && Math.random() < 0.3) await said(word(A.ok[Math.floor(Math.random() * A.ok.length)], 'ok'));
       },
       end: A.end, all: A.all });
-    CLASS.card('wk-annai', '觀光服務台', `<div class="wk-head"><b lang="ja"><ruby>観光<rt>かんこう</rt></ruby><ruby>案内所<rt>あんないじょ</rt></ruby></b><span class="wk-n">${Math.min(ctx.done + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
+    CLASS.card('wk-annai wk-col', '觀光服務台', `<div class="wk-head"><b lang="ja"><ruby>観光<rt>かんこう</rt></ruby><ruby>案内所<rt>あんないじょ</rt></ruby></b><span class="wk-n">${Math.min(ctx.done + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
       ${boardHtml(shift.board)}
       <div class="an-glass"><i class="an-rack" aria-hidden="true">${RACK}</i><div class="an-pane"><div class="wk-cust"></div><i class="an-acryl" aria-hidden="true"></i></div><i class="an-rack" aria-hidden="true">${RACK}</i></div>
       <div class="an-opts"></div><div class="an-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(A.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => D.click(e));

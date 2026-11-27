@@ -1886,7 +1886,7 @@ def test_the_miyage_tray_keeps_one_height(b):
     r = b.run([("metrics", sizes[0]), ("nav", URL), ("wait", READY), ("eval", begin)] + [x for wh in sizes for x in (("metrics", wh), ("eval", sweep))], timeout=120)
     assert r[0] == 'all', r[0]
     for x in map(json.loads, r[1:]):
-        assert x['goods'] == 9 and x['most'] == 9 and x['backs'] == [True, True] and x['moved'] == [] and set(x['tall']) == {46}, x   # every good on it at once: nine
+        assert x['goods'] == 9 and x['most'] == 9 and x['backs'] == [True, True] and x['moved'] == [] and set(x['tall']) == {40 if x['size'][1] < 700 else 46}, x   # every good on it at once: nine (the tray 40 px under 700 px tall since test.5: the shelves whole)
         assert all(rows == 1 and inside and size >= 23.9 and seen >= 0.5 for _, size, rows, inside, seen in x['chips']), x
 
 # fix round 1, M-1: each step its own clock and a fresh mood — a customer kept waiting through their pick (💦) starts their favour calm
@@ -2000,7 +2000,8 @@ def test_the_miyage_card_fits_a_phone(b):
         assert p['inside'] and p['goods'] == 9 and p['parts'] and p['manju'] == ['manju6', 'manju12'] and p['plate'] and p['tray'] and p['give'] and p['cust'], (w, out)
         assert p['btns'] == [] and x['btns2'] == [] and p['small'] == [], (w, out)
         assert p['rt'] >= 8.5 and p['bath'] == [True, True, True] and p['pieces'] == [['6個入', 'ろっこいり'], ['12個入', 'じゅうにこいり']], (w, out)   # M-4
-        assert x['ask'] == [True, True, True] and x['wrong'] == [True, True, True] and x['right'][1], (w, out)
+        talk = w != 360   # test.5's priority (the answers, their words, then the talk row): at 360×640, the shelves whole, the talk row may lie under the fold
+        assert x['ask'][0::2] == [True, True] and x['wrong'][0::2] == [True, True] and (not talk or (x['ask'][1] and x['wrong'][1] and x['right'][1])), (w, out)
     # M-8 (fix round 1): a pick after two misses — their words opened, the right goods lit, 竹内's word with its reason — on a first shift
     # at 360×640 and 390×844: every good still inside the card's view, the words and the talk row too
     reach = {}
@@ -2014,7 +2015,7 @@ def test_the_miyage_card_fits_a_phone(b):
           const c = document.querySelector('.wk-miyage .cls-card'), R = (e) => e.getBoundingClientRect(), q = R(c), top = Math.max(q.top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = q.top + c.clientTop + c.clientHeight, inv = (e) => R(e).top >= top - 1 && R(e).bottom <= bot + 1;
           const out = { open: Boolean(c.querySelector('.wk-bub.wk-open')), lit: c.querySelectorAll('.om-good.wk-hint').length, goods: [...c.querySelectorAll('.om-good')].every(inv), bub: inv(c.querySelector('.wk-cust .wk-bub')), talk: inv(c.querySelector('.om-talk')), miss: my().miss };
           CLASS.close(); return JSON.stringify(out); })()""")])[-1])
-    assert all(x == {'open': True, 'lit': 2, 'goods': True, 'bub': True, 'talk': True, 'miss': 2} for x in reach.values()), reach
+    assert all(dict(x, talk=x['talk'] or w == 360) == {'open': True, 'lit': 2, 'goods': True, 'bub': True, 'talk': True, 'miss': 2} for w, x in reach.items()), reach   # (at 360×640 the talk row may lie under the fold: test.5)
 
 # the generator (生成) has the おみやげ屋's lines: every customer's words (and their favour, their word after, what they say to a wrong
 # tray) in their own voice, the hero's every right reply, 竹内's words and his first; every customer one the town already voices
@@ -2325,7 +2326,8 @@ def test_the_front_card_fits_a_phone(b):
         f = x['first']
         assert f['inside'] and f['rows'] == 5 and f['keys'] == 5 and f['bell'] and f['left'] and f['cust'] and f['opts'] == 4 and f['names'] and f['reads'][0] and f['reads'][1] >= 2, (w, out)
         assert f['btns'] == [] and x['btns2'] == [] and f['small'] == [] and f['rt'] >= 8, (w, out)
-        assert x['keyStep'] == [True, True, True, True] and x['two'] == [True, True, True, True] and x['lit'] == [True, True], (w, out)
+        talk = w != 360   # test.5's priority (the answers — here the keys, the desk no lower than their board whole at a check-in — their words, then the talk row): at 360×640 a check-in's talk row may lie under the fold
+        assert [x['keyStep'][i] for i in (0, 1, 3)] == [True] * 3 and [x['two'][i] for i in (0, 1, 3)] == [True] * 3 and (not talk or (x['keyStep'][2] and x['two'][2])) and x['lit'] == [True, True], (w, out)
 
 # fix round 1 (the review's Minor 3): a held bubble is measured again, its customer's own, when the screen changes — the フロント's guest's
 # bubble held at 390×844, held again on a turn to 360×640 (on every screen since fix round 2, ruling 8: at least as tall, the card
@@ -2694,39 +2696,36 @@ def test_the_miyage_pop_up_word_is_whole(b):
 # what shows (.wk-more), a cue says so at their foot — the 目上 customer of seed 5 at his pick, the shelves at their floor, on an iPhone
 # and an SE: the cue in sight under the header, over no good and no price tag where they show, taking no tap (the noren under it takes
 # it); nothing moving as it goes and comes — the shelves scrolled to their end: gone; back to their top: there again
-def test_the_miyage_shelves_say_more_below(b):
+# test.5 (2026-11-27; the user: 「打工進行中，回答選項在小螢幕上也固定在卡片底部」, at every size): at a pick the goods are the answers — the
+# shelves whole on a phone (till test.5 a floor of 136 px and, task 2's ruling 20, a chevron for the row below it): nothing more below them, the
+# cue never shown, every good inside the card's view under its stuck header and taking a tap at its middle; the card not scrolled
+def test_the_miyage_shelves_are_whole_on_a_phone(b):
     out = {}
-    for w, h in ((390, 664), (375, 553)):
+    for w, h in ((390, 664), (375, 553), (360, 640)):
         out[f'{w}x{h}'] = json.loads(b.run([("metrics", (w, h)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
           window.speakAs = () => Promise.resolve(); JOBS.pat.scale = 100; await begin(5, where(5, (c) => c.kind === 'elder')); await wait(400);
-          const c = document.querySelector('.wk-miyage .cls-card'), s = c.querySelector('.om-shelves'), m = c.querySelector('.om-more'), R = (e) => e.getBoundingClientRect(); if (!m) { CLASS.close(); return JSON.stringify({ cue: false }); }
-          const PARTS = ['.wk-head', '.om-shelves', '.om-front', '.wk-cust .kr-face', '.wk-cust .wk-bub', '.om-tray', '.om-give', '.om-opts', '.om-talk'];
-          const tops = () => JSON.stringify(PARTS.map((q) => { const r = R(c.querySelector(q)); return [Math.round(r.top * 10) / 10, Math.round(r.bottom * 10) / 10]; }).concat([c.scrollTop]));
-          const seen = () => Number(getComputedStyle(m).opacity), r = R(m), sr = R(s), top = sr.top + s.clientTop, bot = top + s.clientHeight;   // a good or tag where it shows: inside the shelves' window
-          const over = (x) => { const g = R(x), t = Math.max(g.top, top), bb = Math.min(g.bottom, bot); return t < bb && r.left < g.right && r.right > g.left && r.top < bb && r.bottom > t; };
-          const beneath = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2), head = R(c.querySelector('.wk-head')).bottom, fold = Math.min(R(c).top + c.clientTop + c.clientHeight, innerHeight);
-          const o = { floor: sr.height <= parseFloat(getComputedStyle(s).minHeight) + 0.5, more: s.classList.contains('wk-more'), seen: seen(), inSight: r.top >= head && r.bottom <= fold && r.width >= 30 && r.height >= 10,
-            covers: [...c.querySelectorAll('.om-good, .om-tag')].filter(over).map((x) => x.className), tap: Boolean(beneath && beneath.closest('.om-noren')) };
-          const t0 = tops(); s.scrollTop = s.scrollHeight; await wait(400); o.end = [s.classList.contains('wk-more'), seen()]; o.still = [tops() === t0];
-          s.scrollTop = 0; await wait(400); o.back = [s.classList.contains('wk-more'), seen()]; o.still.push(tops() === t0);
+          const c = document.querySelector('.wk-miyage .cls-card'), s = c.querySelector('.om-shelves'), m = c.querySelector('.om-more'), R = (e) => e.getBoundingClientRect();
+          const top = Math.max(R(c).top + c.clientTop, R(c.querySelector('.wk-head')).bottom), bot = Math.min(R(c).top + c.clientTop + c.clientHeight, innerHeight);
+          const whole = (g) => { const r = R(g), x = r.left + r.width / 2, y = r.top + r.height / 2, hh = document.elementFromPoint(x, y); return r.top >= top - 0.5 && r.bottom <= bot + 0.5 && Boolean(hh && g.contains(hh)); };
+          const o = { more: s.classList.contains('wk-more') || s.scrollHeight - s.clientHeight > 1, seen: m ? Number(getComputedStyle(m).opacity) : 0, goods: [...c.querySelectorAll('.om-good')].filter((g) => !whole(g)).map((g) => g.dataset.g), st: c.scrollTop };
           CLASS.close(); return JSON.stringify(o); })()""")])[-1])
-    assert all(x == {'floor': True, 'more': True, 'seen': 1, 'inSight': True, 'covers': [], 'tap': True, 'end': [False, 0], 'still': [True, True], 'back': [True, 1]} for x in out.values()), out
+    assert all(x == {'more': False, 'seen': 0, 'goods': [], 'st': 0} for x in out.values()), out
 
 # task 2, fix round 1, ruling 20: a good 竹内 lights (two misses, or as the customer goes) brought into sight inside the shelves — JOBS.inSight,
-# as the フロント's lit row and key; never the card's own scroll. Seed 13's 目上 customer (#4) at 390×664 wants 地酒, in the second row: at
-# his pick the shelves are at their floor and it lies out of sight below them; two wrong trays handed over, it is lit, its centre takes a
-# tap, the card's scroll as it was
+# as the フロント's lit row and key; never the card's own scroll. Seed 13's 目上 customer (#4) at 390×664 wants 地酒, in the second row: till
+# test.5 it lay out of sight below the shelves at their floor; now the shelves are whole — two wrong trays handed over, it is lit where it
+# is, its centre takes a tap, neither the card's nor the shelves' scroll moved
 def test_a_lit_good_comes_into_sight_on_the_shelves(b):
     r = json.loads(b.run([("metrics", (390, 664)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + CALM + WORK4 + MY + """ card(['S', 'S', 'S', 'S']); state.currentUnit = 'm11';
       window.speakAs = () => Promise.resolve(); JOBS.pat.scale = 100; const k = where(13, (c) => c.kind === 'elder'); await begin(13, k); await wait(400);
       const c = document.querySelector('.wk-miyage .cls-card'), s = c.querySelector('.om-shelves'), R = (e) => e.getBoundingClientRect(), want = MIYAGE.answer(my().c), g = good(want[0]);
       const tap = () => { const q = R(g), h = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); return Boolean(h && g.contains(h)); };
-      const out = { k, want, row2: g.parentNode === c.querySelectorAll('.om-shelf')[1], floor: R(s).height <= parseFloat(getComputedStyle(s).minHeight) + 0.5, before: tap(), st0: c.scrollTop };
+      const out = { k, want, row2: g.parentNode === c.querySelectorAll('.om-shelf')[1], whole: s.scrollHeight - s.clientHeight <= 1, before: tap(), st0: c.scrollTop };
       const wrong = MIYAGE.goods().map((x) => x[0]).filter((x) => !want.includes(x));
       put([wrong[0]]); give(); await watch(() => my().miss === 1 && !my().busy, 5000); await wait(200); put([wrong[1]]); give(); await watch(() => g.classList.contains('wk-hint'), 5000); await wait(300);
       Object.assign(out, { lit: g.classList.contains('wk-hint'), miss: my().miss, after: tap(), st: c.scrollTop, shelves: s.scrollTop }); CLASS.close(); return JSON.stringify(out); })()""")])[-1])
-    assert r['k'] == 3 and r['want'] == ['sake'] and r['row2'] and r['floor'] and not r['before'], r   # 地酒: out of sight below the shelves at their floor
-    assert r['lit'] and r['miss'] == 2 and r['after'] and r['st'] == r['st0'] and r['shelves'] > 0, r   # lit and brought into sight inside the shelves; the card never scrolled
+    assert r['k'] == 3 and r['want'] == ['sake'] and r['row2'] and r['whole'] and r['before'], r   # 地酒 in the second row: in sight from the start (test.5: the shelves whole — till then out of sight below their floor)
+    assert r['lit'] and r['miss'] == 2 and r['after'] and r['st'] == r['st0'] and r['shelves'] == 0, r   # lit where it is; neither the card nor the shelves scrolled
 
 # 2026-11-25 (the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」): in the onsen's four jobs a reply moves nothing — the card, what is read
 # (the board, the room, the shelves, the book), the customer's face and bubble, the replies and the talk row each keep their top from just
@@ -2962,7 +2961,7 @@ def ip_run(b, job, w, h, seed, morning=False):
 def ip_check(b, job):
     count, _, runs, _, _ = IP_JOBS[job]
     bad, under, sums, seen, kinds = [], [], [], set(), None
-    for (w, h), seed, morning in [((390, 664), s, m) for s, m in runs] + [((375, 553), 5, False)]:
+    for (w, h), seed, morning in [((390, 664), s, m) for s, m in runs] + [((375, 553), 5, False), ((430, 740), 5, False), ((360, 640), 5, False)]:   # 430×740 and 360×640 since test.5 (every size)
         _, r = ip_run(b, job, w, h, seed, morning)
         se, run = h < 600, (job, f'{w}x{h}', seed) + (('morning',) if morning else ())
         moves = [(g['k'], q, v) for g in r['recs'] for q, v in g['max'].items() if v > 1]
@@ -2977,7 +2976,8 @@ def ip_check(b, job):
         if r['player'] and not se: bad.append(run + ('the player had to scroll the card', r['player']))
         for k, m, v in r['after']:
             if se: (under.append((k, m, v['under'])) if any(v['under'].values()) else None)
-            elif not (v['bub'] and v['opts'] and v['talk']): bad.append(run + (k, m, 'out of reach', v))
+            elif not (v['bub'] and v['opts'] and (v['talk'] or (w, h) != (390, 664) or job == 'miyage')): bad.append(run + (k, m, 'out of reach', v))
+            elif not v['talk']: under.append((k, m, f'{w}x{h}', v['under']))   # test.5's priority (the answers, their words, then the talk row): a talk row under the fold is the report's at the sizes added — and at the おみやげ屋, whose shelves (a pick's answers) are whole since test.5
         if not se: seen |= {g['kind'] for g in r['recs']}; kinds = r['kinds']
         sums.append({'job': job, 'size': f'{w}x{h}', 'seed': seed, 'morning': morning, 'customers': len(r['recs']), 'kinds': sorted({g['kind'] for g in r['recs']}),
                      'moved': max([v for g in r['recs'] for v in g['max'].values()] or [0]), 'scrolled': max([g['st'] for g in r['recs']] or [0]), 'start': sorted({g['start'] for g in r['recs']}),

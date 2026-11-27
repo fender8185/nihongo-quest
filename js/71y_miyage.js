@@ -177,13 +177,22 @@ const MIYAGE_RUN = (() => {
         ...[s.hi, s.give, ...(c.opts || []).filter((o) => o[2])].map((l) => row('hero', line(l[0], first ? l[1] : ''), 'om-me'))]);
     }
     function plate() { const p = el('.om-plate'); if (p) p.innerHTML = plateSvg(bits); }
+    // the shelves whole at every size (test.5: at a pick the goods are the answers) and, as a customer comes, the goods drawn smaller (down to
+    // 24 px) for one whose words and replies need the room — a superior's three two-line replies — so the tray, どうぞ and the replies' foot are
+    // in sight too; set as each comes, never while they are served
+    function fit() {
+      const sh = el('.om-shelves'), card = el('.cls-card'), foot = el('.om-opts') && el('.om-opts').offsetHeight ? el('.om-opts') : el('.om-counter'); if (!sh || !card || !foot) return;
+      sh.style.removeProperty('--om-pic'); card.scrollTop = 0;
+      const over = foot.getBoundingClientRect().bottom - (card.getBoundingClientRect().top + card.clientTop + card.clientHeight) + 2, p = parseFloat(getComputedStyle(sh).getPropertyValue('--om-pic')) || 50;
+      if (over > 0) sh.style.setProperty('--om-pic', `${Math.max(24, Math.floor(p - over / 2))}px`);   // two rows of goods
+    }
     function show() {
       const c = tasks[k]; R = { k, c, step: 0, phase: 'hi', tray: [], seed, miss: 0, miss2: 0, busy: false, line: c.line }; rep = 0;
       el('.wk-n').textContent = `${k + 1}／${N}`;
       const cu = el('.wk-cust'); cu.className = 'wk-cust'; cu.removeAttribute('data-mood'); cu.dataset.kind = c.kind; cu.innerHTML = JOBS.custHtml(c.who) + hold(c);
       unhint(); shelves(); tray(); opts(false); bub(false); JOBS.hold(el('.wk-cust .wk-bub'), [c.line, c.then, c.after].filter((l) => Array.isArray(l) && l[0]).map((l) => bubHtml(true, l)));   // as tall as their words, every step's (2026-11-25)
       JOBS.hold(el('.om-opts'), MIYAGE.steps(c).includes('reply') && c.opts ? [optsHtml(c)] : []); talkHold(c);   // the replies and the talk row held for the whole customer too (fix round 2, ruling 8)
-      JOBS.reading(el('.om-shelves'))(); TL.start(el('.om-shelves'));   // the shelves from their top, taking what is left; the card in sight once
+      fit(); JOBS.reading(el('.om-shelves'))(); TL.start(null, [el('.om-shelves'), el('.wk-cust .wk-bub'), el('.om-counter'), el('.om-opts')]);   // the shelves whole (test.5: the goods are the answers at a pick — no reading block to give way), the card in sight once: never the goods, the tray, どうぞ, the replies or their words out of it
       const me0 = R;
       said(JOBS.queue(() => me(s.hi), box), 700).then(() => { if (mineNow(me0)) begin(0); });
     }
@@ -309,7 +318,7 @@ const MIYAGE_RUN = (() => {
     const shelf = (list, top) => `<div class="om-shelf${top ? ' om-top' : ''}">${top ? `<span class="om-sign" lang="ja" aria-hidden="true"><span>${ruby(list[0][1])}</span></span>` : ''}${list.map((g) => `<button type="button" class="om-good" data-g="${g[0]}" aria-label="${esc(g[5])}・${g[2]} 日圓"><span class="om-pic">${pic(g)}<i class="om-tick" aria-hidden="true">✓</i></span>
       <span class="om-tag"><b lang="ja">${ruby(g[3] ? g[6] : g[1])}</b><i>${yenStr(g[2])}円</i></span></button>`).join('')}</div>`;   // a box's pieces read whole: ろっこいり (fix round 1, M-4)
     const G = MIYAGE.goods();
-    CLASS.card('wk-miyage', '伴手禮店', `<div class="wk-head"><b lang="ja">ゆのはな<ruby>堂<rt>どう</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
+    CLASS.card('wk-miyage wk-col', '伴手禮店', `<div class="wk-head"><b lang="ja">ゆのはな<ruby>堂<rt>どう</rt></ruby></b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span><button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button></div>
       <div class="om-shop"><div class="om-shelves">${shelf(G.slice(0, 5), true)}${shelf(G.slice(5))}</div>
         <div class="om-front"><i class="om-more" aria-hidden="true"></i><i class="om-noren" aria-hidden="true">${NOREN}</i><div class="om-door"><div class="wk-cust"></div></div>
           <div class="om-counter"><span class="om-plate" aria-hidden="true"></span><div class="om-tray"></div><button type="button" class="btn btn-primary om-give" lang="ja" disabled>どうぞ</button></div></div></div>
