@@ -847,8 +847,10 @@ function pqRow(view, e, answered) {
 // a width changed inside a phone's range draws nothing again (a split screen, a window dragged): the row's height before the answer is
 // measured afresh, so the hold is the new width's (the fix round's re-review)
 window.addEventListener('resize', () => { const e = currentEntry(); if (!e || e.done) return; const row = document.querySelector('.pq-card:not(.rp-card) > .q-label'); if (row) e.pqRowH = row.getBoundingClientRect().height;
-  // pieces and words squeezed for the new width (a turn, a split screen), not as a phone's address bar comes and goes (the height alone)
-  const card = document.querySelector('#view > .q-card.pq-fit'); if (card && e.pqW !== window.innerWidth) pqSqueeze(card, e, true); });
+  // pieces and words squeezed for the new width (a turn, a split screen); the height alone (a phone's address bar coming and going) only
+  // where the card now runs over — a bar come back over a card squeezed for the taller screen (the fix round's re-review: options 4–58 px
+  // under its foot) — so they never grow under a finger as the bar goes
+  const card = document.querySelector('#view > .q-card.pq-fit'); if (card && (e.pqW !== window.innerWidth || card.scrollHeight - card.clientHeight > 0)) pqSqueeze(card, e, true); });
 // a reading question's passage, and its question where the panel is short of room (a 情報検索's conditions on a small phone), each scroll
 // on their own (2026-11-27, test.5): the foot fades while there is more below (rp-more; iOS hides scrollbars; the question says 還有 too),
 // and each is kept where it was read to as the card is drawn again (the answer, a sync); a new question starts at the top. The question
@@ -896,12 +898,12 @@ function pqSqueeze(card, e, again) {
   if (getComputedStyle(card).overflowY !== 'auto') { e.pqSq = [0, false, false]; return; }   // not held to the screen: a wide one, a phone on its side
   const over = () => card.scrollHeight - card.clientHeight;
   const fit = (pack, tight) => { let sq = 0; set([0, pack, tight]);
-    for (let k = 0; k < 4 && over() > 1 && sq < 9; k++) { const rows = new Set(tiles().map((t) => Math.round(t.getBoundingClientRect().top))).size || 1; sq = Math.min(9, sq + Math.ceil(over() / (2 * rows))); set([sq, pack, tight]); }
-    for (; sq > 0; sq--) { set([sq - 1, pack, tight]); if (over() > 1) break; }   // no more than it takes: back off while the card still holds
+    for (let k = 0; k < 4 && over() > 0 && sq < 9; k++) { const rows = new Set(tiles().map((t) => Math.round(t.getBoundingClientRect().top))).size || 1; sq = Math.min(9, sq + Math.ceil(over() / (2 * rows))); set([sq, pack, tight]); }
+    for (; sq > 0; sq--) { set([sq - 1, pack, tight]); if (over() > 0) break; }   // no more than it takes: back off while the card still holds
     set([sq, pack, tight]); return [sq, pack, tight]; };
   let r = fit(false, false);
-  if (over() > 1) r = fit(false, true);
-  if (over() > 1 && PQ_SE && PQ_SE.matches && card.querySelector('.zh-build')) r = fit(true, true);
+  if (over() > 0) r = fit(false, true);
+  if (over() > 0 && PQ_SE && PQ_SE.matches && card.querySelector('.zh-build')) r = fit(true, true);
   e.pqSq = r;
 }
 function rpFit(view, e) {

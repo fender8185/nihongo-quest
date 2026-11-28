@@ -13,8 +13,9 @@ questions (by their text) and a stride over the rest, about 32, are drawn at eac
 and 再練一次 label rows, and answered by a real click on a wrong option (我不會 on a tile or 配對 question), as the Chinese under the stem
 hidden (顯示中文) too. Its fix round's own checks, on every card drawn: a stem or Chinese line never taller than its own content, 還有 and the
 fade only over about a third of a line or more, 句意拼貼's pieces and 配對's words at their own size (never under 40 px) unless the card would run
-over and then squeezed no more than it takes, the wide 下一題 strip clear; and four tests of their own — a real touch swipe on the card scrolls
-the page (before the answer and after it), the set's note on an SE comes in the first result, a full 句意拼貼 line keeps 確定 in sight."""
+over and then squeezed no more than it takes, the wide 下一題 strip clear; and five tests of their own — a real touch swipe on the card scrolls
+the page (before the answer and after it), the set's note on an SE comes in the first result, a full 句意拼貼 line keeps 確定 in sight, and a
+phone's address bar come back over a squeezed card squeezes it again (the re-review's NB-1)."""
 import asyncio, json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 import websockets
@@ -187,10 +188,10 @@ KIT = r"""const wait = (ms) => new Promise((r) => setTimeout(r, ms)), R0 = Math.
       if (low < 39.5) out.push(['target', 'under 40 px', low]);
       if (!sq && !pack && !tight && low < (match ? 51.5 : 53.5)) out.push(['target', 'under its own size, nothing squeezed', low]);
       set(0, false, false); const base = over(); set(sq, pack, tight);
-      if (base <= 1 && (sq || pack || tight)) out.push(['squeeze', 'the card holds them as they are', sq]);
-      if (sq > 0) { set(sq - 1, pack, tight); const less = over(); set(sq, pack, tight); if (less <= 1) out.push(['squeeze', 'a px less would do', sq]); }
-      if (tight && !pack) { set(9, false, false); const loose = over(); set(sq, pack, tight); if (loose <= 1) out.push(['squeeze', 'lines closer not needed', sq]); }
-      if (pack) { set(9, false, true); const loose = over(); set(sq, pack, tight); if (loose <= 1) out.push(['squeeze', 'packing not needed', sq]); } }
+      if (base <= 0 && (sq || pack || tight)) out.push(['squeeze', 'the card holds them as they are', sq]);
+      if (sq > 0) { set(sq - 1, pack, tight); const less = over(); set(sq, pack, tight); if (less <= 0) out.push(['squeeze', 'a px less would do', sq]); }
+      if (tight && !pack) { set(9, false, false); const loose = over(); set(sq, pack, tight); if (loose <= 0) out.push(['squeeze', 'lines closer not needed', sq]); }
+      if (pack) { set(9, false, true); const loose = over(); set(sq, pack, tight); if (loose <= 0) out.push(['squeeze', 'packing not needed', sq]); } }
     return out; };
   // answered for real, by a click on a wrong option (the app's own handler: its bookkeeping, its draw) or, on a tile or 配對 question, on 我不會
   // (which puts the whole answer on the line): 下一題 whole in sight and hit, what moved (the label row's, the instruction's and the stem's tops,
@@ -235,9 +236,25 @@ TOUCH = r"""
   // a wrong option's centre (the tap that answers), on a freshly drawn card of the longest question of a format
   const fresh = (tag, mode = 'new') => { cur = longest(tag); draw(cur, mode); window.scrollTo(0, 0); const q = cur.q; return center('.q-card [data-act="answer"][data-i="' + ((q.answer + 1) % q.options.length) + '"]'); };
   // the first card, among the longest 220 of the formats asked for, in a mode, with its tool row under the screen's foot while the page can scroll
-  const find = (tags) => { build(pick(tags)); const xs = QS.slice().sort((a, c) => size(c.q) - size(a.q) || a.i - c.i).slice(0, 220);
-    for (const mode of ['new', 'leech', 'note']) for (const x of xs) { draw(x, mode); const t = tools(); if (t && t[0] > innerHeight - 4 && document.scrollingElement.scrollHeight > innerHeight + 4) { cur = [x, mode]; return [x.tag, x.q.key || x.it.key, mode]; } }
+  // (need: a part of the card a swipe is to start on, in sight there too — the Chinese line: the re-review's NB-6)
+  const find = (tags, need) => { build(pick(tags)); const xs = QS.slice().sort((a, c) => size(c.q) - size(a.q) || a.i - c.i).slice(0, 220);
+    const seen = () => { if (!need) return true; const el = document.querySelector(need), r = el && el.getBoundingClientRect(); return Boolean(r) && r.height > 0 && r.top < innerHeight - 70 && r.bottom > 70; };
+    for (const mode of ['new', 'leech', 'note']) for (const x of xs) { draw(x, mode); const t = tools(); if (t && t[0] > innerHeight - 4 && document.scrollingElement.scrollHeight > innerHeight + 4 && seen()) { cur = [x, mode]; return [x.tag, x.q.key || x.it.key, mode]; } }
     return null; };
+  // the longest card of the formats asked for whose Chinese line, the card answered (a wrong option), is above the result panel: drawn again
+  // unanswered, the centre of the wrong option a finger taps
+  const subAbove = (tags) => { build(pick(tags)); const xs = QS.slice().sort((a, c) => size(c.q) - size(a.q) || a.i - c.i).slice(0, 220);
+    for (const x of xs) { draw(x, 'new'); const q = x.q, sel = '.q-card [data-act="answer"][data-i="' + ((q.answer + 1) % q.options.length) + '"]', el = document.querySelector(sel);
+      if (!el || !document.querySelector('.q-card > .q-sub')) continue;
+      el.click(); const p = panel(), pt = point('.q-card > .q-sub');
+      if (pt && p.sheet !== null && pt[1] < p.sheet - 20) { cur = x; draw(x, 'new'); window.scrollTo(0, 0); return [center(sel), x.q.key || x.it.key]; } }
+    return null; };
+  // the first n cards of the formats asked for (in the list's order) whose pieces or words the squeeze holds at this size, in a mode: their
+  // places in the list; and one of them drawn again, by its place
+  const squeezed = (tags, mode, n) => { build(pick(tags)); const out = [];
+    for (const x of QS) { draw(x, mode); const s = e.pqSq; if (s && (s[0] > 0 || s[1] || s[2]) && !bad(check())) out.push(x.i); if (out.length >= n) break; }
+    return out; };
+  const drawAt = (i, mode) => { const x = QS.find((y) => y.i === i); cur = x; draw(x, mode); window.scrollTo(0, 0); return x.q.key || x.it.key; };
   const again = () => { draw(cur[0], cur[1]); window.scrollTo(0, 0); };
   // the 句意拼貼 question whose full line runs the card over the most: [its key, the px over]
   const longLine = () => { build(pick(['g-zh'])); let best = null;
@@ -246,11 +263,12 @@ TOUCH = r"""
   const order = () => cur.q.zhParts.map((p) => cur.q.tiles.indexOf(p));
   const tileAt = (i) => center('.q-card .order-tile[data-i="' + i + '"]:not([disabled])');
   const line = () => { const card = document.querySelector('#view > .q-card'), ok = document.querySelector('.q-card [data-act="tiles-submit"]');
-    return { over: Math.round((card.scrollHeight - card.clientHeight) * 10) / 10, top: Math.round(card.scrollTop * 10) / 10, more: card.classList.contains('rp-more'), whole: Boolean(ok) && whole(ok), hit: Boolean(ok) && hit(ok, '[data-act="tiles-submit"]'), on: Boolean(ok) && !ok.disabled, at: ok ? center('.q-card [data-act="tiles-submit"]') : null, h: innerHeight }; };
+    const cs = getComputedStyle(card), mask = cs.maskImage || cs.webkitMaskImage || 'none';
+    return { over: Math.round((card.scrollHeight - card.clientHeight) * 10) / 10, top: Math.round(card.scrollTop * 10) / 10, more: card.classList.contains('rp-more'), mask, whole: Boolean(ok) && whole(ok), hit: Boolean(ok) && hit(ok, '[data-act="tiles-submit"]'), on: Boolean(ok) && !ok.disabled, at: ok ? center('.q-card [data-act="tiles-submit"]') : null, h: innerHeight }; };
   // the day's note, over the question and in the result: where it shows, and how tall
   const noteIn = () => { const top = document.querySelector('#view > .plan-note'), res = document.querySelector('.fb-sheet .pq-rp-note');
     return { top: top ? [getComputedStyle(top).display, Math.round(top.getBoundingClientRect().height)] : null, res: res ? [getComputedStyle(res).display, Math.round(res.getBoundingClientRect().height), res.textContent] : null, sheet: Boolean(document.querySelector('.fb-sheet')), second: (() => { SESSION.idx = 1; const s = sessionNoteHtml() + (typeof sessionNoteInResult === 'function' ? sessionNoteInResult() : ''); SESSION.idx = 0; return s; })() }; };
-  return { L, build, draw, check, whole, hit, size, pick, fresh, find, again, point, center, tools, panel, longLine, order, tileAt, line, noteIn, NOTE, get QS() { return QS; } };"""
+  return { L, build, draw, check, whole, hit, size, pick, fresh, find, subAbove, squeezed, drawAt, again, point, center, tools, panel, longLine, order, tileAt, line, noteIn, NOTE, get QS() { return QS; } };"""
 API = "window.T = (() => { " + KIT + TOUCH + " })()"
 
 FORMATS = {'v-meaning', 'v-recall', 'v-cloze', 'v-reading', 'v-kanji', 'v-listen', 'v-spell', 'v-match', 'v-pic', 'v-para', 'g-choice', 'g-meaning', 'g-zh', 'g-fill-type', 'g-order',
@@ -311,6 +329,13 @@ def test_a_touch_swipe_on_the_card_scrolls_the_page_before_and_after_an_answer(b
                 swipes.append((where, found, y, tools))
                 assert y > 0 and tools and tools[1] <= h + 1, (w, h, 'before the answer', where, found, y, tools)   # the page went up, the tool row whole in sight
             assert len(swipes) >= 2, (w, h, swipes)
+            # from the Chinese line under the stem too (the re-review's NB-6: a containment put back on it alone passed), on a card that has one in sight
+            found = await ev("T.find(['g-zh', 'g-meaning*', 'g-fill-type', 'g-choice', 'l-dialog', 'k-read', 'v-meaning', 'v-cloze'], '.q-card > .q-sub')")
+            assert found, (w, h, 'no question leaves the tool row under the screen with its Chinese line in sight')
+            pt = await ev("T.again(); T.point('.q-card > .q-sub')")
+            for _ in range(3): await swipe(call, pt[0], pt[1], -300)
+            tools, y = await ev("T.tools()"), await ev("Math.round(scrollY)")
+            assert y > 0 and tools and tools[1] <= h + 1, (w, h, 'before the answer', '.q-sub', found, y, tools)
             # after a real tap on a wrong option: swipes up the card's part above the panel, until the page stops — every option above the panel
             for tag in ['v-meaning', 'l-dialog']:
                 for where in ['.q-card > .q-label', '.q-card > .q-stem', '.q-card .opt']:
@@ -325,6 +350,22 @@ def test_a_touch_swipe_on_the_card_scrolls_the_page_before_and_after_an_answer(b
                         await swipe(call, w // 2, 120, -300)
                     p = await ev("T.panel()")
                     assert p['sheet'] and p['y'] > 0 and p['last'] <= p['sheet'] + 1, (w, h, 'after the answer', tag, where, p)   # the options came up above the result panel
+            # and from the Chinese line, answered: the longest card whose line is above the result panel (on an SE the panel covers the line of
+            # the longest 220: that swipe is the panel's)
+            got = await ev("T.subAbove(['v-cloze', 'g-choice', 'v-meaning', 'g-meaning'])")
+            assert got or h < 600, (w, h, 'no question leaves its Chinese line above the result panel')
+            if got:
+                (x0, y0), key = got
+                await tap(call, x0, y0)
+                start = await ev("(() => { const p = T.panel(); const pt = T.point('.q-card > .q-sub'); return pt && p.sheet !== null && pt[1] < p.sheet - 20 ? pt : null; })()")
+                assert start, (w, h, 'after the answer', key)
+                await swipe(call, start[0], start[1], -300)
+                for _ in range(3):
+                    p = await ev("T.panel()")
+                    if p['y'] >= p['max'] - 1: break
+                    await swipe(call, w // 2, 120, -300)
+                p = await ev("T.panel()")
+                assert p['sheet'] and p['y'] > 0 and p['last'] <= p['sheet'] + 1, (w, h, 'after the answer', '.q-sub', key, p)
         drive(b, w, h, main)
 
 def test_the_set_note_is_over_the_first_question_and_on_an_se_in_its_result(b):
@@ -364,12 +405,32 @@ def test_a_full_sentence_line_keeps_the_ok_button_in_sight_and_a_card_that_scrol
             assert s['whole'] and s['hit'] and s['on'], (w, h, key, s)   # 確定 whole, tappable, lit
             await swipe(call, w // 2, h // 2, 60)   # the finger down: the card scrolls up by what is left
             s2 = await ev("T.line()")
-            assert s2['top'] < s['top'] - 5 and s2['more'], (w, h, key, s2)   # it says there is more below
+            assert s2['top'] < s['top'] - 5 and s2['more'] and s2['mask'] != 'none', (w, h, key, s2)   # it says there is more below: its foot fades
             await swipe(call, w // 2, h // 2, -120)
             s3 = await ev("T.line()")
             assert s3['whole'] and s3['top'] >= s3['over'] - 1.5, (w, h, key, s3)
             await tap(call, s3['at'][0], s3['at'][1])   # 確定, tapped: answered (the pieces are the right ones)
             assert await ev("currentEntry().done") is True, (w, h, key)
+        drive(b, w, h, main)
+
+def test_a_bar_come_back_over_a_squeezed_card_squeezes_it_again(b):
+    # a phone's address bar comes and goes as the page scrolls: the screen's height alone changes. A card drawn while the bar was gone (its pieces
+    # or words squeezed for the taller screen, or not at all) runs over once the bar is back: it is squeezed again for the shorter one, every
+    # control whole and tapped where it shows (the fix round's re-review, NB-1: options 4–58 px under the card's foot on 375×553)
+    for w, h, mode in [(375, 553, 'new'), (360, 640, 'note')]:
+        async def main(call, ev):
+            await ev(API)
+            places = await ev(f"T.squeezed(['g-zh', 'v-match'], {json.dumps(mode)}, 4)")
+            assert len(places) >= 2, (w, h, mode, places)
+            for i in places:
+                await call("Emulation.setDeviceMetricsOverride", {"width": w, "height": h + 56, "deviceScaleFactor": 2, "mobile": True})
+                await asyncio.sleep(0.2)
+                key = await ev(f"T.drawAt({i}, {json.dumps(mode)})")
+                await asyncio.sleep(0.2)
+                await call("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 2, "mobile": True})
+                await asyncio.sleep(0.4)
+                m = await ev("T.check()")
+                assert m[0] and not m[2] and not m[3] and m[4], (w, h, mode, key, m)   # [controls, worst miss, not whole, covered, the stem begun]
         drive(b, w, h, main)
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
