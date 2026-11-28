@@ -5,8 +5,8 @@ too — 下一題 is in sight and, on a phone, nothing under the result moved.
 
 The user: 「這種還是要讓使用者一開始就能看得到選項」 and 「但感覺還是必須全面適配各種size，畢竟之後還是要上架到app store 和 googlestore」.
 
-A deterministic sample of the full sweep (.superpowers/sdd/2026-11-27-test5-practice/t4-sweep.py: every question of every format, 37,000-odd,
-at the 8 sizes in every state; 12–14 minutes): every grammar, listening, reading, kanji, kana and 變化練習 question and six 錯題卡 is built, and
+A deterministic sample of the full sweep (scripts/sweep-question-fit.py OUT_DIR: every question of every format, 37,000-odd, at the 8 sizes in
+every state; 12–14 minutes; --sizes and --limit run a part of it): every grammar, listening, reading, kanji, kana and 變化練習 question and six 錯題卡 is built, and
 of each vocabulary format the words its question is likeliest longest in and a stride over the rest; then of each format its 12 longest
 questions (by their text) and a stride over the rest, about 32, are drawn at each size — new, as a word missed again and again (錯題複習 and
 常錯: the widest label row), a listening question with its progress line up — and the 12 longest also under a session's note, on the 換個方式再考
@@ -15,7 +15,13 @@ hidden (顯示中文) too. Its fix round's own checks, on every card drawn: a st
 fade only over about a third of a line or more, 句意拼貼's pieces and 配對's words at their own size (never under 40 px) unless the card would run
 over and then squeezed no more than it takes, the wide 下一題 strip clear; and five tests of their own — a real touch swipe on the card scrolls
 the page (before the answer and after it), the set's note on an SE comes in the first result, a full 句意拼貼 line keeps 確定 in sight, and a
-phone's address bar come back over a squeezed card squeezes it again (the re-review's NB-1)."""
+phone's address bar come back over a squeezed card squeezes it again (the re-review's NB-1).
+
+The final fix (2026-11-28; the final review's Important 1 and 2): a practice card going away — a set played to its summary, one left with ✕ after four
+answers and one left with ✕ on its first question — reports no page error (what js/30_report.js would send to app_errors: its ResizeObserver threw on a
+strip the view had drawn over); and every preview card (a new word's, a relearn's, a new kana's, a lesson section's two pages) shows its main button
+whole and tapped at its middle from its first frame at all 8 sizes — pinned at a phone's foot (.pv-foot, .gp-foot), the card's last line scrolling clear
+of the strip."""
 import asyncio, json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 import websockets
@@ -26,11 +32,11 @@ URL = f"http://127.0.0.1:{PORT}/"
 READY = "typeof state === 'object' && !!state.updatedAt && typeof speakScript === 'function'"
 SIZES = [(360, 640), (375, 553), (390, 664), (412, 780), (430, 740), (768, 1024), (1024, 768), (1280, 800)]
 
-def drive(b, w, h, main, reduce=True):
+def drive(b, w, h, main, reduce=True, inject=None):
     """b's page opened at w×h — a phone's emulation (scale 2) up to 600 px wide, a touch screen up to 1024 (the phones, an iPad either way up),
     a keyboard and a mouse at 1280, motion reduced (nothing in flight when a card is measured) — then `await main(call, ev)`: call(method,
     params) is one CDP command, ev(js, timeout) evaluates js (a promise is awaited). One CDP session from the metrics to the value, so the
-    emulation holds throughout"""
+    emulation holds throughout. inject: a script run in every new document before the app's own (a listener that must be there from the start)"""
     mobile, touch = w <= 600, w <= 1024
     async def go():
         async with websockets.connect(b.ws_url, max_size=None) as ws:
@@ -48,6 +54,7 @@ def drive(b, w, h, main, reduce=True):
                 if "exceptionDetails" in r: raise RuntimeError(r["exceptionDetails"].get("exception", {}).get("description", "eval error")[:900])
                 return r["result"].get("value")
             await call("Page.enable"); await call("Page.addScriptToEvaluateOnNewDocument", {"source": "window.NQ_E2E = 1"})
+            if inject: await call("Page.addScriptToEvaluateOnNewDocument", {"source": inject})
             await call("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 2 if mobile else 1, "mobile": mobile})
             await call("Emulation.setTouchEmulationEnabled", {"enabled": True, "maxTouchPoints": 5} if touch else {"enabled": False})
             if reduce: await call("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-reduced-motion", "value": "reduce"}]})
@@ -432,6 +439,125 @@ def test_a_bar_come_back_over_a_squeezed_card_squeezes_it_again(b):
                 m = await ev("T.check()")
                 assert m[0] and not m[2] and not m[3] and m[4], (w, h, mode, key, m)   # [controls, worst miss, not whole, covered, the stem begun]
         drive(b, w, h, main)
+
+# the preview cards (a new word's — a relearn's, 再看一次, too — a new kana's, a lesson section's two pages): drawn as the app draws them, each measured
+# at its first frame (right after the draw, the layout forced) and settled (two frames and the web fonts later), as it is and under the day's note
+# (over the first card of the day: on a wide screen the longest word's 看完了 was under the foot of a 1024×768 screen by 38 px with it). Not the
+# question kit above: that one marks every item learned, and a learned item has no preview. A word's preview is the tallest of the 40 whose texts are
+# the longest (the weight of its two examples, their Chinese and its meaning, a picture counting), a kana's and a section's the tallest of all of them
+PVKIT = r"""
+  const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  speak = () => Promise.resolve(); speakScript = () => Promise.resolve();
+  state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 99; state.startChosen = true; state.currentUnit = DATA.UNITS[DATA.UNITS.length - 1].id; saveState(); DAILY_CACHE = null;
+  const words = REG.vocab.filter((v) => v.builtin), w0 = words[0], w1 = words[1];
+  const show = (it, relearn, page2) => { startSession('items', { items: [it, w0, w1] }); route(); const e = currentEntry(); e.preview = true; e.relearn = Boolean(relearn); e.gpPage = 0; renderPractice();
+    if (page2) { previewMain(); } window.scrollTo(0, 0); return e; };
+  const plain = (s) => String(s || '').replace(/<rt>[\s\S]*?<\/rt>/g, '').replace(/\[[^\]]*\]|\{|\}/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, '');
+  const weight = (v) => plain(v.ex).length + plain(v.ex2).length + String(v.exZh || '').length + String(v.exZh2 || '').length + String(v.m || '').length * 2 + (picKey(v) ? 12 : 0);
+  const R = (el) => el.getBoundingClientRect(), page = () => R(document.querySelector('#view .preview')).height;
+  const tallest = (xs, page2) => { let best = null; xs.forEach((x) => { const e = show(x, false, page2); if (page2 && e.gpPage !== 2) return; const h = page(); if (!best || h > best[1]) best = [x, h]; }); return best[0]; };
+  // the cases at this size: the tallest word's preview (a picture, two examples), the same as a relearn, the tallest kana, the tallest lesson
+  // section's two pages
+  const seen = new Set(), secs = REG.grammar.filter((g) => { const k = lessonSecKey(g); if (!k || seen.has(k)) return false; seen.add(k); return true; });
+  const word = tallest(words.slice().sort((a, b) => weight(b) - weight(a) || (a.key < b.key ? -1 : 1)).slice(0, 40)), kana = tallest(REG.kana.slice());
+  const sec1 = tallest(secs.slice()), sec2 = tallest(secs.filter((g) => grammarPreviewPages({ item: g }) === 2), true);
+  const CASES = { word: () => show(word), relearn: () => show(word, true), kana: () => show(kana), g1: () => show(sec1), g2: () => show(sec2, false, true) };
+  // what a preview shows now: its main button (whole in the screen, and the one a tap at its middle reaches), its foot (the strip: how it is
+  // held, how tall; every button in it inside it and the screen, none over another, how tall) and, the page scrolled to its end, whether the
+  // card's last line is above the strip
+  const probe = (kind) => { const btn = document.getElementById('btnNext'), strip = btn && btn.closest('.pr-actions'); if (!btn || !strip) return { kind, missing: true };
+    const rb = R(btn), rs = R(strip), h = document.elementFromPoint(rb.left + rb.width / 2, rb.top + rb.height / 2), kids = [...strip.querySelectorAll('.btn')].map((k) => R(k));
+    const inside = kids.every((k) => k.left >= rs.left - 0.5 && k.right <= rs.right + 0.5 && k.top >= rs.top - 0.5 && k.bottom <= rs.bottom + 0.5 && k.right <= innerWidth + 0.5 && k.left >= -0.5);
+    const apart = kids.every((a, i) => kids.every((b, j) => i >= j || a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5));
+    return { kind, main: { whole: rb.width > 0 && rb.top >= -0.5 && rb.bottom <= innerHeight + 0.5 && rb.left >= -0.5 && rb.right <= innerWidth + 0.5, hit: Boolean(h && h.closest('#btnNext') === btn), gap: Math.round(rb.bottom - innerHeight), h: Math.round(rb.height * 10) / 10, text: btn.textContent.replace('Enter', '').trim() },
+      strip: { pos: getComputedStyle(strip).position, h: Math.round(rs.height * 10) / 10, inside, apart, hs: kids.map((k) => Math.round(k.height * 10) / 10), n: kids.length }, scroll: Math.round(document.documentElement.scrollHeight - innerHeight) }; };
+  const clear = async () => { window.scrollTo(0, 1e6); await frames(); const last = document.querySelector('#view .preview').lastElementChild, strip = document.querySelector('#view > .pr-actions'), y = scrollY;
+    const out = { y: Math.round(y), clear: R(last).bottom <= R(strip).top + 0.5, gap: Math.round(R(strip).top - R(last).bottom), last: last.className }; window.scrollTo(0, 0); await frames(); return out; };
+  const shape = () => ({ pic: Boolean(document.querySelector('.preview .pic')), examples: document.querySelectorAll('.preview .example').length, bad: Boolean(document.querySelector('.q-label .chip-bad')), left: document.querySelectorAll('#view > .pr-actions .left .btn').length, page: (document.querySelector('.preview.grammar') || { dataset: {} }).dataset.page || '' });
+  const NOTE = '最近錯得比較多、錯題本比較滿，今天新內容少一點（5 題）。先把 N5 的單字（還剩 12 個）和漢字（還剩 8 個）學完，再開始第 3–4 週・て形。';
+  const run = async () => { const out = {}; for (const [k, draw] of Object.entries(CASES)) for (const note of [false, true]) { const name = note ? k + '+note' : k; draw();
+      if (note) { SESSION.meta = Object.assign({}, SESSION.meta, { note: NOTE }); renderPractice(); window.scrollTo(0, 0); }
+      const first = probe(name); await frames(); if (document.fonts) await document.fonts.ready; const settled = probe(name); out[name] = { first, settled, end: await clear(), shape: shape(), note: Boolean(document.querySelector('#view > .plan-note')) === note }; }
+    out.keys = { word: word.key, kana: kana.key, sec1: lessonSecKey(sec1), sec2: lessonSecKey(sec2) }; SESSION = null; document.body.classList.remove('practicing'); return out; };"""
+
+def test_every_preview_shows_its_main_button_from_its_first_frame_at_every_size(b):
+    # the final review's Important 2: a new word's 看完了 was under a phone's foot on the first screen of every new word (87–209 px at 375×553, 20 and
+    # 104 at 390×664, 42 at 430×740; the relearn 再看一次 card the same) — the grammar card's foot was pinned (.gp-foot) and the word's and the kana's
+    # are now (.pv-foot): a solid strip across the gutters at the foot, 看完了 big, the small buttons beside it 40 px at the least (the kana's three at
+    # 360 px on one row with nothing cut or over another), the page above scrolling to its last line clear of the strip
+    for w, h in SIZES:
+        async def main(call, ev):
+            return json.loads(await ev("(async () => { " + PVKIT + " return JSON.stringify(await run()); })()", 120))
+        r = drive(b, w, h, main)
+        phone = w <= 600
+        sh = {k: r[k]['shape'] for k in ('word', 'relearn', 'kana', 'g1', 'g2')}
+        # the cards are what the case says: the longest word's has a picture and two examples, the relearn's the 再看一次 chip, the kana's three buttons
+        # on the left, the section's page 1 its main button 下一頁：例句 and page 2 its examples and 看完了
+        assert sh['word']['pic'] and sh['word']['examples'] == 2 and not sh['word']['bad'] and sh['word']['left'] == 2, (w, h, sh['word'], r['keys'])
+        assert sh['relearn']['pic'] and sh['relearn']['examples'] == 2 and sh['relearn']['bad'] and sh['relearn']['left'] == 1, (w, h, sh['relearn'])
+        assert sh['kana']['left'] == 3 and r['kana']['first']['main']['text'] == '看完了', (w, h, sh['kana'], r['keys'])
+        assert sh['g1']['page'] == '1' and r['g1']['first']['main']['text'] == '下一頁：例句' and sh['g2']['page'] == '2' and sh['g2']['examples'] >= 1 and r['g2']['first']['main']['text'] == '看完了', (w, h, sh['g1'], sh['g2'])
+        for k in ('word', 'relearn', 'kana', 'g1', 'g2', 'word+note', 'relearn+note', 'kana+note', 'g1+note', 'g2+note'):
+            assert r[k]['note'], (w, h, k, 'the day\'s note over the card (or not)')
+            for when in ('first', 'settled'):
+                p = r[k][when]
+                assert not p.get('missing') and p['main']['whole'] and p['main']['hit'], (w, h, k, when, p)   # the main button whole in the screen and tapped at its middle
+                assert p['strip']['inside'] and p['strip']['apart'] and p['strip']['pos'] == 'sticky', (w, h, k, when, p['strip'])   # nothing cut, nothing over another; held at the foot
+                if phone:
+                    assert p['main']['h'] >= 47.5, (w, h, k, when, p)   # 看完了 big
+                    assert min(p['strip']['hs']) >= 39.5, (w, h, k, when, p['strip'])   # no button under 40 px
+                    assert p['strip']['h'] <= 66, (w, h, k, when, p['strip'])   # one row: 8 + 48 + 8 (the kana's three buttons and 看完了 side by side)
+            assert r[k]['end']['clear'], (w, h, k, r[k]['end'])   # scrolled to its end, the card's last line is above the strip
+            if phone and k.split('+')[0] in ('word', 'relearn', 'g1', 'g2'): assert r[k]['first']['scroll'] > 0 and r[k]['end']['y'] > 0, (w, h, k, r[k])   # (the page really is longer than the screen: it scrolls)
+
+# what js/30_report.js would send to public.app_errors, listened for from before the app's first script: an uncaught error (not a ResizeObserver
+# loop notice, which the reporter ignores) and an unhandled rejection (not a sound the browser would not play)
+ERRORS = r"""window.__nqErrs = [];
+  window.addEventListener('error', (e) => { if (/ResizeObserver loop/.test(String(e.message || ''))) return; window.__nqErrs.push(['error', String(e.message || (e.error && e.error.message)), String(e.filename || '').split('/').pop() + ':' + e.lineno]); });
+  window.addEventListener('unhandledrejection', (e) => { const r = e.reason; if (r && (r.name === 'NotAllowedError' || r.name === 'AbortError')) return; window.__nqErrs.push(['rejection', String((r && r.message) || r)]); });"""
+
+def test_a_practice_card_going_away_reports_no_page_error(b):
+    # the final review's Important 1: the observer of a card's strip (RP_RO) threw 「Cannot read properties of null (reading 'matches')」 for a
+    # strip the view had drawn over — at every new item's preview, at the summary, on ✕ — and js/30_report.js sends each to app_errors. A daily
+    # set of new words (previews among its cards) played through its summary, a second left with ✕ after four answers (the summary of a set
+    # quit), a third left with ✕ on its first question: the page's errors and unhandled rejections, listened for from before the set, none
+    for w, h in [(375, 553), (1280, 800)]:
+        async def main(call, ev):
+            js = """(async () => { const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+              speak = () => Promise.resolve(); speakScript = () => Promise.resolve(); window.confirm = () => true;
+              state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 99; state.startChosen = true; state.currentUnit = DATA.UNITS[DATA.UNITS.length - 1].id; saveState();
+              const fresh = () => { state.srs = {}; state.lessonSeen = []; state.mistakes = []; DAILY_CACHE = null; };
+              const click = (sel) => { const el = document.querySelector(sel); if (!el) return false; el.click(); return true; };
+              // a card of the set as a player does it: a preview's button; an answer (every third a wrong one, 我不會 on a tile question) and 下一題
+              const step = async (k) => { const e = currentEntry();
+                if (e.preview && !e.previewDone) { click('#btnNext'); await wait(60); return 'preview'; }
+                if (!e.q) { prepareEntry(SESSION.idx); return 'prepare'; }
+                if (!e.done) { const q = e.q, sel = q.custom ? '.q-card [data-act="custom-giveup"]' : '.q-card [data-act="answer"][data-i="' + ((q.answer + (k % 3 === 1 ? 1 : 0)) % q.options.length) + '"]'; if (!click(sel)) answerCurrent(q.answer); await wait(50); }
+                if (!click('#btnNext')) nextQuestion(); await wait(50); return 'answer'; };
+              const out = {}, errs = () => window.__nqErrs.length;
+              fresh(); startSession('daily', {}); route(); await wait(300);
+              let previews = 0, answered = 0, guard = 0;
+              while (SESSION && SESSION.idx < SESSION.entries.length && guard++ < 300) { const what = await step(answered); if (what === 'preview') previews++; else if (what === 'answer') answered++; }
+              await wait(500);   // the observers' last word, a frame or two after the view is drawn over
+              out.played = { previews, answered, summary: Boolean(document.querySelector('.ring')), errs: errs() };
+              click('[data-act="close-summary"]'); await wait(300); out.closed = { errs: errs(), hash: location.hash };
+              fresh(); startSession('daily', {}); route(); await wait(300);
+              previews = 0; answered = 0; guard = 0;
+              while (SESSION && answered < 4 && guard++ < 300) { const what = await step(answered); if (what === 'preview') previews++; else if (what === 'answer') answered++; }
+              click('[data-act="exit-practice"]'); await wait(500);
+              out.quit = { previews, answered, summary: Boolean(document.querySelector('.ring')), errs: errs() };
+              click('[data-act="close-summary"]'); await wait(300);
+              fresh(); startSession('daily', {}); route(); await wait(300);
+              guard = 0; while (SESSION && guard++ < 50) { const e = currentEntry(); if (e.preview && !e.previewDone) { click('#btnNext'); await wait(60); continue; } if (!e.q) { prepareEntry(SESSION.idx); continue; } break; }
+              const onQuestion = Boolean(document.querySelector('#view > .q-card.pq-fit')); click('[data-act="exit-practice"]'); await wait(500);
+              out.left = { onQuestion, gone: !SESSION, hash: location.hash, errs: errs() };
+              out.errors = window.__nqErrs.slice(0, 6); return JSON.stringify(out); })()"""
+            return json.loads(await ev(js, 240))
+        r = drive(b, w, h, main, inject=ERRORS)
+        assert r['played']['previews'] >= 3 and r['played']['answered'] >= 15 and r['played']['summary'], (w, h, r['played'])   # a set of new words, previews among its cards, to its summary
+        assert r['quit']['previews'] >= 1 and r['quit']['answered'] == 4 and r['quit']['summary'], (w, h, r['quit'])   # ✕ after four answers: the summary of a set cut short
+        assert r['left']['onQuestion'] and r['left']['gone'] and r['left']['hash'] == '#/today', (w, h, r['left'])   # ✕ on a question: out of practice
+        assert r['errors'] == [] and r['left']['errs'] == 0, (w, h, r['played']['errs'], r['quit']['errs'], r['left']['errs'], r['errors'])
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

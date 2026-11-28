@@ -888,6 +888,110 @@ def test_a_reply_moves_nothing_in_the_bento(b):
                    play, 8, sizes=((390, 664), (375, 553), (430, 740), (360, 640), (412, 780)), track=('.bt-car', '.bt-win', '.bt-bub .bt-who', '.bt-ear', '.bt-reply', '.bt-hand', '.bt-chip', '.bt-give', '.bt-good'), head=('.bt-bub',))
     assert bad == [], bad
 
+# the 賣便當's hand (test.5's final fix, the final review's Minor 8). A chip is one good in the hero's hands — tapped, it puts one back (放回一個) — and
+# the hand can hold up to nine of them (every good of the tray: nine from m2); a row that never wraps and hides its scrollbar left a laptop's mouse
+# with no way to the 4th chip and the ones scrolled out of sight. With a fine pointer the row's scrollbar is there from the first frame (thin, the row
+# 8 px taller for it): five chips taken one by one at 1280×800 move nothing — the card's rows, the car and its windows, the passenger's bubble,
+# はい／いいえ, the hand and its chips, どうぞ, the tray, the talk row — and every chip is reached by a real mouse: the scrollbar's thumb dragged to an
+# end, the chip pointed at and clicked, five clicks and five goods put back. A phone keeps its sideways row without a bar (Ruling 30)
+HAND = r"""(async () => { """ + BEGIN + BENTO_HELP + r""" state.currentUnit = 'm6'; BENTO.SECS.fill(900); JOBS.pat.scale = 3; location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+  WORK.start(yard(), 'bento');
+  for (let i = 0; i < 300 && !(BENTO_RUN.now() && BENTO_RUN.now().phase === 'stop' && calling().length); i++) await wait(30);
+  click('.bt-win.calling'); await wait(300);   // a passenger picked: goods can be taken
+  const R = (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.left * 10) / 10, Math.round(r.top * 10) / 10, Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10]; };
+  const SEL = ['.cls-card', '.bt-stage', '.bt-car', '.bt-win', '.bt-dep', '.bt-talk', '.bt-bub', '.bt-replies', '.bt-handrow', '.bt-hand', '.bt-give', '.bt-box', '.bt-good', '.bt-tk'];
+  window.__t = { fine: matchMedia('(hover: hover) and (pointer: fine)').matches, coarse: matchMedia('(hover: none) and (pointer: coarse)').matches, goods: () => card().querySelectorAll('.bt-good').length,
+    snap: () => { const o = {}; SEL.forEach((q) => card().querySelectorAll(q).forEach((e, i) => { o[q + '#' + i] = R(e); })); card().querySelectorAll('.bt-chip').forEach((e, i) => { const r = R(e); o['chip#' + i] = [r[1], r[3]]; }); return o; },
+    take: (i) => { const g = card().querySelectorAll('.bt-good')[i]; g.click(); return g.dataset.g; },
+    hand: () => { const h = card().querySelector('.bt-hand'), r = h.getBoundingClientRect(), cs = getComputedStyle(h);
+      return { left: r.left, top: r.top, w: r.width, h: r.height, sl: Math.round(h.scrollLeft), sw: h.scrollWidth, cw: h.clientWidth, ch: h.clientHeight, oh: h.offsetHeight, ox: cs.overflowX, sbw: cs.scrollbarWidth,
+        chips: [...h.querySelectorAll('.bt-chip')].map((c) => { const q = c.getBoundingClientRect(), at = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); return { l: q.left, r: q.right, y: q.top + q.height / 2, id: c.dataset.drop, hit: Boolean(at && at.closest('.bt-chip') === c) }; }),
+        held: Object.values(BENTO_RUN.now().hand).filter((n) => n > 0).length }; } };
+  return 1; })()"""
+
+def mouse_page(b, w, h, main, touch=False):
+    """b's page at w×h — a keyboard and a mouse, or (touch) a phone's touch screen — set up as HAND sets it up, then `await main(call, ev)`: call(method,
+    params) is one CDP command, ev(js) evaluates js (a promise is awaited)"""
+    import asyncio, websockets
+    async def go():
+        async with websockets.connect(b.ws_url, max_size=None) as ws:
+            n = 0
+            async def call(m, p=None):
+                nonlocal n; n += 1; k = n
+                await ws.send(json.dumps({"id": k, "method": m, "params": p or {}}))
+                while True:
+                    r = json.loads(await ws.recv())
+                    if r.get("id") == k:
+                        if "error" in r: raise RuntimeError(f"{m}: {r['error']}")
+                        return r.get("result", {})
+            async def ev(src, t=120):
+                r = await asyncio.wait_for(call("Runtime.evaluate", {"expression": src, "returnByValue": True, "awaitPromise": True}), t)
+                if "exceptionDetails" in r: raise RuntimeError(r["exceptionDetails"].get("exception", {}).get("description", "eval error")[:900])
+                return r["result"].get("value")
+            await call("Page.enable"); await call("Page.addScriptToEvaluateOnNewDocument", {"source": "window.NQ_E2E = 1"})
+            await call("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 2 if touch else 1, "mobile": touch})
+            await call("Emulation.setTouchEmulationEnabled", {"enabled": True, "maxTouchPoints": 5} if touch else {"enabled": False})
+            await call("Storage.clearDataForOrigin", {"origin": URL.rstrip("/"), "storageTypes": "all"})
+            await call("Page.navigate", {"url": URL})
+            for _ in range(450):
+                try:
+                    if await ev(READY, 10): break
+                except Exception: pass
+                await asyncio.sleep(0.1)
+            await ev(HAND, 120)
+            return await main(call, ev, asyncio)
+    return asyncio.run(go())
+
+def test_the_bento_hand_reaches_every_chip_with_a_mouse_and_a_new_chip_moves_nothing(b):
+    async def laptop(call, ev, asyncio):
+        async def mouse(t, x, y, buttons=0):
+            await call("Input.dispatchMouseEvent", {"type": t, "x": x, "y": y, "button": "left" if buttons or t != "mouseMoved" else "none", "buttons": buttons, "clickCount": 0 if t == "mouseMoved" else 1})
+        async def click(x, y):
+            await mouse("mouseMoved", x, y); await mouse("mousePressed", x, y, 1); await mouse("mouseReleased", x, y); await asyncio.sleep(0.25)
+        async def hand(): return json.loads(await ev("JSON.stringify(__t.hand())"))
+        async def drag_thumb(dx):   # the scrollbar's thumb (the bottom 8 px of the row) grabbed at its middle and pulled dx px along the track
+            st = await hand(); w = st['w']; thumb = max(st['cw'] / st['sw'] * w, 20); x0 = st['left'] + st['sl'] / max(1, st['sw'] - st['cw']) * (w - thumb) + thumb / 2; y = st['top'] + st['h'] - 4
+            await mouse("mouseMoved", x0, y); await mouse("mousePressed", x0, y, 1)
+            for k in range(1, 9): await mouse("mouseMoved", x0 + dx * k / 8, y, 1); await asyncio.sleep(0.02)
+            await mouse("mouseReleased", x0 + dx, y); await asyncio.sleep(0.3)
+        def whole(st, c): return c['l'] >= st['left'] - 0.5 and c['r'] <= st['left'] + st['cw'] + 0.5 and c['hit']   # inside the row's visible part and the one a click at its middle reaches
+        info = json.loads(await ev("JSON.stringify({ fine: __t.fine, goods: __t.goods() })"))
+        assert info['fine'] and info['goods'] >= 6, info   # a mouse (a fine pointer, hover), the tray's nine goods
+        base = json.loads(await ev("JSON.stringify(__t.snap())"))
+        h0 = await hand(); assert h0['oh'] - h0['ch'] >= 6 and h0['h'] >= 50, h0   # the row's scrollbar is there before the first chip: 8 px of it in the row's height
+        moved = []
+        for i in range(5):
+            await ev(f"__t.take({i})"); await asyncio.sleep(0.15)
+            now = json.loads(await ev("JSON.stringify(__t.snap())"))
+            for k, v in base.items():
+                if now.get(k) is None or any(abs(a - c) > 0.5 for a, c in zip(v, now[k])): moved.append((i + 1, k, v, now.get(k)))   # a chip taken: nothing is where it was not
+            tops = {tuple(v) for k, v in now.items() if k.startswith('chip#')}
+            if len(tops) > 1: moved.append((i + 1, 'chips', sorted(tops)))   # every chip on the row's one line
+        assert moved == [], moved[:6]
+        st = await hand(); order = [c['id'] for c in st['chips']]
+        assert len(order) == 5 and st['sw'] > st['cw'] + 40 and st['sl'] > 0, st   # five chips: the 4th and 5th past the row's edge, the first ones scrolled out of sight
+        # each chip — the first taken, the last, then the others — brought whole into the row by the mouse alone (the scrollbar's thumb dragged until it
+        # shows, its middle reached by a click) and clicked: that good put back and the others still in the hand
+        drags, left = 0, list(order)
+        for want in [order[0], order[4], order[1], order[2], order[3]]:
+            for _ in range(5):
+                st = await hand(); c = next(x for x in st['chips'] if x['id'] == want)
+                if whole(st, c): break
+                thumb = max(st['cw'] / st['sw'] * st['w'], 20); need = (c['l'] + c['r']) / 2 - st['left'] - st['cw'] / 2
+                await drag_thumb(need * (st['w'] - thumb) / max(1, st['sw'] - st['cw'])); drags += 1
+            assert whole(st, c), ('chip', want, 'cannot be reached by the mouse', st)
+            await click((c['l'] + c['r']) / 2, c['y']); left.remove(want)
+            after = await hand()
+            assert [x['id'] for x in after['chips']] == left and after['held'] == len(left), ('a click on a chip puts its good back', want, left, after)
+        assert drags >= 2, drags   # the chips were not all in reach without the scrollbar: the first was scrolled out of sight, and the last once it had gone
+    mouse_page(b, 1280, 800, laptop)
+    async def phone(call, ev, asyncio):
+        info = json.loads(await ev("JSON.stringify({ fine: __t.fine, coarse: __t.coarse })")); assert info['coarse'] and not info['fine'], info
+        for i in range(5): await ev(f"__t.take({i})"); await asyncio.sleep(0.15)
+        st = json.loads(await ev("JSON.stringify(__t.hand())"))
+        assert st['sw'] > st['cw'] + 40 and st['oh'] == st['ch'] and st['ox'] == 'auto' and st['sbw'] == 'none' and st['h'] < 50, st   # a phone's row: sideways, no bar, as before
+    mouse_page(b, 390, 664, phone, touch=True)
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

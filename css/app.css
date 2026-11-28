@@ -703,6 +703,19 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .wk-bento .bt-hand.bt-more-r { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), rgba(0, 0, 0, .15)); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), rgba(0, 0, 0, .15)); }
 .wk-bento .bt-hand.bt-more-l { -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, .15), #000 28px); mask-image: linear-gradient(90deg, rgba(0, 0, 0, .15), #000 28px); }
 .wk-bento .bt-hand.bt-more-l.bt-more-r { -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, .15), #000 28px calc(100% - 28px), rgba(0, 0, 0, .15)); mask-image: linear-gradient(90deg, rgba(0, 0, 0, .15), #000 28px calc(100% - 28px), rgba(0, 0, 0, .15)); }
+/* a mouse has no swipe (test.5's final fix, the final review's Minor 8): on a laptop the 4th chip and the ones after it sat past the row's
+   edge with no way for a mouse to the ones scrolled out of sight (a chip puts one good back: 放回一個; the hand can hold up to nine). With a fine
+   pointer the row's scrollbar is drawn from the start, thin, its track there whether or not there is anything to scroll — the row 8 px taller
+   for it from the first chip, so a new chip or a reply moves nothing. Phones keep the sideways row without a bar (Ruling 30). A custom
+   ::-webkit-scrollbar is a bar that stays (a Mac's overlay bars hide), and Chrome 121+ takes it only while scrollbar-width is auto;
+   Firefox, which has no ::-webkit-scrollbar, gets scrollbar-width: thin */
+@media (hover: hover) and (pointer: fine) {
+  .wk-bento .bt-hand { overflow-x: scroll; scrollbar-width: auto; min-height: 52px; }
+  .wk-bento .bt-hand::-webkit-scrollbar { display: block; height: 8px; }
+  .wk-bento .bt-hand::-webkit-scrollbar-track { border-radius: 4px; background: #e3d5ba; }
+  .wk-bento .bt-hand::-webkit-scrollbar-thumb { border-radius: 4px; background: #9a7348; }
+  @supports (-moz-appearance: none) { .wk-bento .bt-hand { scrollbar-width: thin; scrollbar-color: #9a7348 #e3d5ba; } }
+}
 /* no container units (Safari before 16, the iPhone 6s/7 on iOS 15): the car at the card's width, as before test.5 — on an SE-sized screen
    drawn at 70% of it, at the left (fix round 1, the review's Minor 10: the tray's last row 22 px under the fold) */
 @supports not (height: 1cqh) { @media (max-height: 599px) { .wk-bento .bt-car { width: 70%; } } }
@@ -2381,10 +2394,21 @@ body.reading { overflow: hidden; }
   --pq-next: #f0a660; --pq-next-fg: #2e1c12; --pq-on-mark: #fff; --pq-ink-mix: 100%;   /* the page's --bg on --ok was 4.3:1 by day: white */
 }
 /* the kinds (data-pq-kind on the card and the result panel): 單字 朱, 文法 藍, 聽力 若竹, 閱讀 藤, 漢字 金茶, 假名 桃, 錯題本 墨, 變化練習 青磁; the
-   label's fill (--pq-kind-c) dims by night as 課程's covers do, the ink of 新's outline (--pq-kind-ink) lightens by night */
-[data-pq-kind] { --pq-kind: #b8463a; --pq-kind-c: color-mix(in srgb, var(--pq-kind) var(--cover-keep), var(--cover-shade)); --pq-kind-ink: color-mix(in srgb, var(--pq-kind) var(--pq-ink-mix), #fff); }
-[data-pq-kind="g"] { --pq-kind: #3e5f8e; } [data-pq-kind="l"] { --pq-kind: #477754; } [data-pq-kind="r"] { --pq-kind: #6b4d8a; } [data-pq-kind="k"] { --pq-kind: #8a6620; }
-[data-pq-kind="a"] { --pq-kind: #a94a63; } [data-pq-kind="m"] { --pq-kind: #55525e; } [data-pq-kind="c"] { --pq-kind: #2f6f73; }
+   label's fill (--pq-kind-c) dims by night as 課程's covers do, the ink of 新's outline (--pq-kind-ink) lightens by night. Plain colours first
+   (test.5's final fix, the final review's Minor 4: a browser without color-mix() — Safari before 16.2, Chrome before 111 — gave the label no
+   fill and its cream text vanished on the page by day): by day the kind's own colour, by night its fill dimmed (--pq-n-c: 76% of it over
+   課程's night shade #1c1e38) and its ink lightened (--pq-n-ink: 52% of it with white), worked out once for each of the eight — 4.85–8.6:1 for
+   the label's text on its fill, 5.1–7.5:1 for the ink on the page, by day and by night; the mixes only inside @supports, since a custom
+   property takes any words as valid and an old browser would have kept the mix and drawn nothing */
+[data-pq-kind] { --pq-kind: #b8463a; --pq-n-c: #933c3a; --pq-n-ink: #da9f99; --pq-kind-c: var(--pq-n-c); --pq-kind-ink: var(--pq-n-ink); }
+[data-pq-kind="g"] { --pq-kind: #3e5f8e; --pq-n-c: #364f79; --pq-n-ink: #9bacc4; } [data-pq-kind="l"] { --pq-kind: #477754; --pq-n-c: #3d624d; --pq-n-ink: #9fb8a6; }
+[data-pq-kind="r"] { --pq-kind: #6b4d8a; --pq-n-c: #584276; --pq-n-ink: #b2a2c2; } [data-pq-kind="k"] { --pq-kind: #8a6620; --pq-n-c: #705526; --pq-n-ink: #c2af8b; }
+[data-pq-kind="a"] { --pq-kind: #a94a63; --pq-n-c: #873f59; --pq-n-ink: #d2a1ae; } [data-pq-kind="m"] { --pq-kind: #55525e; --pq-n-c: #474655; --pq-n-ink: #a7a5ab; }
+[data-pq-kind="c"] { --pq-kind: #2f6f73; --pq-n-c: #2a5c65; --pq-n-ink: #93b4b6; }
+[data-theme="light"] [data-pq-kind] { --pq-kind-c: var(--pq-kind); --pq-kind-ink: var(--pq-kind); }
+@supports (color: color-mix(in srgb, red, blue)) {
+  [data-pq-kind], [data-theme="light"] [data-pq-kind] { --pq-kind-c: color-mix(in srgb, var(--pq-kind) var(--cover-keep), var(--cover-shade)); --pq-kind-ink: color-mix(in srgb, var(--pq-kind) var(--pq-ink-mix), #fff); }
+}
 /* the bar: the fill's end carries the bead (half past either end at 0% and 100%, in the strip's 14 px gaps) */
 .pq-top { gap: 14px; }
 .pq-bar { position: relative; height: 16px; border: 0; overflow: visible; background: var(--pq-track); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .22); }
@@ -2760,6 +2784,19 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .kana-preview .reading { font-size: 22px; font-weight: 600; color: var(--fg-2); }
 .kana-preview .kp-origin { margin: 10px auto 4px; padding: 6px 12px; display: inline-block; border-radius: 10px; background: var(--bg-sunken); font-size: 15px; }
 .kana-preview .kp-row { margin-top: 6px; font-size: 15px; } .kana-preview .kp-row .jp { font-size: 20px; }
+/* a preview's foot (a new word's, a new kana's, a lesson section's cards) on a wide screen (test.5's final fix: the longest word's 看完了 was under
+   the foot of a 1024×768 screen by 38 px, and a 1280×800 one's by 6, with the day's note over its first card): held at the screen's foot when
+   the page runs on under it, where it is as before — it sits on the page's own colour, its 6 px over and 8 px of padding the 14 px it had, the
+   page's foot 8 px shorter to give it room — so a card that fits looks as it did. A phone's is pinned on a strip across the gutters (.gp-foot,
+   .pv-foot, in the phone type scale below) */
+@media (min-width: 601px) {
+  .pr-next-sticky { position: sticky; bottom: 0; z-index: 5; margin: 6px -16px 0; padding: 8px 16px; background: var(--bg); }
+  body.practicing .content:has(> .pr-next-sticky) { padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (min-width: 901px) {
+  .pr-next-sticky { margin-inline: -32px; padding-inline: 32px; }
+  body.practicing .content:has(> .pr-next-sticky) { padding-bottom: 64px; }
+}
 .flash { text-align: center; padding: 28px 18px; }
 .flash .word { font-size: 46px; font-weight: 600; line-height: 1.6; }
 .flash .reading { font-size: 18px; color: var(--fg-3); }
@@ -3226,11 +3263,15 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
   .q-label { font-size: var(--fs-label); }
   .example .zh, .fb-opt-zh { font-size: var(--fs-sec); }
   /* a lesson section's card (test.4): its patterns and points read; its foot at the foot of the screen whatever the page's length, as
-     the answer's 下一題 (.pr-next) — on a solid strip across the gutters, its main button big, 看完整講義 and ‹ 上一頁 beside it */
+     the answer's 下一題 (.pr-next) — on a solid strip across the gutters, its main button big, 看完整講義 and ‹ 上一頁 beside it. A new
+     word's card (發音, 我會了) and a new kana's (發音, 寫寫看, 我會了) have the same foot (.pv-foot; test.5's final fix: 看完了 was under the
+     foot of a phone's screen — 87–209 px at 375×553 — on the first screen of every new word), the page above it scrolling to its last
+     line clear of the strip; no small button under 40 px, the three of a kana's side by side at 360 px */
   .preview.grammar .rule, .preview.grammar .points { font-size: var(--fs-read); }
-  .gp-foot { position: sticky; bottom: 0; z-index: 5; flex-wrap: nowrap; margin: 12px -16px 0; padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); background: var(--bg); }
-  .gp-foot .right { flex: 1 1 auto; flex-wrap: nowrap; justify-content: flex-end; } .gp-foot .right .btn-primary { flex: 1 1 auto; min-height: 48px; font-size: 16px; }
-  body.practicing .content:has(> .gp-foot) { padding-bottom: 0; }   /* the strip carries the bottom padding: the page ends under the button */
+  .gp-foot, .pv-foot { position: sticky; bottom: 0; z-index: 5; flex-wrap: nowrap; margin: 12px -16px 0; padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); background: var(--bg); }
+  .gp-foot .right, .pv-foot .right { flex: 1 1 auto; flex-wrap: nowrap; justify-content: flex-end; } :is(.gp-foot, .pv-foot) .right .btn-primary { flex: 1 1 auto; min-height: 48px; font-size: 16px; }
+  :is(.gp-foot, .pv-foot) .btn-sm { min-height: 40px; }   /* 發音, 寫寫看, 我會了, 看完整講義, ‹ 上一頁: a thumb's size (the kana's three side by side at 360 px, 看完了 big beside them) */
+  body.practicing .content:has(> :is(.gp-foot, .pv-foot)) { padding-bottom: 0; }   /* the strip carries the bottom padding: the page ends under the button */
   /* 講義 (the course's book): its 五十音 table, its section titles, its patterns */
   .rd-sheet .kana-cell .kata { font-size: 12px; }   /* 講義's 五十音 table: a cell's カタカナ (its rōmaji beside it, a reading, stays 11) */
   .lp-title { font-size: var(--fs-sec); }   /* 講義's section titles (這個單元, 例句): the survey's 14 */

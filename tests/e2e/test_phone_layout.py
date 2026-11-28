@@ -308,7 +308,7 @@ def test_the_grammar_preview_comes_in_two_pages(b):
     wide = json.loads(ev(b, "(async () => { " + FRESH + GP + """ const g = REG.grammar.find((x) => x.u === 'm1' && x.sec === 0); show(g); const f = document.querySelector('.gp-foot'), c = document.querySelector('.q-card');
       const out = { p1: page().main, pos: getComputedStyle(f).position, under: f.getBoundingClientRect().top >= c.getBoundingClientRect().bottom }; previewMain(); out.p2 = page().main;
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""", [("metrics", (1280, 800, False))]))
-    assert wide == {'p1': '下一頁：例句', 'pos': 'static', 'under': True, 'p2': '看完了'}, wide
+    assert wide == {'p1': '下一頁：例句', 'pos': 'sticky', 'under': True, 'p2': '看完了'}, wide   # test.5's final fix: held at the screen's foot only where the page runs on under it (test_question_fit); where it fits, under the card as before
 
 # 講義 (test.4): a section's patterns one a line, as the preview's — split at 「｜」, each on its own line, read at 16 px on a phone (13 on a
 # wide screen, as before)

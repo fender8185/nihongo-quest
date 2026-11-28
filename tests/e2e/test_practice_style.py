@@ -2,7 +2,10 @@
 題型小色標、圓角選項卡和選項的數字圓章、結果的上緣色條和圓圈裡的 ✓／×、平的琥珀色下一題；白天和夜晚的對比都至少 4.5:1；減少動態時珠子和圓圈都不動。
 
 The user: 「我希望目前答題的那個進度條可以粗一點然後有一點風格，現在的每日練習的作答介面有些太像工程師用的沒有包裝過」; of the mockups 「A不錯但有點太花了尤其
-是選項的那個線」, 「剩下幾分鐘之幾的那個底色如果是夜晚版太顯眼了跟原本一樣」; the pick 「A2A極簡版」."""
+是選項的那個線」, 「剩下幾分鐘之幾的那個底色如果是夜晚版太顯眼了跟原本一樣」; the pick 「A2A極簡版」.
+
+The final fix (2026-11-28, the final review's Minor 4): a browser without color-mix() (Safari before 16.2) still draws the kind label's fill — plain colours,
+the same as the mixes' — with its text and 新's ink 4.5:1 by day and by night: test_without_color_mix_the_kind_label_keeps_its_fill_and_its_text_stays_readable."""
 import asyncio, json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 import websockets
@@ -115,8 +118,7 @@ def test_the_count_is_plain_by_night_and_a_label_by_day(b):
 # every kind the app asks — 單字 文法 聽力 閱讀 漢字 假名 變化練習 錯題本 — a small filled label at the head of the label row naming it, in its
 # colour (by night dimmed as 課程's covers are), its text 4.5:1 on its fill; the row's own text without the kind's word; 新 an outline in the
 # kind's ink, 4.5:1 on the page. By night and by day
-def test_each_kind_has_its_label_in_its_colour(b):
-    js = "(async () => { " + KIT + """ const t = todayStr(), out = {};
+KINDS_JS = "(async () => { " + KIT + """ const t = todayStr(), out = {};
       const mk = (id, prompt, answer) => ({ id, cat: '單字', prompt, answer, wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: t });
       state.mistakes = [mk('mk_a', 'さくら', '櫻花'), mk('mk_b', 'うめ', '梅花'), mk('mk_c', 'もも', '桃子'), mk('mk_d', 'きく', '菊花')];
       const g = REG.grammar.find((x) => x.u === 'm1' && (x.t || 'choice') === 'choice'), c = REG.drills[0];
@@ -131,18 +133,37 @@ def test_each_kind_has_its_label_in_its_colour(b):
         for (const [k, [it, q]] of Object.entries(kinds)) { await ask(it, q); out[th][k] = look(); }
         startSession('mistakes'); route(); renderPractice(); await wait(30); out[th].m = look(); }
       done(); return JSON.stringify(out); })()"""
+
+def check_kinds(r, where):
+    for t in ('night', 'day'):
+        assert sorted(r[t]) == sorted(KIND), (where, t, sorted(r[t]))
+        for k, (name, _) in KIND.items():
+            x = r[t][k]
+            assert x['kind'] == k and x['tag'] == name and x['ratio'] >= 4.5, (where, t, k, x)
+            assert near(x['fill'], kind_fill(k, t)), (where, t, k, x['fill'], kind_fill(k, t))
+            assert not x['rest'].startswith(name) and x['label'] == f"{name} · {x['rest']}", (where, t, k, x)   # the row's text: the label without its kind
+            if k != 'm':   # a new item's 新: an outline in the kind's ink (the notebook's card has no 新)
+                c = x['chip']
+                assert c and c['text'] == '新' and c['bg'] == 0 and c['edge'] == c['ink'] and c['ratio'] >= 4.5, (where, t, k, c)
+
+def test_each_kind_has_its_label_in_its_colour(b):
     for w, h in (PHONE, WIDE):
-        r = json.loads(page(b, w, h, js))
-        for t in ('night', 'day'):
-            assert sorted(r[t]) == sorted(KIND), (w, h, t, sorted(r[t]))
-            for k, (name, _) in KIND.items():
-                x = r[t][k]
-                assert x['kind'] == k and x['tag'] == name and x['ratio'] >= 4.5, (w, h, t, k, x)
-                assert near(x['fill'], kind_fill(k, t)), (w, h, t, k, x['fill'], kind_fill(k, t))
-                assert not x['rest'].startswith(name) and x['label'] == f"{name} · {x['rest']}", (w, h, t, k, x)   # the row's text: the label without its kind
-                if k != 'm':   # a new item's 新: an outline in the kind's ink (the notebook's card has no 新)
-                    c = x['chip']
-                    assert c and c['text'] == '新' and c['bg'] == 0 and c['edge'] == c['ink'] and c['ratio'] >= 4.5, (w, h, t, k, c)
+        check_kinds(json.loads(page(b, w, h, KINDS_JS)), (w, h))
+
+# the final review's Minor 4: --pq-kind-c and --pq-kind-ink were color-mix() in a custom property with no fallback, so a browser without it (Safari
+# before 16.2, Chrome before 111) drew the label with no fill and its cream text vanished on the page by day. A browser without color-mix()
+# is made here by renaming the function in the stylesheet itself (every use of it: a property that uses it is dropped as an old browser drops
+# it, a custom property that holds it stays valid and draws nothing, and the @supports that guards the mixes is false), the page's own sheet
+# switched off for the copy: the label's fill, its text and 新's ink are then the plain colours — the same as the mixes' to within a rounding
+NOMIX = """(async () => { const link = document.querySelector('link[rel="stylesheet"][href*="app.css"]'), css = await (await fetch(link.href)).text(), n = css.split('color-mix(').length - 1;
+  const style = document.createElement('style'); style.textContent = css.split('color-mix(').join('color-mixx('); document.head.appendChild(style); link.disabled = true;
+  const probe = document.createElement('div'); probe.setAttribute('data-pq-kind', 'v'); probe.style.background = 'color-mix(in srgb, red, blue)'; document.body.appendChild(probe);
+  const out = { n, own: getComputedStyle(probe).getPropertyValue('--pq-kind-c').trim() }; probe.remove(); out.kinds = JSON.parse(await (""" + KINDS_JS + """)); return JSON.stringify(out); })()"""
+
+def test_without_color_mix_the_kind_label_keeps_its_fill_and_its_text_stays_readable(b):
+    r = json.loads(page(b, *PHONE, NOMIX))
+    assert r['n'] >= 100 and not r['own'].startswith('color-mix'), (r['n'], r['own'])   # the stylesheet had color-mix() all over; the label's variable now holds a plain colour
+    check_kinds(r['kinds'], 'without color-mix')
 
 # each option's number (the options' own .kbd) a quiet badge where there is a keyboard and a fine pointer — 1–4, a 22 px circle at the
 # option's left and in its middle, 4.5:1; answered, the right one's in --ok, the picked wrong one's in --bad, 4.5:1 — and none on a touch

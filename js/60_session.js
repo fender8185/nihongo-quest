@@ -690,6 +690,7 @@ function renderPractice() {
   const view = document.getElementById('view');
   if (!SESSION) { go('#/today'); return; }
   document.body.classList.add('practicing');
+  rpRelease();
   if (SESSION.idx >= SESSION.entries.length) { renderSummary(view); return; }
   const e = currentEntry();
   if (!e.q) prepareEntry(SESSION.idx);
@@ -863,9 +864,15 @@ window.addEventListener('resize', () => { const e = currentEntry(); if (!e || e.
 // is held to the room from its top to the screen's foot (--pq-at: its top on the page, measured again as the bar or a session's note over
 // it changes height)
 const RP_BOX = '.passage, .rp-ask > .q-stem, .pq-fit, .pq-fit > :is(.q-stem, .q-sub)';
-const RP_RO = window.ResizeObserver ? new ResizeObserver((ens) => ens.forEach((en) => { if (en.target.matches('#view > :is(.pr-top, .plan-note)')) { pqAt(); return; }
+const RP_RO = window.ResizeObserver ? new ResizeObserver((ens) => ens.forEach((en) => {
+  if (!en.target.isConnected) return;   // a strip or box the page has let go of (a preview, the summary, ✕ drew over it): its last, empty size is nobody's to answer
+  if (en.target.matches('#view > :is(.pr-top, .plan-note)')) { pqAt(); return; }
   const el = en.target.matches(RP_BOX) ? en.target : en.target.parentElement;
   if (el.matches('.passage')) rpUnder(document.getElementById('view')); else rpMore(el); })) : null;
+// what the last card gave the observers to watch is let go as the view is drawn over: by a draw that has nothing of its own to watch (a new
+// item's preview, the summary) and by any page that is not practice (route), so the detached strips and boxes are not kept nor reported;
+// rpFit takes up the next card's
+function rpRelease() { if (RP_RO) RP_RO.disconnect(); }
 function pqAt() { const card = document.querySelector('#view > .q-card.pq-fit'); if (card) card.style.setProperty('--pq-at', `${Math.round(card.getBoundingClientRect().top + window.scrollY)}px`); }
 // answered on a phone, the card keeps the height it had as it was answered (measured then: answerCurrent), so a filled blank that takes
 // another line gives way in the stem and nothing under it moves — the options stay under the result panel as they were
@@ -1051,7 +1058,7 @@ function previewHtml(e, pct) {
         ${vocabExamples(v).map(e => exampleHtml(e.ex, e.exZh, '', v)).join('')}
       </div>
     </div>
-    <div class="pr-actions pr-next-sticky">
+    <div class="pr-actions pr-next-sticky pv-foot">
       <div class="left">
         <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
         ${e.relearn ? '' : '<button type="button" class="btn btn-sm btn-ghost" data-act="preview-known" title="這個字我已經會了：標成五顆、跳過它的題目，之後排進五顆的複習">我會了</button>'}
@@ -1082,7 +1089,7 @@ function kanaPreviewHtml(e, pct) {
         ${looks.length ? `<div class="kp-row"><span class="muted">別跟這幾個搞混</span> <span class="jp">${looks.map(esc).join('　')}</span></div>` : ''}
       </div>
     </div>
-    <div class="pr-actions pr-next-sticky">
+    <div class="pr-actions pr-next-sticky pv-foot">
       <div class="left">
         <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
         <button type="button" class="btn btn-sm btn-ghost" data-act="kana-write" data-ch="${esc(a.ch)}" title="照筆順寫寫看">✎<span>寫寫看</span></button>

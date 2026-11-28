@@ -92,7 +92,7 @@ function route() {
   document.body.classList.toggle('reading', r.name === 'course' && r.parts[2] === 'read');   // 講義's own screen: the page under it stays put
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
-  if (r.name !== 'practice') { document.body.classList.remove('practicing'); }
+  if (r.name !== 'practice') { document.body.classList.remove('practicing'); rpRelease(); }
   if (LISTEN && !(r.name === 'listen' || ((r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen'))) listenStop(true);   // leaving the pages that host the player ends it
   MUSIC.sync(); SND.sync();   // the gramophone plays in 書房 and the bedroom only; each place its own background (環境音)
   STORY.drop();
