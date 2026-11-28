@@ -144,15 +144,17 @@ const TAXI_RUN = (() => {
       JOBS.hold(el('.tx-top'), [topHtml(g, false, g.ask)].concat([g.ask, ...(g.guided ? g.lines.map((x) => x.line) : []), s.cust.price].map((l) => topHtml(g, true, l))), topCap); };
     // a phone's map labels (tx-narrow) at 12.5 px on the screen, the map drawn at whatever size the card leaves it (scale k), never
     // smaller than drawn; again as the card's size changes. A label grown onto another place's dot slides sideways off it (2026-11-26,
-    // test.4's fix round: 図書館's over 郵便局's on an SE), 2 units clear
+    // test.4's fix round: 図書館's over 郵便局's on an SE), 2 units clear — the dots in the band it grows over: down from its spot, or up to it
+    // (the station's, at the map's foot: test.5)
     function fitMap() {
       const svg = el('.tx-map'); if (!svg) return; const r = svg.getBoundingClientRect(), k = Math.min(r.width / 380, r.height / 510); if (!(k > 0)) return;
       const z = Math.min(2.2, Math.max(1, 12.5 / 13 / k));
       const dots = [...svg.querySelectorAll('.tx-place')].map((p) => { const c = p.querySelector('circle'); return [p, Number(c.getAttribute('cx')), Number(c.getAttribute('cy')), Number(c.getAttribute('r'))]; });
       svg.querySelectorAll('.tx-narrow').forEach((g) => {
-        const [ox, oy] = g.dataset.o.split(' ').map(Number), rc = g.querySelector('rect'), hw = Number(rc.getAttribute('width')) * z / 2, h = Number(rc.getAttribute('height')) * z, own = g.closest('.tx-place');
+        const [ox, oy] = g.dataset.o.split(' ').map(Number), rc = g.querySelector('rect'), hw = Number(rc.getAttribute('width')) * z / 2, ry = Number(rc.getAttribute('y')), own = g.closest('.tx-place');
+        const y0 = oy + (ry - oy) * z, y1 = oy + (ry + Number(rc.getAttribute('height')) - oy) * z;   // its top and foot as grown round its spot
         let dx = 0;
-        dots.forEach(([p, cx, cy, rad]) => { if (p === own || cy + rad < oy || cy - rad > oy + h) return;
+        dots.forEach(([p, cx, cy, rad]) => { if (p === own || cy + rad < y0 || cy - rad > y1) return;
           if (cx >= ox) dx = Math.min(dx, cx - rad - 2 - (ox + hw)); else dx = Math.max(dx, cx + rad + 2 - (ox - hw)); });
         g.setAttribute('transform', `translate(${(ox + dx).toFixed(1)} ${oy}) scale(${z.toFixed(3)}) translate(${-ox} ${-oy})`);
       });

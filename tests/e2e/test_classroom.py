@@ -96,6 +96,19 @@ def test_the_classroom_things_wear_signs(b):
       await wait(4800); out.kept = signs().length; out.quiet = document.querySelector('.yard').classList.contains('quiet'); return JSON.stringify(out); })()"""))
     assert r == {'signs': ['board:1黑板', 'books:1繪本', 'karuta:1かるた', 'radio:1收音機'], 'dots': True, 'named': True, 'kept': 4, 'quiet': False}, r
 
+def test_a_named_sign_moves_down_clear_of_the_buttons_up_top(b):
+    # on an SE (375×553) the 繪本 sign, named with the room at its left end, reached 7.7 px into the wardrobe and 言靈 buttons for its 1.8 s
+    # (test.4's final review): named, it moves down clear of them (yNamedDrop); its moment over, it is let go
+    r = json.loads(b.run([("metrics", (375, 553)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + """ location.hash = '#/kyoshitsu'; route(); await wait(1500);
+      const y = document.querySelector('.yard'); YCAM.free = true; yCamTo(y, -1000); await wait(800); y.classList.remove('quiet'); await wait(450);
+      const t = document.querySelector('#view .use-btn[data-use="books"]'), tools = () => y.querySelector('.yard-tools').getBoundingClientRect(), tag = () => t.querySelector('.tag').getBoundingClientRect();
+      yNamed(t); await wait(400); const g = tag(), r = tools();
+      const out = { named: t.classList.contains('named'), drop: parseFloat(t.style.getPropertyValue('--yn-drop')) || 0, under: Math.round(g.top - r.bottom), across: g.right > r.left && g.left < r.right };
+      await wait(1700); out.after = [t.classList.contains('named'), t.style.getPropertyValue('--yn-drop')]; return JSON.stringify(out); })()""")])[-1])
+    assert r['named'] and r['across'] and r['drop'] > 0, r   # the case: the sign named under the buttons, so moved
+    assert r['under'] >= 3, r   # its top clear under their foot
+    assert r['after'] == [False, ''], r
+
 # 2026-11-20, the user: the radio's song sounded off — each kana's clip has its own silence before and after; cut away, the kana
 # starts on its beat
 def test_a_song_kana_starts_on_its_beat(b):

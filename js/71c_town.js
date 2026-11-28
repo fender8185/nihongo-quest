@@ -2345,8 +2345,17 @@ const mailWords = (n) => (n ? `信箱・${n} 封信` : '信箱');
 let yNamedT = 0;
 function yNamed(el) {
   const yard = el.closest('.yard'); if (!yard) return;
-  yard.querySelectorAll('.thing.named').forEach((t) => t.classList.remove('named'));
-  el.classList.add('named'); clearTimeout(yNamedT); yNamedT = setTimeout(() => el.classList.remove('named'), 1800);
+  yard.querySelectorAll('.thing.named').forEach((t) => { t.classList.remove('named'); t.style.removeProperty('--yn-drop'); });
+  el.classList.add('named'); yNamedDrop(el); clearTimeout(yNamedT); yNamedT = setTimeout(() => { el.classList.remove('named'); el.style.removeProperty('--yn-drop'); }, 1800);
+}
+// a sign named under the buttons up top (an SE's 教室: 繪本's, the room at its left end, reached 7.7 px into them — test.4's final review)
+// moves down clear of them for its moment (--yn-drop), as yPop's words do: measured where it stands, put lower by what it would cover and
+// 4 px more, in the scene's scale
+function yNamedDrop(el) {
+  el.style.removeProperty('--yn-drop'); const t = el.querySelector('.tag'), tools = el.closest('.yard').querySelector('.yard-tools'); if (!t || !tools || !tools.getClientRects().length) return;
+  t.style.transition = 'none'; const r = t.getBoundingClientRect(), b = tools.getBoundingClientRect(); t.style.transition = '';
+  const z = t.offsetHeight ? r.height / t.offsetHeight : 1, over = b.bottom + 4 - r.top;
+  if (over > 0 && r.bottom > b.top && r.right > b.left - 4 && r.left < b.right + 4) el.style.setProperty('--yn-drop', `${Math.ceil(over / z)}px`);
 }
 // a thing in the yard tapped: the hero walks over, turns to it, then the thing does its bit
 function yUse(el, to, fn) {

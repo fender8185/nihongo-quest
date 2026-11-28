@@ -746,6 +746,17 @@ def test_the_taxi_map_reads_on_a_phone(b):
       return JSON.stringify({ narrow: d('.tx-narrow'), note: d('.tx-tapnote'), read: d('.tx-read'), wide: d('.tx-wide') }); })()""")])[-1])
     assert wide == {'narrow': False, 'note': False, 'read': False, 'wide': True}, wide
 
+def test_a_label_that_grows_up_slides_off_a_dot_too(b):
+    # fitMap looked for dots only under a label's spot, as the places' labels hang down from theirs; the station's grows up from the map's foot
+    # (test.4's final review, parked: no dot sits there today). A dot put in that band and the map fitted again: the station's label clear of it
+    r = json.loads(b.run([("metrics", (375, 553)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + TAXI_HELP + TAXI_MAP + """ location.hash = '#/station'; route(); await wait(300);
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; await at(3); const c = card(), svg = c.querySelector('.tx-map'), NS = 'http://www.w3.org/2000/svg';
+      const g = document.createElementNS(NS, 'g'), dot = document.createElementNS(NS, 'circle'); g.setAttribute('class', 'tx-place'); g.dataset.place = 'probe';
+      Object.entries({ cx: 230, cy: 480, r: 17 }).forEach(([k, v]) => dot.setAttribute(k, v)); g.appendChild(dot); svg.appendChild(g);
+      const mb = c.querySelector('.tx-mapbox'); mb.style.width = (mb.clientWidth - 2) + 'px'; await wait(400);   // its size changed: fitted again
+      return JSON.stringify(__txLook()); })()""")])[-1])
+    assert r['n'] == 10 and not [x for x in r['hit'] if 'probe' in x], r   # the station's label slid off the dot over it
+
 # the final fix of test.4 (2026-11-26; the user: 「新的打工回答會跑版，版面會因為回覆導致版面向上擠壓」, Important 1 of the final review): in the
 # older jobs too — 原田's window, 小林's lost and found, 鈴木's taxi (here) and 張's till (test_work) — a reply moves nothing. The jobs' own
 # dice seeded (MOVES_SEED: one stream for the calls whose stack runs through the jobs' files, from the job's start), so every tree gets the
