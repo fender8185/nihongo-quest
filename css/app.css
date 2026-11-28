@@ -2787,11 +2787,14 @@ details.mrow .mbody { padding: 4px 0 14px; }
 /* a preview's foot (a new word's, a new kana's, a lesson section's cards) on a wide screen (test.5's final fix: the longest word's 看完了 was under
    the foot of a 1024×768 screen by 38 px, and a 1280×800 one's by 6, with the day's note over its first card): held at the screen's foot when
    the page runs on under it, where it is as before — it sits on the page's own colour, its 6 px over and 8 px of padding the 14 px it had, the
-   page's foot 8 px shorter to give it room — so a card that fits looks as it did. A phone's is pinned on a strip across the gutters (.gp-foot,
+   page's foot 8 px shorter to give it room — so a card that fits looks as it did. Its colour fades in over those 8 px (--pv-bg0: the page's
+   colour, clear; a solid strip cut the card's shadow off 6 px under it, the re-review's Minor 1), and it stands on a landscape iPhone's home
+   bar (env(); 看完了 was 8 px off the screen's edge, 13 px into the bar's 21). A phone's is pinned on a strip across the gutters (.gp-foot,
    .pv-foot, in the phone type scale below) */
 @media (min-width: 601px) {
-  .pr-next-sticky { position: sticky; bottom: 0; z-index: 5; margin: 6px -16px 0; padding: 8px 16px; background: var(--bg); }
-  body.practicing .content:has(> .pr-next-sticky) { padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)); }
+  .pr-next-sticky { --pv-bg0: rgba(35, 37, 63, 0); position: sticky; bottom: 0; z-index: 5; margin: 6px -16px 0; padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(var(--pv-bg0), var(--bg) 8px); }
+  [data-theme="light"] .pr-next-sticky { --pv-bg0: rgba(243, 235, 222, 0); }
+  body.practicing .content:has(> .pr-next-sticky) { padding-bottom: 4px; }
 }
 @media (min-width: 901px) {
   .pr-next-sticky { margin-inline: -32px; padding-inline: 32px; }

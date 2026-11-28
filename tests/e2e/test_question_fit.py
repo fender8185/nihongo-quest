@@ -469,8 +469,12 @@ PVKIT = r"""
     const rb = R(btn), rs = R(strip), h = document.elementFromPoint(rb.left + rb.width / 2, rb.top + rb.height / 2), kids = [...strip.querySelectorAll('.btn')].map((k) => R(k));
     const inside = kids.every((k) => k.left >= rs.left - 0.5 && k.right <= rs.right + 0.5 && k.top >= rs.top - 0.5 && k.bottom <= rs.bottom + 0.5 && k.right <= innerWidth + 0.5 && k.left >= -0.5);
     const apart = kids.every((a, i) => kids.every((b, j) => i >= j || a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5));
+    // where the strip stands in the page's flow (not held at the foot): how far its main button sits under the card (the strip's elder), and
+    // whether its top is clear
+    strip.style.position = 'static'; const held = Math.abs(R(strip).top - rs.top) > 0.5; strip.style.position = '';
+    const cs = getComputedStyle(strip), under = Math.round((rb.top - R(strip.previousElementSibling).bottom) * 10) / 10;
     return { kind, main: { whole: rb.width > 0 && rb.top >= -0.5 && rb.bottom <= innerHeight + 0.5 && rb.left >= -0.5 && rb.right <= innerWidth + 0.5, hit: Boolean(h && h.closest('#btnNext') === btn), gap: Math.round(rb.bottom - innerHeight), h: Math.round(rb.height * 10) / 10, text: btn.textContent.replace('Enter', '').trim() },
-      strip: { pos: getComputedStyle(strip).position, h: Math.round(rs.height * 10) / 10, inside, apart, hs: kids.map((k) => Math.round(k.height * 10) / 10), n: kids.length }, scroll: Math.round(document.documentElement.scrollHeight - innerHeight) }; };
+      strip: { pos: cs.position, h: Math.round(rs.height * 10) / 10, inside, apart, hs: kids.map((k) => Math.round(k.height * 10) / 10), n: kids.length, held, under, clear: /^linear-gradient\(rgba\([^)]*,\s*0\),/.test(cs.backgroundImage) && cs.backgroundColor === 'rgba(0, 0, 0, 0)', bg: cs.backgroundImage }, scroll: Math.round(document.documentElement.scrollHeight - innerHeight) }; };
   const clear = async () => { window.scrollTo(0, 1e6); await frames(); const last = document.querySelector('#view .preview').lastElementChild, strip = document.querySelector('#view > .pr-actions'), y = scrollY;
     const out = { y: Math.round(y), clear: R(last).bottom <= R(strip).top + 0.5, gap: Math.round(R(strip).top - R(last).bottom), last: last.className }; window.scrollTo(0, 0); await frames(); return out; };
   const shape = () => ({ pic: Boolean(document.querySelector('.preview .pic')), examples: document.querySelectorAll('.preview .example').length, bad: Boolean(document.querySelector('.q-label .chip-bad')), left: document.querySelectorAll('#view > .pr-actions .left .btn').length, page: (document.querySelector('.preview.grammar') || { dataset: {} }).dataset.page || '' });
@@ -497,6 +501,7 @@ def test_every_preview_shows_its_main_button_from_its_first_frame_at_every_size(
         assert sh['relearn']['pic'] and sh['relearn']['examples'] == 2 and sh['relearn']['bad'] and sh['relearn']['left'] == 1, (w, h, sh['relearn'])
         assert sh['kana']['left'] == 3 and r['kana']['first']['main']['text'] == '看完了', (w, h, sh['kana'], r['keys'])
         assert sh['g1']['page'] == '1' and r['g1']['first']['main']['text'] == '下一頁：例句' and sh['g2']['page'] == '2' and sh['g2']['examples'] >= 1 and r['g2']['first']['main']['text'] == '看完了', (w, h, sh['g1'], sh['g2'])
+        wide_free = 0
         for k in ('word', 'relearn', 'kana', 'g1', 'g2', 'word+note', 'relearn+note', 'kana+note', 'g1+note', 'g2+note'):
             assert r[k]['note'], (w, h, k, 'the day\'s note over the card (or not)')
             for when in ('first', 'settled'):
@@ -507,8 +512,14 @@ def test_every_preview_shows_its_main_button_from_its_first_frame_at_every_size(
                     assert p['main']['h'] >= 47.5, (w, h, k, when, p)   # 看完了 big
                     assert min(p['strip']['hs']) >= 39.5, (w, h, k, when, p['strip'])   # no button under 40 px
                     assert p['strip']['h'] <= 66, (w, h, k, when, p['strip'])   # one row: 8 + 48 + 8 (the kana's three buttons and 看完了 side by side)
+                else:
+                    # a wide screen's strip is clear at its top, the card's shadow showing through it (the re-review's Minor 1: a solid one cut it)
+                    assert p['strip']['clear'], (w, h, k, when, p['strip'])
+                    if not p['strip']['held']: assert abs(p['strip']['under'] - 14) <= 0.5, (w, h, k, when, p['strip'])   # where it stands in the page, its buttons 14 px under the card, as before
+            if not phone: wide_free += sum(1 for when in ('first', 'settled') if not r[k][when]['strip']['held'])
             assert r[k]['end']['clear'], (w, h, k, r[k]['end'])   # scrolled to its end, the card's last line is above the strip
             if phone and k.split('+')[0] in ('word', 'relearn', 'g1', 'g2'): assert r[k]['first']['scroll'] > 0 and r[k]['end']['y'] > 0, (w, h, k, r[k])   # (the page really is longer than the screen: it scrolls)
+        assert phone or wide_free > 0, (w, h, 'no card short enough for its strip to stand in the page')
 
 # what js/30_report.js would send to public.app_errors, listened for from before the app's first script: an uncaught error (not a ResizeObserver
 # loop notice, which the reporter ignores) and an unhandled rejection (not a sound the browser would not play)
