@@ -788,10 +788,12 @@ function renderPractice() {
   pqRow(view, e, answered);
   sheetFit(view);
   rpFit(view, e);
-  // a tap-to-answer block (拼字, 排序, 配對) loses its bottom row once answered: on a phone it keeps the height it had, so the tiles stay put under the panel
-  const block = view.querySelector('.q-card > :is(.spell, .order, .match)');
-  if (block && !answered) e.blockH = block.offsetHeight;
-  else if (block && sheet && e.blockH) block.style.minHeight = e.blockH + 'px';
+  // a tap-to-answer block (拼字, 排序, 配對) loses its bottom row once answered: on a phone it keeps the height it had, so the tiles stay put under the panel;
+  // so does its line, where 我不會 puts the whole answer (test.5's Task 4, fix round 1: it pushed the pieces down 34–136 px) — the line scrolls
+  // in its own box then, the result panel saying the answer in full
+  const block = view.querySelector('.q-card > :is(.spell, .order, .match)'), line = block && block.querySelector(':scope > :is(.spell-out, .order-out)');
+  if (block && !answered) { e.blockH = block.offsetHeight; if (line) e.lineH = line.offsetHeight; }
+  else if (block && sheet && e.blockH) { block.style.minHeight = e.blockH + 'px'; if (line && e.lineH) { line.style.height = e.lineH + 'px'; line.style.overflowY = 'auto'; } }
   if (!answered && q.audio && !e.autoPlayed) { e.autoPlayed = true; setTimeout(() => (q.audioScript ? speakScript(q.audio) : speak(q.audio, speakOpts(q, q.audio))), 150); }
   if (!answered && q.audioOptions) prefetchSpeech(q.options.map(o => o.text));   // the same text the play button sends (bracket readings included, ttsText turns them into kana)
   if (answered) { const nb = document.getElementById('btnNext'); if (nb) nb.focus({ preventScroll: true }); }
@@ -844,7 +846,9 @@ function pqRow(view, e, answered) {
 }
 // a width changed inside a phone's range draws nothing again (a split screen, a window dragged): the row's height before the answer is
 // measured afresh, so the hold is the new width's (the fix round's re-review)
-window.addEventListener('resize', () => { const e = currentEntry(); if (!e || e.done) return; const row = document.querySelector('.pq-card:not(.rp-card) > .q-label'); if (row) e.pqRowH = row.getBoundingClientRect().height; });
+window.addEventListener('resize', () => { const e = currentEntry(); if (!e || e.done) return; const row = document.querySelector('.pq-card:not(.rp-card) > .q-label'); if (row) e.pqRowH = row.getBoundingClientRect().height;
+  // pieces and words squeezed for the new width (a turn, a split screen), not as a phone's address bar comes and goes (the height alone)
+  const card = document.querySelector('#view > .q-card.pq-fit'); if (card && e.pqW !== window.innerWidth) pqSqueeze(card, e, true); });
 // a reading question's passage, and its question where the panel is short of room (a 情報検索's conditions on a small phone), each scroll
 // on their own (2026-11-27, test.5): the foot fades while there is more below (rp-more; iOS hides scrollbars; the question says 還有 too),
 // and each is kept where it was read to as the card is drawn again (the answer, a sync); a new question starts at the top. The question
@@ -865,16 +869,40 @@ function pqAt() { const card = document.querySelector('#view > .q-card.pq-fit');
 // another line gives way in the stem and nothing under it moves — the options stay under the result panel as they were
 function pqHold(e) { const card = document.querySelector('#view > .q-card.pq-fit'); e.pqCardH = card && phoneLayout() ? [card.getBoundingClientRect().height, window.innerWidth] : null; }
 function rpMore(el) { if (el.isConnected) el.classList.toggle('rp-more', el.scrollHeight - el.clientHeight - el.scrollTop > 2 && (!el.matches('.pq-fit, .pq-fit > *') || rpHidden(el))); }
-// a question's box (.pq-fit) that gave way by a few px of the space under its last line hides nothing: 還有 only when some of its words (or a
-// picture, a button) are under its foot — more than the empty foot of a run of text (15% of its height, 4 px at the most) cut
+// a question's box (.pq-fit) that gave way by a few px hides nothing: the fade and 還有 only when a third of a line or more of its words (or
+// of a picture, a button) is under its foot (fix round 1: a sliver of a glyph cut called a whole line hidden)
 function rpHidden(el) {
   const foot = el.getBoundingClientRect().top + el.clientTop + el.clientHeight, tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
   for (let n = tw.nextNode(); n; n = tw.nextNode()) {
     let rs = null;
     if (n.nodeType === 3 && n.textContent.trim()) { const rg = document.createRange(); rg.selectNodeContents(n); rs = rg.getClientRects(); } else if (n.nodeType === 1 && n.matches('svg, img, button')) rs = n.getClientRects();
-    if (rs && [...rs].some((r) => r.height > 0 && r.bottom > foot + Math.max(1, Math.min(4, r.height * 0.15)))) return true;
+    if (rs && [...rs].some((r) => r.height > 0 && r.bottom - foot >= r.height / 3)) return true;
   }
   return false;
+}
+// 句意拼貼's pieces and 配對's words keep their own size (54, 51.6 px) unless the card, its stem given way, still runs over (fix round 1), and
+// then give no more than it takes, in three steps: --pq-sq takes what is over off their padding, down to 40 px a piece; still over, the lines
+// of the two-line ones closer (.pq-tight: 1.35, a one-line piece or word still 40 px at the least); on an SE still over, 句意拼貼's pieces pack
+// two to a row (.pq-pack). Worked out as the question is first drawn, and again as the screen changes width or the fonts come in; kept as
+// pieces are placed and through the answer (e.pqSq: [px, packed, tight]), so nothing changes size under a finger
+const PQ_SE = window.matchMedia ? window.matchMedia('(max-width: 600px) and (max-height: 599px)') : null;
+function pqSqueeze(card, e, again) {
+  const tiles = () => [...card.querySelectorAll('.zh-build .order-tile, .match-word')];
+  if (!card.isConnected || !tiles().length) return;
+  const set = ([sq, pack, tight]) => { card.style.setProperty('--pq-sq', `${sq}px`); card.classList.toggle('pq-pack', pack); card.classList.toggle('pq-tight', tight); };
+  if (e.pqSq && !again) { set(e.pqSq); return; }
+  set([0, false, false]);
+  e.pqW = window.innerWidth;
+  if (getComputedStyle(card).overflowY !== 'auto') { e.pqSq = [0, false, false]; return; }   // not held to the screen: a wide one, a phone on its side
+  const over = () => card.scrollHeight - card.clientHeight;
+  const fit = (pack, tight) => { let sq = 0; set([0, pack, tight]);
+    for (let k = 0; k < 4 && over() > 1 && sq < 9; k++) { const rows = new Set(tiles().map((t) => Math.round(t.getBoundingClientRect().top))).size || 1; sq = Math.min(9, sq + Math.ceil(over() / (2 * rows))); set([sq, pack, tight]); }
+    for (; sq > 0; sq--) { set([sq - 1, pack, tight]); if (over() > 1) break; }   // no more than it takes: back off while the card still holds
+    set([sq, pack, tight]); return [sq, pack, tight]; };
+  let r = fit(false, false);
+  if (over() > 1) r = fit(false, true);
+  if (over() > 1 && PQ_SE && PQ_SE.matches && card.querySelector('.zh-build')) r = fit(true, true);
+  e.pqSq = r;
 }
 function rpFit(view, e) {
   if (RP_RO) RP_RO.disconnect();
@@ -888,9 +916,10 @@ function rpFit(view, e) {
     rpUnder(view);
   } else {
     pqAt();
-    if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(pqAt);
+    if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => { pqAt(); if (!e.done) pqSqueeze(card, e, true); });
     if (RP_RO) view.querySelectorAll(':scope > :is(.pr-top, .plan-note)').forEach((el) => RP_RO.observe(el));
     if (e.done && e.pqCardH && e.pqCardH[1] === window.innerWidth && view.querySelector('.fb-sheet')) { card.style.height = `${e.pqCardH[0]}px`; card.style.flexGrow = '0'; }
+    pqSqueeze(card, e);
   }
   const boxes = read ? [[card.querySelector(':scope > .passage'), 'rpTop'], [card.querySelector('.rp-ask > .q-stem'), 'rpStem']]
     : [[card, 'rpCard'], [card.querySelector(':scope > .q-stem'), 'rpStem'], [card.querySelector(':scope > .q-sub'), 'rpSub']];
@@ -902,6 +931,8 @@ function rpFit(view, e) {
     if (RP_RO) { RP_RO.observe(el); if (el !== card) [...el.children].forEach((kid) => { if (kid.tagName === 'DIV') RP_RO.observe(kid); }); }
     if (document.fonts && document.fonts.status === 'loading') document.fonts.ready.then(() => rpMore(el));
   });
+  // a line of pieces grown by the ones placed (a long 句意拼貼) runs the card over: it stays scrolled to its end, 確定 in sight (fix round 1)
+  if (!read && !e.done && card.querySelector('.tile-row') && card.scrollHeight - card.clientHeight > 1) { card.scrollTop = card.scrollHeight; e.rpCard = card.scrollTop; rpMore(card); }
 }
 // answered on a phone: the passage reads on to its last line above the result panel — room at its foot (.passage::after) as deep as the
 // panel covers it, the page unscrolled
@@ -990,6 +1021,9 @@ function prCountHtml() {
 // the session's note (the day's, or a drill's) over its first screen, a question or a new item's preview — answered too (test.5's Task 4:
 // it went with the answer, and the card moved up under the result)
 function sessionNoteHtml() { return SESSION.idx === 0 && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''; }
+// the same note as a line of the first question's result (fb-meta), shown only where it is hidden over the question — an SE, a phone on its
+// side: Ruling 36's switch, .pq-rp-note in css/app.css (test.5's Task 4, fix round 1: a drill's note has no other place)
+function sessionNoteInResult() { return SESSION.idx === 0 && SESSION.meta && SESSION.meta.note ? `<span class="pq-rp-note">${esc(SESSION.meta.note)}</span>` : ''; }
 function previewHtml(e, pct) {
   if (e.item.kind === 'g') return grammarPreviewHtml(e, pct);
   if (e.item.kind === 'a') return kanaPreviewHtml(e, pct);
@@ -1369,7 +1403,7 @@ function feedbackHtml(e, sheet = false, reveal = sheet, chips = '') {
         : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp || q.picOptions ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${chosen}${reveal && q.revealHtml ? q.revealHtml : ''}${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
-      <div class="fb-meta">${chips ? `<span class="pq-rp-chips">${chips}</span>` : ''}${q.point && q.kind === 'g' ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}</div>
+      <div class="fb-meta">${chips ? `<span class="pq-rp-chips">${chips}</span>` : ''}${q.point && q.kind === 'g' ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}${sessionNoteInResult()}</div>
       <div id="aiExplainBox">${aiBoxHtml(e)}</div>
     </div>`;
 }
